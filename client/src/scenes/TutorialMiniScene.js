@@ -1,0 +1,1428 @@
+﻿// Tutorial scene built on PvP movement and controls
+import Phaser from 'phaser';
+
+const STAGE_SEEDS = {
+  S1_MOVEMENT: 0x71C1A5E1,
+  S2_STASHES: 0xA3B17C22,
+  S3_POWERUPS: 0xC0FFEE99
+};
+
+const T = { FLOOR: 0, WALL: 1 };
+
+function makeRng(seed){
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ t >>> 15, 1 | t);
+    r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
+    return ((r ^ r >>> 14) >>> 0) / 0x100000000;
+  };
+}
+
+function manhattan(a, b){
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+function randomCardinal(){
+  const dirs = [ { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 } ];
+  return dirs[(Math.random() * dirs.length) | 0];
+}
+
+function asPoint(p){ return Array.isArray(p) ? { x: p[0], y: p[1] } : { x: p.x, y: p.y };
+}
+
+function corridorAssist(scene, sprite, dir, dt){
+  const c = scene.toCell(sprite.x, sprite.y);
+  const cx = scene.toWorldX(c.x);
+  const cy = scene.toWorldY(c.y);
+  const bias = scene.cell * 6;
+  if (dir.x !== 0){
+    const dy = cy - sprite.y;
+    sprite.y += Math.sign(dy) * Math.min(Math.abs(dy), bias * dt);
+  } else if (dir.y !== 0){
+    const dx = cx - sprite.x;
+    sprite.x += Math.sign(dx) * Math.min(Math.abs(dx), bias * dt);
+  }
+}
+
+function generateArenaMap(cols, rows, seed){
+  const rnd = makeRng(seed);
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(T.FLOOR));
+  for (let x = 0; x < cols; x++){ grid[0][x] = T.WALL; grid[rows - 1][x] = T.WALL; }
+  for (let y = 0; y < rows; y++){ grid[y][0] = T.WALL; grid[y][cols - 1] = T.WALL; }
+  const SHAPES = [
+    [[0,0]],
+    [[0,0],[1,0]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[1,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[1,0],[1,1],[2,1]],
+    [[0,0],[2,0],[1,0],[1,-1],[1,1]],
+    [[0,0],[0,1],[0,2],[1,2]],
+    [[0,0],[1,0],[2,0],[2,1]]
+  ];
+  const rot = (cells, r) => {
+    let pts = cells.map(asPoint);
+    for (let i = 0; i < r; i++) pts = pts.map(p => ({ x: -p.y, y: p.x }));
+    const mx = Math.min(...pts.map(p => p.x));
+    const my = Math.min(...pts.map(p => p.y));
+    return pts.map(p => ({ x: p.x - mx, y: p.y - my }));
+  };
+  const flip = (cells, f) => {
+    const pts = cells.map(asPoint);
+    if (!f) return pts;
+    const mx = Math.max(...pts.map(p => p.x));
+    return pts.map(p => ({ x: mx - p.x, y: p.y }));
+  };
+  const occ = Array.from({ length: rows }, () => Array(cols).fill(0));
+  const PAD_MIN = 0;
+  const PAD_MAX = 2;
+  const GAP = 1;
+  const canPlace = (ax, ay, cells) => {
+    const pad = (rnd() < 0.4) ? PAD_MIN : PAD_MAX;
+    for (const p of cells){
+      const x = ax + p.x;
+      const y = ay + p.y;
+      if (x <= 0 || y <= 0 || x >= cols - 1 || y >= rows - 1) return false;
+      if (x < pad || y < pad || x > cols - 1 - pad || y > rows - 1 - pad) return false;
+      if (grid[y][x] === T.WALL || occ[y][x]) return false;
+      for (let yy = y - GAP; yy <= y + GAP; yy++)
+        for (let xx = x - GAP; xx <= x + GAP; xx++)
+          if (yy >= 0 && yy < rows && xx >= 0 && xx < cols && occ[yy][xx]) return false;
+    }
+    return true;
+  };
+  const stamp = (ax, ay, cells) => {
+    for (const p of cells){
+      const x = ax + p.x;
+      const y = ay + p.y;
+      grid[y][x] = T.WALL;
+      occ[y][x] = 1;
+    }
+  };
+  const target = Math.floor((cols * rows) / 36);
+  let placed = 0;
+  let tries = 0;
+  while (placed < target && tries < target * 40){
+    tries++;
+    const bx = 1 + (rnd() * (cols - 2) | 0);
+    const by = 1 + (rnd() * (rows - 2) | 0);
+    let shape = SHAPES[(rnd() * SHAPES.length) | 0];
+    shape = rot(shape, (rnd() * 4) | 0);
+    shape = flip(shape, rnd() < 0.5);
+    const ox = (rnd() * 3 | 0) - 1;
+    const oy = (rnd() * 3 | 0) - 1;
+    if (canPlace(bx + ox, by + oy, shape)){
+      stamp(bx + ox, by + oy, shape);
+      placed++;
+    }
+  }
+  const floors = [];
+  for (let y = 1; y < rows - 1; y++)
+    for (let x = 1; x < cols - 1; x++)
+      if (grid[y][x] === T.FLOOR) floors.push({ x, y });
+  const pickFar = (avoid, minD) => {
+    for (let k = 0; k < 400; k++){
+      const c = floors[(rnd() * floors.length) | 0];
+      if (avoid.every(pt => manhattan(c, pt) >= minD)) return c;
+    }
+    let best = floors[0];
+    let bestScore = -1;
+    for (const c of floors){
+      const d = Math.min(...avoid.map(pt => manhattan(c, pt)));
+      if (d > bestScore){
+        bestScore = d;
+        best = c;
+      }
+    }
+    return best;
+  };
+  const POCKET_R = 2;
+  const safe = c => c.x > POCKET_R && c.y > POCKET_R && c.x < cols - 1 - POCKET_R && c.y < rows - 1 - POCKET_R;
+  function addPocket(cx, cy){
+    for (let dy = -(POCKET_R - 1); dy <= POCKET_R - 1; dy++)
+      for (let dx = -(POCKET_R - 1); dx <= POCKET_R - 1; dx++){
+        const x = cx + dx;
+        const y = cy + dy;
+        if (y >= 0 && y < rows && x >= 0 && x < cols) grid[y][x] = T.FLOOR;
+      }
+    for (let dy = -POCKET_R; dy <= POCKET_R; dy++)
+      for (let dx = -POCKET_R; dx <= POCKET_R; dx++){
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x <= 0 || y <= 0 || x >= cols - 1 || y >= rows - 1) continue;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) === POCKET_R) grid[y][x] = T.WALL;
+      }
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    const portals = (rnd() < 0.7)
+      ? [[0,1],[2,3]][(rnd()*2)|0]
+      : [[0,2],[0,3],[1,2],[1,3]][(rnd()*4)|0];
+    for (const index of portals){
+      const [dx, dy] = dirs[index];
+      const x = cx + dx * POCKET_R;
+      const y = cy + dy * POCKET_R;
+      grid[y][x] = T.FLOOR;
+      const ox = cx + dx * (POCKET_R + 1);
+      const oy = cy + dy * (POCKET_R + 1);
+      if (ox > 0 && ox < cols - 1 && oy > 0 && oy < rows - 1)
+        grid[oy][ox] = T.FLOOR;
+    }
+    grid[cy][cx] = T.FLOOR;
+  }
+  const runner = pickFar([], Math.floor((cols + rows) / 6));
+  const plug = pickFar([runner], Math.floor((cols + rows) / 4));
+  const stashCandidates = floors.filter(c => safe(c) && (manhattan(c, runner) + 3 < manhattan(c, plug)));
+  const extractCandidates = floors.filter(c => safe(c) && (manhattan(c, plug) + 3 < manhattan(c, runner)));
+  const pickFrom = (arr, avoid, minD) => {
+    const filtered = arr.length ? arr.filter(c => avoid.every(pt => manhattan(c, pt) >= minD)) : [];
+    if (filtered.length) return filtered[(Math.random() * filtered.length) | 0];
+    return pickFar(avoid, minD);
+  };
+  let stash = pickFrom(stashCandidates, [runner, plug], Math.floor((cols + rows) / 10));
+  let extract = pickFrom(extractCandidates, [runner, plug, stash], Math.floor((cols + rows) / 9));
+  if (!safe(stash)){
+    const s = floors.filter(safe);
+    if (s.length) stash = s[(rnd() * s.length) | 0];
+  }
+  if (!safe(extract)){
+    const s = floors.filter(safe);
+    if (s.length) extract = s[(rnd() * s.length) | 0];
+  }
+  addPocket(stash.x, stash.y);
+  addPocket(extract.x, extract.y);
+  grid[runner.y][runner.x] = T.FLOOR;
+  grid[plug.y][plug.x] = T.FLOOR;
+  grid[stash.y][stash.x] = T.FLOOR;
+  grid[extract.y][extract.x] = T.FLOOR;
+  const sides = ['N','E','S','W'];
+  const side = sides[(rnd() * 4) | 0];
+  const gapW = Math.max(3, Math.floor(cols / 10));
+  let entry = { x: 1, y: 1 };
+  if (side === 'N'){
+    const mid = 1 + (rnd() * (cols - 2) | 0);
+    const x0 = Math.max(1, mid - Math.floor(gapW / 2));
+    for (let x = x0; x < x0 + gapW && x < cols - 1; x++){
+      grid[0][x] = T.FLOOR;
+      if (rows > 1) grid[1][x] = T.FLOOR;
+    }
+    entry = { x: Math.min(cols - 2, Math.max(1, mid)), y: 1 };
+  } else if (side === 'S'){
+    const mid = 1 + (rnd() * (cols - 2) | 0);
+    const x0 = Math.max(1, mid - Math.floor(gapW / 2));
+    for (let x = x0; x < x0 + gapW && x < cols - 1; x++){
+      grid[rows - 1][x] = T.FLOOR;
+      if (rows > 1) grid[rows - 2][x] = T.FLOOR;
+    }
+    entry = { x: Math.min(cols - 2, Math.max(1, mid)), y: rows - 2 };
+  } else if (side === 'E'){
+    const mid = 1 + (rnd() * (rows - 2) | 0);
+    const y0 = Math.max(1, mid - Math.floor(gapW / 2));
+    for (let y = y0; y < y0 + gapW && y < rows - 1; y++){
+      grid[y][cols - 1] = T.FLOOR;
+      if (cols > 1) grid[y][cols - 2] = T.FLOOR;
+    }
+    entry = { x: cols - 2, y: Math.min(rows - 2, Math.max(1, mid)) };
+  } else {
+    const mid = 1 + (rnd() * (rows - 2) | 0);
+    const y0 = Math.max(1, mid - Math.floor(gapW / 2));
+    for (let y = y0; y < y0 + gapW && y < rows - 1; y++){
+      grid[y][0] = T.FLOOR;
+      if (cols > 1) grid[y][1] = T.FLOOR;
+    }
+    entry = { x: 1, y: Math.min(rows - 2, Math.max(1, mid)) };
+  }
+  return { grid, spawns: { runner, plug }, objectives: { stash, extract }, egress: { side, entry, width: gapW } };
+}
+
+function makeDuffel(scene, x, y, w, h){
+  const cont = scene.add.container(x, y).setDepth(12);
+  const sensor = scene.add.rectangle(0, 0, w, h, 0x000000, 0.0001);
+  const g = scene.add.graphics();
+  const tan = 0xC8A97E;
+  const tanDark = 0xA9885F;
+  const tape = 0x8B7355;
+  const gloss = 0xE7D3B5;
+  const rad = Math.max(4, Math.floor(scene.cell * 0.14));
+  g.fillStyle(tan, 1).lineStyle(Math.max(2, Math.floor(scene.cell * 0.05)), tanDark, 1);
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, rad);
+  g.strokeRoundedRect(-w / 2, -h / 2, w, h, rad);
+  g.fillStyle(tape, 1).fillRect(-w / 2 + 4, -h * 0.28, w - 8, h * 0.56);
+  g.fillStyle(gloss, 0.12).fillRoundedRect(-w / 2 + 6, -h / 2 + 6, w * 0.35, h * 0.3, rad * 0.6);
+  cont.add([sensor, g]);
+  return cont;
+}
+
+function makeCarLights(scene, cx, cy, side){
+  const cont = scene.add.container(cx, cy).setDepth(12);
+  const g = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  const beamColor = 0x93c5fd;
+  if (side === 'N' || side === 'S'){
+    const s = (side === 'N') ? -1 : 1;
+    g.fillStyle(beamColor, 0.25).fillTriangle(-scene.cell * 0.35, 0, scene.cell * 0.35, 0, 0, s * scene.cell * 0.9);
+  } else {
+    const s = (side === 'W') ? -1 : 1;
+    g.fillStyle(beamColor, 0.25).fillTriangle(0, -scene.cell * 0.35, 0, scene.cell * 0.35, s * scene.cell * 1.2, 0);
+  }
+  cont.add(g);
+  return cont;
+}
+
+const THEMES = [
+  {
+    key: 'loft_concrete',
+    bg: 0x0b0f16,
+    floorTint: 0xb8bec9,
+    wallFillTint: 0x232a33,
+    wallEdgeTint: 0x8a8f98,
+    floorSet: 'checker',
+    checkerColors: [0xE5E7EB, 0xF3F4F6]
+  },
+  {
+    key: 'sand_wood',
+    bg: 0x0b0f12,
+    floorTint: 0xE9D5B4,
+    wallFillTint: 0x1f201e,
+    wallEdgeTint: 0xC8A97E,
+    floorSet: 'wood'
+  },
+  {
+    key: 'studio_white',
+    bg: 0x0b0f16,
+    floorTint: 0xF3F4F6,
+    wallFillTint: 0x1f2632,
+    wallEdgeTint: 0x9AA6B2,
+    floorSet: 'checker',
+    checkerColors: [0xF9FAFB, 0xE5E7EB]
+  }
+];
+
+export class TutorialMiniScene extends Phaser.Scene {
+  constructor(){
+    super('TUTORIAL_MINI');
+  }
+  preload(){
+    this.load.image('wall_fill', '/tiles/kenney/walls/fill.png');
+    this.load.image('wall_edge', '/tiles/kenney/walls/edge.png');
+    ['wood_96','wood_97','wood_98','wood_99','wood_100','wood_101'].forEach(k => this.load.image(k, `/tiles/kenney/${k}.png`));
+    ['check_11','check_12','check_13','check_14'].forEach(k => this.load.image(k, `/tiles/checker/${k}.png`));
+    this.load.image('td_runner', '/sprites/td/runner.png');
+    this.load.image('td_runner_step', '/sprites/td/runner_step.png');
+    this.load.image('car_blue', '/cars/blue.png');
+  }
+  init(){
+    const width = Math.max(1, this.scale.gameSize.width);
+    const height = Math.max(1, this.scale.gameSize.height);
+    this.cell = 24;
+    this.cols = Math.max(18, Math.floor(width / this.cell));
+    this.rows = Math.max(12, Math.floor(height / this.cell));
+    this.worldWidth = this.cols * this.cell;
+    this.worldHeight = this.rows * this.cell;
+    this.pad = { x: 0, y: 0 };
+    this.stageIdx = 1;
+    this.tipObj = null;
+    this.tipTween = null;
+    this.pointer = null;
+    this._activePointerId = null;
+    this._dashUntil = 0;
+    this._phaseUntil = 0;
+    this._phaseActive = false;
+    this.autoDrift = true;
+  }
+
+  create(){
+    this.ensureResizeListener();
+    this.startStage(1);
+  }
+  ensureResizeListener(){
+    if (this._onResizeCb) return;
+    this._onResizeCb = () => {
+      const next = this.stageIdx || 1;
+      this.startStage(next);
+    };
+    this.scale.on('resize', this._onResizeCb);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this._onResizeCb){
+        this.scale.off('resize', this._onResizeCb);
+        this._onResizeCb = null;
+      }
+    });
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      if (this._onResizeCb){
+        this.scale.off('resize', this._onResizeCb);
+        this._onResizeCb = null;
+      }
+    });
+  }
+  computeLayout(){
+    const usableW = Math.max(1, this.scale.gameSize.width);
+    const usableH = Math.max(1, this.scale.gameSize.height);
+    const cell = Math.max(16, Math.floor(Math.min(usableW / this.cols, usableH / this.rows)));
+    this.cell = cell;
+    this.worldWidth = this.cols * cell;
+    this.worldHeight = this.rows * cell;
+    this.pad = {
+      x: Math.floor((usableW - this.worldWidth) / 2),
+      y: Math.floor((usableH - this.worldHeight) / 2)
+    };
+    // Match PvP runner size: give the runner a larger hitbox so it hugs corridor
+    // walls and centers properly. Use 0.44 of a tile side, similar to the PvP scene.
+    this.hitboxRadius = this.cell * 0.44;
+  }
+
+  startStage(idx){
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    if (this.tipTween){
+      this.tweens.remove(this.tipTween);
+      this.tipTween = null;
+    }
+    if (this.tipObj){
+      this.tipObj.destroy();
+      this.tipObj = null;
+    }
+    this.children.removeAll();
+    this.stageIdx = idx;
+
+    // Reset extraction state so the car depart animation can run in each stage
+    this._carDeparting = false;
+
+    const baseCell = 24;
+    const width = Math.max(1, this.scale.gameSize.width);
+    const height = Math.max(1, this.scale.gameSize.height);
+    this.cols = Math.max(18, Math.floor(width / baseCell));
+    this.rows = Math.max(12, Math.floor(height / baseCell));
+    this.computeLayout();
+
+    this.stash = null;
+    this.bunkStash = null;
+    this._stashHaloG = null;
+    this.hasPackage = false;
+
+    // Reset per-stage runner power selections.  In the power-up scene (stage 3)
+    // the player will choose two abilities; until then nothing is selected.
+    this.runnerPowersSelected = null;
+    this.runnerPowersConsumed = null;
+
+    // Reset any previously selected runner powers.  Each stage begins with no
+    // active power selections or consumables.  The third stage will set
+    // these values after the player picks two powers from the modal.
+    this.runnerPowersSelected = null;
+    this.runnerPowersConsumed = null;
+
+    // Reset any previously selected runner powers.  Each stage begins with no
+    // active power selections or consumables.  The third stage will set
+    // these values after the player picks two powers from the modal.
+    this.runnerPowersSelected = null;
+    this.runnerPowersConsumed = null;
+
+    const seeds = {
+      1: STAGE_SEEDS.S1_MOVEMENT,
+      2: STAGE_SEEDS.S2_STASHES,
+      3: STAGE_SEEDS.S3_POWERUPS
+    };
+    const seed = seeds[idx] || STAGE_SEEDS.S1_MOVEMENT;
+
+    const arena = generateArenaMap(this.cols, this.rows, seed);
+    this.grid = arena.grid;
+    this.egress = arena.egress;
+    this.spawnRunnerCell = arena.spawns.runner;
+    this.stashCell = arena.objectives.stash;
+    this.extractCell = arena.objectives.extract;
+
+    // Adjust runner spawn location depending on stage requirements
+    if (idx === 1){
+      // For the first tutorial scene, spawn the player near the top-left corner so
+      // they have to traverse the map to reach the car.  Find the first walkable
+      // floor cell scanning from (1,1) to the middle of the map.
+      outer: for (let y = 1; y < this.rows - 1; y++){
+        for (let x = 1; x < this.cols - 1; x++){
+          if (this.isWalkableCell?.(x, y)){
+            this.spawnRunnerCell = { x, y };
+            break outer;
+          }
+        }
+      }
+    }
+    // In previous versions we sealed the stash and extract pockets in stage 3 to force
+    // players to use Phase to reach them.  The user requested that the power-up scene
+    // spawn stashes normally without closing off any pockets.  Therefore we no longer
+    // modify the map for stage 3 here.  Stashes and extract pads spawn as in the
+    // stash scene, and players can reach them through the generated map naturally.
+    if (idx === 3) {
+      /* no-op: do not seal pockets */
+    }
+
+    const themeRng = makeRng(((seed ^ 0x9E3779B9) >>> 0));
+    this.theme = THEMES[(themeRng() * THEMES.length) | 0];
+    this.floorKeySingle = (this.theme.floorSet === 'checker')
+      ? ['check_11','check_12','check_13','check_14'][(themeRng()*4)|0]
+      : null;
+
+    this.drawArena();
+
+    this.runner = this.add.container(this.toWorldX(this.spawnRunnerCell.x), this.toWorldY(this.spawnRunnerCell.y)).setDepth(8);
+    const sh = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
+    const rs = this.add.sprite(0, 0, 'td_runner').setOrigin(0.5);
+    rs.setScale((this.cell / 128) * 3.0);
+    this.runner.add([sh, rs]);
+    this.runner.sprite = rs;
+    this.runner.hbRadius = this.hitboxRadius;
+
+    this._dashUntil = 0;
+    this._phaseUntil = 0;
+    this._phaseActive = false;
+
+    this.setupInput();
+    this.configureCamera();
+    this.placeObjectives(idx);
+    this.resetState();
+    this.showStageModal(idx);
+  }
+
+  drawArena(){
+    const { cell, cols, rows } = this;
+    const width = Math.max(1, this.scale.gameSize.width);
+    const height = Math.max(1, this.scale.gameSize.height);
+    const padX = this.pad.x;
+    const padY = this.pad.y;
+    const theme = this.theme ?? {};
+    this.cameras.main.setBackgroundColor(theme.bg ?? 0x080a10);
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, theme.bg ?? 0x080a10, 1);
+    bg.setDepth(0).setScrollFactor(0);
+
+    const wood = ['wood_96','wood_97','wood_98','wood_99','wood_100','wood_101'];
+    const checkerKeys = ['check_11','check_12','check_13','check_14'];
+    const checkerColors = (Array.isArray(theme.checkerColors) && theme.checkerColors.length >= 2)
+      ? theme.checkerColors
+      : null;
+    const useChecker = theme.floorSet === 'checker';
+
+    for (let y = 0; y < rows; y++){
+      for (let x = 0; x < cols; x++){
+        const wx = padX + x * cell + cell / 2;
+        const wy = padY + y * cell + cell / 2;
+        if (this.grid[y][x] === T.WALL){
+          this.add.image(wx, wy, 'wall_fill')
+            .setDisplaySize(cell, cell)
+            .setDepth(5)
+            .setTint(theme.wallFillTint ?? 0xffffff);
+          const addEdge = (angle) => {
+            this.add.image(wx, wy, 'wall_edge')
+              .setDisplaySize(cell, cell)
+              .setDepth(6)
+              .setAngle(angle)
+              .setTint(theme.wallEdgeTint ?? 0xffffff);
+          };
+          if (!this.isWallCell(x, y - 1)) addEdge(0);
+          if (!this.isWallCell(x + 1, y)) addEdge(90);
+          if (!this.isWallCell(x, y + 1)) addEdge(180);
+          if (!this.isWallCell(x - 1, y)) addEdge(270);
+        } else {
+          if (useChecker && checkerColors){
+            const color = ((x + y) & 1) === 0 ? checkerColors[0] : checkerColors[1];
+            this.add.rectangle(wx, wy, cell + 1, cell + 1, color, 1).setDepth(1);
+          } else {
+            let key;
+            if (useChecker){
+              key = this.floorKeySingle || checkerKeys[((x + y) & 1) % checkerKeys.length];
+            } else {
+              const idx = ((x % wood.length) + wood.length) % wood.length;
+              key = wood[idx];
+            }
+            this.add.image(wx, wy, key)
+              .setDisplaySize(cell, cell)
+              .setDepth(1)
+              .setTint(theme.floorTint ?? 0xffffff);
+          }
+        }
+      }
+    }
+  }
+  setupInput(){
+    if (!this.cursors) this.cursors = this.input.keyboard.createCursorKeys();
+    if (!this.wasdKeys) this.wasdKeys = this.input.keyboard.addKeys({ W: 'W', A: 'A', S: 'S', D: 'D' });
+    if (!this._quickAimBound){
+      const setDir = (x, y) => {
+        this.playerAim = { x, y };
+        this.playerDrift = { x, y };
+        this.userTookOver = true;
+      };
+      this.input.keyboard.on('keydown-W', () => setDir(0, -1));
+      this.input.keyboard.on('keydown-S', () => setDir(0, 1));
+      this.input.keyboard.on('keydown-A', () => setDir(-1, 0));
+      this.input.keyboard.on('keydown-D', () => setDir(1, 0));
+      this.input.keyboard.on('keydown-UP', () => setDir(0, -1));
+      this.input.keyboard.on('keydown-DOWN', () => setDir(0, 1));
+      this.input.keyboard.on('keydown-LEFT', () => setDir(-1, 0));
+      this.input.keyboard.on('keydown-RIGHT', () => setDir(1, 0));
+      this._quickAimBound = true;
+    }
+    if (!this._initDrift){
+      this._initDrift = this.sys.game.device.os.desktop ? { x: 1, y: 0 } : randomCardinal();
+    }
+    this.playerDrift = { x: this._initDrift.x, y: this._initDrift.y };
+    this.playerAim = { x: this._initDrift.x, y: this._initDrift.y };
+    this.userTookOver = false;
+    this.autoDrift = true;
+    const getPid = (evt) => (evt?.id ?? evt?.pointerId ?? 0);
+    if (!this._pointerDownHandler){
+      // On mobile, treat touch input like PvP: only swipes update aim; taps trigger powers
+      this._swipeStart = null;
+      this._lastPointerTapAt = 0;
+      this._pointerDownHandler = (p) => {
+        // Ignore if already tracking a pointer
+        if (this._activePointerId !== null) return;
+        const pid = getPid(p);
+        this._activePointerId = pid;
+        this.pointer = p;
+        this._swipeStart = { x: p.x, y: p.y, t: performance.now() };
+      };
+      this._pointerMoveHandler = (p) => {
+        const pid = getPid(p);
+        if (pid === this._activePointerId && p?.isDown){
+          this.pointer = p;
+          // Continuously update aim toward the current touch relative to the runner when
+          // the swipe has moved far enough from its start.  Use a smaller threshold than
+          // before (approx one third of a tile or 10px) to improve responsiveness and
+          // align with PvP behaviour on mobile.
+          const sx = this._swipeStart?.x ?? p.x;
+          const sy = this._swipeStart?.y ?? p.y;
+          const dx = p.x - sx;
+          const dy = p.y - sy;
+          const moved = Math.hypot(dx, dy);
+          const thresh = Math.max(10, this.cell * 0.4);
+          if (moved >= thresh){
+            this.updateAimFromPointer(p);
+            this.userTookOver = true;
+          }
+        }
+      };
+      this._pointerUpHandler = (p) => {
+        const pid = getPid(p);
+        if (pid === this._activePointerId){
+          const now = performance.now();
+          const sx = this._swipeStart?.x ?? p.x;
+          const sy = this._swipeStart?.y ?? p.y;
+          const dt = now - (this._swipeStart?.t || 0);
+          const dx = p.x - sx;
+          const dy = p.y - sy;
+          const moved = Math.hypot(dx, dy);
+          // Define thresholds similar to PvP for taps and swipes
+          const TAP_TIME = 260;
+          const TAP_DIST = Math.max(10, this.cell * 0.4);
+          if (dt <= TAP_TIME && moved <= TAP_DIST){
+            // Handle double tap to trigger the next power (dash/phase) if selected
+            if (this.stageIdx >= 3 && this.runnerPowersSelected){
+              const diff = now - (this._lastPointerTapAt || 0);
+              if (diff > 0 && diff <= 280){
+                this._lastPointerTapAt = 0;
+                this.activateNextRunnerPower();
+              } else {
+                this._lastPointerTapAt = now;
+              }
+            }
+          } else if (moved >= TAP_DIST) {
+            // Treat as a directional swipe: set aim and drift based on the swipe vector
+            const len = moved || 1;
+            const nx = dx / len;
+            const ny = dy / len;
+            this.playerAim = { x: nx, y: ny };
+            this.playerDrift = { x: nx, y: ny };
+            this.userTookOver = true;
+          }
+          this._activePointerId = null;
+          this.pointer = null;
+          this._swipeStart = null;
+        }
+      };
+      this.input.on('pointerdown', this._pointerDownHandler);
+      this.input.on('pointermove', this._pointerMoveHandler);
+      this.input.on('pointerup', this._pointerUpHandler);
+      this.input.on('pointerupoutside', this._pointerUpHandler);
+      this.input.on('gameout', this._pointerUpHandler);
+    }
+    this.dashKey = this.dashKey || this.input.keyboard.addKey('SHIFT');
+    this.phaseKey = this.phaseKey || this.input.keyboard.addKey('SPACE');
+  }
+  configureCamera(){
+    const cam = this.cameras.main;
+    cam.stopFollow?.();
+    cam.setRoundPixels(true);
+    cam.setZoom(1);
+    cam.setScroll(0, 0);
+    cam.setBounds(0, 0, this.scale.gameSize.width, this.scale.gameSize.height);
+  }
+  toWorldX(cx){
+    return this.pad.x + cx * this.cell + this.cell / 2;
+  }
+
+  toWorldY(cy){
+    return this.pad.y + cy * this.cell + this.cell / 2;
+  }
+
+  toCell(x, y){
+    return {
+      x: Math.floor((x - this.pad.x) / this.cell),
+      y: Math.floor((y - this.pad.y) / this.cell)
+    };
+  }
+
+  inBoundsCell(cx, cy){
+    return cx >= 0 && cy >= 0 && cx < this.cols && cy < this.rows;
+  }
+
+  isWalkableCell(cx, cy){
+    return this.inBoundsCell(cx, cy) && this.grid[cy][cx] !== T.WALL;
+  }
+
+  isWallCell(cx, cy){
+    if (!this.inBoundsCell(cx, cy)) return true;
+    return this.grid[cy][cx] === T.WALL;
+  }
+
+  isWallAtWorld(wx, wy){
+    const c = this.toCell(wx, wy);
+    return !this.isWalkableCell(c.x, c.y);
+  }
+
+  canMoveTo(sprite, nx, ny){
+    if (this._phaseActive) return true;
+    const r = sprite?.hbRadius ?? this.hitboxRadius ?? (this.cell * 0.28);
+    const pts = [
+      { x: nx - r, y: ny - r },
+      { x: nx + r, y: ny - r },
+      { x: nx - r, y: ny + r },
+      { x: nx + r, y: ny + r }
+    ];
+    for (const p of pts){
+      if (this.isWallAtWorld(p.x, p.y)) return false;
+    }
+    return true;
+  }
+  placeObjectives(idx){
+    const ex = this.toWorldX(this.egress.entry.x);
+    const ey = this.toWorldY(this.egress.entry.y);
+    this.extractPad = this.add.rectangle(ex, ey, this.cell*0.9, this.cell*0.9, 0x0ea5e9, 0.08)
+      .setStrokeStyle(2, 0x22c55e)
+      .setDepth(3);
+    const side = this.egress.side;
+    const ang = (side==='N') ? 0 : (side==='S') ? 180 : (side==='E') ? 90 : -90;
+    this.car = this.add.image(ex, ey, 'car_blue').setDepth(11).setAngle(ang);
+    // Make the car a bit larger to match the PvP scene for clearer extraction
+    this.car.setDisplaySize(this.cell*2.4, this.cell*1.3);
+    this.carLights = makeCarLights(this, ex, ey, side).setVisible(idx===1);
+    if (idx === 2 || idx === 3){
+      const w = this.cell*0.82, h = this.cell*0.52;
+      const stashPos = { x: this.toWorldX(this.stashCell.x), y: this.toWorldY(this.stashCell.y) };
+      const extractPos = { x: this.toWorldX(this.extractCell.x), y: this.toWorldY(this.extractCell.y) };
+      const pkgA = makeDuffel(this, stashPos.x, stashPos.y, w, h);
+      const pkgB = makeDuffel(this, extractPos.x, extractPos.y, w, h);
+      const runnerPos = { x: this.toWorldX(this.spawnRunnerCell.x), y: this.toWorldY(this.spawnRunnerCell.y) };
+      const dA = Math.hypot(pkgA.x - runnerPos.x, pkgA.y - runnerPos.y);
+      const dB = Math.hypot(pkgB.x - runnerPos.x, pkgB.y - runnerPos.y);
+      if (dA <= dB){ this.bunkStash = pkgA; this.stash = pkgB; }
+      else { this.bunkStash = pkgB; this.stash = pkgA; }
+      this._stashHaloG = this.add.graphics().setDepth(12);
+    }
+  }
+  resetState(){
+    this._activePointerId = null;
+    this.pointer = null;
+    this._lastPointerTap = null;
+    this._swipeStart = null;
+    this._lastPointerTapAt = 0;
+    this._dashUntil = 0;
+    this._phaseUntil = 0;
+    this._phaseActive = false;
+    this._didDash = false;
+    this._didPhase = false;
+    if (this.runner?.sprite) this.runner.sprite.setAlpha(1);
+    this.carry = null;
+    this.bullets = [];
+    this.lastPos = { x: this.runner.x, y: this.runner.y };
+    this.userTookOver = false;
+    this._lastTap = null;
+    this.playerDrift = this.playerDrift || { x: this._initDrift?.x ?? 1, y: this._initDrift?.y ?? 0 };
+    this.playerAim = this.playerAim || { x: this.playerDrift.x, y: this.playerDrift.y };
+  }
+
+  updateAimFromPointer(p){
+    if (!p || !this.runner) return null;
+    const cam = this.cameras?.main;
+    let px = p.worldX;
+    let py = p.worldY;
+    if ((px === undefined || py === undefined) && cam?.getWorldPoint){
+      const pt = cam.getWorldPoint(p.x, p.y);
+      px = pt.x;
+      py = pt.y;
+    }
+    if (px === undefined || py === undefined) return null;
+    const dx = px - this.runner.x;
+    const dy = py - this.runner.y;
+    const L = Math.hypot(dx, dy);
+    if (L < 0.0001) return { x: px, y: py };
+    const aim = { x: dx / L, y: dy / L };
+    this.playerAim = aim;
+    if (this.autoDrift !== false){
+      this.playerDrift = { x: aim.x, y: aim.y };
+    }
+    this.userTookOver = true;
+    return { x: px, y: py };
+  }
+
+  showStageModal(idx){
+    const desktop = this.sys.game.device.os.desktop;
+    if (idx === 1){
+      this.showModal('Learn movement', [
+        desktop ? 'Use arrow keys / WASD to move' : 'Swipe anywhere to move',
+        'Reach the car to continue.'
+      ], 'Start', () => this.resumeFromModal());
+    } else if (idx === 2) {
+      // Stash tutorial: further shorten and wrap text for mobile devices.  The original
+      // copy wrapped off screen on some phones, so trim the wording and apply a
+      // smaller scale factor for compact layouts.  The message introduces the stash
+      // objective and warns about fakes.
+      const stashLines = [
+        'Get the stash, then escape to the car.',
+        'Fake stashes do not count.'
+      ];
+      // Apply a smaller scale so the dialog fits comfortably on narrow screens.  A
+      // scale of around 0.65 trims the title and content sizes while retaining
+      // readability.  Should further adjustments be needed, update this value.
+      this.showModal('Stash & BUNK', stashLines, 'Go', () => this.resumeFromModal(), { scale: 0.65 });
+    } else if (idx === 3){
+      // In the power-up stage, introduce the available abilities.  List phase, dash, and decoy
+      // with brief descriptions.  After closing the intro modal, present a choice modal.
+      const introLines = [
+        'PHASE: phase through walls',
+        'DASH: quickly dash in a direction',
+        'DECOY: send out a decoy runner'
+      ];
+      this.showModal('Power-ups', introLines, 'Go', () => {
+        this.resumeFromModal();
+        this.showPowerSelectionModal();
+      });
+    }
+  }
+  resumeFromModal(){
+    const cam = this.cameras.main;
+    cam.setZoom(1);
+    this.pointer = null;
+  }
+  showModal(title, lines, btn = 'Start', onStart, opts = {}){
+    this.pausedForModal = true;
+    const veil = this.add.rectangle(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      this.scale.width,
+      this.scale.height,
+      0x000000,
+      0.72
+    ).setScrollFactor(0).setDepth(9998).setInteractive();
+    // Determine font scale: allow a custom scale factor via opts.scale; otherwise,
+    // use 0.85 when opts.small is true, or 1.0 by default.
+    let scaleFac;
+    if (typeof opts.scale === 'number'){
+      scaleFac = opts.scale;
+    } else {
+      scaleFac = opts.small ? 0.85 : 1.0;
+    }
+    const dlg = this.rexUI.add.dialog({
+      x: this.scale.width / 2,
+      y: this.scale.height * 0.42,
+      background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 10, 0x0f172a, 0.96).setStrokeStyle(2, 0x2f3650),
+      title: this.add.text(0, 0, title, { color: '#cbd1ff', fontSize: Math.max(22, Math.floor(this.scale.height * 0.036 * scaleFac)) + 'px', fontStyle: 'bold' }),
+      content: this.add.text(0, 0, lines.join('\n'), { color: '#aab5ff', fontSize: Math.max(15, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px' }),
+      actions: [ this.add.text(0, 0, btn, { color: '#cbd1ff' }) ],
+      space: { title: 12, content: 12, action: 10, left: 18, right: 18, top: 16, bottom: 16 }
+    }).layout().setDepth(9999).popUp(200);
+    dlg.on('button.click', () => {
+      dlg.scaleDownDestroy(140);
+      veil.destroy();
+      this.pausedForModal = false;
+      onStart && onStart();
+    });
+  }
+  toast(msg, hold = 1000, color = '#cbd1ff'){
+    if (this.tipTween){
+      this.tweens.remove(this.tipTween);
+      this.tipTween = null;
+    }
+    if (!this.tipObj){
+      this.tipObj = this.add.text(
+        this.scale.width / 2,
+        18,
+        msg,
+        { color, fontSize: Math.max(14, Math.floor(this.scale.height * 0.026)) + 'px' }
+      ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10000);
+    } else {
+      this.tipObj.setText(msg);
+    }
+    this.tipObj.setColor(color);
+    this.tipObj.setAlpha(0);
+    this.tipTween = this.tweens.add({
+      targets: this.tipObj,
+      alpha: 1,
+      duration: 160,
+      onComplete: () => {
+        this.time.delayedCall(hold, () => this.tweens.add({ targets: this.tipObj, alpha: 0, duration: 200 }));
+      }
+    });
+  }
+  showBunkPopup(x, y){
+    const txt = this.add.text(
+      x,
+      y - this.cell * 0.5,
+      'BUNK!',
+      { color: '#f87171', fontSize: `${Math.max(16, Math.floor(this.cell*0.45))}px`, fontStyle: 'bold' }
+    ).setOrigin(0.5).setDepth(25);
+    txt.setStroke('#7f1d1d', Math.max(2, Math.floor(this.cell*0.05)));
+    this.tweens.add({
+      targets: txt,
+      alpha: 0,
+      y: txt.y - this.cell * 0.35,
+      duration: 800,
+      ease: 'Cubic.easeOut',
+      onComplete: () => txt.destroy()
+    });
+  }
+
+  /**
+   * Display a second modal in the power-up stage prompting the player to choose which power-up
+   * to equip. Only Dash and Phase are selectable; Decoy is shown but disabled.
+   */
+  showPowerSelectionModal(){
+    // Custom modal that mimics the PvP power selection layout.  Players must pick two
+    // abilities; decoy is shown but disabled.  Once two picks are made, the modal
+    // disappears and the tutorial resumes.
+    this.pausedForModal = true;
+    const width = this.scale.width;
+    const height = this.scale.height;
+    // Dark overlay to block game interactions
+    const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.72)
+      .setDepth(20000)
+      .setScrollFactor(0)
+      .setInteractive();
+    // Panel sizing
+    const panelW = Math.min(width * 0.80, 480);
+    const panelH = 220;
+    const panel = this.add.rectangle(width/2, height*0.40, panelW, panelH, 0x0f172a, 0.96)
+      .setStrokeStyle(2, 0x274060)
+      .setDepth(20001);
+    // Title
+    const title = this.add.text(panel.x, panel.y - panelH/2 + 32,
+      'Pick 2 Runner powers (tap order = use order)',
+      { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(height * 0.034)) + 'px', fontStyle:'bold' }
+    ).setOrigin(0.5).setDepth(20002);
+    // Options definition
+    const opts = [ { key:'phase', label:'PHASE', disabled:false }, { key:'dash', label:'DASH', disabled:false }, { key:'decoy', label:'DECOY', disabled:true } ];
+    const chosen = [];
+    // Horizontal spacing
+    const btnW = panelW / opts.length;
+    const btnH = 58;
+    // Keep a list of UI elements for cleanup later
+    const elements = [];
+    opts.forEach((opt, idx) => {
+      const x = panel.x - panelW/2 + btnW * (idx + 0.5);
+      const y = panel.y + panelH/2 - btnH/2 - 16;
+      const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
+        .setStrokeStyle(1, 0x274060)
+        .setDepth(20002)
+        .setInteractive({ useHandCursor: !opt.disabled });
+      const txt = this.add.text(x, y, opt.label, {
+        color: opt.disabled ? '#6b7280' : '#cbd1ff',
+        fontSize: Math.max(18, Math.floor(height * 0.032)) + 'px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(20003);
+      // Selection marker (small number)
+      const mark = this.add.text(x + (btnW*0.30), y - btnH*0.30, '', {
+        color: '#ffffff', fontSize: Math.max(14, Math.floor(height * 0.028)) + 'px', fontStyle:'bold', backgroundColor:'#1f2a44'
+      }).setOrigin(0.5).setDepth(20004).setVisible(false);
+      elements.push(rect, txt, mark);
+      rect.on('pointerdown', () => {
+        if (opt.disabled) return;
+        // Toggle selection: allow deselect by tapping again
+        const idxIn = chosen.indexOf(opt.key);
+        if (idxIn !== -1){
+          chosen.splice(idxIn,1);
+          mark.setVisible(false);
+        } else {
+          if (chosen.length >= 2) return;
+          chosen.push(opt.key);
+          mark.setText(String(chosen.length)).setVisible(true);
+          // When two powers are chosen, close modal
+          if (chosen.length === 2){
+            // Persist the chosen power order.  Players can use each once per run.
+            this.runnerPowersSelected = chosen.slice();
+            this.runnerPowersConsumed = [false, false];
+            // Clean up modal elements and resume the game
+            overlay.destroy();
+            panel.destroy();
+            title.destroy();
+            elements.forEach(el => el.destroy());
+            this.pausedForModal = false;
+          }
+        }
+      });
+    });
+  }
+  addCarry(){
+    if (this.carry){
+      this.runner.remove(this.carry, true);
+      this.carry = null;
+    }
+    const w = this.cell * 0.60;
+    const h = this.cell * 0.36;
+    const cont = this.add.container(0, -this.cell * 0.30).setDepth(2);
+    const aura = this.add.ellipse(0, 0, w * 1.2, h * 1.2, 0x86efac, 0.16).setBlendMode(Phaser.BlendModes.ADD);
+    const g = this.add.graphics();
+    const tan = 0xC8A97E;
+    const tanDark = 0xA9885F;
+    const tape = 0x8B7355;
+    const gloss = 0xE7D3B5;
+    const rad = Math.max(3, Math.floor(this.cell * 0.10));
+    g.fillStyle(tan, 1).lineStyle(Math.max(2, Math.floor(this.cell * 0.04)), tanDark, 1);
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, rad);
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, rad);
+    g.fillStyle(tape, 1);
+    g.fillRect(-w / 2 + 3, -h * 0.42, w - 6, h * 0.84);
+    g.fillStyle(gloss, 0.14);
+    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w * 0.36, h * 0.32, rad * 0.5);
+    cont.add([aura, g]);
+    this.runner.add(cont);
+    this.carry = cont;
+  }
+  setCarLights(on){
+    if (this.carLights) this.carLights.setVisible(!!on);
+  }
+
+  /**
+   * Animate the runner boarding the getaway car and the car driving off.
+   * After the car departs, proceed to the next tutorial stage or finish.
+   */
+  playCarDepartAndGoNext(){
+    // Prevent multiple triggers
+    if (this._carDeparting) return;
+    this._carDeparting = true;
+    // Compute outward direction based on the egress side
+    let dx = 0, dy = 0;
+    const side = this.egress?.side;
+    if (side === 'N'){ dx = 0; dy = -1; }
+    else if (side === 'S'){ dx = 0; dy = 1; }
+    else if (side === 'E'){ dx = 1; dy = 0; }
+    else if (side === 'W'){ dx = -1; dy = 0; }
+    // If car or runner missing, just go next immediately
+    if (!this.runner || !this.car){
+      this.goNext();
+      return;
+    }
+    // Determine the car nose position (front bumper) where the runner boards
+    const noseX = this.car.x + dx * (this.cell * 0.8);
+    const noseY = this.car.y + dy * (this.cell * 0.8);
+    // Tween: move runner to the car nose, shrink and fade out
+    this.tweens.add({
+      targets: this.runner,
+      x: noseX,
+      y: noseY,
+      scaleX: 0.6,
+      scaleY: 0.6,
+      alpha: 0.3,
+      duration: 350,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.runner.setVisible(false);
+        // Tween: drive car outward
+        const dist = this.cell * 8;
+        this.tweens.add({
+          targets: this.car,
+          x: this.car.x + dx * dist,
+          y: this.car.y + dy * dist,
+          duration: 1200,
+          ease: 'Sine.easeIn',
+          onComplete: () => {
+            // After the car departs, proceed to the next stage
+            this.goNext();
+          }
+        });
+      }
+    });
+  }
+  goNext(){
+    const next = this.stageIdx + 1;
+    if (next <= 3){
+      const cam = this.cameras.main;
+      cam.fadeOut(200, 0, 0, 0);
+      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.startStage(next);
+        cam.fadeIn(200, 0, 0, 0);
+      });
+    } else {
+      const dlg = this.rexUI.add.dialog({
+        x: this.scale.width / 2,
+        y: this.scale.height * 0.35,
+        background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 8, 0x101522, 0.96).setStrokeStyle(2, 0x2f3650),
+        title: this.add.text(0, 0, "You're ready", { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(this.scale.height * 0.032)) + 'px', fontStyle: 'bold' }),
+        content: this.add.text(0, 0, 'Play the full game or return to menu', { color: '#aab5ff', fontSize: Math.max(14, Math.floor(this.scale.height * 0.022)) + 'px' }),
+        actions: [
+          this.add.text(0, 0, 'Back', { color: '#cbd1ff' }),
+          this.add.text(0, 0, 'Play', { color: '#cbd1ff' })
+        ],
+        space: { title: 10, content: 10, action: 8, left: 14, right: 14, top: 12, bottom: 12 }
+      }).layout().popUp(160);
+      dlg.on('button.click', (btn, idx) => {
+        dlg.scaleDownDestroy(140);
+        if (idx === 0) this.scene.transition({ target: 'MENU', duration: 200, moveBelow: true });
+        else this.scene.transition({ target: 'PVP', duration: 200, moveBelow: true, data: { mode: 'pve' } });
+      });
+    }
+  }
+  queueDash(duration = 220){
+    // Teleport dash similar to PvP: instantly leap forward along the current facing.
+    // Ignore duration since it's instantaneous.
+    if (!this.runner) return;
+    // Determine facing from last movement or aim
+    const aim = this._runnerMoveDir || this.playerAim || { x: 1, y: 0 };
+    const dir = (Math.abs(aim.x) >= Math.abs(aim.y))
+      ? { x: Math.sign(aim.x) || 1, y: 0 }
+      : { x: 0, y: Math.sign(aim.y) || 1 };
+    const steps = 3;
+    const start = this.toCell(this.runner.x, this.runner.y);
+    let cx = start.x;
+    let cy = start.y;
+    for (let i = 0; i < steps; i++){
+      const nx = cx + dir.x;
+      const ny = cy + dir.y;
+      if (!this.inBoundsCell?.(nx, ny) || !this.isWalkableCell?.(nx, ny)) break;
+      cx = nx;
+      cy = ny;
+    }
+    this.runner.x = this.toWorldX(cx);
+    this.runner.y = this.toWorldY(cy);
+    this._didDash = true;
+  }
+
+  // --- Runner power helpers (order-based execution) ---
+
+  /**
+   * Activate the runner power at the given selection index, if not already
+   * consumed.  Consumed powers cannot be used again in the same stage.
+   * This mirrors the PvP power system but is simplified for tutorial use.
+   * @param {number} idx
+   */
+  activateRunnerPowerByIndex(idx){
+    if (!this.runnerPowersSelected || !this.runnerPowersConsumed) return;
+    if (idx < 0 || idx >= this.runnerPowersSelected.length) return;
+    if (this.runnerPowersConsumed[idx]) return;
+    const power = this.runnerPowersSelected[idx];
+    this.performRunnerPower(power);
+    this.runnerPowersConsumed[idx] = true;
+  }
+
+  /**
+   * Activate the next available runner power in selection order.
+   */
+  activateNextRunnerPower(){
+    if (!this.runnerPowersSelected || !this.runnerPowersConsumed) return;
+    for (let i = 0; i < this.runnerPowersSelected.length; i++){
+      if (!this.runnerPowersConsumed[i]){
+        this.activateRunnerPowerByIndex(i);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Activate a specific power by name (dash or phase) if it was selected and is
+   * not yet consumed.  Useful for keyboard shortcuts (SHIFT or SPACE).
+   * @param {string} name
+   */
+  activateRunnerPowerByName(name){
+    if (!this.runnerPowersSelected || !this.runnerPowersConsumed) return;
+    const idx = this.runnerPowersSelected.indexOf(name);
+    if (idx !== -1 && !this.runnerPowersConsumed[idx]){
+      this.activateRunnerPowerByIndex(idx);
+    }
+  }
+
+  /**
+   * Execute the logic for a specific power.  Only dash and phase are
+   * implemented here.  Phase grants temporary intangibility and fades
+   * the runner.  Dash teleports forward a few tiles along the facing.
+   * @param {string} power
+   */
+  performRunnerPower(power){
+    const now = performance.now();
+    if (!this.runner) return;
+    if (power === 'phase'){
+      // Phase: become intangible and semi-transparent for ~600ms
+      this._phaseUntil = now + 600;
+      this._didPhase = true;
+      this._phaseActive = true;
+      if (this.runner?.sprite) this.runner.sprite.setAlpha(0.35);
+    } else if (power === 'dash'){
+      // Dash: teleport forward up to 3 tiles
+      this.queueDash();
+    }
+  }
+
+  handleMovement(dt){
+    const speed = this.cell * 7.0;
+    let vx = 0;
+    let vy = 0;
+    const k = this.cursors;
+    const wasd = this.wasdKeys || {};
+    const leftDown = k.left?.isDown || wasd.A?.isDown;
+    const rightDown = k.right?.isDown || wasd.D?.isDown;
+    const upDown = k.up?.isDown || wasd.W?.isDown;
+    const downDown = k.down?.isDown || wasd.S?.isDown;
+    const usingKeys = leftDown || rightDown || upDown || downDown;
+
+    if (usingKeys){
+      if (leftDown) vx = -speed;
+      else if (rightDown) vx = speed;
+      if (upDown) vy = -speed;
+      else if (downDown) vy = speed;
+
+      const aim = { x: 0, y: 0 };
+      if (vx !== 0) aim.x = Math.sign(vx);
+      if (vy !== 0) aim.y = Math.sign(vy);
+      if (aim.x !== 0 || aim.y !== 0){
+        const len = Math.hypot(aim.x, aim.y) || 1;
+        const norm = { x: aim.x / len, y: aim.y / len };
+        this.playerDrift = norm;
+        this.playerAim = norm;
+        this.userTookOver = true;
+      }
+    } else {
+      const allowDrift = this.autoDrift !== false;
+      const fallback = { x: 1, y: 0 };
+      const drift = allowDrift ? (this.playerDrift || this._initDrift || fallback) : { x: 0, y: 0 };
+      const aim = allowDrift ? (this.playerAim || drift) : drift;
+      const lenAim = Math.hypot(aim.x, aim.y);
+      if (lenAim > 0.0001){
+        vx = (aim.x / lenAim) * speed;
+        vy = (aim.y / lenAim) * speed;
+      }
+    }
+
+    // Softly pull toward corridor centerlines for smoother navigation in narrow passages.
+    // Apply this assist whether moving via keys or via aim/drift (no keys).  This matches the PvP
+    // feel, where the runner gently snaps to corridor centers even when manually steered.
+    // Only apply corridor-assist when not using keyboard input.  In PvP, the
+    // runner snaps toward corridor centers only when moving via aim/drift (no keys),
+    // allowing smooth diagonal movement when two keys are pressed.  Applying the
+    // assist unconditionally caused a clunky, step-like motion when pressing
+    // multiple keys (e.g., down+right) in the tutorial.  Restricting the
+    // assist to non-keyboard movement resolves this and matches PvP.
+    if (!usingKeys) {
+      const dirAssist = (Math.abs(vx) > Math.abs(vy))
+        ? { x: Math.sign(vx), y: 0 }
+        : (Math.abs(vy) > 0 ? { x: 0, y: Math.sign(vy) } : { x: 0, y: 0 });
+      if (dirAssist.x || dirAssist.y) corridorAssist(this, this.runner, dirAssist, dt);
+    }
+
+    const now = performance.now();
+
+    // Determine whether runner powers are available.  Powers are only enabled in stage 3
+    // and after the player has chosen their abilities.  In earlier stages double-tap
+    // behaviour is ignored.
+    const powersActive = (this.stageIdx >= 3);
+    const tapDir = (Math.abs(vx) + Math.abs(vy) > 0.0001)
+      ? { x: Math.sign(vx), y: Math.sign(vy) }
+      : null;
+    if (!usingKeys){
+      this._lastTap = null;
+    } else if (tapDir){
+      if (!this._lastTap || now - this._lastTap.t > 340 || this._lastTap.dir.x !== tapDir.x || this._lastTap.dir.y !== tapDir.y){
+        this._lastTap = { t: now, dir: tapDir };
+      } else {
+        this._lastTap = null;
+        // On double-tap, execute the next selected power if available
+        if (powersActive && this.runnerPowersSelected){
+          this.activateNextRunnerPower();
+        }
+      }
+    }
+
+    // Keyboard shortcuts for powers: SHIFT triggers dash, SPACE triggers phase
+    if (powersActive && this.dashKey?.isDown){
+      this.activateRunnerPowerByName('dash');
+    }
+    if (powersActive && this.phaseKey?.isDown){
+      this.activateRunnerPowerByName('phase');
+    }
+
+    // Phase state: become intangible while _phaseUntil is in the future
+    this._phaseActive = (now < (this._phaseUntil || 0));
+    if (this.runner?.sprite){
+      this.runner.sprite.setAlpha(this._phaseActive ? 0.35 : 1);
+    }
+
+    // We no longer apply a speed multiplier for dash because dash teleports instead.
+
+    const dxTot = vx * dt;
+    const dyTot = vy * dt;
+    const stepMax = this.cell * 0.28;
+    const moveAxis = (amt, axis) => {
+      let rem = amt;
+      const dir = Math.sign(rem) || 0;
+      const step = stepMax * dir;
+      let guard = 0;
+      while (Math.abs(rem) > 0.0001 && guard++ < 32){
+        const d = (Math.abs(rem) > stepMax) ? step : rem;
+        const nx = axis === 'x' ? this.runner.x + d : this.runner.x;
+        const ny = axis === 'y' ? this.runner.y + d : this.runner.y;
+        if (this.canMoveTo(this.runner, nx, ny)){
+          if (axis === 'x') this.runner.x = nx;
+          else this.runner.y = ny;
+          rem -= d;
+        } else {
+          break;
+        }
+      }
+    };
+
+    const preX = this.runner.x;
+    const preY = this.runner.y;
+    moveAxis(dxTot, 'x');
+    moveAxis(dyTot, 'y');
+
+    if (Math.hypot(this.runner.x - preX, this.runner.y - preY) < 0.5 && (Math.abs(vx) + Math.abs(vy) > 0)){
+      const c = this.toCell(this.runner.x, this.runner.y);
+      const cx = this.toWorldX(c.x);
+      const cy = this.toWorldY(c.y);
+      const ux = cx - this.runner.x;
+      const uy = cy - this.runner.y;
+      const ul = Math.hypot(ux, uy) || 1;
+      const nudge = Math.min(this.cell * 0.20, ul);
+      const nx = this.runner.x + (ux / ul) * nudge;
+      const ny = this.runner.y + (uy / ul) * nudge;
+      if (this.canMoveTo(this.runner, nx, ny)){
+        this.runner.x = nx;
+        this.runner.y = ny;
+      }
+    }
+
+    const spdLen = Math.hypot(vx, vy);
+    if (spdLen > 0.0001){
+      const norm = { x: vx / spdLen, y: vy / spdLen };
+      this._runnerMoveDir = norm;
+      this._runnerLastAim = norm;
+    }
+  }
+
+  update(_, delta){
+    if (!this.runner) return;
+    const dt = delta / 1000;
+    if (this.pausedForModal) return;
+    this.handleMovement(dt);
+    if ((this.stageIdx === 2 || this.stageIdx === 3) && this._stashHaloG) {
+      const g = this._stashHaloG;
+      g.clear();
+      const t = (performance.now() % 1200) / 1200;
+      const r = this.cell * (0.65 + 0.15 * Math.sin(t * Math.PI * 2));
+      const draw = (obj) => {
+        if (!obj) return;
+        g.lineStyle(3, 0x86efac, 0.9);
+        g.strokeCircle(obj.x, obj.y, r);
+        g.lineStyle(1, 0x86efac, 0.45);
+        g.strokeCircle(obj.x, obj.y, r + 6);
+      };
+      draw(this.stash);
+      draw(this.bunkStash);
+    }
+    if (this.runner?.sprite){
+      const dx = this.runner.x - (this.lastPos?.x ?? this.runner.x);
+      const dy = this.runner.y - (this.lastPos?.y ?? this.runner.y);
+      const spd = Math.hypot(dx, dy);
+      if (spd > 0.001){
+        const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        this.runner.sprite.setAngle(ang);
+      }
+      this._stepElapsed = (this._stepElapsed || 0) + dt;
+      if (spd > 0.5){
+        if (this._stepElapsed >= 0.10){
+          this._stepElapsed = 0;
+          this._stepToggle = !this._stepToggle;
+          this.runner.sprite.setTexture(this._stepToggle ? 'td_runner_step' : 'td_runner');
+        }
+      } else if (this.runner.sprite.texture?.key !== 'td_runner'){
+        this.runner.sprite.setTexture('td_runner');
+      }
+    }
+    if (this.stageIdx === 1){
+      // In stage 1, reaching the car triggers an extraction animation rather than an instant transition
+      if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)) this.playCarDepartAndGoNext();
+    } else if (this.stageIdx === 2){
+      if (!this.hasPackage){
+        if (this.stash && this.overlaps(this.runner, this.stash)){
+          this.hasPackage = true;
+          this.addCarry();
+          this.stash?.setVisible(false);
+          if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
+          this.toast('Nice. Get to the car.');
+          this.setCarLights(true);
+        } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
+          this.toast('BUNK!', 1200, '#f87171');
+          this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
+          const decoy = this.bunkStash;
+          this.bunkStash = null;
+          this.tweens.add({ targets: decoy, alpha: 0, scale: 0.86, duration: 800, ease: 'Cubic.easeOut', onComplete: () => decoy.destroy() });
+        }
+      } else if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)){
+        // After picking up the package, reaching the car triggers the departure animation
+        this.playCarDepartAndGoNext();
+      }
+    } else if (this.stageIdx === 3) {
+      // In the power-up stage, spawn stashes normally and allow players to pick
+      // them up.  Collecting the real stash awards the package, just like in
+      // stage 2, but extraction is only allowed after both dash and phase have
+      // been demonstrated.  Fake stashes still show a BUNK message.
+      if (!this.hasPackage) {
+        if (this.stash && this.overlaps(this.runner, this.stash)) {
+          this.hasPackage = true;
+          this.addCarry();
+          this.stash?.setVisible(false);
+          if (this.bunkStash) { this.bunkStash.destroy(); this.bunkStash = null; }
+          this.toast('Nice. Get to the car.');
+          this.setCarLights(true);
+        } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)) {
+          this.toast('BUNK!', 1200, '#f87171');
+          this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
+          const decoy = this.bunkStash;
+          this.bunkStash = null;
+          this.tweens.add({ targets: decoy, alpha: 0, scale: 0.86, duration: 800, ease: 'Cubic.easeOut', onComplete: () => decoy.destroy() });
+        }
+      }
+      // Turn on car lights once both dash and phase have been used.  Boarding
+      // the car is only allowed after demonstrating both powers; the player
+      // can still collect the stash before using powers but cannot depart.
+      if (this._didDash && this._didPhase) this.setCarLights(true);
+      if ((this._didDash && this._didPhase) && this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)) {
+        // Final stage: after demonstrating dash and phase, board the car and depart
+        this.playCarDepartAndGoNext();
+      }
+    }
+    this.lastPos = { x: this.runner.x, y: this.runner.y };
+  }
+  overlaps(a, b){
+    if (!a || !b) return false;
+    const ra = new Phaser.Geom.Rectangle(a.x - 12, a.y - 12, 24, 24);
+    const rb = new Phaser.Geom.Rectangle(b.x - 12, b.y - 12, 24, 24);
+    return Phaser.Geom.Intersects.RectangleToRectangle(ra, rb);
+  }
+  overlapsPoint(a, x, y){
+    const ra = new Phaser.Geom.Rectangle(a.x - 12, a.y - 12, 24, 24);
+    return Phaser.Geom.Rectangle.Contains(ra, x, y);
+  }
+}
+
+export default TutorialMiniScene;
+
+
+
+
+
+

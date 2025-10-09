@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Plug Run LA</title>
+
+    <!-- Mobile-first: lock scale, prevent zoom -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+
+    <!-- put this in <head> of index.html -->
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgo=" />
+
+
+    <style>
+      /* Fill screen, dark theme, no scrollbars */
+      html, body, #app {
+        margin: 0;
+        height: 100%;
+        background: #0b0b12;
+        color: #fff;
+        overflow: hidden; /* no scrolling on mobile */
+      }
+
+      /* Let Phaser handle all touch gestures (no double-tap zoom, no pull-to-refresh) */
+      canvas {
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        display: block; /* remove tiny gaps on some browsers */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
