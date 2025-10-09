@@ -68,11 +68,10 @@ export class MenuScene extends Phaser.Scene {
 
     // Cards data
     const modes = [
-      { key:'learn', title:'Learn the Streets', sub:'Quick tutorial. Zero pressure.' },
-      { key:'run',   title:'Run the Block',     sub:'Chain stash-house escapes. Build your rep.' },
-      { key:'daily', title:'Daily Drop',        sub:'One shared route. Beat today\'s time.' },
-      { key:'pvp',   title:'Street Wars',       sub:'PVP arena. Bring your loadout.' },
-      { key:'talk',  title:'The Block Talk',    sub:'Leaderboards and stats.' }
+      { key:'learn',  title:'Learn the Streets',  sub:'Quick tutorial. Zero pressure.' },
+      { key:'runner', title:'Run the Block',      sub:'Escape endless stash houses. Build your chain.' },
+      { key:'plug',   title:'Defend the Stash',   sub:'Play as the plug. Stop the runner.' },
+      { key:'pvp',    title:'Street Wars',        sub:'1v1 PVP. Coming soon.' }
     ];
 
     // Carousel root container to keep z-order tidy
@@ -280,20 +279,38 @@ export class MenuScene extends Phaser.Scene {
 
   launchCard(card){
     const k = card.modeKey;
-    if (k === 'run'){
-      // Fade and enter PVP (which is actually our PVE run)
-      const cam = this.cameras.main;
-      cam.fadeOut(250, 0,0,0);
-      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
-        this.scene.transition({ target: 'PVP', duration: 250, moveBelow: true, data: { mode: 'pve' } });
-      });
-    } else if (k === 'learn'){
-      const cam = this.cameras.main;
+    const cam = this.cameras.main;
+
+    if (k === 'learn'){
+      // Launch tutorial
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
         this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
       });
+    } else if (k === 'runner'){
+      // Run the Block - play as runner
+      cam.fadeOut(250, 0,0,0);
+      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
+        this.scene.transition({
+          target: 'PVP',
+          duration: 250,
+          moveBelow: true,
+          data: { mode: 'pve', role: 'runner' }
+        });
+      });
+    } else if (k === 'plug'){
+      // Defend the Stash - play as plug
+      cam.fadeOut(250, 0,0,0);
+      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
+        this.scene.transition({
+          target: 'PVP',
+          duration: 250,
+          moveBelow: true,
+          data: { mode: 'pve', role: 'plug' }
+        });
+      });
     } else {
+      // Coming soon (pvp, daily, etc.)
       console.info('[Menu] Coming soon:', k);
       this.toast('Coming soon');
     }

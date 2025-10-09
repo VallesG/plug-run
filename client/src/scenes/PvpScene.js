@@ -884,44 +884,47 @@ export class PvpScene extends Phaser.Scene {
     // recompute speed scalars now that aiPlug exists
     this.recomputeSpeedsFromCell();
 
-    // PRE-GAME: role picker
+    // PRE-GAME: role picker (now skipped if role passed from menu)
     this.roleChosen = !!this.role;
-    if (!this.roleChosen) this.role = null;
 
-    const openRolePicker = ()=>{
-      const modal = this.showModal({
-        title: 'Choose Your Role',
-        lines: [],
-        buttons: [
-          { label:'Play as Runner', color:'#9ad1ff', bg:0x1a2038, onClick: ()=> this.startMatch('runner') },
-          { label:'Play as Plug',   color:'#ffb4b4', bg:0x2a1a1a, onClick: ()=> this.startMatch('plug')   },
-        ]
-      });
+    // Role is now passed from menu - start match immediately
+    if (this.roleChosen) {
+      this.startMatch(this.role);
+    } else {
+      // Fallback: show role picker if no role specified (shouldn't happen with new flow)
+      const openRolePicker = ()=>{
+        const modal = this.showModal({
+          title: 'Choose Your Role',
+          lines: [],
+          buttons: [
+            { label:'Play as Runner', color:'#9ad1ff', bg:0x1a2038, onClick: ()=> this.startMatch('runner') },
+            { label:'Play as Plug',   color:'#ffb4b4', bg:0x2a1a1a, onClick: ()=> this.startMatch('plug')   },
+          ]
+        });
 
-      // place sprites above the two buttons
-      const cellMini = Math.max(18, this.cell * 0.9);
-      const yOffset  = Math.max(42, this.cell * 1.6);
+        // place sprites above the two buttons
+        const cellMini = Math.max(18, this.cell * 0.9);
+        const yOffset  = Math.max(42, this.cell * 1.6);
 
-      if (modal.btnCenters?.length >= 2){
-        const rC = modal.btnCenters[0];
-        const pC = modal.btnCenters[1];
+        if (modal.btnCenters?.length >= 2){
+          const rC = modal.btnCenters[0];
+          const pC = modal.btnCenters[1];
 
-        const runnerMini = makeRunnerSprite(this, rC.x, rC.y - yOffset, cellMini)
-          .setScrollFactor(0).setDepth(20010);
-        const plugMini   = makePlugSprite(this,   pC.x, pC.y - yOffset, cellMini)
-          .setScrollFactor(0).setDepth(20010);
+          const runnerMini = makeRunnerSprite(this, rC.x, rC.y - yOffset, cellMini)
+            .setScrollFactor(0).setDepth(20010);
+          const plugMini   = makePlugSprite(this,   pC.x, pC.y - yOffset, cellMini)
+            .setScrollFactor(0).setDepth(20010);
 
-        this.tweens.add({ targets: runnerMini, y: runnerMini.y - 3, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
-        this.tweens.add({ targets: plugMini,   y: plugMini.y   - 3, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
+          this.tweens.add({ targets: runnerMini, y: runnerMini.y - 3, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
+          this.tweens.add({ targets: plugMini,   y: plugMini.y   - 3, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
 
-        modal.registerExtra(runnerMini, plugMini);
-      }
+          modal.registerExtra(runnerMini, plugMini);
+        }
 
-      this.currentModal = modal;
-    };
-
-    if (!this.roleChosen) openRolePicker();
-    else this.startMatch(this.role);
+        this.currentModal = modal;
+      };
+      openRolePicker();
+    }
   }
 
   startMatch(role){
