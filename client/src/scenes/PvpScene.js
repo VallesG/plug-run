@@ -135,22 +135,6 @@ function generateArenaMap(cols, rows, { rng } = {}){
   for (let x=0;x<cols;x++){ g[0][x]=T.WALL; g[rows-1][x]=T.WALL; }
   for (let y=0;y<rows;y++){ g[y][0]=T.WALL; g[y][cols-1]=T.WALL; }
 
-  // Reserve a permanent "HUD notch" inside the map at bottom-left:
-  // a 3x3 solid wall block just inside the border. Players cannot enter.
-  const NOTCH_W = Math.min(3, Math.max(2, Math.floor(cols * 0.08))); // adaptively 2~3
-  const NOTCH_H = Math.min(3, Math.max(2, Math.floor(rows * 0.08)));
-  const notch = {
-    x0: 1,
-    y0: rows - 1 - NOTCH_H - 0,
-    w: NOTCH_W,
-    h: NOTCH_H
-  };
-  for (let yy = notch.y0; yy < notch.y0 + notch.h; yy++){
-    for (let xx = notch.x0; xx < notch.x0 + notch.w; xx++){
-      g[yy][xx] = T.WALL;
-    }
-  }
-
   const SHAPES = [
     [[0,0]],[[0,0],[1,0]],[[0,0],[1,0],[2,0],[3,0]],
     [[0,0],[0,1],[1,0],[1,1]],[[0,0],[1,0],[0,1],[0,2]],
@@ -291,9 +275,6 @@ function generateArenaMap(cols, rows, { rng } = {}){
   g[stash.y][stash.x]     = T.FLOOR;
   g[extract.y][extract.x] = T.FLOOR;
 
-  // Return notch meta so UI can dock to it
-  const notchCenter = { x: notch.x0 + Math.floor(notch.w/2), y: notch.y0 + Math.floor(notch.h/2) };
-
   // --- Egress driveway outside border ---
   const sides = ['N','E','S','W'];
   const side = sides[(rnd()*4)|0];
@@ -323,7 +304,7 @@ function generateArenaMap(cols, rows, { rng } = {}){
 
   const egress = { side, entry, width: gapW };
 
-  return { grid:g, spawns:{runner,plug}, objectives:{stash,extract}, egress, notch:{...notch, center:notchCenter} };
+  return { grid:g, spawns:{runner,plug}, objectives:{stash,extract}, egress };
 }
 
 
@@ -905,6 +886,7 @@ export class PvpScene extends Phaser.Scene {
     this.aiPlug = { speed: 120, shootEvery: 0.90, maxRange: 300, inaccuracy: 0.45, reactDelay: 550 };
 
     // Apply progressive difficulty in PvE mode
+    // Current scaling: +2.5% speed, +2% fire rate, +3% accuracy, -25ms reaction, +10 vision per round
     if (this.mode === 'pve') {
       this.applyPvEDifficulty();
     }
