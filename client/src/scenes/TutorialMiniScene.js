@@ -4,7 +4,9 @@ import Phaser from 'phaser';
 const STAGE_SEEDS = {
   S1_MOVEMENT: 0x71C1A5E1,
   S2_STASHES: 0xA3B17C22,
-  S3_POWERUPS: 0xC0FFEE99
+  S3_POWERUPS: 0xC0FFEE99,
+  S4_RUNNER_PVP: 0xDEADBEEF,
+  S5_PLUG_PVP: 0xCAFEBABE
 };
 
 const T = { FLOOR: 0, WALL: 1 };
@@ -308,17 +310,17 @@ export class TutorialMiniScene extends Phaser.Scene {
     ['check_11','check_12','check_13','check_14'].forEach(k => this.load.image(k, `/tiles/checker/${k}.png`));
     this.load.image('td_runner', '/sprites/td/runner.png');
     this.load.image('td_runner_step', '/sprites/td/runner_step.png');
+    this.load.image('td_plug', '/sprites/td/plug.png');
+    this.load.image('td_plug_step', '/sprites/td/plug_step.png');
     this.load.image('car_blue', '/cars/blue.png');
   }
-  init(){
-    const width = Math.max(1, this.scale.gameSize.width);
-    const height = Math.max(1, this.scale.gameSize.height);
+  init(data){
+    // Match PvpScene: calculate cols/rows dynamically from screen size
     this.cell = 24;
-    this.cols = Math.max(18, Math.floor(width / this.cell));
-    this.rows = Math.max(12, Math.floor(height / this.cell));
-    this.worldWidth = this.cols * this.cell;
-    this.worldHeight = this.rows * this.cell;
+    this.cols = Math.floor(this.scale.width / this.cell);
+    this.rows = Math.floor(Math.max(1, this.scale.height) / this.cell);
     this.pad = { x: 0, y: 0 };
+    // Start at stage 1 by default
     this.stageIdx = 1;
     this.tipObj = null;
     this.tipTween = null;
@@ -328,11 +330,18 @@ export class TutorialMiniScene extends Phaser.Scene {
     this._phaseUntil = 0;
     this._phaseActive = false;
     this.autoDrift = true;
+
+    // Weapon stats for stage 5 (matching PvpScene)
+    this.weaponStats = {
+      pistol:   { clip: 12, speed: 320, color: 0xff4444, spreadAngles: [0] },
+      shotgun:  { clip: 8,  speed: 280, color: 0xff4444, spreadAngles: [-12, 0, 12] },
+      rifle:    { clip: 10, speed: 360, color: 0xff4444, spreadAngles: [0] }
+    };
   }
 
   create(){
     this.ensureResizeListener();
-    this.startStage(1);
+    this.startStage(this.stageIdx);
   }
   ensureResizeListener(){
     if (this._onResizeCb) return;
@@ -357,14 +366,14 @@ export class TutorialMiniScene extends Phaser.Scene {
   computeLayout(){
     const usableW = Math.max(1, this.scale.gameSize.width);
     const usableH = Math.max(1, this.scale.gameSize.height);
-    const cell = Math.max(16, Math.floor(Math.min(usableW / this.cols, usableH / this.rows)));
+    const MIN_CELL = 14;
+    const cellFit = Math.floor(Math.min(usableW / this.cols, usableH / this.rows));
+    const cell = Math.max(MIN_CELL, cellFit);
     this.cell = cell;
     this.worldWidth = this.cols * cell;
     this.worldHeight = this.rows * cell;
-    this.pad = {
-      x: Math.floor((usableW - this.worldWidth) / 2),
-      y: Math.floor((usableH - this.worldHeight) / 2)
-    };
+    // Match PvpScene: no padding, fill screen
+    this.pad = { x: 0, y: 0 };
     // Match PvP runner size: give the runner a larger hitbox so it hugs corridor
     // walls and centers properly. Use 0.44 of a tile side, similar to the PvP scene.
     this.hitboxRadius = this.cell * 0.44;
@@ -387,11 +396,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Reset extraction state so the car depart animation can run in each stage
     this._carDeparting = false;
 
-    const baseCell = 24;
-    const width = Math.max(1, this.scale.gameSize.width);
-    const height = Math.max(1, this.scale.gameSize.height);
-    this.cols = Math.max(18, Math.floor(width / baseCell));
-    this.rows = Math.max(12, Math.floor(height / baseCell));
+    // Recompute layout using current cols/rows (set in init)
     this.computeLayout();
 
     this.stash = null;
@@ -404,22 +409,50 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.runnerPowersSelected = null;
     this.runnerPowersConsumed = null;
 
-    // Reset any previously selected runner powers.  Each stage begins with no
-    // active power selections or consumables.  The third stage will set
-    // these values after the player picks two powers from the modal.
-    this.runnerPowersSelected = null;
-    this.runnerPowersConsumed = null;
+    // Clean up AI sprites from previous stages
+    if (this.aiPlug){
+      this.aiPlug.destroy();
+      this.aiPlug = null;
+    }
+    if (this.aiRunner){
+      this.aiRunner.destroy();
+      this.aiRunner = null;
+    }
 
-    // Reset any previously selected runner powers.  Each stage begins with no
-    // active power selections or consumables.  The third stage will set
-    // these values after the player picks two powers from the modal.
-    this.runnerPowersSelected = null;
-    this.runnerPowersConsumed = null;
+    // Clean up bullet arrays
+    if (this.bulletsPlug){
+      this.bulletsPlug.forEach(b => b.destroy?.());
+      this.bulletsPlug = null;
+    }
+    if (this.bulletsPlayer){
+      this.bulletsPlayer.forEach(b => b.destroy?.());
+      this.bulletsPlayer = null;
+    }
+
+    // Initialize bullet arrays for stages 4 & 5
+    if (idx === 4){
+      this.bulletsPlug = [];
+      this._aiPlugTick = 0;
+      this._playerHits = 0; // track how many times player was hit
+      this._playerHP = 2; // player has 2 HP in stage 4
+    } else if (idx === 5){
+      this.bulletsPlayer = [];
+      this._playerShootCooldown = 0;
+      this._mobileShootRequested = false;
+    }
+
+    // Clean up HP display from previous stages
+    if (this._hpDisplay){
+      this._hpDisplay.destroy();
+      this._hpDisplay = null;
+    }
 
     const seeds = {
       1: STAGE_SEEDS.S1_MOVEMENT,
       2: STAGE_SEEDS.S2_STASHES,
-      3: STAGE_SEEDS.S3_POWERUPS
+      3: STAGE_SEEDS.S3_POWERUPS,
+      4: STAGE_SEEDS.S4_RUNNER_PVP,
+      5: STAGE_SEEDS.S5_PLUG_PVP
     };
     const seed = seeds[idx] || STAGE_SEEDS.S1_MOVEMENT;
 
@@ -427,6 +460,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.grid = arena.grid;
     this.egress = arena.egress;
     this.spawnRunnerCell = arena.spawns.runner;
+    this.plugSpawnCell = arena.spawns.plug; // Save plug spawn for stage 4
     this.stashCell = arena.objectives.stash;
     this.extractCell = arena.objectives.extract;
 
@@ -613,8 +647,12 @@ export class TutorialMiniScene extends Phaser.Scene {
           const TAP_TIME = 260;
           const TAP_DIST = Math.max(10, this.cell * 0.4);
           if (dt <= TAP_TIME && moved <= TAP_DIST){
+            // Stage 5: tap to shoot
+            if (this.stageIdx === 5){
+              this._mobileShootRequested = true;
+            }
             // Handle double tap to trigger the next power (dash/phase) if selected
-            if (this.stageIdx >= 3 && this.runnerPowersSelected){
+            else if (this.stageIdx >= 3 && this.runnerPowersSelected){
               const diff = now - (this._lastPointerTapAt || 0);
               if (diff > 0 && diff <= 280){
                 this._lastPointerTapAt = 0;
@@ -702,17 +740,55 @@ export class TutorialMiniScene extends Phaser.Scene {
     return true;
   }
   placeObjectives(idx){
+    const side = this.egress.side;
     const ex = this.toWorldX(this.egress.entry.x);
     const ey = this.toWorldY(this.egress.entry.y);
-    this.extractPad = this.add.rectangle(ex, ey, this.cell*0.9, this.cell*0.9, 0x0ea5e9, 0.08)
-      .setStrokeStyle(2, 0x22c55e)
+
+    // Match PvpScene car placement: position with forward offset
+    let dx = 0, dy = 0, ang = 0;
+    if (side === 'N'){ ang = 0; dx = 0; dy = -1; }
+    else if (side === 'S'){ ang = 180; dx = 0; dy = 1; }
+    else if (side === 'E'){ ang = 90; dx = 1; dy = 0; }
+    else { ang = -90; dx = -1; dy = 0; }
+
+    // Use same car placement for ALL stages (same as stage 1)
+    const forward = this.cell * 0.6;
+    const cx = ex + dx * forward;
+    const cy = ey + dy * forward;
+
+    // Car sprite - match PvpScene size exactly
+    const carLen = this.cell * 2.6;
+    this.car = this.add.image(cx, cy, 'car_blue').setDepth(1200);
+    this.car.setDisplaySize(carLen, this.cell * 1.4).setAngle(ang);
+    this.carOutDir = { x: dx, y: dy };
+
+    // Car beacon matching PvpScene - positioned at car nose
+    this.showCarBeacon = () => {
+      if (!this.car) return;
+      this.hideCarBeacon();
+      const noseX = this.car.x + dx * (this.cell * 0.8);
+      const noseY = this.car.y + dy * (this.cell * 0.8);
+      const c = this.add.container(noseX, noseY).setDepth(1300);
+      const w = this.cell * 1.8, h = this.cell * 1.2;
+      const glow = this.add.ellipse(0, 0, w, h, 0x60a5fa, 0.55).setBlendMode(Phaser.BlendModes.ADD);
+      const inner = this.add.ellipse(0, 0, w*0.6, h*0.5, 0xffffff, 0.35).setBlendMode(Phaser.BlendModes.ADD);
+      c.add([glow, inner]);
+      this.tweens.add({ targets: glow, alpha: 0.25, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: c, scaleX: 1.12, scaleY: 1.12, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.carBeacon = c;
+    };
+    this.hideCarBeacon = () => {
+      if (this.carBeacon){ this.carBeacon.destroy(); this.carBeacon = null; }
+    };
+
+    // Show beacon in all stages for visibility
+    this.showCarBeacon();
+
+    // Extract pad for collision - slightly larger than PvP for mobile-friendly extraction
+    this.extractPad = this.add.rectangle(cx, cy, this.cell*2.8, this.cell*2.8, 0x0ea5e9, 0)
       .setDepth(3);
-    const side = this.egress.side;
-    const ang = (side==='N') ? 0 : (side==='S') ? 180 : (side==='E') ? 90 : -90;
-    this.car = this.add.image(ex, ey, 'car_blue').setDepth(11).setAngle(ang);
-    // Make the car a bit larger to match the PvP scene for clearer extraction
-    this.car.setDisplaySize(this.cell*2.4, this.cell*1.3);
-    this.carLights = makeCarLights(this, ex, ey, side).setVisible(idx===1);
+
+    // Stages 2 and 3: spawn stashes (real + bunk)
     if (idx === 2 || idx === 3){
       const w = this.cell*0.82, h = this.cell*0.52;
       const stashPos = { x: this.toWorldX(this.stashCell.x), y: this.toWorldY(this.stashCell.y) };
@@ -725,6 +801,37 @@ export class TutorialMiniScene extends Phaser.Scene {
       if (dA <= dB){ this.bunkStash = pkgA; this.stash = pkgB; }
       else { this.bunkStash = pkgB; this.stash = pkgA; }
       this._stashHaloG = this.add.graphics().setDepth(12);
+    }
+
+    // Stage 4: spawn AI plug and real + bunk stash (like PvP)
+    if (idx === 4){
+      this.createAIPlug();
+      // Spawn 2 stashes: 1 real, 1 bunk (same logic as stages 2 & 3)
+      const w = this.cell*0.82, h = this.cell*0.52;
+      const stashPos = { x: this.toWorldX(this.stashCell.x), y: this.toWorldY(this.stashCell.y) };
+      const extractPos = { x: this.toWorldX(this.extractCell.x), y: this.toWorldY(this.extractCell.y) };
+      const pkgA = makeDuffel(this, stashPos.x, stashPos.y, w, h);
+      const pkgB = makeDuffel(this, extractPos.x, extractPos.y, w, h);
+      const runnerPos = { x: this.toWorldX(this.spawnRunnerCell.x), y: this.toWorldY(this.spawnRunnerCell.y) };
+      const dA = Math.hypot(pkgA.x - runnerPos.x, pkgA.y - runnerPos.y);
+      const dB = Math.hypot(pkgB.x - runnerPos.x, pkgB.y - runnerPos.y);
+      if (dA <= dB){ this.bunkStash = pkgA; this.stash = pkgB; }
+      else { this.bunkStash = pkgB; this.stash = pkgA; }
+      this._stashHaloG = this.add.graphics().setDepth(12);
+    }
+
+    // Stage 5: spawn AI runner and real stash, convert player runner to plug
+    if (idx === 5){
+      this.createAIRunner();
+      const w = this.cell*0.82, h = this.cell*0.52;
+      const stashPos = { x: this.toWorldX(this.stashCell.x), y: this.toWorldY(this.stashCell.y) };
+      this.stash = makeDuffel(this, stashPos.x, stashPos.y, w, h);
+      this._stashHaloG = this.add.graphics().setDepth(12);
+
+      // Convert player sprite to plug
+      if (this.runner?.sprite){
+        this.runner.sprite.setTexture('td_plug');
+      }
     }
   }
   resetState(){
@@ -795,15 +902,42 @@ export class TutorialMiniScene extends Phaser.Scene {
     } else if (idx === 3){
       // In the power-up stage, introduce the available abilities.  List phase, dash, and decoy
       // with brief descriptions.  After closing the intro modal, present a choice modal.
+      const desktop = this.sys.game.device.os.desktop;
       const introLines = [
         'PHASE: phase through walls',
         'DASH: quickly dash in a direction',
-        'DECOY: send out a decoy runner'
-      ];
+        'DECOY: send out a decoy runner',
+        '',
+        desktop ? '' : 'Tip: Double tap screen to activate'
+      ].filter(line => line !== '');
       this.showModal('Power-ups', introLines, 'Go', () => {
         this.resumeFromModal();
         this.showPowerSelectionModal();
       });
+    } else if (idx === 4) {
+      // Stage 4: Runner PvP tutorial - show runner power selection first, then intro modal
+      const runnerLines = [
+        'Now that you know the basics, try and take',
+        'the stash from the plug while dodging',
+        'his bullets. Go to the getaway car.',
+        '',
+        'Tip: Don\'t get hit more than once!'
+      ];
+      this.showModal('Run from the Plug', runnerLines, 'Go', () => {
+        this.resumeFromModal();
+        this.showPowerSelectionModal();
+      }, { scale: 0.70 });
+    } else if (idx === 5) {
+      // Stage 5: Plug PvP tutorial - show gun selection first, then start
+      const plugLines = [
+        'Great! Now you have the stashes.',
+        'Now you\'re a plug. Defend against runners.',
+        desktop ? 'Click to shoot, move mouse to aim.' : 'Tap screen to shoot, drag to aim.'
+      ];
+      this.showModal('Defend the Block', plugLines, 'Go', () => {
+        this.resumeFromModal();
+        this.showGunSelectionModal();
+      }, { scale: 0.70 });
     }
   }
   resumeFromModal(){
@@ -914,7 +1048,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Title
     const title = this.add.text(panel.x, panel.y - panelH/2 + 32,
       'Pick 2 Runner powers (tap order = use order)',
-      { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(height * 0.034)) + 'px', fontStyle:'bold' }
+      { color: '#cbd1ff', fontSize: Math.max(18, Math.floor(height * 0.030)) + 'px', fontStyle:'bold' }
     ).setOrigin(0.5).setDepth(20002);
     // Options definition
     const opts = [ { key:'phase', label:'PHASE', disabled:false }, { key:'dash', label:'DASH', disabled:false }, { key:'decoy', label:'DECOY', disabled:true } ];
@@ -968,6 +1102,73 @@ export class TutorialMiniScene extends Phaser.Scene {
       });
     });
   }
+
+  /**
+   * Display gun selection modal for stage 5 (plug tutorial)
+   * Player must choose one weapon before starting
+   */
+  showGunSelectionModal(){
+    this.pausedForModal = true;
+    const width = this.scale.width;
+    const height = this.scale.height;
+    // Dark overlay
+    const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.72)
+      .setDepth(20000)
+      .setScrollFactor(0)
+      .setInteractive();
+    // Panel sizing
+    const panelW = Math.min(width * 0.85, 500);
+    const panelH = 240;
+    const panel = this.add.rectangle(width/2, height*0.40, panelW, panelH, 0x0f172a, 0.96)
+      .setStrokeStyle(2, 0x274060)
+      .setDepth(20001);
+    // Title
+    const title = this.add.text(panel.x, panel.y - panelH/2 + 28,
+      'Choose Your Weapon',
+      { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(height * 0.034)) + 'px', fontStyle:'bold' }
+    ).setOrigin(0.5).setDepth(20002);
+    // Gun options
+    const guns = [
+      { key:'pistol', label:'PISTOL', ammo: 12 },
+      { key:'shotgun', label:'SHOTGUN', ammo: 8 },
+      { key:'rifle', label:'RIFLE', ammo: 10 }
+    ];
+    const btnW = (panelW - 40) / guns.length;
+    const btnH = 70;
+    const elements = [];
+
+    guns.forEach((gun, idx) => {
+      const x = panel.x - panelW/2 + 20 + btnW * (idx + 0.5);
+      const y = panel.y + panelH/2 - btnH/2 - 20;
+      const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
+        .setStrokeStyle(2, 0x274060)
+        .setDepth(20002)
+        .setInteractive({ useHandCursor: true });
+      const txt = this.add.text(x, y - 8, gun.label, {
+        color: '#cbd1ff',
+        fontSize: Math.max(16, Math.floor(height * 0.028)) + 'px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(20003);
+      const ammoTxt = this.add.text(x, y + 14, `${gun.ammo} rounds`, {
+        color: '#9AA6B2',
+        fontSize: Math.max(12, Math.floor(height * 0.020)) + 'px'
+      }).setOrigin(0.5).setDepth(20003);
+      elements.push(rect, txt, ammoTxt);
+
+      rect.on('pointerdown', () => {
+        // Set weapon and ammo for stage 5
+        this.selectedWeapon = gun.key;
+        this.weaponAmmo = gun.ammo;
+        // Clean up modal
+        overlay.destroy();
+        panel.destroy();
+        title.destroy();
+        elements.forEach(el => el.destroy());
+        this.pausedForModal = false;
+      });
+    });
+  }
+
   addCarry(){
     if (this.carry){
       this.runner.remove(this.carry, true);
@@ -1028,7 +1229,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       y: noseY,
       scaleX: 0.6,
       scaleY: 0.6,
-      alpha: 0.3,
+      alpha: 0.4,
       duration: 350,
       ease: 'Sine.easeOut',
       onComplete: () => {
@@ -1051,7 +1252,7 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
   goNext(){
     const next = this.stageIdx + 1;
-    if (next <= 3){
+    if (next <= 5){
       const cam = this.cameras.main;
       cam.fadeOut(200, 0, 0, 0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -1059,22 +1260,30 @@ export class TutorialMiniScene extends Phaser.Scene {
         cam.fadeIn(200, 0, 0, 0);
       });
     } else {
+      // Tutorial complete - show completion modal and return to menu
+      const veil = this.add.rectangle(
+        this.scale.width / 2,
+        this.scale.height / 2,
+        this.scale.width,
+        this.scale.height,
+        0x000000,
+        0.72
+      ).setScrollFactor(0).setDepth(9998).setInteractive();
+
       const dlg = this.rexUI.add.dialog({
         x: this.scale.width / 2,
         y: this.scale.height * 0.35,
         background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 8, 0x101522, 0.96).setStrokeStyle(2, 0x2f3650),
-        title: this.add.text(0, 0, "You're ready", { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(this.scale.height * 0.032)) + 'px', fontStyle: 'bold' }),
-        content: this.add.text(0, 0, 'Play the full game or return to menu', { color: '#aab5ff', fontSize: Math.max(14, Math.floor(this.scale.height * 0.022)) + 'px' }),
-        actions: [
-          this.add.text(0, 0, 'Back', { color: '#cbd1ff' }),
-          this.add.text(0, 0, 'Play', { color: '#cbd1ff' })
-        ],
+        title: this.add.text(0, 0, "You're ready!", { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(this.scale.height * 0.032)) + 'px', fontStyle: 'bold' }),
+        content: this.add.text(0, 0, 'Tutorial complete!\n\nTime to run the streets and defend the block.', { color: '#aab5ff', fontSize: Math.max(14, Math.floor(this.scale.height * 0.022)) + 'px', align: 'center' }),
+        actions: [ this.add.text(0, 0, 'Exit', { color: '#cbd1ff' }) ],
         space: { title: 10, content: 10, action: 8, left: 14, right: 14, top: 12, bottom: 12 }
-      }).layout().popUp(160);
-      dlg.on('button.click', (btn, idx) => {
+      }).layout().setDepth(9999).popUp(160);
+
+      dlg.on('button.click', () => {
         dlg.scaleDownDestroy(140);
-        if (idx === 0) this.scene.transition({ target: 'MENU', duration: 200, moveBelow: true });
-        else this.scene.transition({ target: 'PVP', duration: 200, moveBelow: true, data: { mode: 'pve' } });
+        veil.destroy();
+        this.scene.transition({ target: 'MENU', duration: 200, moveBelow: true });
       });
     }
   }
@@ -1165,6 +1374,319 @@ export class TutorialMiniScene extends Phaser.Scene {
       // Dash: teleport forward up to 3 tiles
       this.queueDash();
     }
+  }
+
+  // ========== STAGE 4 & 5: AI AND BULLET HELPERS ==========
+
+  // Create AI plug sprite for stage 4
+  createAIPlug(){
+    // Use the plug spawn cell from arena generation (arena.spawns.plug)
+    const spawnCell = this.plugSpawnCell || { x: Math.floor(this.cols / 2), y: Math.floor(this.rows / 2) };
+    const wx = this.toWorldX(spawnCell.x);
+    const wy = this.toWorldY(spawnCell.y);
+
+    this.aiPlug = this.add.container(wx, wy).setDepth(8);
+    const shadow = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
+    const sprite = this.add.sprite(0, 0, 'td_plug').setOrigin(0.5);
+    sprite.setScale((this.cell / 128) * 3.0);
+    this.aiPlug.add([shadow, sprite]);
+    this.aiPlug.sprite = sprite;
+    this.aiPlug.hbRadius = this.hitboxRadius;
+    this.aiPlug.hp = 3;
+  }
+
+  // Create AI runner sprite for stage 5
+  // Spawn at plug spawn cell (opposite end from player) to avoid overlap
+  createAIRunner(){
+    const spawnCell = this.plugSpawnCell || this.spawnRunnerCell;
+    const wx = this.toWorldX(spawnCell.x);
+    const wy = this.toWorldY(spawnCell.y);
+
+    this.aiRunner = this.add.container(wx, wy).setDepth(8);
+    const shadow = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
+    const sprite = this.add.sprite(0, 0, 'td_runner').setOrigin(0.5);
+    sprite.setScale((this.cell / 128) * 3.0);
+    this.aiRunner.add([shadow, sprite]);
+    this.aiRunner.sprite = sprite;
+    this.aiRunner.hbRadius = this.hitboxRadius;
+    this.aiRunner.hp = 2; // 2 hits to eliminate
+    this.aiRunner.hasStash = false;
+    this.aiRunner.carry = null;
+  }
+
+  // Add carry package to AI runner
+  addAIRunnerCarry(){
+    if (!this.aiRunner) return;
+    if (this.aiRunner.carry){
+      this.aiRunner.remove(this.aiRunner.carry, true);
+      this.aiRunner.carry = null;
+    }
+    const w = this.cell * 0.60;
+    const h = this.cell * 0.36;
+    const cont = this.add.container(0, -this.cell * 0.30).setDepth(2);
+    const aura = this.add.ellipse(0, 0, w * 1.2, h * 1.2, 0x86efac, 0.16).setBlendMode(Phaser.BlendModes.ADD);
+    const g = this.add.graphics();
+    const tan = 0xC8A97E;
+    const tanDark = 0xA9885F;
+    const tape = 0x8B7355;
+    const gloss = 0xE7D3B5;
+    const rad = Math.max(3, Math.floor(this.cell * 0.10));
+    g.fillStyle(tan, 1).lineStyle(Math.max(2, Math.floor(this.cell * 0.04)), tanDark, 1);
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, rad);
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, rad);
+    g.fillStyle(tape, 1);
+    g.fillRect(-w / 2 + 3, -h * 0.42, w - 6, h * 0.84);
+    g.fillStyle(gloss, 0.14);
+    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w * 0.36, h * 0.32, rad * 0.5);
+    cont.add([aura, g]);
+    this.aiRunner.add(cont);
+    this.aiRunner.carry = cont;
+  }
+
+  // Pathfinding: get walkable neighbors
+  neighbors4(c){
+    return [
+      {x:c.x+1, y:c.y}, {x:c.x-1, y:c.y}, {x:c.x, y:c.y+1}, {x:c.x, y:c.y-1}
+    ].filter(n=>this.isWalkableCell(n.x,n.y));
+  }
+
+  // BFS pathfinding to find next step towards goal
+  findNextStepTowards(startCell, goalCell){
+    if (startCell.x===goalCell.x && startCell.y===goalCell.y) return startCell;
+    const key = (c)=>`${c.x},${c.y}`;
+    const q=[startCell]; const seen=new Set([key(startCell)]); const parent = new Map();
+    while(q.length){
+      const cur = q.shift();
+      for (const n of this.neighbors4(cur)){
+        const k = key(n); if (seen.has(k)) continue;
+        seen.add(k); parent.set(k, cur);
+        if (n.x===goalCell.x && n.y===goalCell.y){
+          let step=n, prev=parent.get(k);
+          while (prev && !(prev.x===startCell.x && prev.y===startCell.y)){
+            const pk = key(prev); step = prev; prev = parent.get(pk);
+          }
+          return step || n;
+        }
+        q.push(n);
+      }
+    }
+    return startCell;
+  }
+
+  // Update AI plug behavior (chase and shoot)
+  updatePlugAI(dt){
+    if (!this.aiPlug || !this.runner) return;
+
+    const d = this.aiPlug;
+    const ax = this.runner.x;
+    const ay = this.runner.y;
+    const now = performance.now();
+    const speed = this.cell * 4.5;
+
+    // Chase the runner
+    const vx = ax - d.x;
+    const vy = ay - d.y;
+    const dist = Math.hypot(vx, vy);
+
+    // Simple chase logic
+    const dirX = Math.sign(vx);
+    const dirY = Math.sign(vy);
+    const nx = d.x + dirX * speed * dt;
+    const ny = d.y + dirY * speed * dt;
+
+    if (this.canMoveTo(d, nx, d.y)) d.x = nx;
+    if (this.canMoveTo(d, d.x, ny)) d.y = ny;
+
+    // Shoot if aligned and in range
+    const maxRange = this.cell * 12;
+    if (dist <= maxRange){
+      const aligned = (Math.abs(ax - d.x) < this.cell*0.4) || (Math.abs(ay - d.y) < this.cell*0.4);
+      if (aligned){
+        this._aiPlugTick = (this._aiPlugTick || 0) + dt;
+        if (this._aiPlugTick >= 0.6){ // shoot every 0.6s
+          this._aiPlugTick = 0;
+          const adx = Math.abs(ax - d.x);
+          const ady = Math.abs(ay - d.y);
+          const aim = (adx > ady)
+            ? {x: Math.sign(ax - d.x), y: 0}
+            : {x: 0, y: Math.sign(ay - d.y)};
+          this.spawnWeaponBurst(d, aim, this.bulletsPlug);
+        }
+      }
+    }
+  }
+
+  // Update AI runner behavior (go to stash then extract)
+  updateRunnerAI(delta){
+    if (!this.aiRunner) return;
+
+    const now = performance.now();
+    const dt = delta / 1000;
+
+    // Replan every 400ms
+    if (!this._aiRunnerPlanAt || now >= this._aiRunnerPlanAt){
+      this._aiRunnerPlanAt = now + 400;
+
+      const runnerCell = this.toCell(this.aiRunner.x, this.aiRunner.y);
+      const targetCell = (!this.aiRunner.hasStash)
+        ? this.toCell(this.stash.x, this.stash.y)
+        : this.toCell(this.extractPad.x, this.extractPad.y);
+
+      let nextCell = this.findNextStepTowards(runnerCell, targetCell);
+      if (nextCell.x === runnerCell.x && nextCell.y === runnerCell.y){
+        const ns = this.neighbors4(runnerCell);
+        if (ns.length) nextCell = ns[(Math.random()*ns.length)|0];
+      }
+
+      const dir = { x: Math.sign(nextCell.x - runnerCell.x), y: Math.sign(nextCell.y - runnerCell.y) };
+      const speed = this.cell * 5.0 * (this.aiRunner.hasStash ? 0.75 : 1);
+
+      this._aiRunnerVX = dir.x * speed;
+      this._aiRunnerVY = dir.y * speed;
+    }
+
+    // Move AI runner
+    const vx = this._aiRunnerVX || 0;
+    const vy = this._aiRunnerVY || 0;
+    const nx = this.aiRunner.x + vx * dt;
+    const ny = this.aiRunner.y + vy * dt;
+
+    if (this.canMoveTo(this.aiRunner, nx, this.aiRunner.y)) this.aiRunner.x = nx;
+    if (this.canMoveTo(this.aiRunner, this.aiRunner.x, ny)) this.aiRunner.y = ny;
+  }
+
+  // Spawn weapon burst (bullets) - supports spread for shotgun
+  spawnWeaponBurst(origin, aim, group, weapon = 'pistol'){
+    const stats = this.weaponStats?.[weapon] || this.weaponStats?.pistol;
+    const ax = aim?.x ?? 0;
+    const ay = aim?.y ?? 0;
+    const len = Math.hypot(ax, ay) || 1;
+    const baseAngle = Math.atan2(ay / len, ax / len);
+    const pellets = stats?.spreadAngles?.length ? stats.spreadAngles : [0];
+
+    pellets.forEach((offset) => {
+      const ang = baseAngle + Phaser.Math.DegToRad(offset);
+      const dx = Math.cos(ang);
+      const dy = Math.sin(ang);
+      const color = stats?.color ?? 0xff4444;
+      const speed = stats?.speed ?? 300;
+
+      const bullet = this.add.circle(origin.x, origin.y, Math.max(3, Math.floor(this.cell*0.12)), color, 1)
+        .setDepth(9);
+
+      bullet.vx = dx * speed;
+      bullet.vy = dy * speed;
+      bullet.life = 1200;
+
+      group.push(bullet);
+    });
+  }
+
+  // Update all bullets
+  updateBullets(delta){
+    const dt = delta / 1000;
+
+    // Update plug bullets (stage 4)
+    if (this.bulletsPlug){
+      for (let i = this.bulletsPlug.length - 1; i >= 0; i--){
+        const b = this.bulletsPlug[i];
+        b.x += (b.vx || 0) * dt;
+        b.y += (b.vy || 0) * dt;
+        b.life -= delta;
+
+        const blocked = this.isWallAtWorld(b.x, b.y);
+        if (blocked || b.life <= 0){
+          b.destroy();
+          this.bulletsPlug.splice(i, 1);
+        }
+      }
+    }
+
+    // Update player bullets (stage 5)
+    if (this.bulletsPlayer){
+      for (let i = this.bulletsPlayer.length - 1; i >= 0; i--){
+        const b = this.bulletsPlayer[i];
+        b.x += (b.vx || 0) * dt;
+        b.y += (b.vy || 0) * dt;
+        b.life -= delta;
+
+        const blocked = this.isWallAtWorld(b.x, b.y);
+        if (blocked || b.life <= 0){
+          b.destroy();
+          this.bulletsPlayer.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  // Handle player shooting for stage 5
+  handlePlayerShooting(){
+    if (!this.runner) return;
+
+    const now = performance.now();
+
+    // Desktop: click to shoot
+    if (this.sys.game.device.os.desktop){
+      if (this.input.activePointer.isDown){
+        if (now >= (this._playerShootCooldown || 0)){
+          this._playerShootCooldown = now + 250; // 250ms cooldown
+
+          // Aim from mouse position
+          const pointer = this.input.activePointer;
+          const dx = pointer.worldX - this.runner.x;
+          const dy = pointer.worldY - this.runner.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const aim = { x: dx / len, y: dy / len };
+
+          this.spawnWeaponBurst(this.runner, aim, this.bulletsPlayer, this.selectedWeapon);
+        }
+      }
+    } else {
+      // Mobile: tap to shoot in current aim direction
+      if (this._mobileShootRequested){
+        this._mobileShootRequested = false;
+        if (now >= (this._playerShootCooldown || 0)){
+          this._playerShootCooldown = now + 250;
+          const aim = this.playerAim || { x: 1, y: 0 };
+          this.spawnWeaponBurst(this.runner, aim, this.bulletsPlayer, this.selectedWeapon);
+        }
+      }
+    }
+  }
+
+  // Check if two sprites overlap (simple AABB collision)
+  spritesOverlap(a, b){
+    if (!a || !b) return false;
+    const r1 = (a.hbRadius || this.cell * 0.4);
+    const r2 = (b.hbRadius || this.cell * 0.4);
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    return dist < (r1 + r2);
+  }
+
+  // Can damage target (check i-frames)
+  canDamage(who){
+    return performance.now() >= (who.iUntil || 0);
+  }
+
+  // Hit target with bullet
+  hitTarget(who){
+    if (!this.canDamage(who)) return;
+
+    who.hp = (who.hp || 0) - 1;
+    who.iUntil = performance.now() + 600; // 600ms i-frames
+
+    // Flash effect
+    const originalAlpha = who.alpha;
+    this.tweens.add({
+      targets: who,
+      alpha: 0.3,
+      duration: 60,
+      yoyo: true,
+      repeat: 3,
+      onComplete: () => who.setAlpha(originalAlpha)
+    });
+
+    this.cameras.main.shake(60, 0.004);
   }
 
   handleMovement(dt){
@@ -1317,8 +1839,104 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (!this.runner) return;
     const dt = delta / 1000;
     if (this.pausedForModal) return;
+
+    // Handle movement for all stages (player controls runner in 1-4, plug in 5)
     this.handleMovement(dt);
-    if ((this.stageIdx === 2 || this.stageIdx === 3) && this._stashHaloG) {
+
+    // Stage 4: Update AI plug and bullets
+    if (this.stageIdx === 4){
+      this.updatePlugAI(dt);
+      this.updateBullets(delta);
+
+      // Display player HP
+      if (!this._hpDisplay){
+        this._hpDisplay = this.add.text(
+          this.scale.width - 10,
+          10,
+          `HP: ${this._playerHP || 2}`,
+          { color: '#86efac', fontSize: Math.max(16, Math.floor(this.scale.height * 0.028)) + 'px', fontStyle: 'bold' }
+        ).setOrigin(1, 0).setScrollFactor(0).setDepth(10000);
+      } else {
+        this._hpDisplay.setText(`HP: ${this._playerHP || 2}`);
+      }
+
+      // Check if plug bullets hit the runner
+      if (this.bulletsPlug){
+        for (let i = this.bulletsPlug.length - 1; i >= 0; i--){
+          const b = this.bulletsPlug[i];
+          if (this.spritesOverlap(b, this.runner)){
+            b.destroy();
+            this.bulletsPlug.splice(i, 1);
+            this.hitTarget(this.runner);
+            this._playerHP = (this._playerHP || 2) - 1;
+
+            // Player loses after HP reaches 0
+            if (this._playerHP <= 0){
+              this.toast('You were eliminated!', 1500, '#f87171');
+              this.time.delayedCall(1600, () => this.startStage(4));
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Stage 5: Update AI runner, player shooting, and bullets
+    if (this.stageIdx === 5){
+      this.updateRunnerAI(delta);
+      this.handlePlayerShooting();
+      this.updateBullets(delta);
+
+      // Display AI runner HP
+      if (!this._hpDisplay && this.aiRunner){
+        this._hpDisplay = this.add.text(
+          this.scale.width - 10,
+          10,
+          `Runner HP: ${this.aiRunner.hp || 2}`,
+          { color: '#ffd166', fontSize: Math.max(16, Math.floor(this.scale.height * 0.028)) + 'px', fontStyle: 'bold' }
+        ).setOrigin(1, 0).setScrollFactor(0).setDepth(10000);
+      } else if (this._hpDisplay && this.aiRunner) {
+        this._hpDisplay.setText(`Runner HP: ${this.aiRunner.hp || 2}`);
+      }
+
+      // Check if player bullets hit the AI runner
+      if (this.bulletsPlayer && this.aiRunner){
+        for (let i = this.bulletsPlayer.length - 1; i >= 0; i--){
+          const b = this.bulletsPlayer[i];
+          if (this.spritesOverlap(b, this.aiRunner)){
+            b.destroy();
+            this.bulletsPlayer.splice(i, 1);
+            this.hitTarget(this.aiRunner);
+
+            // Player wins if AI runner is eliminated
+            if (this.aiRunner.hp <= 0){
+              this.toast('Defender wins!', 1500, '#86efac');
+              this.time.delayedCall(1600, () => this.goNext());
+              return;
+            }
+          }
+        }
+      }
+
+      // Check if AI runner picked up the stash
+      if (!this.aiRunner.hasStash && this.stash && this.overlaps(this.aiRunner, this.stash)){
+        this.aiRunner.hasStash = true;
+        this.addAIRunnerCarry();
+        this.stash?.setVisible(false);
+        if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+        this.toast('Runner got the stash!', 1200, '#ffd166');
+      }
+
+      // Check if AI runner extracted (player loses)
+      if (this.aiRunner.hasStash && this.overlapsPoint(this.aiRunner, this.extractPad.x, this.extractPad.y)){
+        this.toast('Runner extracted! You lose.', 1500, '#f87171');
+        this.time.delayedCall(1600, () => this.startStage(5));
+        return;
+      }
+    }
+
+    // Draw stash halo for stages 2, 3, 4, 5
+    if ((this.stageIdx === 2 || this.stageIdx === 3 || this.stageIdx === 4 || this.stageIdx === 5) && this._stashHaloG) {
       const g = this._stashHaloG;
       g.clear();
       const t = (performance.now() % 1200) / 1200;
@@ -1333,6 +1951,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       draw(this.stash);
       draw(this.bunkStash);
     }
+    // Update player sprite animation and rotation
     if (this.runner?.sprite){
       const dx = this.runner.x - (this.lastPos?.x ?? this.runner.x);
       const dy = this.runner.y - (this.lastPos?.y ?? this.runner.y);
@@ -1346,11 +1965,62 @@ export class TutorialMiniScene extends Phaser.Scene {
         if (this._stepElapsed >= 0.10){
           this._stepElapsed = 0;
           this._stepToggle = !this._stepToggle;
-          this.runner.sprite.setTexture(this._stepToggle ? 'td_runner_step' : 'td_runner');
+          const baseTexture = (this.stageIdx === 5) ? 'td_plug' : 'td_runner';
+          const stepTexture = (this.stageIdx === 5) ? 'td_plug_step' : 'td_runner_step';
+          this.runner.sprite.setTexture(this._stepToggle ? stepTexture : baseTexture);
         }
-      } else if (this.runner.sprite.texture?.key !== 'td_runner'){
-        this.runner.sprite.setTexture('td_runner');
+      } else {
+        const baseTexture = (this.stageIdx === 5) ? 'td_plug' : 'td_runner';
+        if (this.runner.sprite.texture?.key !== baseTexture){
+          this.runner.sprite.setTexture(baseTexture);
+        }
       }
+    }
+
+    // Update AI plug sprite animation (stage 4)
+    if (this.stageIdx === 4 && this.aiPlug?.sprite){
+      const lastPlugPos = this._lastPlugPos || { x: this.aiPlug.x, y: this.aiPlug.y };
+      const dx = this.aiPlug.x - lastPlugPos.x;
+      const dy = this.aiPlug.y - lastPlugPos.y;
+      const spd = Math.hypot(dx, dy);
+      if (spd > 0.001){
+        const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        this.aiPlug.sprite.setAngle(ang);
+      }
+      this._plugStepElapsed = (this._plugStepElapsed || 0) + dt;
+      if (spd > 0.5){
+        if (this._plugStepElapsed >= 0.10){
+          this._plugStepElapsed = 0;
+          this._plugStepToggle = !this._plugStepToggle;
+          this.aiPlug.sprite.setTexture(this._plugStepToggle ? 'td_plug_step' : 'td_plug');
+        }
+      } else if (this.aiPlug.sprite.texture?.key !== 'td_plug'){
+        this.aiPlug.sprite.setTexture('td_plug');
+      }
+      this._lastPlugPos = { x: this.aiPlug.x, y: this.aiPlug.y };
+    }
+
+    // Update AI runner sprite animation (stage 5)
+    if (this.stageIdx === 5 && this.aiRunner?.sprite){
+      const lastRunnerPos = this._lastAIRunnerPos || { x: this.aiRunner.x, y: this.aiRunner.y };
+      const dx = this.aiRunner.x - lastRunnerPos.x;
+      const dy = this.aiRunner.y - lastRunnerPos.y;
+      const spd = Math.hypot(dx, dy);
+      if (spd > 0.001){
+        const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        this.aiRunner.sprite.setAngle(ang);
+      }
+      this._runnerStepElapsed = (this._runnerStepElapsed || 0) + dt;
+      if (spd > 0.5){
+        if (this._runnerStepElapsed >= 0.10){
+          this._runnerStepElapsed = 0;
+          this._runnerStepToggle = !this._runnerStepToggle;
+          this.aiRunner.sprite.setTexture(this._runnerStepToggle ? 'td_runner_step' : 'td_runner');
+        }
+      } else if (this.aiRunner.sprite.texture?.key !== 'td_runner'){
+        this.aiRunner.sprite.setTexture('td_runner');
+      }
+      this._lastAIRunnerPos = { x: this.aiRunner.x, y: this.aiRunner.y };
     }
     if (this.stageIdx === 1){
       // In stage 1, reaching the car triggers an extraction animation rather than an instant transition
@@ -1362,8 +2032,10 @@ export class TutorialMiniScene extends Phaser.Scene {
           this.addCarry();
           this.stash?.setVisible(false);
           if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
+          // Clear stash halo graphics
+          if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
           this.toast('Nice. Get to the car.');
-          this.setCarLights(true);
+          this.showCarBeacon();
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
@@ -1386,8 +2058,10 @@ export class TutorialMiniScene extends Phaser.Scene {
           this.addCarry();
           this.stash?.setVisible(false);
           if (this.bunkStash) { this.bunkStash.destroy(); this.bunkStash = null; }
+          // Clear stash halo graphics
+          if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
           this.toast('Nice. Get to the car.');
-          this.setCarLights(true);
+          this.showCarBeacon();
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)) {
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
@@ -1404,7 +2078,31 @@ export class TutorialMiniScene extends Phaser.Scene {
         // Final stage: after demonstrating dash and phase, board the car and depart
         this.playCarDepartAndGoNext();
       }
+    } else if (this.stageIdx === 4){
+      // Stage 4: Player as runner vs AI plug - same stash logic as stages 2 & 3
+      if (!this.hasPackage){
+        if (this.stash && this.overlaps(this.runner, this.stash)){
+          this.hasPackage = true;
+          this.addCarry();
+          this.stash?.setVisible(false);
+          if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
+          if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          this.toast('Got the stash! Get to the car.');
+          this.showCarBeacon();
+        } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
+          this.toast('BUNK!', 1200, '#f87171');
+          this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
+          const decoy = this.bunkStash;
+          this.bunkStash = null;
+          this.tweens.add({ targets: decoy, alpha: 0, scale: 0.86, duration: 800, ease: 'Cubic.easeOut', onComplete: () => decoy.destroy() });
+        }
+      } else if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)){
+        // Player successfully extracted with stash
+        this.playCarDepartAndGoNext();
+      }
     }
+    // Note: Stage 5 logic is handled earlier in the update method
+
     this.lastPos = { x: this.runner.x, y: this.runner.y };
   }
   overlaps(a, b){
