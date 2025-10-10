@@ -559,8 +559,30 @@ export class PvpScene extends Phaser.Scene {
     this.pad  = { x: 0, y: 0 };
     this.timerMs = 90_000;
 
-    this.role = (data && 'role' in data) ? data.role : null;
-    this.seed = data?.seed ?? this.seed ?? ((Math.random() * 2**32) | 0);
+    // scene.transition passes data via scene.settings.data, not init param
+    const settings = this.scene.settings.data || {};
+    const initData = data || settings;
+
+    console.log('[PvP Init] data:', data);
+    console.log('[PvP Init] scene.settings.data:', settings);
+    console.log('[PvP Init] final initData:', initData);
+
+    this.role = (initData && 'role' in initData) ? initData.role : null;
+    this.seed = initData?.seed ?? this.seed ?? ((Math.random() * 2**32) | 0);
+    this.tutorialStage = initData?.tutorialStage ?? null;
+
+    // PvE session tracking
+    this.mode = initData?.mode || 'pvp'; // 'pve' or 'pvp'
+    console.log('[PvP Init] Set mode to:', this.mode, 'role:', this.role);
+
+    if (this.mode === 'pve') {
+      // Continue session or start new
+      this.pveRound = initData?.pveRound ?? 1;
+      this.pveSessionStash = initData?.pveSessionStash ?? 0; // Total stash collected (leaderboard metric)
+      this.pveSessionRep = initData?.pveSessionRep ?? 0; // Total rep collected
+      this.pveBestRound = initData?.pveBestRound ?? 0;
+      console.log('[PvP Init] PvE mode - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep);
+    }
   }
 
   // world/grid helpers
@@ -691,7 +713,15 @@ export class PvpScene extends Phaser.Scene {
       // load both directories based on prefix
       furnIds.forEach(id=> this.load.image('furn_'+id, `/tiles/furn/tile_${id}.png`));
       furn2Ids.forEach(id=> this.load.image('f2_'+id, `/tiles/furn2/tile_${id}.png`));
-      this.load.once('complete', ()=> this.scene.restart({ role: this.role, seed: this.seed }));
+      this.load.once('complete', ()=> this.scene.restart({
+        mode: this.mode,
+        role: this.role,
+        seed: this.seed,
+        pveRound: this.pveRound,
+        pveSessionStash: this.pveSessionStash,
+        pveSessionRep: this.pveSessionRep,
+        pveBestRound: this.pveBestRound
+      }));
       this.load.start();
       return;
     }
@@ -735,7 +765,15 @@ export class PvpScene extends Phaser.Scene {
     // layout
     this.computeLayoutFromViewport();
     this.scale.off('resize', this._onResizeCb);
-    this._onResizeCb = () => this.scene.restart({ role: this.role, seed: this.seed });
+    this._onResizeCb = () => this.scene.restart({
+      mode: this.mode,
+      role: this.role,
+      seed: this.seed,
+      pveRound: this.pveRound,
+      pveSessionStash: this.pveSessionStash,
+      pveSessionRep: this.pveSessionRep,
+      pveBestRound: this.pveBestRound
+    });
     this.scale.on('resize', this._onResizeCb);
 
     // arena
@@ -863,8 +901,14 @@ export class PvpScene extends Phaser.Scene {
 
     this.meleeEnabled = false;
 
-    // AI knobs
+    // AI knobs (base difficulty)
     this.aiPlug = { speed: 120, shootEvery: 0.90, maxRange: 300, inaccuracy: 0.45, reactDelay: 550 };
+
+    // Apply progressive difficulty in PvE mode
+    if (this.mode === 'pve') {
+      this.applyPvEDifficulty();
+    }
+
     // Defender AI anti-lockstep helpers
     this._aiPlugStrafeDir = { x: 0, y: 0 };
     this._aiPlugStrafeUntil = 0;
@@ -1351,14 +1395,50 @@ export class PvpScene extends Phaser.Scene {
   }
 
   startExtractionSequence(){
-    if (this.roundOver) return; this.roundOver = true;
+    if (this.roundOver) return;
+
+    // PvE mode: update stats and show floating rewards, then continue with normal extraction
+    if (this.mode === 'pve') {
+      console.log('[PvE] Extraction! Round:', this.pveRound, 'Mode:', this.mode);
+      // Update stats
+      const stashEarned = this.calculateStashValue(this.pveRound);
+      const repEarned = this.calculateRep(this.pveRound);
+      this.pveSessionStash += stashEarned;
+      this.pveSessionRep += repEarned;
+      this.pveBestRound = Math.max(this.pveBestRound, this.pveRound);
+      console.log('[PvE] Stats - Stash:', stashEarned, 'Rep:', repEarned, 'Total Stash:', this.pveSessionStash, 'Total Rep:', this.pveSessionRep);
+
+      // Show floating numbers at extraction point (will stay visible during fade and next round's power modal)
+      this.showFloatingRewards(stashEarned, repEarned);
+      // Continue with normal extraction sequence (fade, restart, power modal will show automatically)
+    }
+
+    this.roundOver = true;
     this.input.keyboard.enabled = false; this._mouseDown = false;
     const doFade = () => {
       const veil = this.add.rectangle(this.cameras.main.centerX, this.cameras.main.centerY, this.scale.gameSize.width, this.scale.gameSize.height, 0x000000, 0)
         .setScrollFactor(0).setDepth(5000);
       this.tweens.add({ targets: veil, alpha: 1, duration: 500, ease:'Sine.easeIn', onComplete: ()=>{
-        const newSeed = (Math.random() * 2**32) | 0;
-        this.scene.restart({ role: this.role, seed: newSeed });
+        // If in tutorial mode, transition back to tutorial scene for next stage
+        if (this.tutorialStage === 4) {
+          // Completed runner tutorial, go to plug tutorial
+          this.scene.start('TUTORIAL_MINI', { continueToStage: 5 });
+        } else if (this.tutorialStage === 5) {
+          // Completed plug tutorial, show completion
+          this.scene.start('TUTORIAL_MINI', { continueToStage: 6 });
+        } else {
+          // Restart with new seed (preserve mode for PvE)
+          const newSeed = (Math.random() * 2**32) | 0;
+          this.scene.restart({
+            mode: this.mode,
+            role: this.role,
+            seed: newSeed,
+            pveRound: this.mode === 'pve' ? (this.pveRound || 1) + 1 : undefined,
+            pveSessionStash: this.pveSessionStash,
+            pveSessionRep: this.pveSessionRep,
+            pveBestRound: this.pveBestRound
+          });
+        }
       }});
     };
     // Runner boards the car: move to the car nose and shrink/fade
@@ -1578,10 +1658,12 @@ export class PvpScene extends Phaser.Scene {
       const ang = baseAngle + Phaser.Math.DegToRad(offset);
       const dx = Math.cos(ang);
       const dy = Math.sin(ang);
-      const color = stats?.color ?? 0xffd166;
+      // In PvE mode, all bullets are red with normal blend; in PvP, use weapon-specific color with ADD blend
+      const color = this.mode === 'pve' ? 0xef4444 : (stats?.color ?? 0xffd166);
+      const blendMode = this.mode === 'pve' ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD;
       const bullet = this.add.circle(origin.x, origin.y, Math.max(3, Math.floor(this.cell*0.12)), color, 1)
         .setDepth(9)
-        .setBlendMode(Phaser.BlendModes.ADD);
+        .setBlendMode(blendMode);
       group.add(bullet);
       bullet.vx = dx * (stats?.speed ?? 300);
       bullet.vy = dy * (stats?.speed ?? 300);
@@ -1650,32 +1732,44 @@ export class PvpScene extends Phaser.Scene {
   // --- Runner power selection (pick TWO, order matters) ---
   promptRunnerPowerSelection(onDone){
     if (this.role !== 'runner') { onDone?.(); return; }
-    const options = ['phase','dash','decoy'];
+
+    // Power definitions with symbols and colors
+    const powers = [
+      { id: 'phase', name: 'PHASE', symbol: '👻', color: '#a78bfa' },  // purple ghost
+      { id: 'dash', name: 'DASH', symbol: '⚡', color: '#fbbf24' },     // yellow lightning
+      { id: 'decoy', name: 'DECOY', symbol: '🎭', color: '#60a5fa' }   // blue mask
+    ];
+
     this.roundPausedForMenu = true;
+
+    // Show round number if in PvE mode
+    const titleText = this.mode === 'pve' ? `ROUND ${this.pveRound}` : 'Power Selection';
+
     const modal = this.showModal({
-      title: 'Pick 2 Runner powers (tap order = use order)',
-      lines: [],
+      title: titleText,
+      lines: ['Pick 2 Power-Ups'],
       buttons: []
     });
     const { destroy, registerExtra, panel } = modal;
     const cx = panel?.x ?? this.cameras.main.centerX;
     const cy = panel?.y ?? this.cameras.main.centerY;
-    const gap = 140;
-    const startX = cx - gap * (options.length - 1) / 2;
-    const y = cy + 20;
+    const btnWidth = 110;
+    const gap = 125;
+    const startX = cx - gap * (powers.length - 1) / 2;
+    const y = cy + 40;
 
     const chosen = [];
     const markers = new Map();
     const select = (power) => {
-      const i = chosen.indexOf(power);
+      const i = chosen.indexOf(power.id);
       if (i !== -1){
         chosen.splice(i,1);
-        markers.get(power)?.setVisible(false);
+        markers.get(power.id)?.setVisible(false);
         return;
       }
       if (chosen.length >= 2) return;
-      chosen.push(power);
-      const m = markers.get(power);
+      chosen.push(power.id);
+      const m = markers.get(power.id);
       if (m){ m.setText(String(chosen.length)).setVisible(true); }
       if (chosen.length === 2){
         this.runnerPowersSelected = chosen.slice();
@@ -1687,20 +1781,39 @@ export class PvpScene extends Phaser.Scene {
       }
     };
 
-    options.forEach((power, idx) => {
+    powers.forEach((power, idx) => {
       const x = startX + gap * idx;
-      const btn = this.add.rectangle(x, y, 140, 48, 0x14202f, 1)
-        .setStrokeStyle(1, 0x274060)
+
+      // Button background with power color tint
+      const btn = this.add.rectangle(x, y, btnWidth, 80, 0x14202f, 1)
+        .setStrokeStyle(2, parseInt(power.color.replace('#', '0x')))
         .setDepth(20004)
         .setInteractive({ useHandCursor: true });
-      const label = power.toUpperCase();
-      const txt = this.add.text(x, y, label, { color:'#cbd1ff', fontSize:'18px', fontStyle:'bold' })
-        .setOrigin(0.5).setDepth(20005);
-      const badge = this.add.text(x + 60, y - 18, '1', { color:'#ffffff', fontSize:'14px', fontStyle:'bold', backgroundColor:'#1f2a44' })
-        .setOrigin(0.5).setDepth(20006).setVisible(false);
-      markers.set(power, badge);
+
+      // Symbol (emoji) above name
+      const symbol = this.add.text(x, y - 15, power.symbol, {
+        fontSize:'32px'
+      }).setOrigin(0.5).setDepth(20005);
+
+      // Power name below symbol
+      const txt = this.add.text(x, y + 20, power.name, {
+        color: power.color,
+        fontSize:'16px',
+        fontStyle:'bold'
+      }).setOrigin(0.5).setDepth(20005);
+
+      // Selection order badge (top-right corner of button)
+      const badge = this.add.text(x + (btnWidth / 2) - 10, y - 35, '1', {
+        color:'#ffffff',
+        fontSize:'16px',
+        fontStyle:'bold',
+        backgroundColor:'#10b981',
+        padding: { x: 6, y: 4 }
+      }).setOrigin(0.5).setDepth(20006).setVisible(false);
+
+      markers.set(power.id, badge);
       btn.on('pointerdown', () => select(power));
-      registerExtra(btn, txt, badge);
+      registerExtra(btn, symbol, txt, badge);
     });
   }
 
@@ -2422,25 +2535,7 @@ export class PvpScene extends Phaser.Scene {
     let moveHandler = updateSwipe;
     let upHandler   = endSwipe;
 
-    // --- On-screen touch debug overlay (visible aid while diagnosing mobile input) ---
-    this.debugTouch = true; // enable visual debug for now
-    if (this.debugTouch){
-      const DBG_Z = 50_000;
-      const dot = this.add.circle(0, 0, 8, 0x86efac, 0.95).setVisible(false).setScrollFactor(0).setDepth(DBG_Z);
-      const label = this.add.text(8, 8, 'touch d:0 m:0 u:0', { color:'#9ad1ff', fontSize:'12px' })
-        .setScrollFactor(0).setDepth(DBG_Z);
-      const counts = { down:0, move:0, up:0 };
-      const updateLabel = (pid)=>{
-        const aim = this.playerAim || {x:0,y:0};
-        label.setText(`touch d:${counts.down} m:${counts.move} u:${counts.up} pid:${pid ?? 'n'} aim:${aim.x.toFixed(2)},${aim.y.toFixed(2)}`);
-      };
-      const showDot = (x,y,color)=>{ dot.setPosition(x,y).setFillStyle(color, 0.95).setVisible(true); dot.alpha = 1; };
-      const _begin = beginSwipe; const _move = updateSwipe; const _end = endSwipe;
-      downHandler = (p)=>{ counts.down++; showDot(p.x, p.y, 0x22c55e); updateLabel(p.id); _begin(p); };
-      moveHandler = (p)=>{ counts.move++; showDot(p.x, p.y, 0xf59e0b); updateLabel(p.id); _move(p); };
-      upHandler   = (p)=>{ counts.up++;   showDot(p.x, p.y, 0xef4444); updateLabel(p.id); _end(p); this.tweens.add({ targets: dot, alpha: 0, duration: 280 }); };
-      this._touchDbg = { dot, label };
-    }
+    // Touch debug disabled - clean UI
 
     // Bind to both the zone and the global input to be extra robust across platforms
     zone.on('pointerdown', downHandler);
@@ -2537,6 +2632,169 @@ export class PvpScene extends Phaser.Scene {
     }
   }
 
+  /* ----------------- PvE Difficulty Scaling ----------------- */
+  applyPvEDifficulty(){
+    if (!this.pveRound || this.pveRound <= 1) return;
+
+    const round = this.pveRound;
+
+    // Speed scaling: +2.5% per round, caps at +35% (round 14)
+    const speedBoost = Math.min(0.35, (round - 1) * 0.025);
+    this.aiPlug.speed = 120 * (1 + speedBoost);
+
+    // Shoot cooldown: -2% per round, caps at -30% (round 15) = shoots 30% faster
+    const cooldownReduction = Math.min(0.30, (round - 1) * 0.02);
+    this.aiPlug.shootEvery = 0.90 * (1 - cooldownReduction);
+
+    // Accuracy: reduce inaccuracy by 3% per round, caps at 50% reduction (round 17)
+    const accuracyBoost = Math.min(0.50, (round - 1) * 0.03);
+    this.aiPlug.inaccuracy = 0.45 * (1 - accuracyBoost);
+
+    // Reaction time: -25ms per round, caps at -200ms (round 9) = reacts 200ms faster
+    const reactionBoost = Math.min(200, (round - 1) * 25);
+    this.aiPlug.reactDelay = Math.max(200, 550 - reactionBoost);
+
+    // Vision range: +10 units per round, caps at +150 (round 16)
+    const rangeBoost = Math.min(150, (round - 1) * 10);
+    this.aiPlug.maxRange = 300 + rangeBoost;
+  }
+
+  calculateStashValue(roundNum){
+    // Each successful round = 1 stash collected
+    // Stash is the currency/score that goes on leaderboards
+    return 1;
+  }
+
+  calculateRep(roundNum){
+    // Rep calculation - later can factor in: speed, power-ups used, damage taken, etc.
+    // For now: base 100 + (round * 50) for scaling
+    // Round 1: 150, Round 5: 350, Round 10: 600
+    return 100 + (roundNum * 50);
+  }
+
+  showFloatingRewards(stashEarned, repEarned){
+    // Get extraction position (car position) in world coordinates
+    const extractX = this.car?.x ?? this.attacker?.x ?? this.scale.width / 2;
+    const extractY = this.car?.y ?? this.attacker?.y ?? this.scale.height / 2;
+
+    // Convert world position to screen position
+    const cam = this.cameras.main;
+    const screenX = (extractX - cam.scrollX) * cam.zoom + cam.x;
+    const screenY = (extractY - cam.scrollY) * cam.zoom + cam.y;
+
+    // Calculate direction towards screen center
+    const centerX = this.cameras.main.centerX;
+    const centerY = this.cameras.main.centerY;
+
+    // Vector from extraction point to center
+    const dx = centerX - screenX;
+    const dy = centerY - screenY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Normalize and scale to float distance (60% of the way to center)
+    const floatDistance = Math.min(120, distance * 0.6);
+    const normalizedDx = distance > 0 ? (dx / distance) * floatDistance : 0;
+    const normalizedDy = distance > 0 ? (dy / distance) * floatDistance : -80; // fallback: float up if already at center
+
+    // Add some perpendicular offset to space them out (perpendicular to the direction vector)
+    const perpX = -normalizedDy; // perpendicular vector
+    const perpY = normalizedDx;
+    const perpScale = 0.3; // how much to offset perpendicular
+
+    // Stash goes slightly to one side, Rep goes to the other
+    const stashEndX = screenX + normalizedDx + perpX * perpScale;
+    const stashEndY = screenY + normalizedDy + perpY * perpScale;
+    const repEndX = screenX + normalizedDx - perpX * perpScale;
+    const repEndY = screenY + normalizedDy - perpY * perpScale;
+
+    // Create floating stash text
+    const stashText = this.add.text(screenX, screenY, `+${stashEarned} STASH`, {
+      color: '#86efac',
+      fontSize: '28px',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(20001).setScrollFactor(0);
+
+    // Create floating rep text (at same start position)
+    const repText = this.add.text(screenX, screenY, `+${repEarned} REP`, {
+      color: '#ffd166',
+      fontSize: '22px',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(20001).setScrollFactor(0);
+
+    // Animate stash: float towards center (with slight offset) and fade out
+    stashText.setAlpha(0);
+    this.tweens.add({
+      targets: stashText,
+      alpha: 1,
+      x: stashEndX,
+      y: stashEndY,
+      duration: 2000,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: stashText,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => stashText.destroy()
+        });
+      }
+    });
+
+    // Animate rep: float towards center (with offset on opposite side) and fade out
+    repText.setAlpha(0);
+    this.tweens.add({
+      targets: repText,
+      alpha: 1,
+      x: repEndX,
+      y: repEndY,
+      duration: 2000,
+      delay: 100, // slight delay after stash
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: repText,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => repText.destroy()
+        });
+      }
+    });
+  }
+
+  showPowerSelectionForNextRound(){
+    // Freeze input
+    this.input.keyboard.enabled = false;
+
+    // Show power selection modal (will be ad spot later)
+    const modal = this.showModal({
+      title: `ROUND ${this.pveRound + 1}`,
+      lines: ['Select your powers for the next round'],
+      buttons: [
+        {
+          label: 'Continue',
+          bg: 0x1a2038,
+          color:'#86efac',
+          onClick: ()=> {
+            this.scene.restart({
+              mode: 'pve',
+              role: 'runner',
+              pveRound: this.pveRound + 1,
+              pveSessionStash: this.pveSessionStash,
+              pveBestRound: this.pveBestRound,
+              seed: (Math.random()*2**32)|0
+            });
+          }
+        }
+      ]
+    });
+
+    this.currentModal = modal;
+  }
+
   /* ----------------- Round End / UI ----------------- */
   endRound(winner){
     if (this.roundOver) return;
@@ -2548,11 +2806,26 @@ export class PvpScene extends Phaser.Scene {
     this.destroyDecoySprite();
 
     const runnerWon = (winner === 'attacker');
-    const title = runnerWon ? 'Runner Extracted!' : 'Plug Defended!';
-    const sub   = runnerWon ? 'Package delivered to the getaway.' : 'Runner was stopped (or time ran out).';
 
     // freeze movement input
     this.input.keyboard.enabled = false;
+
+    console.log('[endRound] Mode:', this.mode, 'Winner:', winner, 'Runner won:', runnerWon);
+
+    // PvE mode: only show game over modal on death
+    // (successful extraction handled by startExtractionSequence)
+    if (this.mode === 'pve') {
+      console.log('[endRound] PvE mode detected!');
+      if (!runnerWon) {
+        console.log('[endRound] Runner died, showing game over modal');
+        this.showPvEGameOver();
+      }
+      return;
+    }
+
+    // PvP mode: original behavior
+    const title = runnerWon ? 'Runner Extracted!' : 'Plug Defended!';
+    const sub   = runnerWon ? 'Package delivered to the getaway.' : 'Runner was stopped (or time ran out).';
 
     const modal = this.showModal({
       title,
@@ -2560,6 +2833,36 @@ export class PvpScene extends Phaser.Scene {
       buttons: [
         { label: 'Rematch (same role)', bg: 0x1a2038, color:'#cbd1ff', onClick: ()=> this.scene.restart({ role: this.role, seed: (Math.random()*2**32)|0 }) },
         { label: 'Switch Role',         bg: 0x1a2038, color:'#cbd1ff', onClick: ()=> this.scene.restart({ role: (this.role==='runner'?'plug':'runner'), seed: (Math.random()*2**32)|0 }) },
+      ]
+    });
+
+    this.currentModal = modal;
+  }
+
+
+  showPvEGameOver(){
+    const modal = this.showModal({
+      title: `ELIMINATED - ROUND ${this.pveRound}`,
+      lines: [
+        `Run Ended`,
+        ``,
+        `Total Stash Collected: ${this.pveSessionStash}`,
+        `Total Rep Earned: ${this.pveSessionRep}`,
+        `Best Round: ${Math.max(this.pveBestRound, this.pveRound)}`
+      ],
+      buttons: [
+        {
+          label: 'Try Again',
+          bg: 0x1a2038,
+          color:'#86efac',
+          onClick: ()=> this.scene.restart({ mode: 'pve', role: 'runner', pveRound: 1, pveSessionStash: 0, pveSessionRep: 0, pveBestRound: 0, seed: (Math.random()*2**32)|0 })
+        },
+        {
+          label: 'Exit',
+          bg: 0x1a2038,
+          color:'#cbd1ff',
+          onClick: ()=> this.scene.start('MENU')
+        },
       ]
     });
 
