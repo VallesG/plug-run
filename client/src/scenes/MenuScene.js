@@ -19,6 +19,15 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export class MenuScene extends Phaser.Scene {
   constructor(){ super('MENU'); }
 
+  preload(){
+    // Load character sprites for card visuals
+    this.load.image('td_runner', '/sprites/td/runner.png');
+    this.load.image('td_runner_step', '/sprites/td/runner_step.png');
+    this.load.image('td_plug', '/sprites/td/plug.png');
+    this.load.image('td_plug_step', '/sprites/td/plug_step.png');
+    this.load.image('car_blue', '/sprites/car_blue.png');
+  }
+
   init(){
     this.cards = [];
     this.selected = 0;
@@ -58,13 +67,51 @@ export class MenuScene extends Phaser.Scene {
       });
     }});
 
-    // Top logo text
-    this.logo = this.add.text(W/2, 36, 'PLUG RUN LA', {
-      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial',
-      fontSize: Math.max(22, Math.floor(H * 0.04)) + 'px',
-      color: PALETTE.title,
-      fontStyle: 'bold'
-    }).setOrigin(0.5, 0).setDepth(5);
+    // Top logo text - styled like a street sign
+    const logoY = 36;
+    const logoSize = Math.max(26, Math.floor(H * 0.05));
+
+    // Street sign background (blue rectangle with white border - LA street sign style)
+    // Match card width proportions
+    const cardWidth = Math.min(520, Math.floor(W * 0.82));
+    const signW = cardWidth; // Same width as cards
+    const signH = logoSize * 2.2; // Taller for two lines
+    const signBg = this.add.rectangle(W/2, logoY + signH/2, signW, signH, 0x0047AB, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setDepth(4);
+
+    // Add subtle shadow for depth
+    const signShadow = this.add.rectangle(W/2 + 2, logoY + signH/2 + 2, signW, signH, 0x000000, 0.3)
+      .setDepth(3);
+
+    // Static street number for main sign (8666 ST - memorable and consistent)
+    const mainStreetNum = 8666;
+    const mainSuffix = 'ST';
+
+    // Main title
+    this.logo = this.add.text(W/2, logoY + signH/2 - logoSize * 0.35, 'PLUG RUN', {
+      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
+      fontSize: logoSize + 'px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5, 0.5).setDepth(5);
+
+    // Address number below
+    const mainAddressSize = Math.max(12, Math.floor(logoSize * 0.65));
+    this.logoAddress = this.add.text(W/2, logoY + signH/2 + logoSize * 0.45, `${mainStreetNum} ${mainSuffix}`, {
+      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
+      fontSize: mainAddressSize + 'px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 1.5,
+      letterSpacing: 2
+    }).setOrigin(0.5, 0.5).setDepth(5);
+
+    this.signBg = signBg;
+    this.signShadow = signShadow;
 
     // Cards data
     const modes = [
@@ -78,7 +125,7 @@ export class MenuScene extends Phaser.Scene {
     this.carousel = this.add.container(0, 0).setDepth(3);
 
     modes.forEach((m, idx)=>{
-      const card = this.makeCard(m.title, m.sub); // rexUI-based card
+      const card = this.makeCard(m.title, m.sub, m.key); // rexUI-based card
       card.modeKey = m.key;
       card.index = idx;
       this.carousel.add(card);
@@ -139,65 +186,82 @@ export class MenuScene extends Phaser.Scene {
   }
 
   // MENU: UI helpers -------------------------------------------------
-  // MENUSCENE (rexUI): card built with rexUI label + sizers
-  makeCard(title, sub){
+  // Simple card with background and text overlay
+  makeCard(title, sub, modeKey){
     const W = this.scale.width, H = this.scale.height;
     const cw = Math.min(520, Math.floor(W * 0.82));
-    const ch = Math.min(240, Math.floor(H * 0.34));
+    const ch = Math.min(320, Math.floor(H * 0.45));
 
-    // Background using rexUI rounded rectangle with per-card color
-    const CARD_COLORS = [0x1E293B, 0x0ea5e9, 0x22c55e, 0xf59e0b, 0x6366f1, 0xef4444, 0x14b8a6, 0x8b5cf6];
-    const color = CARD_COLORS[(Math.random()*CARD_COLORS.length)|0];
-    const bg = this.rexUI.add.roundRectangle(0, 0, 0, 0, 10, color, 0.92)
-      .setStrokeStyle(2, PALETTE.stroke);
-
-    // Build a vertical sizer for stacked big title (word-per-line) + spacer + subtitle
-    const vbox = this.rexUI.add.sizer({ orientation: 1, space: { top: 10, bottom: 12, item: 6 } });
-    const titleBox = this.rexUI.add.sizer({ orientation: 1, space: { item: 2 } });
-    const words = String(title).toUpperCase().split(/\s+/g).filter(Boolean);
-    const titleSize = Math.max(20, Math.floor(Math.min(ch * 0.22, cw * 0.16)));
-    words.forEach(w=>{
-      const line = this.add.text(0, 0, w, {
-        color: '#ffffff',
-        fontFamily: 'ui-monospace, Menlo, Consolas, Monaco, monospace',
-        fontStyle: 'bold',
-        fontSize: titleSize + 'px',
-        align: 'center',
-        wordWrap: { width: Math.floor(cw*0.9) }
-      }).setOrigin(0.5,0.5);
-      titleBox.add(line, { proportion: 0, expand: false, align: 'center' });
-    });
-
-    const spacer = this.rexUI.add.space();
-    const subTxt = this.add.text(0, 0, sub, {
-      color: '#E5E7EB',
-      fontSize: Math.max(12, Math.floor(ch*0.12)) + 'px',
-      align: 'center',
-      wordWrap: { width: Math.floor(cw*0.9) }
-    }).setOrigin(0.5,0.5);
-
-    vbox.add(titleBox, { proportion: 0, expand: false, align: 'center' });
-    vbox.add(spacer,   { proportion: 1, expand: true });
-    vbox.add(subTxt,   { proportion: 0, expand: false, align: 'center' });
-
-    // Compose into rexUI label for interaction + background sizing
-    const label = this.rexUI.add.label({
-      width: cw,
-      height: ch,
-      background: bg,
-      text: vbox,
-      align: 'center',
-      space: { left: 16, right: 16, top: 12, bottom: 12 }
-    });
-    label.layout();
-
-    const cont = this.add.container(0, 0, [label]).setSize(cw, ch).setDepth(3);
+    // Create container first
+    const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
     cont.setInteractive(new Phaser.Geom.Rectangle(-cw/2, -ch/2, cw, ch), Phaser.Geom.Rectangle.Contains);
 
-    // Subtle glow under focused card
-    const glow = this.add.ellipse(0, 0, cw * 1.2, ch * 1.4, PALETTE.glow, 0.18)
-      .setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
-    cont.addAt(glow, 0);
+    // Dark background
+    const bg = this.add.rectangle(0, 0, cw, ch, 0x0a0f1a, 0.85);
+    bg.setStrokeStyle(2, PALETTE.stroke, 1);
+    cont.add(bg);
+
+    // Add animated sprite visuals
+    this.addCardVisuals(cont, modeKey, cw, ch);
+
+    // Title at TOP (LA street sign font with blue background bar)
+    const titleText = String(title).toUpperCase();
+    const titleSize = Math.max(14, Math.floor(ch * 0.085)); // Smaller for street number/suffix
+
+    // Static street numbers for each mode (consistent each time)
+    const streetAddresses = {
+      'learn': { num: 1337, suffix: 'WAY' },
+      'runner': { num: 2049, suffix: 'BLVD' },
+      'plug': { num: 5558, suffix: 'PL' },
+      'pvp': { num: 7700, suffix: 'AVE' }
+    };
+    const address = streetAddresses[modeKey] || { num: 1000, suffix: 'ST' };
+    const streetNum = address.num;
+    const suffix = address.suffix;
+
+    // Add blue background bar that fills full card width at top edge
+    const titleBgHeight = titleSize * 2.2; // Slightly taller for two lines
+    const titleBg = this.add.rectangle(0, -ch * 0.5 + titleBgHeight/2, cw, titleBgHeight, 0x0047AB, 1)
+      .setStrokeStyle(3, 0xffffff)
+      .setOrigin(0.5, 0.5);
+
+    // Main title text (street name)
+    const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2 - titleSize * 0.35, titleText, {
+      color: '#ffffff',
+      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
+      fontStyle: 'bold',
+      fontSize: titleSize + 'px',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5, 0.5);
+
+    // Street number and suffix (smaller, below main title - matching PLUG RUN spacing)
+    const addressSize = Math.max(10, Math.floor(titleSize * 0.65));
+    const addressObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2 + titleSize * 0.45, `${streetNum} ${suffix}`, {
+      color: '#ffffff',
+      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
+      fontStyle: 'bold',
+      fontSize: addressSize + 'px',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 1.5,
+      letterSpacing: 2
+    }).setOrigin(0.5, 0.5);
+
+    cont.add(titleBg);
+    cont.add(titleObj);
+    cont.add(addressObj);
+
+    // Subtitle at BOTTOM
+    const subSize = Math.max(11, Math.floor(ch * 0.08));
+    const subTxt = this.add.text(0, ch * 0.35, sub, {
+      color: '#cbd5e1',
+      fontSize: subSize + 'px',
+      align: 'center',
+      wordWrap: { width: Math.floor(cw * 0.85) }
+    }).setOrigin(0.5, 0.5);
+    cont.add(subTxt);
 
     // Tap candidate: mark on pointerdown; also handle direct tap/click on release
     cont.on('pointerdown', ()=>{ this._tapCandidate = cont; });
@@ -213,11 +277,511 @@ export class MenuScene extends Phaser.Scene {
       }
     };
     cont.on('pointerup', directTap);
-    cont._label?.setInteractive?.();
-    cont._label?.on?.('pointerup', directTap);
 
-    cont._glow = glow; cont._bg = bg; cont._label = label; cont._sub = subTxt;
+    cont._bg = bg; cont._sub = subTxt;
     return cont;
+  }
+
+  addCardVisuals(cont, modeKey, cw, ch){
+    if (!modeKey) return;
+
+    // ANIMATED MINI-SCENES - Show actual gameplay loops!
+    const scale = 0.75; // Small, subtle animations
+    const alpha = 0.6; // Faint so it's not confusing
+
+    if (modeKey === 'learn'){
+      // TUTORIAL: Runner wandering naturally with flame trail effect
+      const runner = this.add.sprite(0, 0, 'td_runner')
+        .setScale(scale)
+        .setAlpha(alpha);
+
+      cont.add([runner]);
+
+      // Trail tracking
+      let lastTrailPos = { x: runner.x, y: runner.y };
+      let trailTimer = 0;
+
+      // Random wandering with natural movement
+      const wander = () => {
+        // Pick a random point to walk to
+        const targetX = (Math.random() - 0.5) * cw * 0.5;
+        const targetY = (Math.random() - 0.5) * ch * 0.3;
+        const distance = Math.hypot(targetX - runner.x, targetY - runner.y);
+        const duration = distance * 15; // Natural walking speed
+
+        // Face the direction we're moving
+        runner.setFlipX(targetX < runner.x);
+
+        this.tweens.add({
+          targets: runner,
+          x: targetX,
+          y: targetY,
+          duration: duration,
+          ease: 'Sine.easeInOut',
+          onUpdate: (tween) => {
+            runner.setTexture(Math.floor(tween.progress * (duration / 150)) % 2 === 0 ? 'td_runner' : 'td_runner_step');
+
+            // Flame trail effect
+            const dx = runner.x - lastTrailPos.x;
+            const dy = runner.y - lastTrailPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 2 && trailTimer >= 40) {
+              trailTimer = 0;
+              const dirX = dx / dist;
+              const dirY = dy / dist;
+              const perpX = -dirY * (Math.random() - 0.5) * scale * 20;
+              const perpY = dirX * (Math.random() - 0.5) * scale * 20;
+
+              lastTrailPos = { x: runner.x, y: runner.y };
+
+              // Create 2 flame particles behind and spread out
+              for (let i = 0; i < 2; i++) {
+                const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const trail = this.add.circle(
+                  runner.x - dirX * scale * 25 + perpX * (i === 0 ? 0.5 : -0.5),
+                  runner.y - dirY * scale * 25 + perpY * (i === 0 ? 0.5 : -0.5),
+                  scale * 10,
+                  color,
+                  0.7
+                );
+                cont.add(trail);
+
+                this.tweens.add({
+                  targets: trail,
+                  alpha: 0,
+                  scale: 0.2,
+                  duration: 500,
+                  ease: 'Cubic.easeOut',
+                  onComplete: () => trail.destroy()
+                });
+              }
+            }
+            trailTimer += 16; // Approximate frame time
+          },
+          onComplete: () => {
+            this.time.delayedCall(Phaser.Math.Between(200, 800), wander);
+          }
+        });
+      };
+      wander();
+
+    } else if (modeKey === 'runner'){
+      // RUN THE BLOCK: Runner runs to car, car drives off!
+      const runner = this.add.sprite(-cw * 0.4, ch * 0.15, 'td_runner')
+        .setScale(scale)
+        .setAlpha(alpha);
+
+      // Getaway car sprite - flipped to face left
+      const car = this.add.sprite(cw * 0.3, ch * 0.15, 'car_blue')
+        .setScale(scale * 1.2)
+        .setAlpha(alpha)
+        .setAngle(90); // Facing left
+
+      cont.add([car, runner]);
+
+      // Trail tracking
+      let runnerLastTrailPos = { x: runner.x, y: runner.y };
+      let runnerTrailTimer = 0;
+      let carLastTrailPos = { x: car.x, y: car.y };
+      let carTrailTimer = 0;
+
+      // Animation sequence using chained tweens
+      const runSequence = () => {
+        // 1. Runner runs to car
+        this.tweens.add({
+          targets: runner,
+          x: cw * 0.25,
+          duration: 2000,
+          ease: 'Linear',
+          onUpdate: (tween) => {
+            const progress = tween.progress;
+            runner.setTexture(Math.floor(progress * 20) % 2 === 0 ? 'td_runner' : 'td_runner_step');
+
+            // Blue flame trail for runner
+            const dx = runner.x - runnerLastTrailPos.x;
+            const dy = runner.y - runnerLastTrailPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 2 && runnerTrailTimer >= 40) {
+              runnerTrailTimer = 0;
+              const dirX = dx / dist;
+              const dirY = dy / dist;
+              const perpX = -dirY * (Math.random() - 0.5) * scale * 20;
+              const perpY = dirX * (Math.random() - 0.5) * scale * 20;
+
+              runnerLastTrailPos = { x: runner.x, y: runner.y };
+
+              for (let i = 0; i < 2; i++) {
+                const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const trail = this.add.circle(
+                  runner.x - dirX * scale * 25 + perpX * (i === 0 ? 1 : -1),
+                  runner.y - dirY * scale * 25 + perpY * (i === 0 ? 1 : -1),
+                  scale * 10,
+                  color,
+                  0.7
+                );
+                cont.add(trail);
+
+                this.tweens.add({
+                  targets: trail,
+                  alpha: 0,
+                  scale: 0.2,
+                  duration: 500,
+                  ease: 'Cubic.easeOut',
+                  onComplete: () => trail.destroy()
+                });
+              }
+            }
+            runnerTrailTimer += 16;
+          },
+          onComplete: () => {
+            // 2. Pause (getting in car)
+            this.tweens.add({
+              targets: runner,
+              alpha: 0,
+              duration: 300,
+              onComplete: () => {
+                runner.setVisible(false);
+                // 3. Car drives off with trail
+                carLastTrailPos = { x: car.x, y: car.y };
+                carTrailTimer = 0;
+                this.tweens.add({
+                  targets: car,
+                  x: cw * 0.7,
+                  alpha: 0,
+                  duration: 1200,
+                  ease: 'Cubic.easeIn',
+                  onUpdate: () => {
+                    // Blue flame trail for car
+                    const dx = car.x - carLastTrailPos.x;
+                    const dy = car.y - carLastTrailPos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 2 && carTrailTimer >= 40) {
+                      carTrailTimer = 0;
+                      const dirX = dx / dist;
+                      const dirY = dy / dist;
+                      const perpX = -dirY * (Math.random() - 0.5) * scale * 20;
+                      const perpY = dirX * (Math.random() - 0.5) * scale * 20;
+
+                      carLastTrailPos = { x: car.x, y: car.y };
+
+                      for (let i = 0; i < 2; i++) {
+                        const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+                        const color = colors[Math.floor(Math.random() * colors.length)];
+
+                        const trail = this.add.circle(
+                          car.x - dirX * scale * 60 + perpX * (i === 0 ? 1 : -1),
+                          car.y - dirY * scale * 60 + perpY * (i === 0 ? 1 : -1),
+                          scale * 10,
+                          color,
+                          0.7
+                        );
+                        cont.add(trail);
+
+                        this.tweens.add({
+                          targets: trail,
+                          alpha: 0,
+                          scale: 0.2,
+                          duration: 500,
+                          ease: 'Cubic.easeOut',
+                          onComplete: () => trail.destroy()
+                        });
+                      }
+                    }
+                    carTrailTimer += 16;
+                  },
+                  onComplete: () => {
+                    // 4. Reset and loop
+                    runner.setPosition(-cw * 0.4, ch * 0.15).setAlpha(alpha).setVisible(true);
+                    car.setPosition(cw * 0.3, ch * 0.15).setAlpha(alpha);
+                    runnerLastTrailPos = { x: runner.x, y: runner.y };
+                    runnerTrailTimer = 0;
+                    this.time.delayedCall(500, runSequence);
+                  }
+                });
+              }
+            });
+          }
+        });
+      };
+      runSequence();
+
+    } else if (modeKey === 'plug'){
+      // DEFEND THE STASH: Plug patrolling with shooting and flame trail
+      const plug = this.add.sprite(0, 0, 'td_plug')
+        .setScale(scale)
+        .setAlpha(alpha)
+        .setTint(0xff6b6b);
+
+      // Muzzle flash for shooting animation
+      const muzzleFlash = this.add.rectangle(0, 0, scale * 6, scale * 6, 0xffff00, 0)
+        .setDepth(10);
+
+      // Bullet projectiles pool
+      const bullets = [];
+      for (let i = 0; i < 5; i++) {
+        const bullet = this.add.circle(0, 0, scale * 4, 0xff0000, 0)
+          .setDepth(5);
+        bullets.push(bullet);
+        cont.add(bullet);
+      }
+
+      cont.add([plug, muzzleFlash]);
+
+      // Trail tracking
+      let lastTrailPos = { x: plug.x, y: plug.y };
+      let trailTimer = 0;
+
+      // Patrol with random shooting
+      const patrol = () => {
+        // Pick a random patrol point
+        const targetX = (Math.random() - 0.5) * cw * 0.5;
+        const targetY = (Math.random() - 0.5) * ch * 0.3;
+        const distance = Math.hypot(targetX - plug.x, targetY - plug.y);
+        const duration = distance * 12; // Slightly faster patrol
+
+        // Face the direction we're moving
+        plug.setFlipX(targetX < plug.x);
+
+        this.tweens.add({
+          targets: plug,
+          x: targetX,
+          y: targetY,
+          duration: duration,
+          ease: 'Sine.easeInOut',
+          onUpdate: (tween) => {
+            plug.setTexture(Math.floor(tween.progress * (duration / 150)) % 2 === 0 ? 'td_plug' : 'td_plug_step');
+
+            // Flame trail effect (red for plug)
+            const dx = plug.x - lastTrailPos.x;
+            const dy = plug.y - lastTrailPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 2 && trailTimer >= 40) {
+              trailTimer = 0;
+              const dirX = dx / dist;
+              const dirY = dy / dist;
+              const perpX = -dirY * (Math.random() - 0.5) * scale * 20;
+              const perpY = dirX * (Math.random() - 0.5) * scale * 20;
+
+              lastTrailPos = { x: plug.x, y: plug.y };
+
+              // Create 2 red flame particles behind and spread out
+              for (let i = 0; i < 2; i++) {
+                const colors = [0xef4444, 0xdc2626, 0xb91c1c];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const trail = this.add.circle(
+                  plug.x - dirX * scale * 25 + perpX * (i === 0 ? 1 : -1),
+                  plug.y - dirY * scale * 25 + perpY * (i === 0 ? 1 : -1),
+                  scale * 10,
+                  color,
+                  0.7
+                );
+                cont.add(trail);
+
+                this.tweens.add({
+                  targets: trail,
+                  alpha: 0,
+                  scale: 0.2,
+                  duration: 500,
+                  ease: 'Cubic.easeOut',
+                  onComplete: () => trail.destroy()
+                });
+              }
+            }
+            trailTimer += 16; // Approximate frame time
+          },
+          onComplete: () => {
+            // Random chance to shoot
+            if (Math.random() < 0.6) {
+              const bulletDir = plug.flipX ? -1 : 1;
+              const startX = plug.x + (bulletDir * scale * 8);
+              const startY = plug.y;
+
+              // Muzzle flash
+              muzzleFlash.setPosition(startX, startY);
+              this.tweens.add({
+                targets: muzzleFlash,
+                alpha: 0.9,
+                duration: 80,
+                yoyo: true,
+                repeat: 1
+              });
+
+              // Fire bullet
+              const bullet = bullets.find(b => b.alpha === 0) || bullets[0];
+              bullet.setPosition(startX, startY).setAlpha(1);
+
+              this.tweens.add({
+                targets: bullet,
+                x: startX + (bulletDir * cw * 0.5),
+                duration: 600,
+                ease: 'Linear',
+                onComplete: () => {
+                  bullet.setAlpha(0); // Return to pool
+                  this.time.delayedCall(Phaser.Math.Between(300, 600), patrol);
+                }
+              });
+            } else {
+              this.time.delayedCall(Phaser.Math.Between(200, 500), patrol);
+            }
+          }
+        });
+      };
+      patrol();
+
+    } else if (modeKey === 'pvp'){
+      // STREET WARS: Chase scene - plug chasing runner!
+      const runner = this.add.sprite(-cw * 0.3, 0, 'td_runner')
+        .setScale(scale)
+        .setAlpha(alpha);
+
+      const plug = this.add.sprite(-cw * 0.4, 0, 'td_plug')
+        .setScale(scale)
+        .setAlpha(alpha)
+        .setTint(0xff6b6b);
+
+      cont.add([runner, plug]);
+
+      // Trail tracking for both characters
+      let runnerLastTrailPos = { x: runner.x, y: runner.y };
+      let runnerTrailTimer = 0;
+      let plugLastTrailPos = { x: plug.x, y: plug.y };
+      let plugTrailTimer = 0;
+
+      // CHASE: Runner runs, plug chases behind
+      const chase = () => {
+        // Runner runs to a new spot
+        const runnerTargetX = (Math.random() - 0.3) * cw * 0.6;
+        const runnerTargetY = (Math.random() - 0.5) * ch * 0.25;
+        const runnerDist = Math.hypot(runnerTargetX - runner.x, runnerTargetY - runner.y);
+        const runnerDuration = runnerDist * 8;
+
+        runner.setFlipX(runnerTargetX < runner.x);
+
+        this.tweens.add({
+          targets: runner,
+          x: runnerTargetX,
+          y: runnerTargetY,
+          duration: runnerDuration,
+          ease: 'Sine.easeInOut',
+          onUpdate: (tween) => {
+            runner.setTexture(Math.floor(tween.progress * (runnerDuration / 100)) % 2 === 0 ? 'td_runner' : 'td_runner_step');
+
+            // Blue flame trail for runner
+            const dx = runner.x - runnerLastTrailPos.x;
+            const dy = runner.y - runnerLastTrailPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 2 && runnerTrailTimer >= 40) {
+              runnerTrailTimer = 0;
+              const dirX = dx / dist;
+              const dirY = dy / dist;
+              const perpX = -dirY * (Math.random() - 0.5) * scale * 20;
+              const perpY = dirX * (Math.random() - 0.5) * scale * 20;
+
+              runnerLastTrailPos = { x: runner.x, y: runner.y };
+
+              for (let i = 0; i < 2; i++) {
+                const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const trail = this.add.circle(
+                  runner.x - dirX * scale * 25 + perpX * (i === 0 ? 1 : -1),
+                  runner.y - dirY * scale * 25 + perpY * (i === 0 ? 1 : -1),
+                  scale * 10,
+                  color,
+                  0.7
+                );
+                cont.add(trail);
+
+                this.tweens.add({
+                  targets: trail,
+                  alpha: 0,
+                  scale: 0.2,
+                  duration: 500,
+                  ease: 'Cubic.easeOut',
+                  onComplete: () => trail.destroy()
+                });
+              }
+            }
+            runnerTrailTimer += 16;
+          }
+        });
+
+        // Plug chases the runner (always moves towards runner's current position)
+        this.time.delayedCall(200, () => {
+          const plugTargetX = runner.x - (cw * 0.1 * (runner.flipX ? -1 : 1));
+          const plugTargetY = runner.y;
+          const plugDist = Math.hypot(plugTargetX - plug.x, plugTargetY - plug.y);
+          const plugDuration = plugDist * 9; // Slightly slower than runner
+
+          plug.setFlipX(plugTargetX < plug.x);
+
+          this.tweens.add({
+            targets: plug,
+            x: plugTargetX,
+            y: plugTargetY,
+            duration: plugDuration,
+            ease: 'Sine.easeInOut',
+            onUpdate: (tween) => {
+              plug.setTexture(Math.floor(tween.progress * (plugDuration / 100)) % 2 === 0 ? 'td_plug' : 'td_plug_step');
+
+              // Red flame trail for plug
+              const dx = plug.x - plugLastTrailPos.x;
+              const dy = plug.y - plugLastTrailPos.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist > 2 && plugTrailTimer >= 40) {
+                plugTrailTimer = 0;
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                const perpX = -dirY * (Math.random() - 0.5) * scale * 20;
+                const perpY = dirX * (Math.random() - 0.5) * scale * 20;
+
+                plugLastTrailPos = { x: plug.x, y: plug.y };
+
+                for (let i = 0; i < 2; i++) {
+                  const colors = [0xef4444, 0xdc2626, 0xb91c1c];
+                  const color = colors[Math.floor(Math.random() * colors.length)];
+
+                  const trail = this.add.circle(
+                    plug.x - dirX * scale * 25 + perpX * (i === 0 ? 1 : -1),
+                    plug.y - dirY * scale * 25 + perpY * (i === 0 ? 1 : -1),
+                    scale * 10,
+                    color,
+                    0.7
+                  );
+                  cont.add(trail);
+
+                  this.tweens.add({
+                    targets: trail,
+                    alpha: 0,
+                    scale: 0.2,
+                    duration: 500,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => trail.destroy()
+                  });
+                }
+              }
+              plugTrailTimer += 16;
+            },
+            onComplete: () => {
+              this.time.delayedCall(Phaser.Math.Between(200, 500), chase);
+            }
+          });
+        });
+      };
+
+      chase();
+    }
   }
 
   makeIconButton(label, onClick){
@@ -264,8 +828,9 @@ export class MenuScene extends Phaser.Scene {
       }
 
       const focused = (Math.round(focusIdx) === i && d < 0.6);
-      card._glow?.setVisible(focused);
-      card._bg?.setStrokeStyle( focused ? 3 : 2, focused ? 0x60a5fa : 0x2f3650 );
+      if (card._bg) {
+        card._bg.setStrokeStyle(focused ? 3 : 2, focused ? 0x60a5fa : 0x2f3650, 1);
+      }
     });
   }
 
@@ -340,7 +905,16 @@ export class MenuScene extends Phaser.Scene {
 
   reposition(){
     const W = this.scale.width, H = this.scale.height;
-    this.logo?.setPosition(W/2, Math.max(16, Math.floor(H*0.04)));
+    const logoY = Math.max(16, Math.floor(H*0.04));
+    const logoSize = Math.max(26, Math.floor(H * 0.05));
+    const signH = logoSize * 2.2; // Updated for two-line sign
+
+    // Reposition street sign elements
+    this.signShadow?.setPosition(W/2 + 2, logoY + signH/2 + 2);
+    this.signBg?.setPosition(W/2, logoY + signH/2);
+    this.logo?.setPosition(W/2, logoY + signH/2 - logoSize * 0.35);
+    this.logoAddress?.setPosition(W/2, logoY + signH/2 + logoSize * 0.45);
+
     // Bottom corners
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
     this.settingsBtn?.setPosition(W - pad - 24, H - pad - 24);

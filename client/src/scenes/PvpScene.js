@@ -41,7 +41,7 @@ function corridorAssist(scene, sprite, dir, dt){
   const c = scene.toCell(sprite.x, sprite.y);
   const centerX = scene.toWorldX(c.x);
   const centerY = scene.toWorldY(c.y);
-  const bias = scene.cell * 6; // strong & snappy
+  const bias = scene.cell * 7; // Increased from 6 for easier mobile turning
   if (dir.x !== 0){
     const dy = centerY - sprite.y;
     sprite.y += Math.sign(dy) * Math.min(Math.abs(dy), bias * dt);
@@ -336,13 +336,16 @@ function makeRunnerSprite(scene, x, y, cell){
   return c;
 }
 function makePlugSprite(scene, x, y, cell){
-  // Plug sprite (Kenney Soldier), plus existing gun/muzzle attachments
+  // Plug sprite (Kenney Soldier with red tint)
   const sprite = scene.add.sprite(0, 0, 'td_plug');
-  const scale = (cell / 128) * 3.0; // match runner scale
+  const scale = (cell / 128) * 3.0;
   sprite.setScale(scale).setOrigin(0.5, 0.5);
+  // Red tint for the plug
+  sprite.setTint(0xff6b6b);
+
   const shadow = scene.add.ellipse(0, cell*0.48, cell*0.90, cell*0.30, 0x000000, 0.34).setScale(1, 0.8);
   const outline = [];
-  const tint = 0x60a5fa;
+  const tint = 0xef4444; // Red outline instead of blue
   const offsets = [ [1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1] ];
   offsets.forEach(([ox,oy])=>{
   const o = scene.add.sprite(ox, oy, 'td_plug').setScale(scale).setOrigin(0.5);
@@ -362,11 +365,19 @@ function updateAvatarVisuals(scene, dt){
     const moving = speed > 5;
     // Drive sprite animations or 2-frame step for TD sprites
     if (who.usesTD){
-      const keyBase = (who.kind === 'plug') ? 'td_plug' : 'td_runner';
-      const keyStep = (who.kind === 'plug') ? 'td_plug_step' : 'td_runner_step';
+      const keyBase = who.kind === 'plug' ? 'td_plug' : 'td_runner';
+      const keyStep = who.kind === 'plug' ? 'td_plug_step' : 'td_runner_step';
       if (who.kind === 'plug'){
-        // Keep plug steady for aiming; no stepping
-        if (who.sprite.texture?.key !== keyBase){ who.sprite.setTexture(keyBase); if (who.outline){ for (const o of who.outline) o.setTexture(keyBase); } }
+        // Plug: 2-frame step while moving
+        who._stepT = (who._stepT || 0) + dt;
+        const rate = 0.14;
+        if (moving){
+          const useStep = Math.floor(who._stepT / rate) % 2 === 1;
+          const tex = useStep ? keyStep : keyBase;
+          if (who.sprite.texture?.key !== tex){ who.sprite.setTexture(tex); if (who.outline){ for (const o of who.outline) o.setTexture(tex); } }
+        } else {
+          if (who.sprite.texture?.key !== keyBase){ who.sprite.setTexture(keyBase); if (who.outline){ for (const o of who.outline) o.setTexture(keyBase); } }
+        }
       } else {
         // Runner: 2-frame step while moving
         who._stepT = (who._stepT || 0) + dt;
@@ -674,7 +685,7 @@ export class PvpScene extends Phaser.Scene {
     const RUNNER_CPS       = 7.0;
     const PLUG_CPS         = 4.8;
     const PLUG_NO_AMMO_CPS = 5.4;
-    const AI_PLUG_CPS      = 4.0;
+    const AI_PLUG_CPS      = 3.0; // Reduced from 4.0 for easier early rounds
 
     this.runnerSpeed     = RUNNER_CPS       * this.cell;
     this.plugSpeed       = PLUG_CPS         * this.cell;
@@ -886,7 +897,7 @@ export class PvpScene extends Phaser.Scene {
     this.aiPlug = { speed: 120, shootEvery: 0.90, maxRange: 300, inaccuracy: 0.45, reactDelay: 550 };
 
     // Apply progressive difficulty in PvE mode
-    // Current scaling: +2.5% speed, +2% fire rate, +3% accuracy, -25ms reaction, +10 vision per round
+    // Current scaling: +1.5% speed, +2% fire rate, +1.5% accuracy, -25ms reaction, +10 vision per round
     if (this.mode === 'pve') {
       this.applyPvEDifficulty();
     }
@@ -2103,9 +2114,15 @@ export class PvpScene extends Phaser.Scene {
     if (this.role==='runner'){
       moveHuman(this.attacker, moveSpeedRunner);
       this.updateDefenderAI(dt);
+      // Add trail effects
+      this.updateRunnerTrail(dt);
+      this.updateDefenderTrail(dt);
     } else {
       moveHuman(this.defender, plugBaseSpeed);
       this.updateAIRunner(delta);
+      // Add trail effects
+      this.updateRunnerTrail(dt);
+      this.updateDefenderTrail(dt);
     }
 
     this.updateBullets(delta);
@@ -2614,22 +2631,142 @@ export class PvpScene extends Phaser.Scene {
     }
   }
 
+  /* ----------------- Movement Trails (Flame-like) ----------------- */
+  updateRunnerTrail(dt){
+    if (!this.attacker || !this.attacker.visible) return;
+
+    // Initialize trail tracking
+    if (!this._runnerTrailTimer) this._runnerTrailTimer = 0;
+    if (!this._runnerLastTrailPos) this._runnerLastTrailPos = { x: this.attacker.x, y: this.attacker.y };
+
+    this._runnerTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Calculate movement direction
+    const dx = this.attacker.x - this._runnerLastTrailPos.x;
+    const dy = this.attacker.y - this._runnerLastTrailPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1 && this._runnerTrailTimer >= 40) {
+      this._runnerTrailTimer = 0;
+
+      // Normalize direction to get unit vector
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+
+      // Place trail BEHIND the character (opposite of movement direction)
+      const trailDistance = this.cell * 0.3;
+      const baseX = this._runnerLastTrailPos.x;
+      const baseY = this._runnerLastTrailPos.y;
+
+      this._runnerLastTrailPos = { x: this.attacker.x, y: this.attacker.y };
+
+      // Create 2 particles behind the character
+      for (let i = 0; i < 2; i++) {
+        // Small perpendicular offset for width
+        const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+        const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+        // Blue flame colors - brighter to darker
+        const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const trail = this.add.circle(
+          baseX + perpX,
+          baseY + perpY,
+          this.cell * 0.35,
+          color,
+          0.7
+        ).setDepth(1);
+
+        // Fade and shrink
+        this.tweens.add({
+          targets: trail,
+          alpha: 0,
+          scale: 0.2,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => trail.destroy()
+        });
+      }
+    }
+  }
+
+  updateDefenderTrail(dt){
+    if (!this.defender || !this.defender.visible) return;
+
+    // Initialize trail tracking
+    if (!this._defenderTrailTimer) this._defenderTrailTimer = 0;
+    if (!this._defenderLastTrailPos) this._defenderLastTrailPos = { x: this.defender.x, y: this.defender.y };
+
+    this._defenderTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Calculate movement direction
+    const dx = this.defender.x - this._defenderLastTrailPos.x;
+    const dy = this.defender.y - this._defenderLastTrailPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1 && this._defenderTrailTimer >= 40) {
+      this._defenderTrailTimer = 0;
+
+      // Normalize direction to get unit vector
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+
+      // Place trail BEHIND the character (opposite of movement direction)
+      const trailDistance = this.cell * 0.3;
+      const baseX = this._defenderLastTrailPos.x;
+      const baseY = this._defenderLastTrailPos.y;
+
+      this._defenderLastTrailPos = { x: this.defender.x, y: this.defender.y };
+
+      // Create 2 particles behind the character
+      for (let i = 0; i < 2; i++) {
+        // Small perpendicular offset for width
+        const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+        const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+        // Red flame colors - brighter to darker
+        const colors = [0xef4444, 0xdc2626, 0xb91c1c];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const trail = this.add.circle(
+          baseX + perpX,
+          baseY + perpY,
+          this.cell * 0.35,
+          color,
+          0.7
+        ).setDepth(1);
+
+        // Fade and shrink
+        this.tweens.add({
+          targets: trail,
+          alpha: 0,
+          scale: 0.2,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => trail.destroy()
+        });
+      }
+    }
+  }
+
   /* ----------------- PvE Difficulty Scaling ----------------- */
   applyPvEDifficulty(){
     if (!this.pveRound || this.pveRound <= 1) return;
 
     const round = this.pveRound;
 
-    // Speed scaling: +2.5% per round, caps at +35% (round 14)
-    const speedBoost = Math.min(0.35, (round - 1) * 0.025);
+    // Speed scaling: More gradual ramp - +2% per round, caps at +50% (round 26)
+    // This gives more breathing room in early rounds, then ramps up later
+    const speedBoost = Math.min(0.50, (round - 1) * 0.02);
     this.aiPlug.speed = 120 * (1 + speedBoost);
 
     // Shoot cooldown: -2% per round, caps at -30% (round 15) = shoots 30% faster
     const cooldownReduction = Math.min(0.30, (round - 1) * 0.02);
     this.aiPlug.shootEvery = 0.90 * (1 - cooldownReduction);
 
-    // Accuracy: reduce inaccuracy by 3% per round, caps at 50% reduction (round 17)
-    const accuracyBoost = Math.min(0.50, (round - 1) * 0.03);
+    // Accuracy: reduce inaccuracy by 1.5% per round, caps at 50% reduction (round 34)
+    const accuracyBoost = Math.min(0.50, (round - 1) * 0.015);
     this.aiPlug.inaccuracy = 0.45 * (1 - accuracyBoost);
 
     // Reaction time: -25ms per round, caps at -200ms (round 9) = reacts 200ms faster
