@@ -41,7 +41,7 @@ function corridorAssist(scene, sprite, dir, dt){
   const c = scene.toCell(sprite.x, sprite.y);
   const centerX = scene.toWorldX(c.x);
   const centerY = scene.toWorldY(c.y);
-  const bias = scene.cell * 7; // Increased from 6 for easier mobile turning
+  const bias = scene.cell * 5; // Reduced from 7 to feel less like a speed boost
   if (dir.x !== 0){
     const dy = centerY - sprite.y;
     sprite.y += Math.sign(dy) * Math.min(Math.abs(dy), bias * dt);
@@ -408,8 +408,18 @@ function updateAvatarVisuals(scene, dt){
         } else {
           // vertical movement � use aim to decide facing
           let aim = null;
-          if (who.kind === 'plug') aim = (scene.isDesktop ? (scene.playerGunAim || scene.playerAim) : scene.playerAim) || scene.aiAim;
-          else aim = scene._runnerLastAim || scene.playerAim || scene._aiLastMoveDir || { x: 1, y: 0 };
+          const isPlayer = (scene.role === 'plug' && who === scene.defender) || (scene.role === 'runner' && who === scene.attacker);
+          if (who.kind === 'plug') {
+            // For plugs: use player aim if this is the player, otherwise use AI aim
+            aim = isPlayer
+              ? ((scene.isDesktop ? (scene.playerGunAim || scene.playerAim) : scene.playerAim) || { x: 1, y: 0 })
+              : (scene.aiAim || { x: 1, y: 0 });
+          } else {
+            // For runners: use player aim if this is the player, otherwise use AI move direction
+            aim = isPlayer
+              ? (scene._runnerLastAim || scene.playerAim || { x: 1, y: 0 })
+              : (scene._aiLastMoveDir || { x: 1, y: 0 });
+          }
           const flip = (aim?.x || 0) < 0;
           who.sprite.setFlipX(flip);
           if (who.outline){ for (const o of who.outline) o.setFlipX(flip); }
@@ -417,8 +427,18 @@ function updateAvatarVisuals(scene, dt){
       } else {
         // idle � face based on last known aim
         let aim = null;
-        if (who.kind === 'plug') aim = (scene.isDesktop ? (scene.playerGunAim || scene.playerAim) : scene.playerAim) || scene.aiAim;
-        else aim = scene._runnerLastAim || scene.playerAim || scene._aiLastMoveDir || { x: 1, y: 0 };
+        const isPlayer = (scene.role === 'plug' && who === scene.defender) || (scene.role === 'runner' && who === scene.attacker);
+        if (who.kind === 'plug') {
+          // For plugs: use player aim if this is the player, otherwise use AI aim
+          aim = isPlayer
+            ? ((scene.isDesktop ? (scene.playerGunAim || scene.playerAim) : scene.playerAim) || { x: 1, y: 0 })
+            : (scene.aiAim || { x: 1, y: 0 });
+        } else {
+          // For runners: use player aim if this is the player, otherwise use AI move direction
+          aim = isPlayer
+            ? (scene._runnerLastAim || scene.playerAim || { x: 1, y: 0 })
+            : (scene._aiLastMoveDir || { x: 1, y: 0 });
+        }
         const flip = (aim?.x || 0) < 0;
         who.sprite.setFlipX(flip);
         if (who.outline){ for (const o of who.outline) o.setFlipX(flip); }
@@ -426,9 +446,17 @@ function updateAvatarVisuals(scene, dt){
     }
 
     // Orient top-down sprites by aim (both roles). If gun attachments exist, they still update.
-    const aim = (scene.role === 'plug')
-      ? (scene.isDesktop ? (scene.playerGunAim || scene.playerAim) : scene.playerAim)
-      : (scene.playerAim || scene.aiAim);
+    const isPlayer = (scene.role === 'plug' && who === scene.defender) || (scene.role === 'runner' && who === scene.attacker);
+    let aim = null;
+    if (isPlayer) {
+      // Player sprite: use player aim only
+      aim = (scene.role === 'plug')
+        ? (scene.isDesktop ? (scene.playerGunAim || scene.playerAim) : scene.playerAim)
+        : scene.playerAim;
+    } else {
+      // AI sprite: use AI aim
+      aim = scene.aiAim;
+    }
     if (aim && who.sprite){
       const ang = Math.atan2(aim.y, aim.x) * 180/Math.PI; // 0=east
       who.sprite.setAngle(ang);
@@ -978,6 +1006,9 @@ export class PvpScene extends Phaser.Scene {
 
     this.attacker.setVisible(true);
     this.defender.setVisible(true);
+
+    // Reset AI reaction timer so it doesn't accumulate during menus/delays
+    this._aiFirstSeenAt = performance.now();
 
     this.input.keyboard.enabled = true;
 
@@ -2757,9 +2788,10 @@ export class PvpScene extends Phaser.Scene {
     const round = this.pveRound;
 
     // Speed scaling: More gradual ramp - +2% per round, caps at +50% (round 26)
-    // This gives more breathing room in early rounds, then ramps up later
+    // Base is 3.0 cells/sec, scales up to 4.5 cells/sec at round 26
     const speedBoost = Math.min(0.50, (round - 1) * 0.02);
-    this.aiPlug.speed = 120 * (1 + speedBoost);
+    const AI_PLUG_CPS = 3.0 * (1 + speedBoost);
+    this.aiPlug.speed = AI_PLUG_CPS * this.cell;
 
     // Shoot cooldown: -2% per round, caps at -30% (round 15) = shoots 30% faster
     const cooldownReduction = Math.min(0.30, (round - 1) * 0.02);
@@ -2773,9 +2805,10 @@ export class PvpScene extends Phaser.Scene {
     const reactionBoost = Math.min(200, (round - 1) * 25);
     this.aiPlug.reactDelay = Math.max(200, 550 - reactionBoost);
 
-    // Vision range: +10 units per round, caps at +150 (round 16)
-    const rangeBoost = Math.min(150, (round - 1) * 10);
-    this.aiPlug.maxRange = 300 + rangeBoost;
+    // Vision range: +0.5 cells per round, caps at +8 cells (round 17)
+    // Base is ~15 cells at 20px/cell, scales to ~23 cells
+    const rangeBoost = Math.min(8, (round - 1) * 0.5);
+    this.aiPlug.maxRange = (15 + rangeBoost) * this.cell;
   }
 
   calculateStashValue(roundNum){
