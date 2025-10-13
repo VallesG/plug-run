@@ -4,7 +4,7 @@ import Phaser from 'phaser';
 const STAGE_SEEDS = {
   S1_MOVEMENT: 0x71C1A5E1,
   S2_STASHES: 0xA3B17C22,
-  S3_POWERUPS: 0xC0FFEE99,
+  S3_POWERUPS: 0xF00DFACE,  // Changed seed for better extraction accessibility
   S4_RUNNER_PVP: 0xDEADBEEF,
   S5_PLUG_PVP: 0xCAFEBABE
 };
@@ -340,6 +340,10 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   create(){
+    // Reset modal pause state on scene create/restart
+    this.pausedForModal = false;
+    this.userTookOver = false;
+
     this.ensureResizeListener();
     this.startStage(this.stageIdx);
   }
@@ -667,7 +671,10 @@ export class TutorialMiniScene extends Phaser.Scene {
             const nx = dx / len;
             const ny = dy / len;
             this.playerAim = { x: nx, y: ny };
-            this.playerDrift = { x: nx, y: ny };
+            // In stage 5 (plug), only update aim, not drift (plug doesn't auto-move)
+            if (this.stageIdx !== 5) {
+              this.playerDrift = { x: nx, y: ny };
+            }
             this.userTookOver = true;
           }
           this._activePointerId = null;
@@ -762,6 +769,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.car.setDisplaySize(carLen, this.cell * 1.4).setAngle(ang);
     this.carOutDir = { x: dx, y: dy };
 
+    // Car lights - created but initially hidden until extraction is available
+    this.carLights = makeCarLights(this, cx, cy, side);
+    this.carLights.setVisible(false);
+
     // Car beacon matching PvpScene - positioned at car nose
     this.showCarBeacon = () => {
       if (!this.car) return;
@@ -820,12 +831,23 @@ export class TutorialMiniScene extends Phaser.Scene {
       this._stashHaloG = this.add.graphics().setDepth(12);
     }
 
-    // Stage 5: spawn AI runner and real stash, convert player runner to plug
+    // Stage 5: spawn AI runner and real + bunk stash, convert player runner to plug
     if (idx === 5){
       this.createAIRunner();
       const w = this.cell*0.82, h = this.cell*0.52;
       const stashPos = { x: this.toWorldX(this.stashCell.x), y: this.toWorldY(this.stashCell.y) };
-      this.stash = makeDuffel(this, stashPos.x, stashPos.y, w, h);
+      const extractPos = { x: this.toWorldX(this.extractCell.x), y: this.toWorldY(this.extractCell.y) };
+
+      // Spawn both real and bunk stash (like stages 2-4)
+      const pkgA = makeDuffel(this, stashPos.x, stashPos.y, w, h);
+      const pkgB = makeDuffel(this, extractPos.x, extractPos.y, w, h);
+
+      // Real stash is farther from extraction point (harder for AI to get)
+      const dA = Math.hypot(stashPos.x - extractPos.x, stashPos.y - extractPos.y);
+      const dB = Math.hypot(extractPos.x - extractPos.x, extractPos.y - extractPos.y);
+      if (dA <= dB){ this.bunkStash = pkgA; this.stash = pkgB; }
+      else { this.bunkStash = pkgB; this.stash = pkgA; }
+
       this._stashHaloG = this.add.graphics().setDepth(12);
 
       // Convert player sprite to plug
@@ -851,8 +873,39 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.lastPos = { x: this.runner.x, y: this.runner.y };
     this.userTookOver = false;
     this._lastTap = null;
-    this.playerDrift = this.playerDrift || { x: this._initDrift?.x ?? 1, y: this._initDrift?.y ?? 0 };
-    this.playerAim = this.playerAim || { x: this.playerDrift.x, y: this.playerDrift.y };
+
+    // Pick a safe initial drift direction that doesn't lead into walls
+    const safeDrift = this.pickSafeInitialDirection();
+    this.playerDrift = safeDrift;
+    this.playerAim = safeDrift;
+  }
+
+  // Pick an initial movement direction that doesn't immediately hit a wall
+  pickSafeInitialDirection(){
+    if (!this.runner) return { x: 1, y: 0 };
+
+    // Test all 4 cardinal directions
+    const directions = [
+      { x: 1, y: 0 },   // Right
+      { x: 0, y: 1 },   // Down
+      { x: -1, y: 0 },  // Left
+      { x: 0, y: -1 }   // Up
+    ];
+
+    // Test each direction to see if we can move in it
+    for (const dir of directions) {
+      const testDist = this.cell * 1.5; // Look ahead 1.5 cells
+      const testX = this.runner.x + dir.x * testDist;
+      const testY = this.runner.y + dir.y * testDist;
+
+      // If we can move to this position, it's a safe direction
+      if (this.canMoveTo(this.runner, testX, testY)) {
+        return dir;
+      }
+    }
+
+    // Fallback to right if no safe direction found (shouldn't happen)
+    return { x: 1, y: 0 };
   }
 
   updateAimFromPointer(p){
@@ -882,10 +935,24 @@ export class TutorialMiniScene extends Phaser.Scene {
   showStageModal(idx){
     const desktop = this.sys.game.device.os.desktop;
     if (idx === 1){
-      this.showModal('Learn movement', [
-        desktop ? 'Use arrow keys / WASD to move' : 'Swipe anywhere to move',
-        'Reach the car to continue.'
-      ], 'Start', () => this.resumeFromModal());
+      const mobileLines = [
+        'You move automatically',
+        'Swipe to change direction',
+        'Reach the Getaway Car',
+        '',
+        'Tip: No need to hold the screen',
+        '',
+        'You are the RUNNER'
+      ];
+      const desktopLines = [
+        'Use arrow keys / WASD to move',
+        'Reach the Getaway Car',
+        '',
+        'You are the RUNNER'
+      ];
+      this.showModal('Learn movement', desktop ? desktopLines : mobileLines, 'Start', () => this.resumeFromModal());
+      // Add runner character preview with blue trail inline with text
+      this.time.delayedCall(250, () => this.showCharacterPreview('runner'));
     } else if (idx === 2) {
       // Stash tutorial: further shorten and wrap text for mobile devices.  The original
       // copy wrapped off screen on some phones, so trim the wording and apply a
@@ -931,16 +998,81 @@ export class TutorialMiniScene extends Phaser.Scene {
       // Stage 5: Plug PvP tutorial - show gun selection first, then start
       const plugLines = [
         'Great! Now you have the stashes.',
-        'Now you\'re a plug. Defend against runners.',
-        desktop ? 'Click to shoot, move mouse to aim.' : 'Tap screen to shoot, drag to aim.'
+        'Defend against runners.',
+        desktop ? 'Click to shoot, move mouse to aim.' : 'Tap screen to shoot, drag to aim.',
+        '',
+        'You are now the PLUG'
       ];
       this.showModal('Defend the Block', plugLines, 'Go', () => {
         this.resumeFromModal();
         this.showGunSelectionModal();
-      }, { scale: 0.70 });
+      }, { scale: 0.65 });
+      // Add plug character preview with red trail inline with text
+      this.time.delayedCall(250, () => this.showCharacterPreview('plug'));
     }
   }
+  showCharacterPreview(role){
+    // Create character preview inline with text at bottom of modal
+    const width = this.scale.width;
+    const height = this.scale.height;
+
+    // Position to align perfectly with "You are the RUNNER/PLUG" text line (same vertical position as text)
+    const previewY = height * 0.475;  // Adjusted down to align with text line after modal content changes
+    const previewSize = Math.min(width, height) * 0.045;  // Smaller size (was 0.06) to fit inline
+
+    // Container for character preview - positioned to the right of "You are the RUNNER/PLUG" text
+    const container = this.add.container(width / 2 + 80, previewY).setDepth(10001).setScrollFactor(0);
+
+    // Character sprite
+    const texture = (role === 'runner') ? 'td_runner' : 'td_plug';
+    const sprite = this.add.sprite(0, 0, texture).setDisplaySize(previewSize, previewSize);
+
+    // Flame trail particles behind character (smaller and fewer)
+    const trailColors = (role === 'runner')
+      ? [0x60a5fa, 0x3b82f6, 0x2563eb]  // Blue for runner
+      : [0xef4444, 0xdc2626, 0xb91c1c]; // Red for plug
+
+    // Create 2 small trail circles behind the character
+    const trails = [];
+    for (let i = 0; i < 2; i++) {
+      const offsetX = -previewSize * 0.6 - (i * previewSize * 0.5);
+      const offsetY = (Math.random() - 0.5) * previewSize * 0.25;
+      const size = previewSize * (0.3 - i * 0.08);
+      const color = trailColors[i % trailColors.length];
+      const alpha = 0.7 - (i * 0.2);
+
+      const trail = this.add.circle(offsetX, offsetY, size, color, alpha);
+      trails.push(trail);
+      container.add(trail);
+    }
+
+    container.add(sprite);
+
+    // Animate trails pulsing
+    trails.forEach((trail, i) => {
+      this.tweens.add({
+        targets: trail,
+        alpha: trail.alpha * 0.4,
+        scale: 0.8,
+        duration: 600,
+        delay: i * 100,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    });
+
+    // Store reference for cleanup
+    if (!this._modalExtras) this._modalExtras = [];
+    this._modalExtras.push(container);
+  }
+
   resumeFromModal(){
+    // Clean up any modal extras (character previews)
+    if (this._modalExtras) {
+      this._modalExtras.forEach(extra => extra.destroy());
+      this._modalExtras = [];
+    }
     const cam = this.cameras.main;
     cam.setZoom(1);
     this.pointer = null;
@@ -969,7 +1101,17 @@ export class TutorialMiniScene extends Phaser.Scene {
       background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 10, 0x0f172a, 0.96).setStrokeStyle(2, 0x2f3650),
       title: this.add.text(0, 0, title, { color: '#cbd1ff', fontSize: Math.max(22, Math.floor(this.scale.height * 0.036 * scaleFac)) + 'px', fontStyle: 'bold' }),
       content: this.add.text(0, 0, lines.join('\n'), { color: '#aab5ff', fontSize: Math.max(15, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px' }),
-      actions: [ this.add.text(0, 0, btn, { color: '#cbd1ff' }) ],
+      actions: [
+        this.rexUI.add.label({
+          background: this.rexUI.add.roundRectangle(0, 0, 2, 2, 8, 0xfbbf24).setStrokeStyle(4, 0xfde047),
+          text: this.add.text(0, 0, btn, {
+            color: '#000000',
+            fontSize: Math.max(18, Math.floor(this.scale.height * 0.032 * scaleFac)) + 'px',
+            fontStyle: 'bold'
+          }),
+          space: { left: 28, right: 28, top: 14, bottom: 14 }
+        })
+      ],
       space: { title: 12, content: 12, action: 10, left: 18, right: 18, top: 16, bottom: 16 }
     }).layout().setDepth(9999).popUp(200);
     dlg.on('button.click', () => {
@@ -1041,40 +1183,58 @@ export class TutorialMiniScene extends Phaser.Scene {
       .setInteractive();
     // Panel sizing
     const panelW = Math.min(width * 0.80, 480);
-    const panelH = 220;
+    const panelH = 240;
     const panel = this.add.rectangle(width/2, height*0.40, panelW, panelH, 0x0f172a, 0.96)
       .setStrokeStyle(2, 0x274060)
       .setDepth(20001);
-    // Title
-    const title = this.add.text(panel.x, panel.y - panelH/2 + 32,
-      'Pick 2 Runner powers (tap order = use order)',
-      { color: '#cbd1ff', fontSize: Math.max(18, Math.floor(height * 0.030)) + 'px', fontStyle:'bold' }
+    // Main title (matching PvE style)
+    const title = this.add.text(panel.x, panel.y - panelH/2 + 24,
+      'TUTORIAL',
+      { color: '#cbd1ff', fontSize: Math.max(22, Math.floor(height * 0.040)) + 'px', fontStyle:'bold' }
     ).setOrigin(0.5).setDepth(20002);
-    // Options definition
-    const opts = [ { key:'phase', label:'PHASE', disabled:false }, { key:'dash', label:'DASH', disabled:false }, { key:'decoy', label:'DECOY', disabled:true } ];
+    // Subtitle
+    const subtitle = this.add.text(panel.x, panel.y - panelH/2 + 52,
+      'Pick 2 Power-Ups',
+      { color: '#94a3b8', fontSize: Math.max(16, Math.floor(height * 0.026)) + 'px', fontStyle:'normal' }
+    ).setOrigin(0.5).setDepth(20002);
+    // Options definition with emoji symbols and colors (matching PvE mode)
+    const opts = [
+      { key:'phase', label:'PHASE', symbol:'👻', color:'#a78bfa', disabled:false },
+      { key:'dash', label:'DASH', symbol:'⚡', color:'#fbbf24', disabled:false },
+      { key:'decoy', label:'DECOY', symbol:'🎭', color:'#60a5fa', disabled:true }
+    ];
     const chosen = [];
     // Horizontal spacing
     const btnW = panelW / opts.length;
-    const btnH = 58;
+    const btnH = 80;
     // Keep a list of UI elements for cleanup later
     const elements = [];
     opts.forEach((opt, idx) => {
       const x = panel.x - panelW/2 + btnW * (idx + 0.5);
       const y = panel.y + panelH/2 - btnH/2 - 16;
       const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
-        .setStrokeStyle(1, 0x274060)
+        .setStrokeStyle(2, opt.disabled ? 0x374151 : parseInt(opt.color.replace('#', '0x')))
         .setDepth(20002)
         .setInteractive({ useHandCursor: !opt.disabled });
-      const txt = this.add.text(x, y, opt.label, {
-        color: opt.disabled ? '#6b7280' : '#cbd1ff',
-        fontSize: Math.max(18, Math.floor(height * 0.032)) + 'px',
+
+      // Symbol (emoji) above name
+      const symbol = this.add.text(x, y - 15, opt.symbol, {
+        fontSize: '32px'
+      }).setOrigin(0.5).setDepth(20003).setAlpha(opt.disabled ? 0.4 : 1.0);
+
+      // Power name below symbol
+      const txt = this.add.text(x, y + 20, opt.label, {
+        color: opt.disabled ? '#6b7280' : opt.color,
+        fontSize: Math.max(16, Math.floor(height * 0.028)) + 'px',
         fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(20003);
-      // Selection marker (small number)
-      const mark = this.add.text(x + (btnW*0.30), y - btnH*0.30, '', {
-        color: '#ffffff', fontSize: Math.max(14, Math.floor(height * 0.028)) + 'px', fontStyle:'bold', backgroundColor:'#1f2a44'
+
+      // Selection marker (small number badge in top-right corner)
+      const mark = this.add.text(x + (btnW*0.30), y - btnH*0.40, '', {
+        color: '#ffffff', fontSize: Math.max(14, Math.floor(height * 0.026)) + 'px', fontStyle:'bold', backgroundColor:'#10b981',
+        padding: { x: 6, y: 4 }
       }).setOrigin(0.5).setDepth(20004).setVisible(false);
-      elements.push(rect, txt, mark);
+      elements.push(rect, txt, symbol, mark);
       rect.on('pointerdown', () => {
         if (opt.disabled) return;
         // Toggle selection: allow deselect by tapping again
@@ -1095,6 +1255,7 @@ export class TutorialMiniScene extends Phaser.Scene {
             overlay.destroy();
             panel.destroy();
             title.destroy();
+            subtitle.destroy();
             elements.forEach(el => el.destroy());
             this.pausedForModal = false;
           }
@@ -1260,7 +1421,27 @@ export class TutorialMiniScene extends Phaser.Scene {
         cam.fadeIn(200, 0, 0, 0);
       });
     } else {
-      // Tutorial complete - show completion modal and return to menu
+      // Tutorial complete - pause game and show completion modal
+      this.pausedForModal = true;
+
+      // Stop AI movement and bullets
+      if (this.aiRunner) {
+        this.aiRunner.destroy();
+        this.aiRunner = null;
+      }
+      if (this.aiPlug) {
+        this.aiPlug.destroy();
+        this.aiPlug = null;
+      }
+      if (this.bulletsPlayer) {
+        this.bulletsPlayer.forEach(b => b.destroy());
+        this.bulletsPlayer = [];
+      }
+      if (this.bulletsPlug) {
+        this.bulletsPlug.forEach(b => b.destroy());
+        this.bulletsPlug = [];
+      }
+
       const veil = this.add.rectangle(
         this.scale.width / 2,
         this.scale.height / 2,
@@ -1473,7 +1654,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     return startCell;
   }
 
-  // Update AI plug behavior (chase and shoot)
+  // Update AI plug behavior (chase and shoot) - Tutorial level difficulty (easier than PvE round 1)
   updatePlugAI(dt){
     if (!this.aiPlug || !this.runner) return;
 
@@ -1481,21 +1662,36 @@ export class TutorialMiniScene extends Phaser.Scene {
     const ax = this.runner.x;
     const ay = this.runner.y;
     const now = performance.now();
-    const speed = this.cell * 4.5;
+    // Tutorial AI plug speed: 3.0 cells/sec (same as PvE round 1, but shoots slower)
+    const speed = this.cell * 3.0;
 
-    // Chase the runner
+    // Chase the runner with improved pathfinding
     const vx = ax - d.x;
     const vy = ay - d.y;
     const dist = Math.hypot(vx, vy);
 
-    // Simple chase logic
-    const dirX = Math.sign(vx);
-    const dirY = Math.sign(vy);
-    const nx = d.x + dirX * speed * dt;
-    const ny = d.y + dirY * speed * dt;
+    // Use pathfinding to navigate around walls better
+    const plugCell = this.toCell(d.x, d.y);
+    const runnerCell = this.toCell(ax, ay);
+    const nextCell = this.findNextStepTowards(plugCell, runnerCell);
 
-    if (this.canMoveTo(d, nx, d.y)) d.x = nx;
-    if (this.canMoveTo(d, d.x, ny)) d.y = ny;
+    if (nextCell) {
+      const targetX = this.toWorldX(nextCell.x);
+      const targetY = this.toWorldY(nextCell.y);
+      const dx = targetX - d.x;
+      const dy = targetY - d.y;
+      const moveLen = Math.hypot(dx, dy);
+
+      if (moveLen > 0.1) {
+        const normX = dx / moveLen;
+        const normY = dy / moveLen;
+        const nx = d.x + normX * speed * dt;
+        const ny = d.y + normY * speed * dt;
+
+        if (this.canMoveTo(d, nx, d.y)) d.x = nx;
+        if (this.canMoveTo(d, d.x, ny)) d.y = ny;
+      }
+    }
 
     // Shoot if aligned and in range
     const maxRange = this.cell * 12;
@@ -1503,7 +1699,8 @@ export class TutorialMiniScene extends Phaser.Scene {
       const aligned = (Math.abs(ax - d.x) < this.cell*0.4) || (Math.abs(ay - d.y) < this.cell*0.4);
       if (aligned){
         this._aiPlugTick = (this._aiPlugTick || 0) + dt;
-        if (this._aiPlugTick >= 0.6){ // shoot every 0.6s
+        // Tutorial shoots slower: every 0.9s (vs 0.6s in PvE)
+        if (this._aiPlugTick >= 0.9){
           this._aiPlugTick = 0;
           const adx = Math.abs(ax - d.x);
           const ady = Math.abs(ay - d.y);
@@ -1516,30 +1713,39 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
   }
 
-  // Update AI runner behavior (go to stash then extract)
+  // Update AI runner behavior (go to stash then extract) - Tutorial difficulty
   updateRunnerAI(delta){
     if (!this.aiRunner) return;
 
     const now = performance.now();
     const dt = delta / 1000;
 
-    // Replan every 400ms
+    // Replan every 600ms (slower replanning for less optimal pathing)
     if (!this._aiRunnerPlanAt || now >= this._aiRunnerPlanAt){
-      this._aiRunnerPlanAt = now + 400;
+      this._aiRunnerPlanAt = now + 600;
 
       const runnerCell = this.toCell(this.aiRunner.x, this.aiRunner.y);
       const targetCell = (!this.aiRunner.hasStash)
         ? this.toCell(this.stash.x, this.stash.y)
         : this.toCell(this.extractPad.x, this.extractPad.y);
 
+      // Add some randomness to make AI take suboptimal routes (easier to intercept)
       let nextCell = this.findNextStepTowards(runnerCell, targetCell);
+
+      // 30% chance to pick a random valid neighbor instead of optimal path (makes it wander)
+      if (Math.random() < 0.3) {
+        const ns = this.neighbors4(runnerCell);
+        if (ns.length) nextCell = ns[(Math.random() * ns.length) | 0];
+      }
+
       if (nextCell.x === runnerCell.x && nextCell.y === runnerCell.y){
         const ns = this.neighbors4(runnerCell);
         if (ns.length) nextCell = ns[(Math.random()*ns.length)|0];
       }
 
       const dir = { x: Math.sign(nextCell.x - runnerCell.x), y: Math.sign(nextCell.y - runnerCell.y) };
-      const speed = this.cell * 5.0 * (this.aiRunner.hasStash ? 0.75 : 1);
+      // Tutorial AI runner speed: 3.0 cells/sec (same as plug, slower than normal 5.0)
+      const speed = this.cell * 3.0 * (this.aiRunner.hasStash ? 0.75 : 1);
 
       this._aiRunnerVX = dir.x * speed;
       this._aiRunnerVY = dir.y * speed;
@@ -1738,7 +1944,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     // assist unconditionally caused a clunky, step-like motion when pressing
     // multiple keys (e.g., down+right) in the tutorial.  Restricting the
     // assist to non-keyboard movement resolves this and matches PvP.
-    if (!usingKeys) {
+    // In stage 4, disable corridor assist when near AI plug to prevent runner from following plug movement
+    const nearAIPlug = this.stageIdx === 4 && this.aiPlug && Math.hypot(this.runner.x - this.aiPlug.x, this.runner.y - this.aiPlug.y) < this.cell * 3;
+    if (!usingKeys && !nearAIPlug) {
       const dirAssist = (Math.abs(vx) > Math.abs(vy))
         ? { x: Math.sign(vx), y: 0 }
         : (Math.abs(vy) > 0 ? { x: 0, y: Math.sign(vy) } : { x: 0, y: 0 });
@@ -1848,18 +2056,6 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.updatePlugAI(dt);
       this.updateBullets(delta);
 
-      // Display player HP
-      if (!this._hpDisplay){
-        this._hpDisplay = this.add.text(
-          this.scale.width - 10,
-          10,
-          `HP: ${this._playerHP || 2}`,
-          { color: '#86efac', fontSize: Math.max(16, Math.floor(this.scale.height * 0.028)) + 'px', fontStyle: 'bold' }
-        ).setOrigin(1, 0).setScrollFactor(0).setDepth(10000);
-      } else {
-        this._hpDisplay.setText(`HP: ${this._playerHP || 2}`);
-      }
-
       // Check if plug bullets hit the runner
       if (this.bulletsPlug){
         for (let i = this.bulletsPlug.length - 1; i >= 0; i--){
@@ -1886,18 +2082,6 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.updateRunnerAI(delta);
       this.handlePlayerShooting();
       this.updateBullets(delta);
-
-      // Display AI runner HP
-      if (!this._hpDisplay && this.aiRunner){
-        this._hpDisplay = this.add.text(
-          this.scale.width - 10,
-          10,
-          `Runner HP: ${this.aiRunner.hp || 2}`,
-          { color: '#ffd166', fontSize: Math.max(16, Math.floor(this.scale.height * 0.028)) + 'px', fontStyle: 'bold' }
-        ).setOrigin(1, 0).setScrollFactor(0).setDepth(10000);
-      } else if (this._hpDisplay && this.aiRunner) {
-        this._hpDisplay.setText(`Runner HP: ${this.aiRunner.hp || 2}`);
-      }
 
       // Check if player bullets hit the AI runner
       if (this.bulletsPlayer && this.aiRunner){
@@ -2023,6 +2207,8 @@ export class TutorialMiniScene extends Phaser.Scene {
       this._lastAIRunnerPos = { x: this.aiRunner.x, y: this.aiRunner.y };
     }
     if (this.stageIdx === 1){
+      // In stage 1, extraction is always available - turn on car lights immediately
+      this.setCarLights(true);
       // In stage 1, reaching the car triggers an extraction animation rather than an instant transition
       if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)) this.playCarDepartAndGoNext();
     } else if (this.stageIdx === 2){
@@ -2036,6 +2222,8 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
           this.toast('Nice. Get to the car.');
           this.showCarBeacon();
+          // Turn on car lights once package is collected
+          this.setCarLights(true);
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
@@ -2089,6 +2277,8 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
           this.toast('Got the stash! Get to the car.');
           this.showCarBeacon();
+          // Turn on car lights once package is collected
+          this.setCarLights(true);
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
@@ -2103,6 +2293,11 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
     // Note: Stage 5 logic is handled earlier in the update method
 
+    // Update flame trails for runner and AI characters
+    this.updateRunnerTrail(dt);
+    if (this.aiPlug) this.updatePlugTrail(dt);
+    if (this.aiRunner) this.updateAIRunnerTrail(dt);
+
     this.lastPos = { x: this.runner.x, y: this.runner.y };
   }
   overlaps(a, b){
@@ -2114,6 +2309,189 @@ export class TutorialMiniScene extends Phaser.Scene {
   overlapsPoint(a, x, y){
     const ra = new Phaser.Geom.Rectangle(a.x - 12, a.y - 12, 24, 24);
     return Phaser.Geom.Rectangle.Contains(ra, x, y);
+  }
+
+  /* ----------------- Movement Trails (Flame-like) ----------------- */
+  updateRunnerTrail(dt){
+    if (!this.runner || !this.runner.visible) return;
+
+    // Initialize trail tracking
+    if (!this._runnerTrailTimer) this._runnerTrailTimer = 0;
+    if (!this._runnerLastTrailPos) this._runnerLastTrailPos = { x: this.runner.x, y: this.runner.y };
+
+    this._runnerTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Emit trail particles every 50ms when moving
+    if (this._runnerTrailTimer >= 50) {
+      this._runnerTrailTimer = 0;
+
+      const dx = this.runner.x - this._runnerLastTrailPos.x;
+      const dy = this.runner.y - this._runnerLastTrailPos.y;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance > 1) {
+        // Normalize direction to get unit vector
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+
+        // Place trail BEHIND the character (opposite of movement direction)
+        const baseX = this._runnerLastTrailPos.x;
+        const baseY = this._runnerLastTrailPos.y;
+
+        this._runnerLastTrailPos = { x: this.runner.x, y: this.runner.y };
+
+        // Create 2 particles behind the character
+        for (let i = 0; i < 2; i++) {
+          // Small perpendicular offset for width
+          const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+          const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+          // In stage 5, player is plug (red trail), otherwise runner (blue trail)
+          const colors = (this.stageIdx === 5)
+            ? [0xef4444, 0xdc2626, 0xb91c1c]  // Red for plug
+            : [0x60a5fa, 0x3b82f6, 0x2563eb]; // Blue for runner
+          const color = colors[Math.floor(Math.random() * colors.length)];
+
+          const trail = this.add.circle(
+            baseX + perpX,
+            baseY + perpY,
+            this.cell * 0.35,
+            color,
+            0.7
+          ).setDepth(1);
+
+          // Fade and shrink
+          this.tweens.add({
+            targets: trail,
+            alpha: 0,
+            scale: 0.2,
+            duration: 500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => trail.destroy()
+          });
+        }
+      }
+    }
+  }
+
+  updatePlugTrail(dt){
+    if (!this.aiPlug || !this.aiPlug.sprite || !this.aiPlug.sprite.visible) return;
+
+    // Initialize trail tracking
+    if (!this._plugTrailTimer) this._plugTrailTimer = 0;
+    if (!this._plugLastTrailPos) this._plugLastTrailPos = { x: this.aiPlug.x, y: this.aiPlug.y };
+
+    this._plugTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Emit trail particles every 50ms when moving
+    if (this._plugTrailTimer >= 50) {
+      this._plugTrailTimer = 0;
+
+      const dx = this.aiPlug.x - this._plugLastTrailPos.x;
+      const dy = this.aiPlug.y - this._plugLastTrailPos.y;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance > 1) {
+        // Normalize direction to get unit vector
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+
+        // Place trail BEHIND the character (opposite of movement direction)
+        const baseX = this._plugLastTrailPos.x;
+        const baseY = this._plugLastTrailPos.y;
+
+        this._plugLastTrailPos = { x: this.aiPlug.x, y: this.aiPlug.y };
+
+        // Create 2 particles behind the character
+        for (let i = 0; i < 2; i++) {
+          // Small perpendicular offset for width
+          const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+          const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+          // Red flame colors - brighter to darker
+          const colors = [0xef4444, 0xdc2626, 0xb91c1c];
+          const color = colors[Math.floor(Math.random() * colors.length)];
+
+          const trail = this.add.circle(
+            baseX + perpX,
+            baseY + perpY,
+            this.cell * 0.35,
+            color,
+            0.7
+          ).setDepth(1);
+
+          // Fade and shrink
+          this.tweens.add({
+            targets: trail,
+            alpha: 0,
+            scale: 0.2,
+            duration: 500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => trail.destroy()
+          });
+        }
+      }
+    }
+  }
+
+  updateAIRunnerTrail(dt){
+    if (!this.aiRunner || !this.aiRunner.sprite || !this.aiRunner.sprite.visible) return;
+
+    // Initialize trail tracking
+    if (!this._aiRunnerTrailTimer) this._aiRunnerTrailTimer = 0;
+    if (!this._aiRunnerLastTrailPos) this._aiRunnerLastTrailPos = { x: this.aiRunner.x, y: this.aiRunner.y };
+
+    this._aiRunnerTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Emit trail particles every 50ms when moving
+    if (this._aiRunnerTrailTimer >= 50) {
+      this._aiRunnerTrailTimer = 0;
+
+      const dx = this.aiRunner.x - this._aiRunnerLastTrailPos.x;
+      const dy = this.aiRunner.y - this._aiRunnerLastTrailPos.y;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance > 1) {
+        // Normalize direction to get unit vector
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+
+        // Place trail BEHIND the character (opposite of movement direction)
+        const baseX = this._aiRunnerLastTrailPos.x;
+        const baseY = this._aiRunnerLastTrailPos.y;
+
+        this._aiRunnerLastTrailPos = { x: this.aiRunner.x, y: this.aiRunner.y };
+
+        // Create 2 particles behind the character
+        for (let i = 0; i < 2; i++) {
+          // Small perpendicular offset for width
+          const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+          const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+          // AI runner always has blue trail (they're always a runner)
+          const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+          const color = colors[Math.floor(Math.random() * colors.length)];
+
+          const trail = this.add.circle(
+            baseX + perpX,
+            baseY + perpY,
+            this.cell * 0.35,
+            color,
+            0.7
+          ).setDepth(1);
+
+          // Fade and shrink
+          this.tweens.add({
+            targets: trail,
+            alpha: 0,
+            scale: 0.2,
+            duration: 500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => trail.destroy()
+          });
+        }
+      }
+    }
   }
 }
 
