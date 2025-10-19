@@ -1418,6 +1418,9 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Update combat system (bullets and hit detection)
     this.combatSystem.update(delta);
+    // Exit immediately if round ended during combat update (prevents race conditions)
+    if (this.roundOver) return;
+
     updateAvatarVisuals(this, dt);
 
     // anti-camp (REAL / BUNK STASH PATCH: only consider the REAL stash)
@@ -1493,7 +1496,7 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     // extract win
-    if (this.hasStash && rectsOverlap(this.attacker, this.extract)) return this.startExtractionSequence();
+    if (!this.roundOver && this.hasStash && rectsOverlap(this.attacker, this.extract)) return this.startExtractionSequence();
 
     // Unstuck runner if inside wall and not phasing
     if (!this.runnerIsPhasing?.() && this.isWallAtWorld?.(this.attacker.x, this.attacker.y)) this.ensureUnstuck(this.attacker);
