@@ -1163,11 +1163,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.endAt = performance.now() + this.timerMs;
     this.roundPausedForMenu = false;
 
-    // Initialize RepTracker for this round
-    if (!this.repTracker) {
-      this.repTracker = new RepTracker(this.role, this);
-    } else {
-      this.repTracker.startRound(this.pveRound || 1);
+    // Initialize RepTracker for this round via ProgressionManager
+    if (this.progressionManager) {
+      this.progressionManager.startRound(this.pveRound || 1);
     }
   }
 
@@ -1202,8 +1200,8 @@ export class BaseGameScene extends Phaser.Scene {
     if (!stats) return;
 
     // Track power usage for REP system
-    if (this.repTracker && this.role === 'runner') {
-      this.repTracker.onPowerUsed(power);
+    if (this.progressionManager?.repTracker && this.role === 'runner') {
+      this.progressionManager.repTracker.onPowerUsed(power);
     }
 
     if (power === 'phase'){
@@ -1448,10 +1446,10 @@ export class BaseGameScene extends Phaser.Scene {
         this.hasStash = true;
         this.aiRunnerTargetsBunkFirst = false;
         // Track real stash pickup for REP (runner got it right)
-        if (this.repTracker && this.role === 'runner') {
-          this.repTracker.onStashPickup(false); // false = not bunk
-        } else if (this.repTracker && this.role === 'plug') {
-          this.repTracker.onStashPickup(false); // Plug sees runner got real stash
+        if (this.progressionManager?.repTracker && this.role === 'runner') {
+          this.progressionManager.repTracker.onStashPickup(false); // false = not bunk
+        } else if (this.progressionManager?.repTracker && this.role === 'plug') {
+          this.progressionManager.repTracker.onStashPickup(false); // Plug sees runner got real stash
         }
         // Play pickup sounds (generic pickup + real stash pickup)
         try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
@@ -1474,8 +1472,8 @@ export class BaseGameScene extends Phaser.Scene {
           decoy._fading = true;
           this.aiRunnerTargetsBunkFirst = false;
           // Track bunk stash pickup for REP (runner got fooled)
-          if (this.repTracker && this.role === 'runner') {
-            this.repTracker.onStashPickup(true); // true = bunk
+          if (this.progressionManager?.repTracker && this.role === 'runner') {
+            this.progressionManager.repTracker.onStashPickup(true); // true = bunk
           }
           // Play pickup sounds (generic pickup + bunk stash pickup)
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
@@ -1545,8 +1543,8 @@ export class BaseGameScene extends Phaser.Scene {
         b.life -= delta;
         if (this.isBulletBlockedAtWorld(b.x, b.y) || b.life<=0){
           // Track bullet miss for REP (if it expires/hits wall without hitting target)
-          if (this.repTracker && this.role === 'plug' && group === this.bulletsD && !b._repTracked) {
-            this.repTracker.onBulletFired(false); // Missed shot
+          if (this.progressionManager?.repTracker && this.role === 'plug' && group === this.bulletsD && !b._repTracked) {
+            this.progressionManager.repTracker.onBulletFired(false); // Missed shot
             b._repTracked = true;
           }
           impact(b.x, b.y, b._color || 0xffffff);
@@ -1566,8 +1564,8 @@ export class BaseGameScene extends Phaser.Scene {
       if (this.decoySprite && rectsOverlap(b, this.decoySprite)){
         this._spawnBulletImpact?.(b.x, b.y, b._color || 0xffffff);
         // Track bullet hit decoy (counts as hit for plug)
-        if (this.repTracker && this.role === 'plug' && !b._repTracked) {
-          this.repTracker.onBulletFired(true);
+        if (this.progressionManager?.repTracker && this.role === 'plug' && !b._repTracked) {
+          this.progressionManager.repTracker.onBulletFired(true);
           b._repTracked = true;
         }
         b._glow?.destroy?.(); b._rim?.destroy?.(); b.destroy();
@@ -1578,8 +1576,8 @@ export class BaseGameScene extends Phaser.Scene {
         if (phasing) return;
         this._spawnBulletImpact?.(b.x, b.y, b._color || 0xffffff);
         // Track bullet hit runner (counts as hit for plug)
-        if (this.repTracker && this.role === 'plug' && !b._repTracked) {
-          this.repTracker.onBulletFired(true);
+        if (this.progressionManager?.repTracker && this.role === 'plug' && !b._repTracked) {
+          this.progressionManager.repTracker.onBulletFired(true);
           b._repTracked = true;
         }
         b._glow?.destroy?.(); b._rim?.destroy?.(); b.destroy();
@@ -1602,8 +1600,8 @@ export class BaseGameScene extends Phaser.Scene {
     who.iUntil = performance.now() + (this.iFrameMs || 900);
 
     // Track damage for REP system
-    if (this.repTracker && who === this.attacker && this.role === 'runner') {
-      this.repTracker.onBulletHitPlayer();
+    if (this.progressionManager?.repTracker && who === this.attacker && this.role === 'runner') {
+      this.progressionManager.repTracker.onBulletHitPlayer();
     }
 
     // Play a quick 'ouch' hit SFX
@@ -1669,8 +1667,8 @@ export class BaseGameScene extends Phaser.Scene {
     const currentRound = this.pveRound || 1;
 
     // Track runner elimination for REP calculation
-    if (this.repTracker) {
-      this.repTracker.onRunnerEliminated();
+    if (this.progressionManager?.repTracker) {
+      this.progressionManager.repTracker.onRunnerEliminated();
     }
 
     // Calculate rewards using new tracking system
@@ -1679,8 +1677,8 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Calculate REP using RepTracker
     let repEarned = 0;
-    if (this.repTracker) {
-      const repResult = this.repTracker.calculateFinalRep(roundCompletion.repMultiplier);
+    if (this.progressionManager?.repTracker) {
+      const repResult = this.progressionManager.repTracker.calculateFinalRep(roundCompletion.repMultiplier);
       repEarned = repResult.finalRep;
       console.log('[Plug] REP Breakdown:', repResult.breakdown);
     }
