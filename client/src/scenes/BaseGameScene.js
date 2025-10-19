@@ -23,6 +23,8 @@ import AIController from '../controllers/AIController.js';
 import CombatSystem from '../controllers/CombatSystem.js';
 import VisualEffects from '../controllers/VisualEffects.js';
 import GameUI from '../controllers/GameUI.js';
+import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
+import { getRunnerBaseStats, applyRunnerProgression } from '../controllers/RunnerAI.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 
 function makeRng(seed){
@@ -567,13 +569,14 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.meleeEnabled = false;
 
-    // AI knobs (base difficulty)
-    this.aiPlug = { speed: 120, shootEvery: 0.90, maxRange: 300, inaccuracy: 0.45, reactDelay: 550 };
+    // AI knobs (base difficulty) - Loaded from separate AI modules
+    this.aiPlug = getPlugBaseStats();
+    this.aiRunner = getRunnerBaseStats();
 
     // Apply progressive difficulty in PvE mode
-    // Current scaling: +1.5% speed, +2% fire rate, +1.5% accuracy, -25ms reaction, +10 vision per round
     if (this.mode === 'pve') {
-      this.applyPvEDifficulty();
+      applyPlugProgression(this);
+      applyRunnerProgression(this);
       this.applyMusicRamp();
     }
 
@@ -586,22 +589,18 @@ export class BaseGameScene extends Phaser.Scene {
     this._aiPlugStrafeDir = { x: 0, y: 0 };
     this._aiPlugStrafeUntil = 0;
     this._aiFirstSeenAt = performance.now();
-    this.aiRunner = { planEvery: 200, jukeDist: 0, sprintDist: 5, sprintMul: 1.05, centerBias: 14 };
     this.aiTick = 0;
     this._aiPlanAt = 0;
     this._aiSpawnAt = performance.now();
     this._aiLastPos = { x:this.attacker.x, y:this.attacker.y };
     this._aiVX = 0; this._aiVY = 0;
     this._aiCruiseDir = { x:1, y:0 };
-    this.aiRunner.keepDirMs   = 300;
-    this.aiRunner.slideNudge  = 0.16;
     this._aiLastMoveDir = { x:0, y:0 };
     this._aiFlipGuardUntil = 0;
 
     // recompute speed scalars now that aiPlug exists
     this.recomputeSpeedsFromCell();
     if (this.mode === 'pve') {
-      this.applyRunnerAIDifficulty();
       if (this.role === 'plug') {
         // Use seeded RNG for AI targeting decision (deterministic in PvE routes)
         const rng = this.gameplayRNG || Math.random;
@@ -664,7 +663,8 @@ export class BaseGameScene extends Phaser.Scene {
     this.phaseActiveUntil = 0;
     this.attacker?.setAlpha?.(1);
     if (this.mode === 'pve') {
-      this.applyRunnerAIDifficulty();
+      applyPlugProgression(this);
+      applyRunnerProgression(this);
       this.applyMusicRamp();
     }
 
@@ -1167,6 +1167,9 @@ export class BaseGameScene extends Phaser.Scene {
     if (this.progressionManager) {
       this.progressionManager.startRound(this.pveRound || 1);
     }
+
+    // Reset AI orientation timer for new round
+    resetPlugOrientation(this);
   }
 
   // Weapon selection prompt (delegated to GameUI controller)
@@ -1881,64 +1884,9 @@ export class BaseGameScene extends Phaser.Scene {
   // Trail effects (delegated to VFX controller - handled in vfx.update())
 
   /* ----------------- PvE Difficulty Scaling ----------------- */
-  applyPvEDifficulty(){
-    if (!this.pveRound || this.pveRound <= 1) return;
-
-    const round = this.pveRound;
-
-    // Speed scaling: Gentle ramp - +0.8% per round, caps at +80% (round 100)
-    // Base is 3.0 cells/sec, scales up to 5.4 cells/sec at round 100
-    const speedBoost = Math.min(0.80, (round - 1) * 0.008);
-    const AI_PLUG_CPS = 3.0 * (1 + speedBoost);
-    this.aiPlug.speed = AI_PLUG_CPS * this.cell;
-
-    // Shoot cooldown: -0.5% per round, caps at -50% (round 100) = shoots 50% faster
-    const cooldownReduction = Math.min(0.50, (round - 1) * 0.005);
-    this.aiPlug.shootEvery = 0.90 * (1 - cooldownReduction);
-
-    // Accuracy: reduce inaccuracy by 0.5% per round, caps at 50% reduction (round 100)
-    const accuracyBoost = Math.min(0.50, (round - 1) * 0.005);
-    this.aiPlug.inaccuracy = 0.45 * (1 - accuracyBoost);
-
-    // Reaction time: -5ms per round, caps at -350ms (round 70) = reacts 350ms faster
-    const reactionBoost = Math.min(350, (round - 1) * 5);
-    this.aiPlug.reactDelay = Math.max(200, 550 - reactionBoost);
-
-    // Vision range: +0.08 cells per round, caps at +8 cells (round 100)
-    // Base is ~15 cells at 20px/cell, scales to ~23 cells
-    const rangeBoost = Math.min(8, (round - 1) * 0.08);
-    this.aiPlug.maxRange = (15 + rangeBoost) * this.cell;
-  }
-
-  applyRunnerAIDifficulty(){
-    if (this.role !== 'plug') return;
-
-    const round = Math.max(1, this.pveRound || 1);
-
-    // Start the AI runner noticeably slower and ramp gently as rounds progress
-    // Extra nerf for rounds 1-3 to make early game easier
-    const baseRunnerCps = round <= 3 ? 4.0 : 4.6; // even slower start for first 3 rounds
-    const runnerSpeedBoost = Math.min(0.60, (round - 1) * 0.006); // gentle growth: +60% max at round 100
-    this.runnerSpeed = baseRunnerCps * (1 + runnerSpeedBoost) * this.cell;
-
-    // Keep dependent stats (e.g., decoy) in sync with new speed
-    if (this.runnerPowerStats?.decoy) {
-      this.runnerPowerStats.decoy.speed = this.runnerSpeed * 0.9;
-    }
-    if (this.runnerPowerStats?.phase) {
-      this.runnerPowerStats.phase.dashDist = this.cell * 3.5;
-    }
-
-    if (!this.aiRunner) return;
-    // Worse decision-making in early rounds
-    const planningPenalty = round <= 3 ? 100 : 0; // +100ms slower planning for rounds 1-3
-    this.aiRunner.planEvery = Math.max(90, 240 + planningPenalty - (round - 1) * 1.5); // planning improves slower: -150ms max at round 100
-    this.aiRunner.sprintMul = 1.05 + Math.min(0.40, (round - 1) * 0.004); // sprint multiplier: +40% max at round 100
-    this.aiRunner.sprintDist = 5 + Math.min(4, (round - 1) * 0.04); // sprint distance: +4 cells max at round 100
-    this.aiRunner.centerBias = 12 + Math.min(14, (round - 1) * 0.14); // centering: +14 max at round 100
-    this.aiRunner.slideNudge = Math.min(0.4, 0.16 + (round - 1) * 0.0024); // slide nudge: +0.24 max at round 100
-    this.aiRunner.keepDirMs = Math.max(160, 300 - (round - 1) * 1.4); // direction persistence: -140ms max at round 100
-  }
+  // Difficulty scaling has been moved to separate AI modules:
+  // - PlugAI.js: applyPlugProgression() for Runner mode opponent
+  // - RunnerAI.js: applyRunnerProgression() for Plug mode opponent
 
   applyMusicRamp(){
     if (!this.pveRound || this.pveRound <= 1) return;
