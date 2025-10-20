@@ -340,35 +340,46 @@ export default class PlayerController {
         }
       }
     } else if (moved >= this.SWIPE_DEAD_PX) {
-      // Quick swipe: change intended movement direction
-      const dx = pointer.x - sx, dy = pointer.y - sy;
+      // Determine if this is a quick swipe (direction change) or slow drag (aim only)
+      // Quick swipe = fast motion (< 400ms), Slow drag = slower deliberate motion (>= 400ms)
+      const SWIPE_SPEED_THRESHOLD_MS = 400;
+      const isQuickSwipe = dt < SWIPE_SPEED_THRESHOLD_MS;
 
-      // Convert to cardinal direction only (no diagonals)
-      let nx = 0, ny = 0;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        // Horizontal swipe
-        nx = dx > 0 ? 1 : -1;
-        ny = 0;
+      // In plug mode: quick swipes change direction, slow drags only aim
+      if (this.scene.role === 'plug' && !isQuickSwipe) {
+        // Slow drag in plug mode - aim drag completed, gun aim was already updated during updateSwipe
+        // Don't change movement direction
       } else {
-        // Vertical swipe
-        nx = 0;
-        ny = dy > 0 ? 1 : -1;
-      }
+        // Quick swipe: change intended movement direction
+        const dx = pointer.x - sx, dy = pointer.y - sy;
 
-      // Simply update the movement direction
-      this.playerMoveDir = { x: nx, y: ny };
-      this.playerIntendedDir = { x: nx, y: ny };
-      this.playerDrift = { x: nx, y: ny };  // Legacy-style drift
+        // Convert to cardinal direction only (no diagonals)
+        let nx = 0, ny = 0;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // Horizontal swipe
+          nx = dx > 0 ? 1 : -1;
+          ny = 0;
+        } else {
+          // Vertical swipe
+          nx = 0;
+          ny = dy > 0 ? 1 : -1;
+        }
 
-      // Update gun aim for plug so orientation updates correctly
-      if (this.scene.role === 'plug') {
-        this.playerGunAim = { x: nx, y: ny };
-      }
+        // Simply update the movement direction
+        this.playerMoveDir = { x: nx, y: ny };
+        this.playerIntendedDir = { x: nx, y: ny };
+        this.playerDrift = { x: nx, y: ny };  // Legacy-style drift
 
-      // Update running direction for sprite
-      const who = (this.scene.role === 'plug') ? this.scene.defender : this.scene.attacker;
-      if (who && this.scene.role === 'runner') {
-        this._runnerInputDir = { x: nx, y: ny };
+        // Update gun aim for plug so orientation updates correctly
+        if (this.scene.role === 'plug') {
+          this.playerGunAim = { x: nx, y: ny };
+        }
+
+        // Update running direction for sprite
+        const who = (this.scene.role === 'plug') ? this.scene.defender : this.scene.attacker;
+        if (who && this.scene.role === 'runner') {
+          this._runnerInputDir = { x: nx, y: ny };
+        }
       }
     }
 

@@ -381,12 +381,74 @@ export function considerRunnerPowerUse(scene, aiController, now) {
   // Legacy deterministic system: Use powers based on simple distance checks
   // Check BOTH powers each frame and use the most appropriate one for current situation
 
+  // Helper function to check if phasing through walls would create a tactical advantage
+  const shouldPhaseForTactics = () => {
+    // Only smart AIs (high powerSkill) use tactical phasing
+    if (scene.aiRunner.powerSkill < 0.6) return false; // Round 20+
+
+    const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
+
+    // Determine current objective
+    let objectiveCell;
+    if (!scene.hasStash) {
+      objectiveCell = scene.toCell(scene.stash.x, scene.stash.y);
+    } else {
+      objectiveCell = scene.toCell(scene.extract.x, scene.extract.y);
+    }
+
+    // Calculate direct distance vs pathfinding distance to objective
+    const directDist = Math.hypot(
+      objectiveCell.x - attackerCell.x,
+      objectiveCell.y - attackerCell.y
+    );
+
+    // Check if there's a wall in the direct line to objective
+    const dx = Math.sign(objectiveCell.x - attackerCell.x);
+    const dy = Math.sign(objectiveCell.y - attackerCell.y);
+    const nextCell = { x: attackerCell.x + dx, y: attackerCell.y + dy };
+
+    const wallBlocking = scene.inBoundsCell(nextCell.x, nextCell.y) &&
+                         !scene.isWalkableCell(nextCell.x, nextCell.y);
+
+    // Tactical shortcut: Phase if wall blocks direct path and objective is close
+    if (wallBlocking && directDist <= 8) {
+      console.log('[RunnerAI] 🧠 TACTICAL PHASE: Cutting through wall to reach objective (distance:', directDist.toFixed(1), 'cells)');
+      return true; // Cut through walls to reach objective faster
+    }
+
+    // Evasive maneuver: Being chased and can phase to put wall between us and plug
+    const plugCell = scene.toCell(scene.defender.x, scene.defender.y);
+    const distToPlug = toroDist(attackerCell, plugCell, scene.cols, scene.rows);
+
+    if (distToPlug <= 6 && distToPlug > 2) {
+      // Check if phasing in escape direction would put a wall between us and plug
+      const escapeDx = Math.sign(attackerCell.x - plugCell.x) || 1;
+      const escapeDy = Math.sign(attackerCell.y - plugCell.y) || 1;
+      const escapeCell = { x: attackerCell.x + escapeDx, y: attackerCell.y + escapeDy };
+
+      const wallInEscapeDir = scene.inBoundsCell(escapeCell.x, escapeCell.y) &&
+                              !scene.isWalkableCell(escapeCell.x, escapeCell.y);
+
+      if (wallInEscapeDir) {
+        console.log('[RunnerAI] 🧠 TACTICAL PHASE: Escaping through wall to break line of sight (plug distance:', distToPlug, 'cells)');
+        return true; // Phase through wall to break line of sight and escape
+      }
+    }
+
+    return false;
+  };
+
   // Helper function to check if a power should be used at this distance
   const shouldUsePower = (power) => {
     switch (power) {
       case 'phase':
-        // Use phase when defender is close (last resort escape)
-        return dist <= scene.cell * 5;
+        // Defensive: Use when defender is very close (last resort panic escape)
+        const defensiveUse = dist <= scene.cell * 5;
+
+        // Tactical: Use to cut through walls for shortcuts or evasive maneuvers (high skill only)
+        const tacticalUse = shouldPhaseForTactics();
+
+        return defensiveUse || tacticalUse;
       case 'decoy':
         // Use decoy when defender is within sight range and no decoy exists (strategic distraction)
         return !scene.decoySprite && dist <= scene.cell * 18;
