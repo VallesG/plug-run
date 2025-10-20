@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import inv, { loadInv, saveInv } from '../state/inventory.js';
 import {
   rectsOverlap,
+  overlaps,
   stepCell,
   isWalkableDirFrom,
   applyCenterBias,
@@ -1076,10 +1077,10 @@ export class BaseGameScene extends Phaser.Scene {
 
     const carW = this.cell * 1.6;
     const carH = this.cell * 1.0;
-    // Make extraction a small invisible sensor at driveway mouth; halo only
-    // Extraction remains an invisible sensor only. We'll show an obvious CAR BEACON later after pickup.
+    // Make extraction pad larger for fair, precise detection (matching tutorial mechanics)
+    // Tutorial uses 2.8 cells for mobile-friendly extraction without vacuum effect
     this.extract?.destroy?.();
-    this.extract = this.add.rectangle(ex, ey, this.cell*0.8, this.cell*0.8, 0x000000, 0.0001).setDepth(1000);
+    this.extract = this.add.rectangle(ex, ey, this.cell*2.8, this.cell*2.8, 0x000000, 0.0001).setDepth(1000);
     this.extractHalo?.destroy?.();
     this.extractHalo = null;
     this._drawExtractHalo = null;
@@ -1506,8 +1507,8 @@ export class BaseGameScene extends Phaser.Scene {
       }
     }
 
-    // extract win
-    if (!this.roundOver && this.hasStash && rectsOverlap(this.attacker, this.extract)) return this.startExtractionSequence();
+    // extract win (using precise overlaps instead of rectsOverlap for fairer extraction)
+    if (!this.roundOver && this.hasStash && overlaps(this.attacker, this.extract)) return this.startExtractionSequence();
 
     // Unstuck runner if inside wall and not phasing
     if (!this.runnerIsPhasing?.() && this.isWallAtWorld?.(this.attacker.x, this.attacker.y)) this.ensureUnstuck(this.attacker);

@@ -8,7 +8,7 @@ import {
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
-import { rectsOverlap } from '../utils/gameUtils.js';
+import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
 
 /**
  * ProgressionManager - Handles round flow, extraction, and session state
@@ -179,10 +179,18 @@ export default class ProgressionManager {
     const boardThenDrive = () => {
       if (this.scene.car) {
         const dist = this.scene.cell * 8;
+        const dx = this.scene.carOutDir?.x || 0;
+        const dy = this.scene.carOutDir?.y || 0;
+
+        // Move car, lights, and beacon together (matching tutorial)
+        const targets = [this.scene.car];
+        if (this.scene.carLights) targets.push(this.scene.carLights);
+        if (this.scene.vfx?.carBeacon) targets.push(this.scene.vfx.carBeacon);
+
         this.scene.tweens.add({
-          targets: this.scene.car,
-          x: this.scene.car.x + (this.scene.carOutDir?.x || 0) * dist,
-          y: this.scene.car.y + (this.scene.carOutDir?.y || 0) * dist,
+          targets: targets,
+          x: `+=${dx * dist}`,
+          y: `+=${dy * dist}`,
           duration: 1200,
           ease: 'Sine.easeIn',
           onComplete: doFade
@@ -192,24 +200,26 @@ export default class ProgressionManager {
       }
     };
 
-    try {
-      this.scene.removeCarryPackage?.();
-    } catch {}
-
     if (this.scene.attacker && this.scene.car) {
       const noseX = this.scene.car.x + (this.scene.carOutDir?.x || 0) * (this.scene.cell * 0.8);
       const noseY = this.scene.car.y + (this.scene.carOutDir?.y || 0) * (this.scene.cell * 0.8);
+      // "Sucked into vehicle" effect matching tutorial animation
+      // Keep carry package attached so it shrinks with runner (looks more natural)
       this.scene.tweens.add({
         targets: this.scene.attacker,
         x: noseX,
         y: noseY,
-        scaleX: 0.6,
-        scaleY: 0.6,
-        alpha: 0.4,
-        duration: 350,
-        ease: 'Sine.easeOut',
+        scaleX: 0.1,
+        scaleY: 0.1,
+        alpha: 0,
+        duration: 400,
+        ease: 'Sine.easeIn',
         onComplete: () => {
           this.scene.attacker.setVisible(false);
+          // Remove carry package after animation completes
+          try {
+            this.scene.removeCarryPackage?.();
+          } catch {}
           boardThenDrive();
         }
       });
@@ -377,10 +387,10 @@ export default class ProgressionManager {
   }
 
   /**
-   * Check if runner reached extraction point
+   * Check if runner reached extraction point (using precise overlaps for fair detection)
    */
   checkExtractionProgress() {
-    if (this.scene.hasStash && rectsOverlap(this.scene.attacker, this.scene.extract)) {
+    if (this.scene.hasStash && overlaps(this.scene.attacker, this.scene.extract)) {
       return this.startExtractionSequence();
     }
   }

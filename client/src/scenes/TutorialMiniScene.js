@@ -35,15 +35,38 @@ function asPoint(p){ return Array.isArray(p) ? { x: p[0], y: p[1] } : { x: p.x, 
 }
 
 function corridorAssist(scene, sprite, dir, dt){
-  const c = scene.toCell(sprite.x, sprite.y);
-  const cx = scene.toWorldX(c.x);
-  const cy = scene.toWorldY(c.y);
-  const bias = scene.cell * 6;
-  if (dir.x !== 0){
-    const dy = cy - sprite.y;
+  const cell = scene.toCell(sprite.x, sprite.y);
+  const centerX = scene.toWorldX(cell.x);
+  const centerY = scene.toWorldY(cell.y);
+
+  // Check how tight the space is (walls on sides)
+  let wallsOnSides = 0;
+  if (dir.x !== 0) {
+    // Moving horizontally - check for walls above and below
+    const northWall = scene.isWallAtWorld(sprite.x, sprite.y - scene.cell);
+    const southWall = scene.isWallAtWorld(sprite.x, sprite.y + scene.cell);
+    if (northWall) wallsOnSides++;
+    if (southWall) wallsOnSides++;
+  } else if (dir.y !== 0) {
+    // Moving vertically - check for walls left and right
+    const westWall = scene.isWallAtWorld(sprite.x - scene.cell, sprite.y);
+    const eastWall = scene.isWallAtWorld(sprite.x + scene.cell, sprite.y);
+    if (westWall) wallsOnSides++;
+    if (eastWall) wallsOnSides++;
+  }
+
+  // Determine assist strength based on how tight the corridor is
+  let baseStrength = 0.2; // Open areas
+  if (wallsOnSides === 1) baseStrength = 0.4;  // One wall nearby
+  if (wallsOnSides === 2) baseStrength = 0.7;  // True 1x1 corridor
+
+  const bias = scene.cell * baseStrength;
+
+  if (dir.x !== 0) {
+    const dy = centerY - sprite.y;
     sprite.y += Math.sign(dy) * Math.min(Math.abs(dy), bias * dt);
-  } else if (dir.y !== 0){
-    const dx = cx - sprite.x;
+  } else if (dir.y !== 0) {
+    const dx = centerX - sprite.x;
     sprite.x += Math.sign(dx) * Math.min(Math.abs(dx), bias * dt);
   }
 }
@@ -257,17 +280,62 @@ function makeDuffel(scene, x, y, w, h){
 }
 
 function makeCarLights(scene, cx, cy, side){
-  const cont = scene.add.container(cx, cy).setDepth(12);
-  const g = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  const beamColor = 0x93c5fd;
+  const cont = scene.add.container(cx, cy).setDepth(1210);
+
+  // Create multiple layers of light beams for depth
+  const outerBeam = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  const midBeam = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  const innerBeam = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+
+  // Colors for layered effect
+  const outerColor = 0x60a5fa;  // Bright blue
+  const midColor = 0x93c5fd;    // Light blue
+  const innerColor = 0xdbeafe;  // Very light blue
+
   if (side === 'N' || side === 'S'){
     const s = (side === 'N') ? -1 : 1;
-    g.fillStyle(beamColor, 0.25).fillTriangle(-scene.cell * 0.35, 0, scene.cell * 0.35, 0, 0, s * scene.cell * 0.9);
+    const reach = scene.cell * 1.4;
+    const width = scene.cell * 0.5;
+
+    // Outer beam (widest, faintest)
+    outerBeam.fillStyle(outerColor, 0.15);
+    outerBeam.fillTriangle(-width, 0, width, 0, 0, s * reach);
+
+    // Mid beam
+    midBeam.fillStyle(midColor, 0.25);
+    midBeam.fillTriangle(-width * 0.7, 0, width * 0.7, 0, 0, s * reach * 0.8);
+
+    // Inner beam (brightest, narrowest)
+    innerBeam.fillStyle(innerColor, 0.35);
+    innerBeam.fillTriangle(-width * 0.4, 0, width * 0.4, 0, 0, s * reach * 0.6);
   } else {
     const s = (side === 'W') ? -1 : 1;
-    g.fillStyle(beamColor, 0.25).fillTriangle(0, -scene.cell * 0.35, 0, scene.cell * 0.35, s * scene.cell * 1.2, 0);
+    const reach = scene.cell * 1.6;
+    const width = scene.cell * 0.5;
+
+    // Outer beam (widest, faintest)
+    outerBeam.fillStyle(outerColor, 0.15);
+    outerBeam.fillTriangle(0, -width, 0, width, s * reach, 0);
+
+    // Mid beam
+    midBeam.fillStyle(midColor, 0.25);
+    midBeam.fillTriangle(0, -width * 0.7, 0, width * 0.7, s * reach * 0.8, 0);
+
+    // Inner beam (brightest, narrowest)
+    innerBeam.fillStyle(innerColor, 0.35);
+    innerBeam.fillTriangle(0, -width * 0.4, 0, width * 0.4, s * reach * 0.6, 0);
   }
-  cont.add(g);
+
+  cont.add([outerBeam, midBeam, innerBeam]);
+
+  // Store beam references for animation control
+  cont.beams = [outerBeam, midBeam, innerBeam];
+
+  // Set beams to invisible initially (will be shown when lights turn on)
+  outerBeam.setAlpha(0);
+  midBeam.setAlpha(0);
+  innerBeam.setAlpha(0);
+
   return cont;
 }
 
@@ -317,8 +385,17 @@ export class TutorialMiniScene extends Phaser.Scene {
 
     // Audio
     try {
-      this.load.audio('learn_beat', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
-      this.load.audio('pickup', ['/audio/pickup.ogg', '/audio/pickup.mp3']);
+      // Background music
+      this.load.audio('learn_beat',   ['/audio/learn_beat.ogg',   '/audio/learn_beat.mp3']);
+
+      // Sound effects
+      this.load.audio('gun_fire',     ['/audio/gun_fire.ogg',     '/audio/gun_fire.mp3']);
+      this.load.audio('ouch',         ['/audio/ouch.ogg',         '/audio/ouch.mp3']);
+      this.load.audio('pickup',       ['/audio/pickup.ogg',       '/audio/pickup.mp3']);
+      this.load.audio('spickup',      ['/audio/spickup.ogg',      '/audio/spickup.mp3']);
+      this.load.audio('bpickup',      ['/audio/bpickup.ogg',      '/audio/bpickup.mp3']);
+      this.load.audio('engine_start', ['/audio/engine_start.ogg', '/audio/engine_start.mp3']);
+      this.load.audio('engine_idle',  ['/audio/engine_idle.ogg',  '/audio/engine_idle.mp3']);
     } catch {}
   }
   init(data){
@@ -640,19 +717,19 @@ export class TutorialMiniScene extends Phaser.Scene {
         const pid = getPid(p);
         if (pid === this._activePointerId && p?.isDown){
           this.pointer = p;
-          // Continuously update aim toward the current touch relative to the runner when
-          // the swipe has moved far enough from its start.  Use a smaller threshold than
-          // before (approx one third of a tile or 10px) to improve responsiveness and
-          // align with PvP behaviour on mobile.
-          const sx = this._swipeStart?.x ?? p.x;
-          const sy = this._swipeStart?.y ?? p.y;
-          const dx = p.x - sx;
-          const dy = p.y - sy;
-          const moved = Math.hypot(dx, dy);
-          const thresh = Math.max(10, this.cell * 0.4);
-          if (moved >= thresh){
-            this.updateAimFromPointer(p);
-            this.userTookOver = true;
+          // Stage 5 (plug mode): continuously update aim during drag for gun aiming
+          // Stages 1-4 (runner mode): ignore drag, only process swipes on pointerup
+          if (this.stageIdx === 5){
+            const sx = this._swipeStart?.x ?? p.x;
+            const sy = this._swipeStart?.y ?? p.y;
+            const dx = p.x - sx;
+            const dy = p.y - sy;
+            const moved = Math.hypot(dx, dy);
+            const thresh = Math.max(10, this.cell * 0.4);
+            if (moved >= thresh){
+              this.updateAimFromPointer(p);
+              this.userTookOver = true;
+            }
           }
         }
       };
@@ -685,17 +762,25 @@ export class TutorialMiniScene extends Phaser.Scene {
               }
             }
           } else if (moved >= TAP_DIST) {
-            // Treat as a directional swipe: set aim and drift based on the swipe vector
-            const len = moved || 1;
-            const nx = dx / len;
-            const ny = dy / len;
-            this.playerAim = { x: nx, y: ny };
+            // Treat as a directional swipe: convert to cardinal direction (matches main game)
+            let cardinalDir = { x: 0, y: 0 };
+            if (Math.abs(dx) > Math.abs(dy)) {
+              // Horizontal swipe
+              cardinalDir.x = dx > 0 ? 1 : -1;
+              cardinalDir.y = 0;
+            } else {
+              // Vertical swipe
+              cardinalDir.x = 0;
+              cardinalDir.y = dy > 0 ? 1 : -1;
+            }
+
+            this.playerAim = cardinalDir;
             // In stage 5 (plug), only update aim, not drift (plug doesn't auto-move)
             if (this.stageIdx !== 5) {
-              this.playerDrift = { x: nx, y: ny };
+              this.playerDrift = cardinalDir;
             }
             if (this.stageIdx !== 5) {
-              this._runnerInputDir = { x: nx, y: ny };
+              this._runnerInputDir = cardinalDir;
             }
             this.userTookOver = true;
           }
@@ -768,6 +853,24 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
     return true;
   }
+
+  // If a sprite ends up inside a wall tile (e.g., after phase ends), snap it to the nearest free tile center
+  ensureUnstuck(sprite){
+    if (!this.isWallAtWorld?.(sprite.x, sprite.y)) return;
+    const start = this.toCell(sprite.x, sprite.y);
+    const maxR = 4; // search radius in tiles
+    for (let r=1; r<=maxR; r++){
+      for (let dy=-r; dy<=r; dy++){
+        for (let dx=-r; dx<=r; dx++){
+          const cx = start.x + dx, cy = start.y + dy;
+          if (!this.isWalkableCell?.(cx, cy)) continue;
+          sprite.x = this.toWorldX(cx);
+          sprite.y = this.toWorldY(cy);
+          return;
+        }
+      }
+    }
+  }
   placeObjectives(idx){
     const side = this.egress.side;
     const ex = this.toWorldX(this.egress.entry.x);
@@ -793,7 +896,8 @@ export class TutorialMiniScene extends Phaser.Scene {
 
     // Car lights - created but initially hidden until extraction is available
     this.carLights = makeCarLights(this, cx, cy, side);
-    this.carLights.setVisible(false);
+    // Explicitly turn off lights (sets beam alphas to 0)
+    this.setCarLights(false);
 
     // Car beacon matching PvpScene - positioned at car nose
     this.showCarBeacon = () => {
@@ -907,7 +1011,32 @@ export class TutorialMiniScene extends Phaser.Scene {
   pickSafeInitialDirection(){
     if (!this.runner) return { x: 1, y: 0 };
 
-    // Test all 4 cardinal directions
+    // Stage 2: Auto-drift toward bunk stash for smooth tutorial experience
+    if (this.stageIdx === 2 && this.bunkStash) {
+      const dx = this.bunkStash.x - this.runner.x;
+      const dy = this.bunkStash.y - this.runner.y;
+
+      // Convert to cardinal direction (prioritize larger delta)
+      if (Math.abs(dx) > Math.abs(dy)) {
+        const dir = { x: Math.sign(dx), y: 0 };
+        // Verify it's safe before using it
+        const testX = this.runner.x + dir.x * this.cell * 1.5;
+        const testY = this.runner.y;
+        if (this.canMoveTo(this.runner, testX, testY)) {
+          return dir;
+        }
+      } else {
+        const dir = { x: 0, y: Math.sign(dy) };
+        // Verify it's safe before using it
+        const testX = this.runner.x;
+        const testY = this.runner.y + dir.y * this.cell * 1.5;
+        if (this.canMoveTo(this.runner, testX, testY)) {
+          return dir;
+        }
+      }
+    }
+
+    // Test all 4 cardinal directions (fallback for other stages or if bunk path blocked)
     const directions = [
       { x: 1, y: 0 },   // Right
       { x: 0, y: 1 },   // Down
@@ -1100,6 +1229,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.setZoom(1);
     this.pointer = null;
+
+    // Stage 1: extraction is available from start, so start engine and lights when stage begins
+    if (this.stageIdx === 1) {
+      try { this.audio?.startEngineLoop(); } catch {}
+      this.setCarLights(true);
+    }
   }
   showModal(title, lines, btn = 'Start', onStart, opts = {}){
     this.pausedForModal = true;
@@ -1381,7 +1516,38 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.carry = cont;
   }
   setCarLights(on){
-    if (this.carLights) this.carLights.setVisible(!!on);
+    if (!this.carLights) return;
+
+    // Start pulsing animation when lights turn on
+    if (on && this.carLights.beams) {
+      // Kill any existing light tweens
+      if (this._carLightTween) {
+        this.tweens.remove(this._carLightTween);
+        this._carLightTween = null;
+      }
+
+      // Set beams to visible first
+      this.carLights.beams.forEach(beam => beam.setAlpha(1));
+
+      // Create new pulsing tween
+      this._carLightTween = this.tweens.add({
+        targets: this.carLights.beams,
+        alpha: 0.7,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    } else {
+      // Stop animation and hide beams when lights turn off
+      if (this._carLightTween) {
+        this.tweens.remove(this._carLightTween);
+        this._carLightTween = null;
+      }
+      if (this.carLights.beams) {
+        this.carLights.beams.forEach(beam => beam.setAlpha(0));
+      }
+    }
   }
 
   /**
@@ -1407,24 +1573,28 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Determine the car nose position (front bumper) where the runner boards
     const noseX = this.car.x + dx * (this.cell * 0.8);
     const noseY = this.car.y + dy * (this.cell * 0.8);
-    // Tween: move runner to the car nose, shrink and fade out
+    // Tween: move runner to the car nose, shrink and fade out ("sucked into vehicle" effect)
     this.tweens.add({
       targets: this.runner,
       x: noseX,
       y: noseY,
-      scaleX: 0.6,
-      scaleY: 0.6,
-      alpha: 0.4,
-      duration: 350,
-      ease: 'Sine.easeOut',
+      scaleX: 0.1,
+      scaleY: 0.1,
+      alpha: 0,
+      duration: 400,
+      ease: 'Sine.easeIn',
       onComplete: () => {
         this.runner.setVisible(false);
-        // Tween: drive car outward
+        // Tween: drive car outward (along with lights and beacon)
         const dist = this.cell * 8;
+        const targets = [this.car];
+        if (this.carLights) targets.push(this.carLights);
+        if (this.carBeacon) targets.push(this.carBeacon);
+
         this.tweens.add({
-          targets: this.car,
-          x: this.car.x + dx * dist,
-          y: this.car.y + dy * dist,
+          targets: targets,
+          x: `+=${dx * dist}`,
+          y: `+=${dy * dist}`,
           duration: 1200,
           ease: 'Sine.easeIn',
           onComplete: () => {
@@ -1436,11 +1606,19 @@ export class TutorialMiniScene extends Phaser.Scene {
     });
   }
   goNext(){
+    // Prevent duplicate calls
+    if (this._transitioning) return;
+    this._transitioning = true;
+
+    // Stop engine loop when transitioning to next stage
+    try { this.audio?.stopEngineLoop(); } catch {}
+
     const next = this.stageIdx + 1;
     if (next <= 5){
       const cam = this.cameras.main;
       cam.fadeOut(200, 0, 0, 0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this._transitioning = false;
         this.startStage(next);
         cam.fadeIn(200, 0, 0, 0);
       });
@@ -1586,7 +1764,14 @@ export class TutorialMiniScene extends Phaser.Scene {
   // Create AI plug sprite for stage 4
   createAIPlug(){
     // Use the plug spawn cell from arena generation (arena.spawns.plug)
-    const spawnCell = this.plugSpawnCell || { x: Math.floor(this.cols / 2), y: Math.floor(this.rows / 2) };
+    let spawnCell = this.plugSpawnCell || { x: Math.floor(this.cols / 2), y: Math.floor(this.rows / 2) };
+
+    // Prevent enclosed spawns (trapped in walls with no exits)
+    if (this.isEnclosed(spawnCell)) {
+      console.warn('[Tutorial] AI Plug spawn is enclosed, finding safe spawn...');
+      spawnCell = this.findSafeSpawn(spawnCell) || spawnCell;
+    }
+
     const wx = this.toWorldX(spawnCell.x);
     const wy = this.toWorldY(spawnCell.y);
 
@@ -1603,7 +1788,14 @@ export class TutorialMiniScene extends Phaser.Scene {
   // Create AI runner sprite for stage 5
   // Spawn at plug spawn cell (opposite end from player) to avoid overlap
   createAIRunner(){
-    const spawnCell = this.plugSpawnCell || this.spawnRunnerCell;
+    let spawnCell = this.plugSpawnCell || this.spawnRunnerCell;
+
+    // Prevent enclosed spawns (trapped in walls with no exits)
+    if (this.isEnclosed(spawnCell)) {
+      console.warn('[Tutorial] AI Runner spawn is enclosed, finding safe spawn...');
+      spawnCell = this.findSafeSpawn(spawnCell) || spawnCell;
+    }
+
     const wx = this.toWorldX(spawnCell.x);
     const wy = this.toWorldY(spawnCell.y);
 
@@ -1615,6 +1807,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.aiRunner.sprite = sprite;
     this.aiRunner.hbRadius = this.hitboxRadius;
     this.aiRunner.hp = 2; // 2 hits to eliminate
+    this.aiRunner.iUntil = 0; // Initialize i-frames to 0
     this.aiRunner.hasStash = false;
     this.aiRunner.carry = null;
   }
@@ -1653,6 +1846,58 @@ export class TutorialMiniScene extends Phaser.Scene {
     return [
       {x:c.x+1, y:c.y}, {x:c.x-1, y:c.y}, {x:c.x, y:c.y+1}, {x:c.x, y:c.y-1}
     ].filter(n=>this.isWalkableCell(n.x,n.y));
+  }
+
+  // Check if a cell is enclosed (trapped with no exits)
+  isEnclosed(cell) {
+    if (!this.isWalkableCell(cell.x, cell.y)) return true;
+    const neighbors = this.neighbors4(cell);
+    return neighbors.length === 0;
+  }
+
+  // Find a safe (non-enclosed) spawn near the given cell
+  findSafeSpawn(startCell) {
+    // BFS to find nearest non-enclosed walkable cell
+    const visited = new Set();
+    const queue = [startCell];
+    const key = (c) => `${c.x},${c.y}`;
+    visited.add(key(startCell));
+
+    while (queue.length > 0) {
+      const cell = queue.shift();
+
+      // Check if this cell is safe (walkable and not enclosed)
+      if (this.isWalkableCell(cell.x, cell.y) && !this.isEnclosed(cell)) {
+        return cell;
+      }
+
+      // Check all 4 neighbors
+      const neighbors = [
+        {x: cell.x + 1, y: cell.y},
+        {x: cell.x - 1, y: cell.y},
+        {x: cell.x, y: cell.y + 1},
+        {x: cell.x, y: cell.y - 1}
+      ];
+
+      for (const n of neighbors) {
+        const k = key(n);
+        if (!visited.has(k) && this.inBoundsCell(n.x, n.y)) {
+          visited.add(k);
+          queue.push(n);
+        }
+      }
+    }
+
+    // Fallback: return any walkable cell
+    for (let y = 1; y < this.rows - 1; y++) {
+      for (let x = 1; x < this.cols - 1; x++) {
+        if (this.isWalkableCell(x, y) && !this.isEnclosed({x, y})) {
+          return {x, y};
+        }
+      }
+    }
+
+    return null;
   }
 
   // BFS pathfinding to find next step towards goal
@@ -1740,6 +1985,8 @@ export class TutorialMiniScene extends Phaser.Scene {
   // Update AI runner behavior (go to stash then extract) - Tutorial difficulty
   updateRunnerAI(delta){
     if (!this.aiRunner) return;
+    // Don't update if AI runner is dead
+    if (this.aiRunner.hp <= 0) return;
 
     const now = performance.now();
     const dt = delta / 1000;
@@ -1787,6 +2034,9 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   // Spawn weapon burst (bullets) - supports spread for shotgun
   spawnWeaponBurst(origin, aim, group, weapon = 'pistol'){
+    // Play gun fire sound
+    try { this.audio?.play('gun_fire', { volume: 0.7, rateRand: 0.08 }); } catch {}
+
     const stats = this.weaponStats?.[weapon] || this.weaponStats?.pistol;
     const ax = aim?.x ?? 0;
     const ay = aim?.y ?? 0;
@@ -1921,6 +2171,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     who.hp = (who.hp || 0) - 1;
     who.iUntil = performance.now() + 600; // 600ms i-frames
 
+    // Play impact and damage sounds
+    try { this.audio?.play('impact', { volume: 0.85, rateRand: 0.05 }); } catch {}
+    try { this.audio?.play('ouch', { volume: 0.7, rateRand: 0.03 }); } catch {}
+
     // Flash effect
     const originalAlpha = who.alpha;
     this.tweens.add({
@@ -1936,7 +2190,17 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   handleMovement(dt){
-    const speed = this.cell * 7.0;
+    // Stage 5 is plug mode, stages 1-4 are runner mode
+    // Runner: 7.0 cells/sec, Plug: 4.8 cells/sec (matches main game)
+    const isPlugMode = this.stageIdx === 5;
+    let baseSpeed = isPlugMode ? (this.cell * 4.8) : (this.cell * 7.0);
+
+    // Apply carry slow: 15% slower when carrying package (stages 2-4)
+    if (!isPlugMode && this.hasPackage) {
+      baseSpeed *= 0.85;
+    }
+
+    const speed = baseSpeed;
     let vx = 0;
     let vy = 0;
     const k = this.cursors;
@@ -1948,20 +2212,24 @@ export class TutorialMiniScene extends Phaser.Scene {
     const usingKeys = leftDown || rightDown || upDown || downDown;
 
     if (usingKeys){
-      if (leftDown) vx = -speed;
-      else if (rightDown) vx = speed;
-      if (upDown) vy = -speed;
-      else if (downDown) vy = speed;
+      // Cardinal movement only (matches main game - no diagonals)
+      // Prioritize horizontal over vertical when both pressed
+      let dir = { x: 0, y: 0 };
+      if (leftDown) dir.x = -1;
+      else if (rightDown) dir.x = 1;
 
-      const aim = { x: 0, y: 0 };
-      if (vx !== 0) aim.x = Math.sign(vx);
-      if (vy !== 0) aim.y = Math.sign(vy);
-      if (aim.x !== 0 || aim.y !== 0){
-        const len = Math.hypot(aim.x, aim.y) || 1;
-        const norm = { x: aim.x / len, y: aim.y / len };
-        this.playerDrift = norm;
-        this.playerAim = norm;
-        if (this.stageIdx !== 5) this._runnerInputDir = { x: norm.x, y: norm.y };
+      // Only allow vertical if no horizontal input
+      if (dir.x === 0) {
+        if (upDown) dir.y = -1;
+        else if (downDown) dir.y = 1;
+      }
+
+      if (dir.x !== 0 || dir.y !== 0){
+        vx = dir.x * speed;
+        vy = dir.y * speed;
+        this.playerDrift = dir;
+        this.playerAim = dir;
+        if (this.stageIdx !== 5) this._runnerInputDir = { x: dir.x, y: dir.y };
         this.userTookOver = true;
       }
     } else {
@@ -2030,6 +2298,11 @@ export class TutorialMiniScene extends Phaser.Scene {
     this._phaseActive = (now < (this._phaseUntil || 0));
     if (this.runner?.sprite){
       this.runner.sprite.setAlpha(this._phaseActive ? 0.35 : 1);
+    }
+
+    // Unstuck runner if inside wall and not phasing (prevents getting stuck after phase ends)
+    if (!this._phaseActive && this.isWallAtWorld?.(this.runner.x, this.runner.y)){
+      this.ensureUnstuck(this.runner);
     }
 
     // We no longer apply a speed multiplier for dash because dash teleports instead.
@@ -2136,8 +2409,15 @@ export class TutorialMiniScene extends Phaser.Scene {
 
             // Player wins if AI runner is eliminated
             if (this.aiRunner.hp <= 0){
-              this.toast('Defender wins!', 1500, '#86efac');
-              this.time.delayedCall(1600, () => this.goNext());
+              // Immediately stop AI runner and hide it
+              this.aiRunner.setVisible(false);
+              // Stop AI update by clearing velocity
+              this._aiRunnerVX = 0;
+              this._aiRunnerVY = 0;
+
+              this.toast('Defender wins!', 800, '#86efac');
+              // Short delay for toast to be visible, then immediately show modal
+              this.time.delayedCall(300, () => this.goNext());
               return;
             }
           }
@@ -2150,11 +2430,13 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.addAIRunnerCarry();
         this.stash?.setVisible(false);
         if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+        // Start engine sounds when AI runner gets stash
+        try { this.audio?.startEngineLoop(); } catch {}
         this.toast('Runner got the stash!', 1200, '#ffd166');
       }
 
       // Check if AI runner extracted (player loses)
-      if (this.aiRunner.hasStash && this.overlapsPoint(this.aiRunner, this.extractPad.x, this.extractPad.y)){
+      if (this.aiRunner.hasStash && this.overlaps(this.aiRunner, this.extractPad)){
         this.toast('Runner extracted! You lose.', 1500, '#f87171');
         this.time.delayedCall(1600, () => this.startStage(5));
         return;
@@ -2249,10 +2531,8 @@ export class TutorialMiniScene extends Phaser.Scene {
       this._lastAIRunnerPos = { x: this.aiRunner.x, y: this.aiRunner.y };
     }
     if (this.stageIdx === 1){
-      // In stage 1, extraction is always available - turn on car lights immediately
-      this.setCarLights(true);
       // In stage 1, reaching the car triggers an extraction animation rather than an instant transition
-      if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)) this.playCarDepartAndGoNext();
+      if (this.overlaps(this.runner, this.extractPad)) this.playCarDepartAndGoNext();
     } else if (this.stageIdx === 2){
       if (!this.hasPackage){
         if (this.stash && this.overlaps(this.runner, this.stash)){
@@ -2262,18 +2542,24 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
           // Clear stash halo graphics
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          // Play pickup sounds and start engine
+          try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
+          try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
+          try { this.audio?.startEngineLoop(); } catch {}
           this.toast('Nice. Get to the car.');
           this.showCarBeacon();
           // Turn on car lights once package is collected
           this.setCarLights(true);
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
+          // Play bunk pickup sound
+          try { this.audio?.play('bpickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
           const decoy = this.bunkStash;
           this.bunkStash = null;
           this.tweens.add({ targets: decoy, alpha: 0, scale: 0.86, duration: 800, ease: 'Cubic.easeOut', onComplete: () => decoy.destroy() });
         }
-      } else if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)){
+      } else if (this.overlaps(this.runner, this.extractPad)){
         // After picking up the package, reaching the car triggers the departure animation
         this.playCarDepartAndGoNext();
       }
@@ -2290,9 +2576,15 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this.bunkStash) { this.bunkStash.destroy(); this.bunkStash = null; }
           // Clear stash halo graphics
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          // Play pickup sounds and start engine
+          try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
+          try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
+          try { this.audio?.startEngineLoop(); } catch {}
           this.toast('Nice. Get to the car.');
           this.showCarBeacon();
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)) {
+          // Play bunk pickup sound
+          try { this.audio?.play('bpickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
           const decoy = this.bunkStash;
@@ -2304,7 +2596,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       // the car is only allowed after demonstrating both powers; the player
       // can still collect the stash before using powers but cannot depart.
       if (this._didDash && this._didPhase) this.setCarLights(true);
-      if ((this._didDash && this._didPhase) && this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)) {
+      if ((this._didDash && this._didPhase) && this.overlaps(this.runner, this.extractPad)) {
         // Final stage: after demonstrating dash and phase, board the car and depart
         this.playCarDepartAndGoNext();
       }
@@ -2317,18 +2609,24 @@ export class TutorialMiniScene extends Phaser.Scene {
           this.stash?.setVisible(false);
           if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          // Play pickup sounds and start engine
+          try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
+          try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
+          try { this.audio?.startEngineLoop(); } catch {}
           this.toast('Got the stash! Get to the car.');
           this.showCarBeacon();
           // Turn on car lights once package is collected
           this.setCarLights(true);
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)){
+          // Play bunk pickup sound
+          try { this.audio?.play('bpickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
           this.toast('BUNK!', 1200, '#f87171');
           this.showBunkPopup(this.bunkStash.x, this.bunkStash.y);
           const decoy = this.bunkStash;
           this.bunkStash = null;
           this.tweens.add({ targets: decoy, alpha: 0, scale: 0.86, duration: 800, ease: 'Cubic.easeOut', onComplete: () => decoy.destroy() });
         }
-      } else if (this.overlapsPoint(this.runner, this.extractPad.x, this.extractPad.y)){
+      } else if (this.overlaps(this.runner, this.extractPad)){
         // Player successfully extracted with stash
         this.playCarDepartAndGoNext();
       }
@@ -2347,10 +2645,6 @@ export class TutorialMiniScene extends Phaser.Scene {
     const ra = new Phaser.Geom.Rectangle(a.x - 12, a.y - 12, 24, 24);
     const rb = new Phaser.Geom.Rectangle(b.x - 12, b.y - 12, 24, 24);
     return Phaser.Geom.Intersects.RectangleToRectangle(ra, rb);
-  }
-  overlapsPoint(a, x, y){
-    const ra = new Phaser.Geom.Rectangle(a.x - 12, a.y - 12, 24, 24);
-    return Phaser.Geom.Rectangle.Contains(ra, x, y);
   }
 
   /* ----------------- Movement Trails (Flame-like) ----------------- */

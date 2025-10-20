@@ -5,6 +5,15 @@ export function rectsOverlap(a, b) {
   return Phaser.Geom.Intersects.RectangleToRectangle(a.getBounds(), b.getBounds());
 }
 
+// More precise collision using fixed hitbox size (better for extraction)
+// Uses 24x24 pixel hitbox instead of sprite bounds for fairer detection
+export function overlaps(a, b) {
+  if (!a || !b) return false;
+  const ra = new Phaser.Geom.Rectangle(a.x - 12, a.y - 12, 24, 24);
+  const rb = new Phaser.Geom.Rectangle(b.x - 12, b.y - 12, 24, 24);
+  return Phaser.Geom.Intersects.RectangleToRectangle(ra, rb);
+}
+
 // Advance a grid cell in a cardinal direction with toroidal wrapping
 export function stepCell(cell, dir, cols, rows) {
   return {
