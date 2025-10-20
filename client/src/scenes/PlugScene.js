@@ -1,8 +1,8 @@
 import { BaseGameScene } from './BaseGameScene.js';
 
-export class RunnerScene extends BaseGameScene {
+export class PlugScene extends BaseGameScene {
   constructor() {
-    super('RUNNER');
+    super('PLUG');
   }
 
   init(data) {
@@ -10,7 +10,7 @@ export class RunnerScene extends BaseGameScene {
     this.mode = data?.mode || 'pve';
     this.pveRound = data?.pveRound || 1;
     this.pveSession = data?.pveSession || { rounds: 0, bestRound: 0 };
-    this.role = 'runner';
+    this.role = 'plug';
   }
 
   create() {

@@ -249,14 +249,14 @@ export default class VisualEffects {
 
     if (distance < 150) {
       // NEAR CENTER: Use fixed vertical separation to prevent overlap
-      const verticalOffset = 55;
+      const verticalOffset = 40;
       stashEndX = screenX + normalizedDx;
       stashEndY = screenY + normalizedDy - verticalOffset;
       repEndX = screenX + normalizedDx;
       repEndY = screenY + normalizedDy + verticalOffset;
     } else {
       // FAR FROM CENTER: Use perpendicular offset as before
-      const perpScale = 0.44; // how much to offset perpendicular
+      const perpScale = 0.3; // how much to offset perpendicular
       stashEndX = screenX + normalizedDx + perpX * perpScale;
       stashEndY = screenY + normalizedDy + perpY * perpScale;
       repEndX = screenX + normalizedDx - perpX * perpScale;

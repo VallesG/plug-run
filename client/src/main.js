@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
-import { PvpScene } from './scenes/PvpScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
+import { RunnerScene } from './scenes/RunnerScene.js';
+import { PlugScene } from './scenes/PlugScene.js';
 import { TutorialMiniScene } from './scenes/TutorialMiniScene.js';
+import LeaderboardScene from './scenes/LeaderboardScene.js';
+// import { PvpScene } from './scenes/PvpScene.js'; // Future multiplayer
 import rexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
 
 const config = {
@@ -25,7 +28,7 @@ const config = {
   autoCenter: Phaser.Scale.CENTER_BOTH
 },
   // Start at Menu, include tutorial and game scenes
-  scene: [MenuScene, TutorialMiniScene, PvpScene]
+  scene: [MenuScene, RunnerScene, PlugScene, TutorialMiniScene, LeaderboardScene]
 };
 
 const game = new Phaser.Game(config);

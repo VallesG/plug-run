@@ -1,5 +1,6 @@
 ﻿// Tutorial scene built on PvP movement and controls
 import Phaser from 'phaser';
+import AudioManager from '../audio/AudioManager.js';
 
 const STAGE_SEEDS = {
   S1_MOVEMENT: 0x71C1A5E1,
@@ -313,6 +314,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.load.image('td_plug', '/sprites/td/plug.png');
     this.load.image('td_plug_step', '/sprites/td/plug_step.png');
     this.load.image('car_blue', '/cars/blue.png');
+
+    // Audio
+    try {
+      this.load.audio('learn_beat', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
+      this.load.audio('pickup', ['/audio/pickup.ogg', '/audio/pickup.mp3']);
+    } catch {}
   }
   init(data){
     // Match PvpScene: calculate cols/rows dynamically from screen size
@@ -330,6 +337,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this._phaseUntil = 0;
     this._phaseActive = false;
     this.autoDrift = true;
+    this._runnerInputDir = { x: 1, y: 0 };
 
     // Weapon stats for stage 5 (matching PvpScene)
     this.weaponStats = {
@@ -343,6 +351,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Reset modal pause state on scene create/restart
     this.pausedForModal = false;
     this.userTookOver = false;
+
+    // Initialize audio (music already started in MenuScene)
+    try {
+      this.audio = AudioManager.get(this);
+      this.audio.ensureUnlocked(this);
+    } catch {}
 
     this.ensureResizeListener();
     this.startStage(this.stageIdx);
@@ -583,8 +597,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (!this.wasdKeys) this.wasdKeys = this.input.keyboard.addKeys({ W: 'W', A: 'A', S: 'S', D: 'D' });
     if (!this._quickAimBound){
       const setDir = (x, y) => {
-        this.playerAim = { x, y };
-        this.playerDrift = { x, y };
+        const len = Math.hypot(x, y) || 1;
+        const nx = x / len;
+        const ny = y / len;
+        this.playerAim = { x: nx, y: ny };
+        this.playerDrift = { x: nx, y: ny };
+        this._runnerInputDir = { x: nx, y: ny };
         this.userTookOver = true;
       };
       this.input.keyboard.on('keydown-W', () => setDir(0, -1));
@@ -602,6 +620,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
     this.playerDrift = { x: this._initDrift.x, y: this._initDrift.y };
     this.playerAim = { x: this._initDrift.x, y: this._initDrift.y };
+    this._runnerInputDir = { x: this.playerAim.x, y: this.playerAim.y };
     this.userTookOver = false;
     this.autoDrift = true;
     const getPid = (evt) => (evt?.id ?? evt?.pointerId ?? 0);
@@ -674,6 +693,9 @@ export class TutorialMiniScene extends Phaser.Scene {
             // In stage 5 (plug), only update aim, not drift (plug doesn't auto-move)
             if (this.stageIdx !== 5) {
               this.playerDrift = { x: nx, y: ny };
+            }
+            if (this.stageIdx !== 5) {
+              this._runnerInputDir = { x: nx, y: ny };
             }
             this.userTookOver = true;
           }
@@ -878,6 +900,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     const safeDrift = this.pickSafeInitialDirection();
     this.playerDrift = safeDrift;
     this.playerAim = safeDrift;
+    this._runnerInputDir = { x: safeDrift.x, y: safeDrift.y };
   }
 
   // Pick an initial movement direction that doesn't immediately hit a wall
@@ -928,6 +951,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (this.autoDrift !== false){
       this.playerDrift = { x: aim.x, y: aim.y };
     }
+    if (this.stageIdx !== 5) this._runnerInputDir = { x: aim.x, y: aim.y };
     this.userTookOver = true;
     return { x: px, y: py };
   }
@@ -1473,7 +1497,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Ignore duration since it's instantaneous.
     if (!this.runner) return;
     // Determine facing from last movement or aim
-    const aim = this._runnerMoveDir || this.playerAim || { x: 1, y: 0 };
+    const aim = this._runnerInputDir || this._runnerMoveDir || this.playerAim || { x: 1, y: 0 };
     const dir = (Math.abs(aim.x) >= Math.abs(aim.y))
       ? { x: Math.sign(aim.x) || 1, y: 0 }
       : { x: 0, y: Math.sign(aim.y) || 1 };
@@ -1770,15 +1794,31 @@ export class TutorialMiniScene extends Phaser.Scene {
     const baseAngle = Math.atan2(ay / len, ax / len);
     const pellets = stats?.spreadAngles?.length ? stats.spreadAngles : [0];
 
+    // High-contrast bullets: choose palette + blend based on floor brightness
+    const isLightFloor = (() => {
+      if (Array.isArray(this.theme?.checkerColors) && this.theme.checkerColors.length >= 2){
+        const lum = (hex) => { const r=(hex>>16)&255,g=(hex>>8)&255,b=hex&255; return (0.2126*r+0.7152*g+0.0722*b)/255; };
+        const avg = this.theme.checkerColors.reduce((s,c)=> s + lum(c), 0) / this.theme.checkerColors.length;
+        return avg > 0.7;
+      }
+      if (typeof this.theme?.floorTint === 'number'){
+        const r=(this.theme.floorTint>>16)&255,g=(this.theme.floorTint>>8)&255,b=this.theme.floorTint&255;
+        const L=(0.2126*r+0.7152*g+0.0722*b)/255; return L > 0.7;
+      }
+      return false;
+    })();
+    const fillColor = isLightFloor ? 0xef4444 : 0xffffff;
+    const useNormalBlend = isLightFloor; // avoid washout on white floors
+
     pellets.forEach((offset) => {
       const ang = baseAngle + Phaser.Math.DegToRad(offset);
       const dx = Math.cos(ang);
       const dy = Math.sin(ang);
-      const color = stats?.color ?? 0xff4444;
       const speed = stats?.speed ?? 300;
 
-      const bullet = this.add.circle(origin.x, origin.y, Math.max(3, Math.floor(this.cell*0.12)), color, 1)
-        .setDepth(9);
+      const bullet = this.add.circle(origin.x, origin.y, Math.max(3, Math.floor(this.cell*0.12)), fillColor, 1)
+        .setDepth(9)
+        .setBlendMode(useNormalBlend ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD);
 
       bullet.vx = dx * speed;
       bullet.vy = dy * speed;
@@ -1921,6 +1961,7 @@ export class TutorialMiniScene extends Phaser.Scene {
         const norm = { x: aim.x / len, y: aim.y / len };
         this.playerDrift = norm;
         this.playerAim = norm;
+        if (this.stageIdx !== 5) this._runnerInputDir = { x: norm.x, y: norm.y };
         this.userTookOver = true;
       }
     } else {
@@ -1932,6 +1973,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       if (lenAim > 0.0001){
         vx = (aim.x / lenAim) * speed;
         vy = (aim.y / lenAim) * speed;
+        if (this.stageIdx !== 5) this._runnerInputDir = { x: aim.x / lenAim, y: aim.y / lenAim };
       }
     }
 
@@ -2039,7 +2081,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (spdLen > 0.0001){
       const norm = { x: vx / spdLen, y: vy / spdLen };
       this._runnerMoveDir = norm;
-      this._runnerLastAim = norm;
+      if (usingKeys || this.userTookOver) this._runnerLastAim = norm;
     }
   }
 

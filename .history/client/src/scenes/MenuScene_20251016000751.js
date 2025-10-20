@@ -2,8 +2,6 @@
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
-import { getUsername, getCurrentUser } from '../utils/userManager.js';
-import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore } from '../utils/leaderboardManager.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -128,8 +126,7 @@ export class MenuScene extends Phaser.Scene {
       { key:'learn',  title:'Learn the Streets',  sub:'Quick tutorial. Zero pressure.' },
       { key:'runner', title:'Run the Block',      sub:'Escape endless stash houses. Build your chain.' },
       { key:'plug',   title:'Defend the Stash',   sub:'Play as the plug. Stop the runner.' },
-      { key:'pvp',    title:'Street Wars',        sub:'1v1 PVP. Coming soon.' },
-      { key:'leaderboard', title:'Leaderboard',   sub:'Top runners on today\'s route.' }
+      { key:'pvp',    title:'Street Wars',        sub:'1v1 PVP. Coming soon.' }
     ];
 
     // Carousel root container to keep z-order tidy
@@ -183,12 +180,9 @@ export class MenuScene extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('A,D,ENTER,SPACE,ESC');
 
-    // Bottom-right settings button
+    // Bottom-right settings/profile
     this.settingsBtn = this.makeIconButton('⚙', () => this.openSettings());
-
-    // User profile chip (clickable to show user's leaderboard position)
-    this.profileChip = this.makeUserProfileChip();
-
+    this.profileBtn  = this.makeIconButton('👤', () => console.info('[Menu] Profile (stub)'));
     // Bottom-left daily chip
     this.dailyChip = this.makeChip('Daily bonus +25', 0x16a34a);
 
@@ -240,8 +234,7 @@ export class MenuScene extends Phaser.Scene {
       'learn': { num: 1337, suffix: 'WAY' },
       'runner': { num: 2049, suffix: 'BLVD' },
       'plug': { num: 5558, suffix: 'PL' },
-      'pvp': { num: 7700, suffix: 'AVE' },
-      'leaderboard': { num: 1000, suffix: 'ST' }
+      'pvp': { num: 7700, suffix: 'AVE' }
     };
     const address = streetAddresses[modeKey] || { num: 1000, suffix: 'ST' };
     const streetNum = address.num;
@@ -833,36 +826,6 @@ export class MenuScene extends Phaser.Scene {
     return c;
   }
 
-  makeUserProfileChip(){
-    const username = getUsername();
-    const c = this.add.container(0, 0).setDepth(6);
-    const w = Math.max(160, Math.floor(this.scale.width * 0.35));
-    const h = Math.max(32, Math.floor(this.scale.height * 0.042));
-
-    // Background with subtle blue tint
-    const bg = this.rexUI.add.roundRectangle(0, 0, w, h, h/2, 0x1e3a8a, 0.85)
-      .setStrokeStyle(2, 0x3b82f6);
-
-    // User icon
-    const icon = this.add.text(-w/2 + h/2, 0, '👤', { fontSize: Math.floor(h * 0.6) + 'px' }).setOrigin(0.5);
-
-    // Username text
-    const t = this.add.text(h/4, 0, username, {
-      color:'#cbd1ff',
-      fontSize: Math.max(12, Math.floor(h*0.5)) + 'px',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    c.add([bg, icon, t]);
-
-    // Make it interactive
-    c.setSize(w, h);
-    c.setInteractive(new Phaser.Geom.Rectangle(-w/2, -h/2, w, h), Phaser.Geom.Rectangle.Contains)
-      .on('pointerdown', () => this.openProfileModal());
-
-    return c;
-  }
-
   cardSpacing(){ return Math.min(520, Math.floor(this.scale.width * 0.82)) + Math.max(28, Math.floor(this.scale.width * 0.06)); }
 
   layoutCards(shift = 0, tweenBack = false){
@@ -905,7 +868,7 @@ export class MenuScene extends Phaser.Scene {
     const cam = this.cameras.main;
 
     if (k === 'learn'){
-      // Launch tutorial - start music immediately
+      // Launch tutorial (play learn beat before transitioning so it crossfades smoothly)
       try {
         const audio = AudioManager.get(this);
         audio.ensureUnlocked(this);
@@ -916,7 +879,7 @@ export class MenuScene extends Phaser.Scene {
         this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
       });
     } else if (k === 'runner'){
-      // Run the Block - start music immediately
+      // Run the Block - play as runner
       try {
         const audio = AudioManager.get(this);
         audio.ensureUnlocked(this);
@@ -932,7 +895,7 @@ export class MenuScene extends Phaser.Scene {
         });
       });
     } else if (k === 'plug'){
-      // Defend the Stash - start music immediately
+      // Defend the Stash - play as plug
       try {
         const audio = AudioManager.get(this);
         audio.ensureUnlocked(this);
@@ -946,12 +909,6 @@ export class MenuScene extends Phaser.Scene {
           moveBelow: true,
           data: { mode: 'pve' }
         });
-      });
-    } else if (k === 'leaderboard'){
-      // Launch leaderboard - keep menu music playing
-      cam.fadeOut(250, 0,0,0);
-      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
-        this.scene.transition({ target: 'LEADERBOARD', duration: 250, moveBelow: true });
       });
     } else {
       // Coming soon (pvp, daily, etc.)
@@ -1010,117 +967,6 @@ export class MenuScene extends Phaser.Scene {
     veil.on('pointerdown', destroyAll);
   }
 
-  openProfileModal(){
-    const W = this.scale.width, H = this.scale.height;
-    const cx = this.cameras.main.centerX;
-    const cy = this.cameras.main.centerY;
-    const panelW = Math.min(420, W - 40);
-    const panelH = Math.min(480, H - 80);
-
-    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.96).setDepth(51).setStrokeStyle(2, PALETTE.stroke);
-
-    const username = getUsername();
-    const user = getCurrentUser();
-
-    // Title with username
-    const title = this.add.text(cx, cy - panelH/2 + 25, username, {
-      color: PALETTE.title,
-      fontSize: '22px',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(52);
-
-    // Subtitle
-    const subtitle = this.add.text(cx, cy - panelH/2 + 50, 'Your Leaderboard Position', {
-      color: PALETTE.sub,
-      fontSize: '13px',
-      fontStyle: 'italic'
-    }).setOrigin(0.5).setDepth(52);
-
-    let y = cy - panelH/2 + 85;
-    const elements = [veil, panel, title, subtitle];
-
-    // Daily Runner Stats
-    const runnerRank = getUserRank('runner');
-    const runnerScore = getUserScore('runner');
-    const runnerSection = this.createStatSection(cx, y, '🏃 Runner (Daily)', runnerRank, runnerScore, panelW);
-    elements.push(...runnerSection);
-    y += 75;
-
-    // Daily Plug Stats
-    const plugRank = getUserRank('plug');
-    const plugScore = getUserScore('plug');
-    const plugSection = this.createStatSection(cx, y, '🚨 Plug (Daily)', plugRank, plugScore, panelW);
-    elements.push(...plugSection);
-    y += 75;
-
-    // All-time Runner Stats
-    const runnerAllTimeRank = getAllTimeRank('runner');
-    const runnerAllTimeScore = getAllTimeScore('runner');
-    const runnerAllTimeSection = this.createStatSection(cx, y, '🏃 Runner (All-Time)', runnerAllTimeRank, runnerAllTimeScore, panelW);
-    elements.push(...runnerAllTimeSection);
-    y += 75;
-
-    // All-time Plug Stats
-    const plugAllTimeRank = getAllTimeRank('plug');
-    const plugAllTimeScore = getAllTimeScore('plug');
-    const plugAllTimeSection = this.createStatSection(cx, y, '🚨 Plug (All-Time)', plugAllTimeRank, plugAllTimeScore, panelW);
-    elements.push(...plugAllTimeSection);
-
-    // Close button
-    const closeBg = this.add.rectangle(cx, cy + panelH/2 - 30, 92, 28, 0x1a2038, 1)
-      .setStrokeStyle(1, PALETTE.stroke)
-      .setDepth(52)
-      .setInteractive({ useHandCursor:true });
-    const closeTx = this.add.text(closeBg.x, closeBg.y, 'Close', { color:'#cbd1ff' }).setOrigin(0.5).setDepth(53);
-    elements.push(closeBg, closeTx);
-
-    const destroyAll = ()=> { elements.forEach(o=>o?.destroy()); };
-    closeBg.on('pointerdown', destroyAll);
-    veil.on('pointerdown', destroyAll);
-  }
-
-  createStatSection(cx, y, label, rank, score, panelW){
-    const elements = [];
-
-    // Section label
-    const labelText = this.add.text(cx, y, label, {
-      color: PALETTE.sub,
-      fontSize: '14px',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(52);
-    elements.push(labelText);
-
-    // Stats row
-    const statY = y + 25;
-    if (rank && score) {
-      // Rank
-      const rankText = this.add.text(cx - 80, statY, `Rank: #${rank}`, {
-        color: rank <= 3 ? '#fbbf24' : '#cbd1ff',
-        fontSize: '16px',
-        fontStyle: rank === 1 ? 'bold' : ''
-      }).setOrigin(0, 0.5).setDepth(52);
-
-      // Round
-      const roundText = this.add.text(cx + 80, statY, `Round ${score.round}`, {
-        color: '#86efac',
-        fontSize: '16px'
-      }).setOrigin(1, 0.5).setDepth(52);
-
-      elements.push(rankText, roundText);
-    } else {
-      // No score yet
-      const noScore = this.add.text(cx, statY, 'No score yet', {
-        color: '#6b7280',
-        fontSize: '14px',
-        fontStyle: 'italic'
-      }).setOrigin(0.5).setDepth(52);
-      elements.push(noScore);
-    }
-
-    return elements;
-  }
-
   update(){
     // keyboard navigation
     if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.A)){ this.selectPrev(); }
@@ -1142,16 +988,10 @@ export class MenuScene extends Phaser.Scene {
     this.logo?.setPosition(W/2, logoY + signH/2 - logoSize * 0.35);
     this.logoAddress?.setPosition(W/2, logoY + signH/2 + logoSize * 0.45);
 
-    // Bottom elements
+    // Bottom corners
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
-
-    // Settings button in bottom-right corner
     this.settingsBtn?.setPosition(W - pad - 24, H - pad - 24);
-
-    // Profile chip in bottom-center
-    this.profileChip?.setPosition(W / 2, H - pad - 24);
-
-    // Daily chip in bottom-left
+    this.profileBtn?.setPosition(W - pad - 24 - 48, H - pad - 24);
     this.dailyChip?.setPosition(pad + 80, H - pad - 24);
     // Refresh layout
     this.layoutCards(0, false);

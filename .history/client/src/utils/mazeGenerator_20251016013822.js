@@ -70,184 +70,98 @@ const SHAPES = [
   [[0, 0], [1, 0], [2, 0], [2, 1]]
 ];
 
-export function generateSquareMaze(cols, rows, { rng, role } = {}) {
+export function generateSquareMaze(cols, rows, { rng } = {}) {
   const rnd = typeof rng === 'function' ? rng : Math.random;
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(TILE_TYPES.FLOOR));
 
-  // For plug mode, enforce minimum path length to reduce easy extractions
-  // Allow 10% of maps to be fast (1-2 in every 10 rounds)
-  const isPlugMode = role === 'plug';
-  const allowFastMap = isPlugMode && rnd() < 0.10; // 10% chance for fast map
-  const minTotalPathLength = allowFastMap ? 0 : 15; // Require decent path length for plug mode
+  for (let x = 0; x < cols; x++) {
+    grid[0][x] = TILE_TYPES.WALL;
+    grid[rows - 1][x] = TILE_TYPES.WALL;
+  }
+  for (let y = 0; y < rows; y++) {
+    grid[y][0] = TILE_TYPES.WALL;
+    grid[y][cols - 1] = TILE_TYPES.WALL;
+  }
 
-  let attempts = 0;
-  const maxAttempts = isPlugMode && !allowFastMap ? 20 : 1; // Try multiple times for plug mode
+  const occ = Array.from({ length: rows }, () => Array(cols).fill(0));
+  const PAD_MIN = 0;
+  const PAD_MAX = 2;
+  const GAP = 1;
 
-  while (attempts < maxAttempts) {
-    attempts++;
+  const rotate = (cells, rot) => {
+    let pts = cells.map(([x, y]) => ({ x, y }));
+    for (let r = 0; r < rot; r++) pts = pts.map((p) => ({ x: -p.y, y: p.x }));
+    const minx = Math.min(...pts.map((p) => p.x));
+    const miny = Math.min(...pts.map((p) => p.y));
+    return pts.map((p) => ({ x: p.x - minx, y: p.y - miny }));
+  };
 
-    const grid = Array.from({ length: rows }, () => Array(cols).fill(TILE_TYPES.FLOOR));
+  const maybeFlipX = (cells, doFlip) => {
+    if (!doFlip) return cells.map((p) => ({ x: p.x, y: p.y }));
+    const maxx = Math.max(...cells.map((p) => p.x));
+    return cells.map((p) => ({ x: maxx - p.x, y: p.y }));
+  };
 
-    for (let x = 0; x < cols; x++) {
-      grid[0][x] = TILE_TYPES.WALL;
-      grid[rows - 1][x] = TILE_TYPES.WALL;
-    }
-    for (let y = 0; y < rows; y++) {
-      grid[y][0] = TILE_TYPES.WALL;
-      grid[y][cols - 1] = TILE_TYPES.WALL;
-    }
+  const canPlace = (atX, atY, cells) => {
+    const allowBorderTouch = rnd() < 0.4;
+    const pad = allowBorderTouch ? PAD_MIN : PAD_MAX;
 
-    const occ = Array.from({ length: rows }, () => Array(cols).fill(0));
-    const PAD_MIN = 0;
-    const PAD_MAX = 2;
-    const GAP = 1;
+    for (const p of cells) {
+      const x = atX + p.x;
+      const y = atY + p.y;
+      if (x <= 0 || y <= 0 || x >= cols - 1 || y >= rows - 1) return false;
+      if (x < pad || y < pad || x > cols - 1 - pad || y > rows - 1 - pad) return false;
+      if (grid[y][x] === TILE_TYPES.WALL || occ[y][x]) return false;
 
-    const rotate = (cells, rot) => {
-      let pts = cells.map(([x, y]) => ({ x, y }));
-      for (let r = 0; r < rot; r++) pts = pts.map((p) => ({ x: -p.y, y: p.x }));
-      const minx = Math.min(...pts.map((p) => p.x));
-      const miny = Math.min(...pts.map((p) => p.y));
-      return pts.map((p) => ({ x: p.x - minx, y: p.y - miny }));
-    };
-
-    const maybeFlipX = (cells, doFlip) => {
-      if (!doFlip) return cells.map((p) => ({ x: p.x, y: p.y }));
-      const maxx = Math.max(...cells.map((p) => p.x));
-      return cells.map((p) => ({ x: maxx - p.x, y: p.y }));
-    };
-
-    const canPlace = (atX, atY, cells) => {
-      const allowBorderTouch = rnd() < 0.4;
-      const pad = allowBorderTouch ? PAD_MIN : PAD_MAX;
-
-      for (const p of cells) {
-        const x = atX + p.x;
-        const y = atY + p.y;
-        if (x <= 0 || y <= 0 || x >= cols - 1 || y >= rows - 1) return false;
-        if (x < pad || y < pad || x > cols - 1 - pad || y > rows - 1 - pad) return false;
-        if (grid[y][x] === TILE_TYPES.WALL || occ[y][x]) return false;
-
-        for (let yy = y - GAP; yy <= y + GAP; yy++) {
-          for (let xx = x - GAP; xx <= x + GAP; xx++) {
-            if (yy >= 0 && yy < rows && xx >= 0 && xx < cols && occ[yy][xx]) return false;
-          }
+      for (let yy = y - GAP; yy <= y + GAP; yy++) {
+        for (let xx = x - GAP; xx <= x + GAP; xx++) {
+          if (yy >= 0 && yy < rows && xx >= 0 && xx < cols && occ[yy][xx]) return false;
         }
       }
-      return true;
-    };
-
-    const stamp = (atX, atY, cells) => {
-      for (const p of cells) {
-        const x = atX + p.x;
-        const y = atY + p.y;
-        grid[y][x] = TILE_TYPES.WALL;
-        occ[y][x] = 1;
-      }
-    };
-
-    const target = Math.floor((cols * rows) / 36);
-    let placed = 0;
-    let tries = 0;
-    const maxTries = target * 40;
-
-    while (placed < target && tries < maxTries) {
-      tries++;
-      const baseX = 1 + ((rnd() * (cols - 2)) | 0);
-      const baseY = 1 + ((rnd() * (rows - 2)) | 0);
-      let shape = SHAPES[(rnd() * SHAPES.length) | 0];
-      shape = rotate(shape, (rnd() * 4) | 0);
-      shape = maybeFlipX(shape, rnd() < 0.5);
-      const offX = ((rnd() * 3) | 0) - 1;
-      const offY = ((rnd() * 3) | 0) - 1;
-      if (canPlace(baseX + offX, baseY + offY, shape)) {
-        stamp(baseX + offX, baseY + offY, shape);
-        placed++;
-      }
     }
+    return true;
+  };
 
-    const { spawns, objectives, egress } = pickObjectives(grid, cols, rows, rnd);
+  const stamp = (atX, atY, cells) => {
+    for (const p of cells) {
+      const x = atX + p.x;
+      const y = atY + p.y;
+      grid[y][x] = TILE_TYPES.WALL;
+      occ[y][x] = 1;
+    }
+  };
 
-    // Validate path length for plug mode
-    if (isPlugMode && !allowFastMap) {
-      const runnerToStash = manhattan(spawns.runner, objectives.stash);
-      const stashToExtract = manhattan(objectives.stash, objectives.extract);
-      const totalPath = runnerToStash + stashToExtract;
+  const target = Math.floor((cols * rows) / 36);
+  let placed = 0;
+  let tries = 0;
+  const maxTries = target * 40;
 
-      // If path is too short, retry (unless it's our last attempt)
-      if (totalPath >= minTotalPathLength || attempts >= maxAttempts) {
-        console.log(`[MazeGen] Plug mode - Attempt ${attempts}, Path: ${totalPath} tiles (runner→stash: ${runnerToStash}, stash→extract: ${stashToExtract})`);
-        return { grid, spawns, objectives, egress };
-      }
-      // Path too short, loop will retry with a new map
-      console.log(`[MazeGen] Plug mode - Rejected map (attempt ${attempts}), path too short: ${totalPath} tiles`);
-    } else {
-      // Runner mode or fast map allowed - accept immediately
-      return { grid, spawns, objectives, egress };
+  while (placed < target && tries < maxTries) {
+    tries++;
+    const baseX = 1 + ((rnd() * (cols - 2)) | 0);
+    const baseY = 1 + ((rnd() * (rows - 2)) | 0);
+    let shape = SHAPES[(rnd() * SHAPES.length) | 0];
+    shape = rotate(shape, (rnd() * 4) | 0);
+    shape = maybeFlipX(shape, rnd() < 0.5);
+    const offX = ((rnd() * 3) | 0) - 1;
+    const offY = ((rnd() * 3) | 0) - 1;
+    if (canPlace(baseX + offX, baseY + offY, shape)) {
+      stamp(baseX + offX, baseY + offY, shape);
+      placed++;
     }
   }
 
-  // Should never reach here, but return the last attempt just in case
-  console.warn('[MazeGen] Max attempts reached for plug mode validation');
   const { spawns, objectives, egress } = pickObjectives(grid, cols, rows, rnd);
+
   return { grid, spawns, objectives, egress };
 }
 
 export function pickObjectives(grid, cols, rows, rnd = Math.random) {
-  // Helper: Check if two points are reachable via flood-fill
-  const canReach = (from, to) => {
-    if (!from || !to) return false;
-    const visited = new Set();
-    const queue = [`${from.x},${from.y}`];
-    visited.add(queue[0]);
-
-    while (queue.length > 0) {
-      const [cx, cy] = queue.shift().split(',').map(Number);
-
-      // Found the target
-      if (cx === to.x && cy === to.y) return true;
-
-      // Explore neighbors
-      const neighbors = [
-        [cx, cy - 1], // up
-        [cx, cy + 1], // down
-        [cx - 1, cy], // left
-        [cx + 1, cy]  // right
-      ];
-
-      for (const [nx, ny] of neighbors) {
-        const key = `${nx},${ny}`;
-        if (visited.has(key)) continue;
-        if (nx <= 0 || ny <= 0 || nx >= cols - 1 || ny >= rows - 1) continue;
-        if (grid[ny][nx] !== TILE_TYPES.FLOOR) continue;
-
-        visited.add(key);
-        queue.push(key);
-      }
-    }
-    return false;
-  };
-
-  // Helper: Check if a cell is accessible (has at least 2 walkable neighbors to avoid enclosed spawns)
-  const isAccessible = (x, y) => {
-    if (x <= 0 || y <= 0 || x >= cols - 1 || y >= rows - 1) return false;
-    const neighbors = [
-      grid[y - 1]?.[x],     // up
-      grid[y + 1]?.[x],     // down
-      grid[y]?.[x - 1],     // left
-      grid[y]?.[x + 1]      // right
-    ];
-    const walkableCount = neighbors.filter(t => t === TILE_TYPES.FLOOR).length;
-    return walkableCount >= 2; // Need at least 2 exits to not be enclosed
-  };
-
   const allFloors = [];
-  const accessibleFloors = []; // Spawns should only use accessible floors
   for (let y = 1; y < rows - 1; y++) {
     for (let x = 1; x < cols - 1; x++) {
       if (grid[y][x] === TILE_TYPES.FLOOR) {
         allFloors.push({ x, y });
-        if (isAccessible(x, y)) {
-          accessibleFloors.push({ x, y });
-        }
       }
     }
   }
@@ -261,17 +175,14 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random) {
     };
   }
 
-  // Use accessible floors for spawns, fall back to all floors if needed
-  const spawnFloors = accessibleFloors.length >= 2 ? accessibleFloors : allFloors;
-
   const pickFar = (avoid, minD) => {
     for (let k = 0; k < 400; k++) {
-      const c = spawnFloors[(rnd() * spawnFloors.length) | 0];
+      const c = allFloors[(rnd() * allFloors.length) | 0];
       if (avoid.every((pt) => manhattan(c, pt) >= minD)) return c;
     }
-    let best = spawnFloors[0];
+    let best = allFloors[0];
     let bestScore = -1;
-    for (const c of spawnFloors) {
+    for (const c of allFloors) {
       const d = avoid.length ? Math.min(...avoid.map((pt) => manhattan(c, pt))) : Infinity;
       if (d > bestScore) {
         bestScore = d;
@@ -360,39 +271,6 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random) {
   grid[plug.y][plug.x] = TILE_TYPES.FLOOR;
   grid[stash.y][stash.x] = TILE_TYPES.FLOOR;
   grid[extract.y][extract.x] = TILE_TYPES.FLOOR;
-
-  // CRITICAL: Validate that spawns can actually reach objectives
-  // This prevents enclosed spawn bugs where characters spawn in isolated pockets
-  const runnerCanReachStash = canReach(runner, stash);
-  const stashCanReachExtract = canReach(stash, extract);
-  const plugCanReachStash = canReach(plug, stash);
-
-  if (!runnerCanReachStash || !stashCanReachExtract || !plugCanReachStash) {
-    // Spawns are in isolated areas! Force simple fallback layout
-    const centerX = Math.floor(cols / 2);
-    const centerY = Math.floor(rows / 2);
-
-    // Clear a path in the center to ensure connectivity
-    for (let y = 1; y < rows - 1; y++) {
-      grid[y][centerX] = TILE_TYPES.FLOOR;
-    }
-    for (let x = 1; x < cols - 1; x++) {
-      grid[centerY][x] = TILE_TYPES.FLOOR;
-    }
-
-    // Place spawns/objectives along the cleared paths
-    return {
-      spawns: {
-        runner: { x: centerX - 3, y: centerY },
-        plug: { x: centerX + 3, y: centerY }
-      },
-      objectives: {
-        stash: { x: centerX, y: centerY - 3 },
-        extract: { x: centerX, y: centerY + 3 }
-      },
-      egress: pickDriveway(grid, cols, rows, rnd)
-    };
-  }
 
   const egress = pickDriveway(grid, cols, rows, rnd);
 

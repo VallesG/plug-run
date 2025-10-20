@@ -13,19 +13,10 @@ import { makeRunnerSprite, makePlugSprite, updateAvatarVisuals } from '../utils/
 import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/mazeGenerator.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
-import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
+import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
-import { applyStreetWarsAI, updateStreetWarsPlugAI, applyStreetWarsShootingBehavior, updateStreetWarsRunnerAI, considerStreetWarsPowerUse } from '../utils/streetWarsAI.js';
-import PlayerController from '../controllers/PlayerController.js';
-import AIController from '../controllers/AIController.js';
-import CombatSystem from '../controllers/CombatSystem.js';
-import VisualEffects from '../controllers/VisualEffects.js';
-import GameUI from '../controllers/GameUI.js';
-import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
-import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
-import ProgressionManager from '../controllers/ProgressionManager.js';
 
 function makeRng(seed){
   let t = seed >>> 0;
@@ -87,18 +78,81 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('engine_start', ['/audio/engine_start.ogg', '/audio/engine_start.mp3']);
       this.load.audio('engine_idle',  ['/audio/engine_idle.ogg',  '/audio/engine_idle.mp3']);
       this.load.audio('ouch',         ['/audio/ouch.ogg',         '/audio/ouch.mp3']);
-
-      // Background music
-      this.load.audio('main_beat',    ['/audio/main_beat.ogg',    '/audio/main_beat.mp3']);
-      this.load.audio('learn_beat',   ['/audio/learn_beat.ogg',   '/audio/learn_beat.mp3']);
-      this.load.audio('plug_beat',    ['/audio/plug_beat.ogg',    '/audio/plug_beat.mp3']);
-      this.load.audio('plug_beat2',   ['/audio/plug_beat2.ogg',   '/audio/plug_beat2.mp3']);
     } catch {}
   }
 
-  /* -- Centered modal helper (delegated to GameUI controller) ----------- */
+  /* -- Centered modal helper ----------- */
   showModal({ title, lines = [], buttons = [] }){
-    return this.gameUI.showModal({ title, lines, buttons });
+    // block world input + hide touch controls
+    this.input.keyboard.enabled = false;
+    this.suspendTouchUI?.(true);
+
+    const Z = 20_000; // above touch UI
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+    const W  = this.scale.gameSize.width;
+    const H  = this.scale.gameSize.height;
+
+    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.82)
+      .setScrollFactor(0).setDepth(Z - 1).setInteractive();
+
+    const panelW = Math.min(480, W - 40);
+    // Increased panel height to accommodate vertically stacked buttons
+    const baseH = 240; // Increased from 180 to fit continue button at bottom
+    const btnH = 36;
+    const btnGap = 10;
+    const btnAreaH = buttons.length * btnH + (buttons.length - 1) * btnGap + 40;
+    const panelH = Math.min(baseH + btnAreaH, H - 40);
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x0a0d1a, 0.96)
+      .setStrokeStyle(2, 0x2f3660).setScrollFactor(0).setDepth(Z);
+
+    const titleTxt = this.add.text(cx, cy - panelH/2 + 28, title || '', {
+        color:'#cbd1ff', fontSize:'22px', wordWrap: { width: panelW - 24 }
+      }).setOrigin(0.5).setDepth(Z).setScrollFactor(0);
+
+    const content = [];
+    let y = titleTxt.y + 26;
+    for (const s of lines){
+      content.push(
+        this.add.text(cx, y, s, { color:'#aab5ff', fontSize:'14px', wordWrap:{ width: panelW - 24 } })
+          .setOrigin(0.5).setDepth(Z).setScrollFactor(0)
+      );
+      y += 18;
+    }
+
+    const btnObjs = [];
+    const btnCenters = [];
+    // Vertical stacking: wider buttons, stacked vertically
+    const btnW = Math.min(280, panelW - 40);
+    const totalH = buttons.length * btnH + (buttons.length - 1) * btnGap;
+    const bx = cx;
+    // Start buttons higher up (increased offset from bottom)
+    let by = cy + panelH/2 - totalH - 50;
+
+    for (const b of buttons){
+      const bg = this.add.rectangle(bx, by, btnW, btnH, b.bg ?? 0x1a2038, 1)
+        .setStrokeStyle(1, b.stroke ?? 0x2f3660).setScrollFactor(0).setDepth(Z)
+        .setInteractive({ useHandCursor: true });
+      const t  = this.add.text(bx, by, b.label, { color: b.color ?? '#cbd1ff', fontSize: '14px' })
+        .setOrigin(0.5).setDepth(Z).setScrollFactor(0);
+
+      bg.on('pointerdown', ()=>{ destroy(); b.onClick && b.onClick(); });
+
+      btnObjs.push(bg, t);
+      btnCenters.push({ x: bx, y: by });
+      by += btnH + btnGap; // Stack vertically instead of horizontally
+    }
+
+    const extras = [];
+    const registerExtra = (...objs)=> extras.push(...objs);
+
+    const destroy = ()=>{
+      [veil, panel, titleTxt, ...content, ...btnObjs, ...extras].forEach(o=>o?.destroy?.());
+      this.suspendTouchUI?.(false);
+      // inputs re-enabled by startMatch()
+    };
+
+    return { destroy, veil, panel, btnCenters, registerExtra };
   }
 
   init(data) {
@@ -107,16 +161,6 @@ export class BaseGameScene extends Phaser.Scene {
     this.rows = Math.floor(Math.max(1, this.scale.height) / this.cell);
     this.pad  = { x: 0, y: 0 };
     this.timerMs = 90_000;
-
-    // Corridor assist configuration (0 = off, 1 = normal, 2 = strong)
-    // Reduced from old value of ~3.3x to 1.0 for better player control
-    // Load user preference from localStorage if available
-    try {
-      const savedAssist = localStorage.getItem('pr_corridor_assist');
-      this.corridorAssistStrength = savedAssist !== null ? parseFloat(savedAssist) : 1.0;
-    } catch {
-      this.corridorAssistStrength = 1.0;
-    }
 
     // scene.transition passes data via scene.settings.data, not init param
     const settings = this.scene.settings.data || {};
@@ -129,13 +173,8 @@ export class BaseGameScene extends Phaser.Scene {
     this.role = (initData && 'role' in initData) ? initData.role : null;
     this.tutorialStage = initData?.tutorialStage ?? null;
 
-    // Initialize all controllers
-    this.playerController = new PlayerController(this);
-    this.aiController = new AIController(this);
-    this.combatSystem = new CombatSystem(this);
-    this.vfx = new VisualEffects(this);
-    this.gameUI = new GameUI(this);
-    this.progressionManager = new ProgressionManager(this);
+    // Track the runner's last deliberate input direction (used for dash consistency)
+    this._runnerInputDir = { x: 1, y: 0 };
 
     // Effects / options
     // Force high-contrast bullets ON for all players
@@ -235,8 +274,7 @@ export class BaseGameScene extends Phaser.Scene {
   canMoveTo(sprite, nx, ny){
     // Allow the runner to pass through walls while phasing
     if (sprite === this.attacker && this.runnerIsPhasing && this.runnerIsPhasing()) return true;
-    // Smaller hitbox for better navigation in tight spaces, especially corridors
-    const r = (sprite?.hbRadius != null) ? sprite.hbRadius : (this.hitboxRadius || (this.cell * 0.18));
+    const r = (sprite?.hbRadius != null) ? sprite.hbRadius : (this.hitboxRadius || (this.cell * 0.28));
     const pts = [
       {x:nx - r, y:ny - r},
       {x:nx + r, y:ny - r},
@@ -248,7 +286,6 @@ export class BaseGameScene extends Phaser.Scene {
     }
     return true;
   }
-
 
   canDamage(who){
     return performance.now() >= (who.iUntil || 0);
@@ -325,7 +362,7 @@ export class BaseGameScene extends Phaser.Scene {
     }
     // One-time animations for sprites
     const mkOnce = (key, cfg) => { if (!this.anims.exists(key)) this.anims.create({ key, ...cfg }); };
-    // Runner (Kenney Player)   simple 2-frame walk
+    // Runner (Kenney Player) � simple 2-frame walk
     mkOnce('runner-idle', { frames: [{ key:'ken_player_idle' }], frameRate: 1, repeat: -1 });
     mkOnce('runner-run',  { frames: [{ key:'ken_player_walk1' }, { key:'ken_player_walk2' }], frameRate: 8, yoyo: true, repeat: -1 });
     // Plug (Kenney Soldier)
@@ -340,7 +377,6 @@ export class BaseGameScene extends Phaser.Scene {
     try {
       this.audio = AudioManager.get(this);
       this.audio.ensureUnlocked(this);
-      // Music already started in MenuScene when card was clicked
     } catch {}
 
     this.roundPausedForMenu = false;
@@ -409,60 +445,11 @@ export class BaseGameScene extends Phaser.Scene {
 
     // controls
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasdKeys = this.input.keyboard.addKeys('W,A,S,D,ONE,TWO,THREE,FOUR');
-
-    // Debug: Press 'C' to cycle corridor assist strength (0 = off, 1 = normal, 2 = strong)
-    this.input.keyboard.on('keydown-C', () => {
-      this.corridorAssistStrength = (this.corridorAssistStrength + 1) % 3;
-      const labels = ['OFF', 'NORMAL', 'STRONG'];
-      console.log(`Corridor assist: ${labels[this.corridorAssistStrength]} (${this.corridorAssistStrength})`);
-
-      // Save preference
-      try {
-        localStorage.setItem('pr_corridor_assist', this.corridorAssistStrength.toString());
-      } catch {}
-
-      // Show temporary on-screen feedback
-      const text = this.add.text(this.cameras.main.centerX, 100,
-        `Corridor Assist: ${labels[this.corridorAssistStrength]}`,
-        { fontSize: '20px', color: '#ffff00' })
-        .setOrigin(0.5).setScrollFactor(0).setDepth(10000);
-      this.tweens.add({
-        targets: text, alpha: 0, duration: 2000,
-        onComplete: () => text.destroy()
-      });
-    });
-
-    // Debug: Press 'V' to toggle movement debug visualization
-    this.debugMovement = false;
-    this.input.keyboard.on('keydown-V', () => {
-      this.debugMovement = !this.debugMovement;
-      console.log(`Movement debug: ${this.debugMovement ? 'ON' : 'OFF'}`);
-
-      if (this.debugMovement) {
-        // Create debug graphics
-        this.debugGraphics = this.add.graphics();
-        this.debugGraphics.setDepth(9999);
-      } else if (this.debugGraphics) {
-        this.debugGraphics.destroy();
-        this.debugGraphics = null;
-      }
-
-      const text = this.add.text(this.cameras.main.centerX, 140,
-        `Movement Debug: ${this.debugMovement ? 'ON' : 'OFF'}`,
-        { fontSize: '20px', color: '#00ff00' })
-        .setOrigin(0.5).setScrollFactor(0).setDepth(10000);
-      this.tweens.add({
-        targets: text, alpha: 0, duration: 2000,
-        onComplete: () => text.destroy()
-      });
-    });
+    this.input.keyboard.addKeys('W,A,S,D,ONE,TWO,THREE,FOUR');
 
     // split aims (player vs AI) and separate gun aim for desktop
     this.playerAim    = { x:1, y:0 }; // movement aim (mobile + keyboard)
     this.playerGunAim = { x:1, y:0 }; // gun aim (desktop mouse)
-    this.playerMoveDir = { x:1, y:0 }; // Actual movement direction (straight line)
-    this.playerIntendedDir = { x:1, y:0 }; // Direction player swiped/chose (never forced to change)
     this.aiAim        = { x:1, y:0 };
 
     // desktop keyboard quick-aim (player) and persistent drift like "snake"
@@ -472,10 +459,6 @@ export class BaseGameScene extends Phaser.Scene {
       const ny = y / len;
       this.playerAim = { x: nx, y: ny };
       this.playerDrift = { x: nx, y: ny };
-      this.playerMoveDir = { x: nx, y: ny }; // Set straight-line movement direction
-      this.playerIntendedDir = { x: nx, y: ny }; // Track what player intended
-      // Also update gun aim when using keyboard (keeps consistency)
-      this.playerGunAim = { x: nx, y: ny };
       this._runnerInputDir = { x: nx, y: ny };
       this.userTookOver = true;
     };
@@ -569,38 +552,36 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.meleeEnabled = false;
 
-    // AI knobs (base difficulty) - Loaded from separate AI modules
-    this.aiPlug = getPlugBaseStats();
-    this.aiRunner = getRunnerBaseStats();
+    // AI knobs (base difficulty)
+    this.aiPlug = { speed: 120, shootEvery: 0.90, maxRange: 300, inaccuracy: 0.45, reactDelay: 550 };
 
     // Apply progressive difficulty in PvE mode
+    // Current scaling: +1.5% speed, +2% fire rate, +1.5% accuracy, -25ms reaction, +10 vision per round
     if (this.mode === 'pve') {
-      applyPlugProgression(this);
-      applyRunnerProgression(this);
+      this.applyPvEDifficulty();
       this.applyMusicRamp();
-    }
-
-    // Apply Street Wars AI (level 50 human-like opponent)
-    if (this.mode === 'streetwars') {
-      applyStreetWarsAI(this);
     }
 
     // Defender AI anti-lockstep helpers
     this._aiPlugStrafeDir = { x: 0, y: 0 };
     this._aiPlugStrafeUntil = 0;
     this._aiFirstSeenAt = performance.now();
+    this.aiRunner = { planEvery: 200, jukeDist: 0, sprintDist: 5, sprintMul: 1.05, centerBias: 14 };
     this.aiTick = 0;
     this._aiPlanAt = 0;
     this._aiSpawnAt = performance.now();
     this._aiLastPos = { x:this.attacker.x, y:this.attacker.y };
     this._aiVX = 0; this._aiVY = 0;
     this._aiCruiseDir = { x:1, y:0 };
+    this.aiRunner.keepDirMs   = 300;
+    this.aiRunner.slideNudge  = 0.16;
     this._aiLastMoveDir = { x:0, y:0 };
     this._aiFlipGuardUntil = 0;
 
     // recompute speed scalars now that aiPlug exists
     this.recomputeSpeedsFromCell();
     if (this.mode === 'pve') {
+      this.applyRunnerAIDifficulty();
       if (this.role === 'plug') {
         // Use seeded RNG for AI targeting decision (deterministic in PvE routes)
         const rng = this.gameplayRNG || Math.random;
@@ -663,8 +644,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.phaseActiveUntil = 0;
     this.attacker?.setAlpha?.(1);
     if (this.mode === 'pve') {
-      applyPlugProgression(this);
-      applyRunnerProgression(this);
+      this.applyRunnerAIDifficulty();
       this.applyMusicRamp();
     }
 
@@ -701,7 +681,7 @@ export class BaseGameScene extends Phaser.Scene {
       this._pointerDownHandler = (p) => {
         if (p.button !== 0) return;
         if (this.role === 'plug') {
-          this._mouseDown = true; this.combatSystem.tryMouseFire();
+          this._mouseDown = true; this.tryMouseFire();
         } else if (this.role === 'runner') {
           // Desktop: left click activates next selected runner power (in order)
           const used = this.runnerPowersConsumed || [];
@@ -713,12 +693,12 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this._pointerDownHandler);
     this.input.on('pointerup', this._pointerUpHandler);
     // Fallback: ensure left click fires even if desktop detection flips
-    this.input.on('pointerdown', (p)=>{ if (p.button===0 && this.role==='plug') this.combatSystem.tryMouseFire(); });
+    this.input.on('pointerdown', (p)=>{ if (p.button===0 && this.role==='plug') this.tryMouseFire(); });
     } else {
       this.makeMobileControls();
     }
 
-    this._spaceHandler = this._spaceHandler || (() => this.combatSystem.firePlug());
+    this._spaceHandler = this._spaceHandler || (() => this.firePlug());
     this._spaceBound = false;
     this.bindSpaceForPlug = () => {
       if (this._spaceBound) return;
@@ -734,34 +714,14 @@ export class BaseGameScene extends Phaser.Scene {
     this.bindSpaceForPlug();
 
     // Initialize human auto-drift: desktop drifts right initially; mobile random.
-    // Find a direction that doesn't immediately hit a wall
-    const findSafeStartDir = () => {
-      const who = (this.role === 'plug') ? this.defender : this.attacker;
-      if (!who) return { x: 1, y: 0 };
-
-      const dirs = [
-        { x: 1, y: 0 }, { x: -1, y: 0 },
-        { x: 0, y: 1 }, { x: 0, y: -1 }
-      ];
-
-      // Check each direction for walls
-      for (const dir of dirs) {
-        const testX = who.x + dir.x * this.cell;
-        const testY = who.y + dir.y * this.cell;
-        if (this.canMoveTo(who, testX, testY)) {
-          return dir;
-        }
-      }
-      return dirs[0]; // Fallback if all blocked
-    };
-
-    this._initDrift = this.isDesktop ? { x: 1, y: 0 } : findSafeStartDir();
+    if (this.isDesktop){
+      this._initDrift = { x: 1, y: 0 };
+    } else {
+      this._initDrift = randomCardinal();
+    }
     this.playerDrift = { x: this._initDrift.x, y: this._initDrift.y };
-    // Set movement direction for straight-line movement
-    this.playerMoveDir = { x: this._initDrift.x, y: this._initDrift.y };
-    this.playerIntendedDir = { x: this._initDrift.x, y: this._initDrift.y }; // Track initial direction
+    // Set current aim/input to drift so movement begins immediately
     this.playerAim = { x: this.playerDrift.x, y: this.playerDrift.y };
-    this.playerGunAim = { x: this.playerDrift.x, y: this.playerDrift.y };
     if (this.role === 'runner') this._runnerInputDir = { x: this.playerDrift.x, y: this.playerDrift.y };
     // Flag flips to true after first user-controlled aim so initial drift never applies again
     this.userTookOver = false;
@@ -811,7 +771,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Full-screen background per theme
     const BG = this.theme?.bg ?? 0x080A10;
-    this.add.rectangle(W/2, H/2, W, H, BG, 1);
+    this.add.rectangle(W/2, H/2,nahh W, H, BG, 1);
 
     const NEON = [0x00E5FF, 0xA78BFA, 0xFF6AD5, 0x00FFA3, 0xFFC857, 0xFF7A00];
     const COVER_FILL = 0x0B0F16;
@@ -968,18 +928,183 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   // REAL / BUNK STASH PATCH: car beacon to guide extraction after pickup
-  // REAL / BUNK STASH PATCH: car beacon to guide extraction after pickup (delegated to VFX controller)
   showCarBeacon(){
-    this.vfx.showCarBeacon();
+    if (!this.car) return;
+    this.hideCarBeacon();
+    const noseX = this.car.x + (this.carOutDir?.x||0) * (this.cell*0.8);
+    const noseY = this.car.y + (this.carOutDir?.y||0) * (this.cell*0.8);
+    const c = this.add.container(noseX, noseY).setDepth(1300);
+    const w = this.cell * 1.8, h = this.cell * 1.2;
+    const glow = this.add.ellipse(0, 0, w, h, 0x60a5fa, 0.55)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    const inner = this.add.ellipse(0, 0, w*0.6, h*0.5, 0xffffff, 0.35)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    c.add([glow, inner]);
+    this.tweens.add({ targets: glow, alpha: 0.25, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: c, scaleX: 1.12, scaleY: 1.12, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.carBeacon = c;
+    this._drawCarBeacon = () => {
+      if (!this.car || !this.carBeacon) return;
+      const nx = this.car.x + (this.carOutDir?.x||0) * (this.cell*0.8);
+      const ny = this.car.y + (this.carOutDir?.y||0) * (this.cell*0.8);
+      this.carBeacon.x = nx; this.carBeacon.y = ny;
+    };
   }
   hideCarBeacon(){
-    this.vfx.hideCarBeacon();
+    this._drawCarBeacon = null;
+    if (this.carBeacon){ this.carBeacon.destroy(); this.carBeacon = null; }
   }
 
   startExtractionSequence(){
-    return this.progressionManager.startExtractionSequence();
-  }
+    if (this.roundOver) return;
 
+    const cleanupArena = () => {
+      this.destroyDecoySprite();
+      const destroyGroup = (group) => {
+        const children = group?.getChildren?.() || [];
+        children.forEach((b) => b.destroy());
+      };
+      destroyGroup(this.bulletsA);
+      destroyGroup(this.bulletsD);
+      this.hideCarBeacon?.();
+      this.removeCarryPackage?.();
+      // Stop engine idle loop (extraction complete)
+      try { this.audio?.stopEngineLoop(); } catch {}
+      this.hasStash = false;
+    };
+
+    if (this.mode === 'pve' && this.role === 'plug') {
+      this.roundOver = true;
+      this.roundPausedForMenu = true;
+      this.input.keyboard.enabled = false;
+      this._mouseDown = false;
+      cleanupArena();
+      this.attacker?.setVisible(false);
+
+      // Track runner extraction for REP calculation (plug failed)
+      if (this.repTracker) {
+        this.repTracker.onRunnerExtracted();
+      }
+
+      this.pveBestRound = Math.max(this.pveBestRound ?? 0, this.pveRound || 1);
+      this.showPvEGameOver({ reason: 'runner_extracted' });
+      return;
+    }
+
+    // PvE mode: update stats and show floating rewards, then continue with normal extraction
+    if (this.mode === 'pve') {
+      console.log('[PvE] Extraction! Round:', this.pveRound, 'Mode:', this.mode);
+
+      // Track round completion for REP calculation
+      if (this.repTracker) {
+        this.repTracker.onRoundComplete();
+      }
+
+      // Calculate rewards using new tracking system
+      const roundCompletion = recordRoundCompletion(this.role, this.pveRound);
+      const stashEarned = roundCompletion.earnedStash ? 1 : 0;
+
+      // Calculate REP using RepTracker
+      let repEarned = 0;
+      if (this.repTracker) {
+        const repResult = this.repTracker.calculateFinalRep(roundCompletion.repMultiplier);
+        repEarned = repResult.finalRep;
+        console.log('[PvE] REP Breakdown:', repResult.breakdown);
+      }
+
+      this.pveSessionStash += stashEarned;
+      this.pveSessionRep += repEarned;
+      this.pveBestRound = Math.max(this.pveBestRound, this.pveRound);
+      console.log('[PvE] Stats - Stash:', stashEarned, 'Rep:', repEarned, 'Total Stash:', this.pveSessionStash, 'Total Rep:', this.pveSessionRep);
+      console.log('[PvE] Completion:', roundCompletion.completionCount, 'times, multiplier:', roundCompletion.repMultiplier);
+
+      // Update user's total accumulated stash and REP
+      const user = getCurrentUser();
+      updateUserStats({
+        totalStash: (user.stats?.totalStash || 0) + stashEarned,
+        totalRep: (user.stats?.totalRep || 0) + repEarned
+      });
+
+      // Track route progress for leaderboard
+      updateRouteProgress(this.role, this.pveRound);
+
+      // Save session state (for continue feature) - save next round since that's what they'll play
+      saveSessionState(this.role, {
+        pveRound: this.pveRound + 1,
+        pveSessionStash: this.pveSessionStash,
+        pveSessionRep: this.pveSessionRep,
+        pveBestRound: this.pveBestRound
+      });
+
+      // Submit score to daily leaderboard
+      submitScore(this.role, this.pveRound, this.pveSessionStash);
+
+      // Submit to all-time leaderboard
+      submitAllTimeScore(this.role, this.pveRound, this.pveSessionStash);
+
+      // Show floating numbers at extraction point (will stay visible during fade and next round's power modal)
+      this.showFloatingRewards(stashEarned, repEarned);
+      // Continue with normal extraction sequence (fade, restart, power modal will show automatically)
+    }
+
+    this.roundOver = true;
+    this.input.keyboard.enabled = false; this._mouseDown = false;
+    cleanupArena();
+    const doFade = () => {
+      const veil = this.add.rectangle(this.cameras.main.centerX, this.cameras.main.centerY, this.scale.gameSize.width, this.scale.gameSize.height, 0x000000, 0)
+        .setScrollFactor(0).setDepth(5000);
+      this.tweens.add({ targets: veil, alpha: 1, duration: 500, ease:'Sine.easeIn', onComplete: ()=>{
+        // If in tutorial mode, transition back to tutorial scene for next stage
+        if (this.tutorialStage === 4) {
+          // Completed runner tutorial, go to plug tutorial
+          this.scene.start('TUTORIAL_MINI', { continueToStage: 5 });
+        } else if (this.tutorialStage === 5) {
+          // Completed plug tutorial, show completion
+          this.scene.start('TUTORIAL_MINI', { continueToStage: 6 });
+        } else {
+          // Restart with new seed (preserve mode for PvE)
+          const newSeed = (Math.random() * 2**32) | 0;
+          this.scene.restart({
+            mode: this.mode,
+            role: this.role,
+            seed: newSeed,
+            pveRound: this.mode === 'pve' ? (this.pveRound || 1) + 1 : undefined,
+            pveSessionStash: this.pveSessionStash,
+            pveSessionRep: this.pveSessionRep,
+            pveBestRound: this.pveBestRound
+          });
+        }
+      }});
+    };
+    // Runner boards the car: move to the car nose and shrink/fade
+    const boardThenDrive = () => {
+      if (this.car){
+        const dist = this.cell * 8;
+        this.tweens.add({
+          targets: this.car,
+          x: this.car.x + (this.carOutDir?.x||0)*dist,
+          y: this.car.y + (this.carOutDir?.y||0)*dist,
+          duration: 1200,
+          ease: 'Sine.easeIn',
+          onComplete: doFade
+        });
+      } else {
+        doFade();
+      }
+    };
+
+    try { this.removeCarryPackage?.(); } catch {}
+    if (this.attacker && this.car){
+      const noseX = this.car.x + (this.carOutDir?.x||0) * (this.cell*0.8);
+      const noseY = this.car.y + (this.carOutDir?.y||0) * (this.cell*0.8);
+      this.tweens.add({ targets: this.attacker, x: noseX, y: noseY, scaleX: 0.6, scaleY: 0.6, alpha: 0.4, duration: 350, ease:'Sine.easeOut', onComplete: ()=>{
+        this.attacker.setVisible(false);
+        boardThenDrive();
+      }});
+    } else {
+      boardThenDrive();
+    }
+  }
 
   // stash & extract
   makeObjectives(stashCell, extractCell){
@@ -1158,38 +1283,336 @@ export class BaseGameScene extends Phaser.Scene {
     return this.weaponStats?.[weapon] || this.weaponStats?.pistol;
   }
 
+  spawnWeaponBurst(origin, aim, weapon, group){
+    // Fire SFX for weapon burst (uses real asset if present; else oscillator fallback)
+    try { this.audio?.play('gun_fire', { volume: 0.8, rateRand: 0.06 }); this.audio?.duckForGunshot?.(); } catch {}
+    const stats = this.getWeaponStats(weapon);
+    const ax = aim?.x ?? 0;
+    const ay = aim?.y ?? 0;
+    const len = Math.hypot(ax, ay) || 1;
+    const baseAngle = Math.atan2(ay / len, ax / len);
+    const pellets = stats?.spreadAngles?.length ? stats.spreadAngles : [0];
+
+    // Subtle muzzle flash: cyan ring + short directional streak (smaller, high-contrast)
+    const flashColor = 0x60a5fa; // electric blue for contrast on wood/brown floors
+    const flashR = Math.max(4, Math.floor(this.cell * 0.14));
+    const deg = (baseAngle * 180) / Math.PI;
+    // ring
+    const flashRing = this.add.graphics().setDepth(11);
+    flashRing.lineStyle(Math.max(1, Math.floor(this.cell * 0.07)), flashColor, 1);
+    flashRing.strokeCircle(0, 0, Math.floor(flashR * 0.9));
+    flashRing.setBlendMode(Phaser.BlendModes.ADD);
+    flashRing.setPosition(origin.x, origin.y);
+    this.tweens.add({ targets: flashRing, alpha: 0, scaleX: 1.35, scaleY: 1.35, duration: 80, ease: 'Cubic.easeOut', onComplete: () => flashRing.destroy() });
+    // streak
+    const streakLen = Math.max(6, Math.floor(this.cell * 0.40));
+    const streakThk = Math.max(2, Math.floor(this.cell * 0.06));
+    const streak = this.add.rectangle(origin.x + Math.cos(baseAngle) * flashR, origin.y + Math.sin(baseAngle) * flashR, streakLen, streakThk, flashColor, 0.95)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(11)
+      .setAngle(deg);
+    this.tweens.add({ targets: streak, alpha: 0, scaleX: 1.5, duration: 80, ease: 'Cubic.easeOut', onComplete: () => streak.destroy() });
+
+    // Pick high-contrast bullet palette based on floor appearance
+    const isLightFloor = (() => {
+      if (Array.isArray(this.theme?.checkerColors) && this.theme.checkerColors.length >= 2){
+        const lum = (hex) => { const r=(hex>>16)&255,g=(hex>>8)&255,b=hex&255; return (0.2126*r+0.7152*g+0.0722*b)/255; };
+        const avg = this.theme.checkerColors.reduce((s,c)=> s + lum(c), 0) / this.theme.checkerColors.length;
+        return avg > 0.7;
+      }
+      if (this.theme?.floorSet === 'wood') return false;
+      if (typeof this.theme?.floorTint === 'number'){
+        const r=(this.theme.floorTint>>16)&255,g=(this.theme.floorTint>>8)&255,b=this.theme.floorTint&255;
+        const L=(0.2126*r+0.7152*g+0.0722*b)/255; return L > 0.7;
+      }
+      return false;
+    })();
+    const palette = (() => {
+      if (!this.fxBulletHighContrast){
+        // default behavior: theme-aware but softer (lean on weapon tint/PvE red)
+        const base = (this.mode === 'pve') ? 0xef4444 : (stats?.color ?? 0xffd166);
+        const rim = isLightFloor ? 0xffffff : 0xef4444;
+        return { fill: base, rim };
+      }
+      // High contrast: strong red on light floors, pure white on dark floors
+      return isLightFloor ? { fill: 0xef4444, rim: 0xffffff } : { fill: 0xffffff, rim: 0xef4444 };
+    })();
+
+    const useNormalBlend = !!(this.fxBulletHighContrast && isLightFloor);
+    pellets.forEach((offset) => {
+      const ang = baseAngle + Phaser.Math.DegToRad(offset);
+      const dx = Math.cos(ang);
+      const dy = Math.sin(ang);
+      // Use high-contrast color based on floor theme
+      const color = palette.fill;
+      const radius = Math.max(3, Math.floor(this.cell * 0.13));
+      const bullet = this.add.circle(origin.x, origin.y, radius, color, 1)
+        .setDepth(10)
+        .setBlendMode(useNormalBlend ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD);
+      group.add(bullet);
+      bullet.vx = dx * (stats?.speed ?? 300);
+      bullet.vy = dy * (stats?.speed ?? 300);
+      bullet.life = 1200;
+      bullet._color = color;
+      bullet._radius = radius;
+      bullet._trailAt = performance.now();
+      bullet._repTracked = false; // Mark if we've tracked this bullet's outcome for REP
+      // Soft glow that follows the projectile
+      bullet._glow = this.add.circle(origin.x, origin.y, Math.floor(radius * 1.7), color, 0.28)
+        .setDepth(9)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      // high-contrast rim; on very light floors, use a darker NORMAL-blend outline so it doesn't wash out
+      const rim = this.add.graphics().setDepth(10);
+      const rimColor = (isLightFloor && this.fxBulletHighContrast) ? 0xb91c1c : palette.rim;
+      const rimBlend = (isLightFloor && this.fxBulletHighContrast) ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD;
+      const rimRadius = Math.floor(radius * 1.12); // consistent rim size across all themes
+      const rimThk = Math.max(1, Math.floor(this.cell * 0.06)); // thicker rim for better visibility
+      rim.lineStyle(rimThk, rimColor, 0.95);
+      rim.strokeCircle(0, 0, rimRadius);
+      rim.setBlendMode(rimBlend);
+      rim.setPosition(origin.x, origin.y);
+      bullet._rim = rim;
+    });
+  }
 
   beginRoundTimer(){
     this.endAt = performance.now() + this.timerMs;
     this.roundPausedForMenu = false;
 
-    // Initialize RepTracker for this round via ProgressionManager
-    if (this.progressionManager) {
-      this.progressionManager.startRound(this.pveRound || 1);
+    // Initialize RepTracker for this round
+    if (!this.repTracker) {
+      this.repTracker = new RepTracker(this.role, this);
+    } else {
+      this.repTracker.startRound(this.pveRound || 1);
+    }
+  }
+
+  promptPlugWeaponSelection(onDone){
+    if (this.role !== 'plug') { onDone?.(); return; }
+    const options = this.availableGuns || ['pistol'];
+    if (options.length <= 1){yeah
+      this.selectLoadout(options[0]);
+      onDone?.();
+      return;
     }
 
-    // Reset AI orientation timers for new round
-    resetPlugOrientation(this);
-    resetRunnerOrientation(this);
+    this.roundPausedForMenu = true;
+    this.destroyAbilityButton();
+    this.runnerAbilityText?.setVisible(false);
+    const roundLabel = `ROUND ${this.pveRound || 1}`;
+
+    const modal = this.showModal({
+      title: roundLabel,
+      lines: ['Select your weapon for this round.', ''],
+      buttons: []
+    });
+    const { destroy, registerExtra, panel } = modal;
+    const cx = panel?.x ?? this.cameras.main.centerX;
+    const cy = panel?.y ?? this.cameras.main.centerY;
+    const panelW = (panel?.width ?? Math.min(this.scale.width - 40, 480));
+    const vw = this.scale.gameSize.width;
+    const isNarrow = vw < 480 || panelW < 420;
+    // Layout: stack as 2x2 grid on narrow/mobile, single row otherwise
+    const cols = isNarrow ? Math.min(2, options.length) : Math.min(options.length, 4);
+    const rows = Math.ceil(options.length / cols);
+
+    // Smaller buttons positioned higher
+    const gridGapX = Math.min(115, Math.max(80, panelW / Math.max(cols, 1) * 0.65));
+    const totalW = (cols - 1) * gridGapX;
+    const startX = cx - totalW / 2;
+    const firstRowY = cy + (rows > 1 ? -10 : 0); // Moved up
+    const rowGapY = 50; // Tighter spacing
+    const weaponBtnW = 110; // Smaller width
+    const weaponBtnH = 38; // Smaller height
+
+    const select = (weapon) => {
+      this.selectLoadout(weapon);
+      this.input.keyboard.enabled = true;
+      destroy();
+      this.roundPausedForMenu = false;
+      onDone?.();
+    };
+
+    const friendlyName = (name) => ({
+      pistol: 'Pistol',
+      doublebarrel: 'Double Barrel',
+      laser: 'Laser',
+      rifle: 'Rifle'
+    })[name] || (name[0].toUpperCase() + name.slice(1));
+
+    let lastRowY = firstRowY;
+    options.forEach((weapon, idx) => {
+      const r = Math.floor(idx / cols);
+      const c = idx % cols;
+      const x = startX + c * gridGapX;
+      const y = firstRowY + r * rowGapY;
+      lastRowY = y;
+
+      const btn = this.add.rectangle(x, y, weaponBtnW, weaponBtnH, 0x1a2038, 1)
+        .setStrokeStyle(1, 0x2f3660)
+        .setDepth(20004)
+        .setInteractive({ useHandCursor: true });
+      const label = friendlyName(weapon);
+      const txt = this.add.text(x, y, label, { color:'#cbd1ff', fontSize:'14px' })
+        .setOrigin(0.5).setDepth(20005);
+      btn.on('pointerdown', () => select(weapon));
+      registerExtra(btn, txt);
+    });
+
+    // Add Continue button at bottom if there's a saved session
+    if (this.pveRound === 1 && this.savedSession && this.savedSession.pveRound > 1) {
+      const continueY = lastRowY + weaponBtnH / 2 + 45; // Below weapon buttons
+      const continueW = Math.min(280, panelW - 80);
+      const continueH = 36;
+
+      const continueBg = this.add.rectangle(cx, continueY, continueW, continueH, 0x16a34a, 1)
+        .setStrokeStyle(2, 0x22c55e)
+        .setDepth(20004)
+        .setInteractive({ useHandCursor: true });
+
+      const continueText = this.add.text(cx, continueY, `Continue from Round ${this.savedSession.pveRound}`, {
+        color: '#ffffff',
+        fontSize: '14px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(20005);
+
+      continueBg.on('pointerdown', () => {
+        destroy();
+        this.scene.restart({
+          mode: 'pve',
+          role: this.role,
+          ...this.savedSession
+        });
+      });
+
+      registerExtra(continueBg, continueText);
+    }
   }
 
-  // Weapon selection prompt (delegated to GameUI controller)
-  promptPlugWeaponSelection(onDone){
-    return this.gameUI.promptPlugWeaponSelection(onDone);
-  }
-
-  // --- Runner power selection (pick TWO, order matters) (delegated to GameUI controller) ---
+  // --- Runner power selection (pick TWO, order matters) ---
   promptRunnerPowerSelection(onDone){
-    return this.gameUI.promptRunnerPowerSelection(onDone);
+    if (this.role !== 'runner') { onDone?.(); return; }
+
+    // Power definitions with symbols and colors
+    const powers = [
+      { id: 'phase', name: 'PHASE', symbol: '👻', color: '#a78bfa' },  // purple ghost
+      { id: 'dash', name: 'DASH', symbol: '⚡', color: '#fbbf24' },     // yellow lightning
+      { id: 'decoy', name: 'DECOY', symbol: '🎭', color: '#60a5fa' }   // blue mask
+    ];
+
+    this.roundPausedForMenu = true;
+
+    // Show round number if in PvE mode
+    const titleText = this.mode === 'pve' ? `ROUND ${this.pveRound}` : 'Power Selection';
+
+    const modal = this.showModal({
+      title: titleText,
+      lines: ['Pick 2 Power-Ups'],
+      buttons: []
+    });
+    const { destroy, registerExtra, panel } = modal;
+    const cx = panel?.x ?? this.cameras.main.centerX;
+    const cy = panel?.y ?? this.cameras.main.centerY;
+
+    // Smaller buttons positioned higher
+    const btnWidth = 90;
+    const btnHeight = 70;
+    const gap = 105;
+    const startX = cx - gap * (powers.length - 1) / 2;
+    const y = cy + 10; // Moved up from cy + 40
+
+    const chosen = [];
+    const markers = new Map();
+    const select = (power) => {
+      const i = chosen.indexOf(power.id);
+      if (i !== -1){
+        chosen.splice(i,1);
+        markers.get(power.id)?.setVisible(false);
+        return;
+      }
+      if (chosen.length >= 2) return;
+      chosen.push(power.id);
+      const m = markers.get(power.id);
+      if (m){ m.setText(String(chosen.length)).setVisible(true); }
+      if (chosen.length === 2){
+        this.runnerPowersSelected = chosen.slice();
+        this.runnerPowersConsumed = [false, false];
+        this.input.keyboard.enabled = true;
+        destroy();
+        this.roundPausedForMenu = false;
+        onDone?.();
+      }
+    };
+
+    powers.forEach((power, idx) => {
+      const x = startX + gap * idx;
+
+      // Button background with power color tint (using smaller height)
+      const btn = this.add.rectangle(x, y, btnWidth, btnHeight, 0x14202f, 1)
+        .setStrokeStyle(2, parseInt(power.color.replace('#', '0x')))
+        .setDepth(20004)
+        .setInteractive({ useHandCursor: true });
+
+      // Symbol (emoji) above name - smaller
+      const symbol = this.add.text(x, y - 12, power.symbol, {
+        fontSize:'28px'
+      }).setOrigin(0.5).setDepth(20005);
+
+      // Power name below symbol - smaller
+      const txt = this.add.text(x, y + 18, power.name, {
+        color: power.color,
+        fontSize:'14px',
+        fontStyle:'bold'
+      }).setOrigin(0.5).setDepth(20005);
+
+      // Selection order badge (top-right corner of button) - smaller
+      const badge = this.add.text(x + (btnWidth / 2) - 8, y - 30, '1', {
+        color:'#ffffff',
+        fontSize:'14px',
+        fontStyle:'bold',
+        backgroundColor:'#10b981',
+        padding: { x: 5, y: 3 }
+      }).setOrigin(0.5).setDepth(20006).setVisible(false);
+
+      markers.set(power.id, badge);
+      btn.on('pointerdown', () => select(power));
+      registerExtra(btn, symbol, txt, badge);
+    });
+
+    // Add Continue button at bottom if there's a saved session
+    if (this.pveRound === 1 && this.savedSession && this.savedSession.pveRound > 1) {
+      const continueY = y + btnHeight / 2 + 45; // Below power buttons
+      const continueW = Math.min(280, panel?.width - 80 || 200);
+      const continueH = 36;
+
+      const continueBg = this.add.rectangle(cx, continueY, continueW, continueH, 0x16a34a, 1)
+        .setStrokeStyle(2, 0x22c55e)
+        .setDepth(20004)
+        .setInteractive({ useHandCursor: true });
+
+      const continueText = this.add.text(cx, continueY, `Continue from Round ${this.savedSession.pveRound}`, {
+        color: '#ffffff',
+        fontSize: '14px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(20005);
+
+      continueBg.on('pointerdown', () => {
+        destroy();
+        this.scene.restart({
+          mode: 'pve',
+          role: this.role,
+          ...this.savedSession
+        });
+      });
+
+      registerExtra(continueBg, continueText);
+    }
   }
 
   // ---- Runner power helpers (order-based execution) ----
   activateRunnerPowerByIndex(idx){
-    // Handle both player runner and AI runner powers
-    const isAI = this.role === 'plug'; // When player is plug, the AI is the runner
-    const sel = isAI ? (this.aiRunnerPowersSelected || []) : (this.runnerPowersSelected || []);
-    const used = isAI ? (this.aiRunnerPowersConsumed || []) : (this.runnerPowersConsumed || []);
-
+    const sel = this.runnerPowersSelected || [];
+    const used = this.runnerPowersConsumed || [];
     if (idx < 0 || idx >= 2) return;
     if (!sel[idx]) return;
     if (used[idx]) return;
@@ -1198,13 +1621,7 @@ export class BaseGameScene extends Phaser.Scene {
     // perform power immediately (no per-power cooldown; consumable)
     this.performRunnerPower(power);
     used[idx] = true;
-
-    // Update the correct property based on who's using it
-    if (isAI) {
-      this.aiRunnerPowersConsumed = used;
-    } else {
-      this.runnerPowersConsumed = used;
-    }
+    this.runnerPowersConsumed = used;
   }
 
   performRunnerPower(power){
@@ -1213,8 +1630,8 @@ export class BaseGameScene extends Phaser.Scene {
     if (!stats) return;
 
     // Track power usage for REP system
-    if (this.progressionManager?.repTracker && this.role === 'runner') {
-      this.progressionManager.repTracker.onPowerUsed(power);
+    if (this.repTracker && this.role === 'runner') {
+      this.repTracker.onPowerUsed(power);
     }
 
     if (power === 'phase'){
@@ -1327,6 +1744,53 @@ export class BaseGameScene extends Phaser.Scene {
     }
   }
 
+  considerAIRunnerPower(now){
+    if (this.role === 'runner') return;
+
+    // Don't allow power-ups until round 4
+    const round = this.pveRound || 1;
+    if (round < 4) return;
+
+    // AI uses consumable powers (2 random powers, each used once)
+    const sel = this.aiRunnerPowersSelected || [];
+    const used = this.aiRunnerPowersConsumed || [];
+    if (!sel.length) return;
+
+    // Cooldown between power uses (prevent using both powers simultaneously)
+    if (this._aiRunnerLastPowerAt && (now - this._aiRunnerLastPowerAt) < 2000) return;
+
+    const dist = Math.hypot(this.defender.x - this.attacker.x, this.defender.y - this.attacker.y);
+
+    // Try to use first power if not consumed
+    if (!used[0] && sel[0]) {
+      const power = sel[0];
+      let shouldUse = false;
+      if (power === 'phase' && dist <= this.cell * 3.6) shouldUse = true;
+      if (power === 'decoy' && !this.decoySprite && dist <= this.cell * 4.2) shouldUse = true;
+      if (shouldUse) {
+        this.performRunnerPower(power);
+        used[0] = true;
+        this.aiRunnerPowersConsumed = used;
+        this._aiRunnerLastPowerAt = now; // track cooldown
+        return;
+      }
+    }
+
+    // Try to use second power if not consumed
+    if (!used[1] && sel[1]) {
+      const power = sel[1];
+      let shouldUse = false;
+      if (power === 'phase' && dist <= this.cell * 3.6) shouldUse = true;
+      if (power === 'decoy' && !this.decoySprite && dist <= this.cell * 4.2) shouldUse = true;
+      if (shouldUse) {
+        this.performRunnerPower(power);
+        used[1] = true;
+        this.aiRunnerPowersConsumed = used;
+        this._aiRunnerLastPowerAt = now; // track cooldown
+        return;
+      }
+    }
+  }
 
   firePlug(){
     if (this.role !== 'plug') return;
@@ -1336,9 +1800,9 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.roundAmmo[weapon] -= 1;
 
-    // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
-    const aim = (this.playerController?.playerGunAim || this.playerAim) || { x: 1, y: 0 };
-    this.combatSystem.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
+    // Desktop mouse uses playerGunAim; mobile uses playerAim
+    const aim = (this.isDesktop ? (this.playerGunAim || this.playerAim) : this.playerAim) || { x: 1, y: 0 };
+    this.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
 
     // Play a quick shooting animation if available
     if (this.defender?.sprite?.anims && !this.defender?.usesTD){
@@ -1362,14 +1826,10 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   update(_, delta){
-    // Update visual effects (delegated to VFX controller)
-    this.vfx.update(delta / 1000);
-
-    // Draw helper visuals each frame if enabled
+    // draw helper visuals each frame if enabled
     this._drawStashHalo?.();
     this._drawExtractHalo?.(); // kept for compatibility if re-enabled elsewhere
     this._drawCarBeacon?.();
-
     if (!this.attacker || !this.defender) return; // scene still initializing / lazy-load path
     if (!this.attacker.visible || this.roundOver) return;
     if (this.roundPausedForMenu) return;
@@ -1377,15 +1837,10 @@ export class BaseGameScene extends Phaser.Scene {
     const now = performance.now();
     const dt = delta / 1000;
 
-    if (this.role !== 'runner') {
-      this.aiController.considerAIRunnerPower(now);
-      // Street Wars: Apply human-like power usage
-      considerStreetWarsPowerUse(this);
-    } else {
-      this.updateRunnerAbilityUI();
-    }
+    if (this.role !== 'runner') this.considerAIRunnerPower(now);
+    else this.updateRunnerAbilityUI();
 
-    if (this.isDesktop && this._mouseDown) this.combatSystem.tryMouseFire();
+    if (this.isDesktop && this._mouseDown) this.tryMouseFire();
 
     const phasing = this.runnerIsPhasing();
     if (phasing){
@@ -1416,22 +1871,152 @@ export class BaseGameScene extends Phaser.Scene {
       plugBaseSpeed *= aimSlow;
     }
 
+    const moveHuman = (sprite, speed) => {
+      let vx = 0;
+      let vy = 0;
+      const k = this.cursors;
+      const wasd = this.wasdKeys || {};
 
-    // Update player-controlled movement via PlayerController
-    this.playerController.update(dt);
+      // Determine if any keyboard movement keys are pressed (arrow keys or WASD)
+      const leftDown  = k.left?.isDown  || wasd.A?.isDown;
+      const rightDown = k.right?.isDown || wasd.D?.isDown;
+      const upDown    = k.up?.isDown    || wasd.W?.isDown;
+      const downDown  = k.down?.isDown  || wasd.S?.isDown;
+      const usingKeys = leftDown || rightDown || upDown || downDown;
 
-    // Update AI based on role
+      if (usingKeys){
+        // Use keyboard for movement
+        if (leftDown)  vx = -speed;
+        else if (rightDown) vx = speed;
+        if (upDown)    vy = -speed;
+        else if (downDown) vy = speed;
+        if (sprite === this.attacker){
+          const mag = Math.hypot(vx, vy);
+          if (mag > 0.0001){
+            this._runnerInputDir = { x: vx / mag, y: vy / mag };
+          }
+        }
+      } else {
+        // No keys: use player's aim or drift. After first user interaction, never fall back to initial drift.
+        const drift = this.userTookOver ? (this.playerDrift || null) : (this.playerDrift || this._initDrift || null);
+        const aim = this.playerAim || drift || { x: 1, y: 0 };
+        const lenAim = Math.hypot(aim.x, aim.y);
+        if (lenAim > 0.0001){
+          vx = (aim.x / lenAim) * speed;
+          vy = (aim.y / lenAim) * speed;
+          if (sprite === this.attacker){
+            this._runnerInputDir = { x: aim.x / lenAim, y: aim.y / lenAim };
+          }
+        }
+      }
+
+      // When not using keys (i.e., using aim), softly snap to corridor centers to assist movement
+      if (!usingKeys){
+        const dir = (Math.abs(vx) > Math.abs(vy))
+          ? { x: Math.sign(vx), y: 0 }
+          : (Math.abs(vy) > 0 ? { x: 0, y: Math.sign(vy) } : { x: 0, y: 0 });
+
+        if (dir.x || dir.y) {
+          // Prevent corridor assist from pulling Runner toward AI Plug when aligned in same corridor
+          let skipAssist = false;
+          if (sprite === this.attacker && this.role === 'runner') {
+            const cell = this.toCell(sprite.x, sprite.y);
+            const centerX = this.toWorldX(cell.x);
+            const centerY = this.toWorldY(cell.y);
+
+            if (dir.x !== 0) {
+              // Moving horizontally: check if plug is in similar Y position (horizontally aligned)
+              const plugAlignedHorizontally = Math.abs(sprite.y - this.defender.y) < this.cell * 0.8;
+              if (plugAlignedHorizontally) {
+                // Check if centering Y would move us toward plug's Y
+                const dy = centerY - sprite.y;
+                const movingTowardPlugY = Math.abs((sprite.y + Math.sign(dy) * this.cell * 0.1) - this.defender.y) < Math.abs(sprite.y - this.defender.y);
+                skipAssist = movingTowardPlugY;
+              }
+            } else if (dir.y !== 0) {
+              // Moving vertically: check if plug is in similar X position (vertically aligned)
+              const plugAlignedVertically = Math.abs(sprite.x - this.defender.x) < this.cell * 0.8;
+              if (plugAlignedVertically) {
+                // Check if centering X would move us toward plug's X
+                const dx = centerX - sprite.x;
+                const movingTowardPlugX = Math.abs((sprite.x + Math.sign(dx) * this.cell * 0.1) - this.defender.x) < Math.abs(sprite.x - this.defender.x);
+                skipAssist = movingTowardPlugX;
+              }
+            }
+          }
+
+          if (!skipAssist) {
+            corridorAssist(this, sprite, dir, dt);
+          }
+        }
+      }
+
+      // Attempt to move in X and Y with sub-steps to prevent tunneling through thin walls
+      const dxTot = vx * dt;
+      const dyTot = vy * dt;
+      const stepMax = this.cell * 0.28; // less than half a tile
+      const moveAxis = (amount, axis) => {
+        let remaining = amount;
+        const dir = Math.sign(remaining) || 0;
+        const step = stepMax * dir;
+        let guard = 0;
+        while (Math.abs(remaining) > 0.0001 && guard++ < 32){
+          const d = (Math.abs(remaining) > stepMax) ? step : remaining;
+          const nx = axis === 'x' ? sprite.x + d : sprite.x;
+          const ny = axis === 'y' ? sprite.y + d : sprite.y;
+          if (this.canMoveTo(sprite, nx, ny)){
+            if (axis === 'x') sprite.x = nx; else sprite.y = ny;
+            remaining -= d;
+          } else {
+            break; // blocked on this axis
+          }
+        }
+      };
+      const preX = sprite.x, preY = sprite.y;
+      moveAxis(dxTot, 'x');
+      moveAxis(dyTot, 'y');
+      // If we barely moved (corner caught), softly nudge toward tile center to unstick
+      if (Math.hypot(sprite.x - preX, sprite.y - preY) < 0.5 && (Math.abs(vx) + Math.abs(vy) > 0)){
+        const c = this.toCell(sprite.x, sprite.y);
+        const cx = this.toWorldX(c.x);
+        const cy = this.toWorldY(c.y);
+        const ux = cx - sprite.x, uy = cy - sprite.y;
+        const ul = Math.hypot(ux, uy) || 1;
+        const nudge = Math.min(this.cell * 0.20, ul);
+        const nx = sprite.x + (ux/ul) * nudge;
+        const ny = sprite.y + (uy/ul) * nudge;
+        if (this.canMoveTo(sprite, nx, ny)) { sprite.x = nx; sprite.y = ny; }
+      }
+
+      // Cache facing direction for runner powers when moving
+      const spdLen = Math.hypot(vx, vy);
+      if (spdLen > 0.0001){
+        const norm = { x: vx / spdLen, y: vy / spdLen };
+        if (sprite === this.attacker){
+          this._runnerMoveDir = norm;
+          // Only update _runnerLastAim when the player is actively driving movement
+          if (usingKeys || this.userTookOver){
+            this._runnerLastAim = norm;
+          }
+        }
+      }
+    };
+
     if (this.role==='runner'){
-      this.aiController.updatePlug(dt);
+      moveHuman(this.attacker, moveSpeedRunner);
+      this.updateDefenderAI(dt);
+      // Add trail effects
+      this.updateRunnerTrail(dt);
+      this.updateDefenderTrail(dt);
     } else {
-      this.aiController.updateRunner(delta);
+      moveHuman(this.defender, plugBaseSpeed);
+      this.updateAIRunner(delta);
+      // Add trail effects
+      this.updateRunnerTrail(dt);
+      this.updateDefenderTrail(dt);
     }
 
-    // Update combat system (bullets and hit detection)
-    this.combatSystem.update(delta);
-    // Exit immediately if round ended during combat update (prevents race conditions)
-    if (this.roundOver) return;
-
+    this.updateBullets(delta);
     updateAvatarVisuals(this, dt);
 
     // anti-camp (REAL / BUNK STASH PATCH: only consider the REAL stash)
@@ -1459,10 +2044,10 @@ export class BaseGameScene extends Phaser.Scene {
         this.hasStash = true;
         this.aiRunnerTargetsBunkFirst = false;
         // Track real stash pickup for REP (runner got it right)
-        if (this.progressionManager?.repTracker && this.role === 'runner') {
-          this.progressionManager.repTracker.onStashPickup(false); // false = not bunk
-        } else if (this.progressionManager?.repTracker && this.role === 'plug') {
-          this.progressionManager.repTracker.onStashPickup(false); // Plug sees runner got real stash
+        if (this.repTracker && this.role === 'runner') {
+          this.repTracker.onStashPickup(false); // false = not bunk
+        } else if (this.repTracker && this.role === 'plug') {
+          this.repTracker.onStashPickup(false); // Plug sees runner got real stash
         }
         // Play pickup sounds (generic pickup + real stash pickup)
         try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
@@ -1485,8 +2070,8 @@ export class BaseGameScene extends Phaser.Scene {
           decoy._fading = true;
           this.aiRunnerTargetsBunkFirst = false;
           // Track bunk stash pickup for REP (runner got fooled)
-          if (this.progressionManager?.repTracker && this.role === 'runner') {
-            this.progressionManager.repTracker.onStashPickup(true); // true = bunk
+          if (this.repTracker && this.role === 'runner') {
+            this.repTracker.onStashPickup(true); // true = bunk
           }
           // Play pickup sounds (generic pickup + bunk stash pickup)
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
@@ -1507,19 +2092,220 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     // extract win
-    if (!this.roundOver && this.hasStash && rectsOverlap(this.attacker, this.extract)) return this.startExtractionSequence();
+    if (this.hasStash && rectsOverlap(this.attacker, this.extract)) return this.startExtractionSequence();
 
     // Unstuck runner if inside wall and not phasing
     if (!this.runnerIsPhasing?.() && this.isWallAtWorld?.(this.attacker.x, this.attacker.y)) this.ensureUnstuck(this.attacker);
 
+    // hits
+    this.checkHits();
+
     // melee tag (runner i-frames respected)
     if (this.meleeEnabled && !phasing && rectsOverlap(this.defender, this.attacker) && this.canDamage(this.attacker)) {
-      this.combatSystem.hit(this.attacker);
+      this.hit(this.attacker);
     }
   }
 
+  // --------- AI: Plug (defender) ----------
+  updateDefenderAI(dt){
+    const d = this.defender, ax = this.attacker.x, ay = this.attacker.y;
+    const now = performance.now();
+    const speed = this.meleeEnabled ? this.plugSpeedNoAmmo : this.aiPlug.speed;
 
+    // Avoid "lockstep" mirroring when very close: strafe for a short burst
+    const vx = ax - d.x, vy = ay - d.y;
+    const dist = Math.hypot(vx, vy);
+    const sepDist = this.cell * 0.9;
 
+    let moved = false;
+    if (now < (this._aiPlugStrafeUntil || 0)){
+      const sx = this._aiPlugStrafeDir?.x || 0;
+      const sy = this._aiPlugStrafeDir?.y || 0;
+      const nx = d.x + sx * speed * dt, ny = d.y + sy * speed * dt;
+      if (this.canMoveTo(d, nx, d.y)) d.x = nx;
+      if (this.canMoveTo(d, d.x, ny)) d.y = ny;
+      moved = true;
+    } else if (dist < sepDist){
+      // pick an orthogonal direction to break the alignment
+      const ortho = (Math.abs(vx) > Math.abs(vy))
+        ? [ {x:0,y:1}, {x:0,y:-1} ]
+        : [ {x:1,y:0}, {x:-1,y:0} ];
+      // prefer walkable
+      let pick = ortho[ (Math.random() * ortho.length) | 0 ];
+      const tryA = { x: d.x + pick.x * this.cell, y: d.y + pick.y * this.cell };
+      const tryB = { x: d.x - pick.x * this.cell, y: d.y - pick.y * this.cell };
+      if (!this.canMoveTo(d, tryA.x, tryA.y) && this.canMoveTo(d, tryB.x, tryB.y)) pick = { x: -pick.x, y: -pick.y };
+      this._aiPlugStrafeDir = pick;
+      this._aiPlugStrafeUntil = now + 260;
+      const nx = d.x + pick.x * speed * dt, ny = d.y + pick.y * speed * dt;
+      if (this.canMoveTo(d, nx, d.y)) d.x = nx;
+      if (this.canMoveTo(d, d.x, ny)) d.y = ny;
+      moved = true;
+    }
+
+    if (!moved){
+      const dirX = Math.sign(vx), dirY = Math.sign(vy);
+      const nx = d.x + dirX*speed*dt, ny = d.y + dirY*speed*dt;
+      if (this.canMoveTo(d, nx, d.y)) d.x = nx;
+      if (this.canMoveTo(d, d.x, ny)) d.y = ny;
+    }
+
+    if (this.totalRoundsLeft() === 0){ this.meleeEnabled = true; return; }
+
+    const dist2 = Math.hypot(ax - d.x, ay - d.y);
+    if (dist2 > this.aiPlug.maxRange) return;
+    if (now - this._aiFirstSeenAt < this.aiPlug.reactDelay) return;
+
+    const aligned = (Math.abs(ax - d.x) < this.cell*0.4) || (Math.abs(ay - d.y) < this.cell*0.4);
+    if (!aligned) return;
+
+    const usable = this.allowedGuns.filter(g => (this.roundAmmo[g]||0) > 0);
+    if (usable.length === 0) return;
+    const weapon = usable[0];
+    this.weapon = weapon;
+
+    this.aiTick += dt;
+    if (this.aiTick < this.aiPlug.shootEvery) return;
+    this.aiTick = 0;
+
+    const adx = Math.abs(ax - d.x), ady = Math.abs(ay - d.y);
+    this.aiAim = (Math.random() < this.aiPlug.inaccuracy)
+      ? (adx > ady ? {x:0, y: Math.sign(ay - d.y)} : {x: Math.sign(ax - d.x), y:0})
+      : (adx > ady ? {x: Math.sign(ax - d.x), y:0} : {x:0, y: Math.sign(ay - d.y)});
+
+    if ((this.roundAmmo[weapon]||0) > 0){
+      this.roundAmmo[weapon] -= 1;
+      const aim = this.aiAim || { x: Math.sign(ax - d.x) || 1, y: Math.sign(ay - d.y) || 0 };
+      this.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
+      if (this.totalRoundsLeft() === 0) this.meleeEnabled = true;
+    }
+  }
+
+  // --- Fallback cruise for AI Runner ---
+  aiRunnerCruise(){
+    const speedBase = this.runnerSpeed * (this.hasStash ? this.carrySlow : 1);
+    const dir = this._aiCruiseDir || { x:1, y:0 };
+    const c = this.toCell(this.attacker.x, this.attacker.y);
+    const tryDirs = [ dir, { x: dir.y,  y: -dir.x }, { x: -dir.y, y: dir.x }, { x: -dir.x, y: -dir.y } ];
+    for (const d of tryDirs){
+      const n = { x: c.x + d.x, y: c.y + d.y };
+      if (this.isWalkableCell(n.x, n.y)){
+        this._aiCruiseDir = d;
+        const speed = speedBase;
+        this._aiVX = d.x * speed; this._aiVY = d.y * speed; return;
+      }
+    }
+    this._aiVX = 0; this._aiVY = 0;
+  }
+
+  // --------- AI: Runner (attacker) ----------
+  updateAIRunner(delta){
+    const now = performance.now();
+    const dt = delta / 1000;
+
+    if (!this._aiPlanAt || now >= this._aiPlanAt){
+      this._aiPlanAt = now + this.aiRunner.planEvery;
+
+      const attackerCell = this.toCell(this.attacker.x, this.attacker.y);
+      const plugCell     = this.toCell(this.defender.x, this.defender.y);
+
+      let targetCell;
+      if (!this.hasStash) {
+        if (this.role === 'plug' && this.mode === 'pve') {
+          const bunkVisible = this.bunkStash && this.bunkStash.active && this.bunkStash.visible;
+          if (this.aiRunnerTargetsBunkFirst && bunkVisible) {
+            targetCell = this.toCell(this.bunkStash.x, this.bunkStash.y);
+          } else {
+            this.aiRunnerTargetsBunkFirst = false;
+            targetCell = this.toCell(this.stash.x, this.stash.y);
+          }
+        } else {
+          targetCell = this.toCell(this.stash.x, this.stash.y);
+        }
+      } else {
+        targetCell = this.toCell(this.extract.x, this.extract.y);
+      }
+
+      let nextCell = this.findNextStepTowards(attackerCell, targetCell);
+      if (nextCell.x === attackerCell.x && nextCell.y === attackerCell.y){
+        const ns = this.neighbors4(attackerCell);
+        if (ns.length) nextCell = ns[(Math.random()*ns.length)|0];
+      }
+
+      if (this.aiRunner.jukeDist > 0 && toroDist(attackerCell, plugCell, this.cols, this.rows) <= this.aiRunner.jukeDist && Math.random() < 0.5){
+        const ns = this.neighbors4(attackerCell);
+        ns.sort((m,n)=> toroDist(n,plugCell,this.cols,this.rows) - toroDist(m,plugCell,this.cols,this.rows));
+        nextCell = ns[0] || nextCell;
+      }
+
+      let dir = { x: Math.sign(nextCell.x - attackerCell.x), y: Math.sign(nextCell.y - attackerCell.y) };
+      const close = toroDist(attackerCell, plugCell, this.cols, this.rows) <= this.aiRunner.sprintDist;
+      const speed = this.runnerSpeed * (this.hasStash ? this.carrySlow : 1) * (close ? this.aiRunner.sprintMul : 1);
+
+      const opp = (a,b)=> (a.x === -b.x && a.y === -b.y);
+      if (this._aiLastMoveDir && opp(dir, this._aiLastMoveDir) && performance.now() < this._aiFlipGuardUntil) {
+        dir = this._aiLastMoveDir;
+      }
+
+      if (!isWalkableDirFrom(this, this.attacker, dir)) {
+        this.aiRunnerCruise();
+      } else {
+        this._aiCruiseDir = dir;
+        this._aiVX = dir.x * speed;
+        this._aiVY = dir.y * speed;
+        this._aiLastMoveDir = { x: Math.sign(dir.x), y: Math.sign(dir.y) };
+        this._aiFlipGuardUntil = performance.now() + this.aiRunner.keepDirMs;
+      }
+
+      this._aiLastPos = { x:this.attacker.x, y:this.attacker.y };
+      this._aiStuckAt = now;
+    }
+
+    const vx = this._aiVX || 0, vy = this._aiVY || 0;
+    const nx = this.attacker.x + vx * dt;
+    const ny = this.attacker.y + vy * dt;
+
+    const dirNow = (Math.abs(vx) > Math.abs(vy)) ? {x: Math.sign(vx), y:0} : {x:0, y: Math.sign(vy)};
+    applyCenterBias(this, this.attacker, dirNow, dt);
+
+    let movedX = false, movedY = false;
+    if (this.canMoveTo(this.attacker, nx, this.attacker.y)) { this.attacker.x = nx; movedX = true; }
+    if (this.canMoveTo(this.attacker, this.attacker.x, ny)) { this.attacker.y = ny; movedY = true; }
+
+    if (!movedX && Math.abs(vx) > 0) {
+      const dy = this.cell * this.aiRunner.slideNudge;
+      if (this.canMoveTo(this.attacker, this.attacker.x, this.attacker.y - dy)) this.attacker.y -= dy;
+      else if (this.canMoveTo(this.attacker, this.attacker.x, this.attacker.y + dy)) this.attacker.y += dy;
+    }
+    if (!movedY && Math.abs(vy) > 0) {
+      const dx = this.cell * this.aiRunner.slideNudge;
+      if (this.canMoveTo(this.attacker, this.attacker.x - dx, this.attacker.y)) this.attacker.x -= dx;
+      else if (this.canMoveTo(this.attacker, this.attacker.x + dx, this.attacker.y)) this.attacker.x += dx;
+    }
+
+    if (!movedX && !movedY) {
+      const nudge = this.cell * 0.18;
+      if (Math.abs(vx) > Math.abs(vy)) {
+        if (this.canMoveTo(this.attacker, this.attacker.x, this.attacker.y - nudge)) this.attacker.y -= nudge;
+        else if (this.canMoveTo(this.attacker, this.attacker.x, this.attacker.y + nudge)) this.attacker.y += nudge;
+      } else {
+        if (this.canMoveTo(this.attacker, this.attacker.x - nudge, this.attacker.y)) this.attacker.x -= nudge;
+        else if (this.canMoveTo(this.attacker, this.attacker.x + nudge, this.attacker.y)) this.attacker.x += nudge;
+      }
+    }
+
+    const moved = Math.hypot(this.attacker.x - (this._aiLastPos?.x || 0), this.attacker.y - (this._aiLastPos?.y || 0));
+    if (moved < 0.4 && (performance.now() - (this._aiStuckAt || 0)) > 350){
+      this.aiRunnerCruise();
+      this._aiLastPos = { x:this.attacker.x, y:this.attacker.y };
+      this._aiStuckAt = performance.now();
+    } else if (moved >= 0.4) {
+      this._aiLastPos = { x:this.attacker.x, y:this.attacker.y };
+      this._aiStuckAt = performance.now();
+    }
+
+    if (!this._aiVX && !this._aiVY) this.aiRunnerCruise();
+  }
 
   updateBullets(delta){
     const dt = delta/1000;
@@ -1556,8 +2342,8 @@ export class BaseGameScene extends Phaser.Scene {
         b.life -= delta;
         if (this.isBulletBlockedAtWorld(b.x, b.y) || b.life<=0){
           // Track bullet miss for REP (if it expires/hits wall without hitting target)
-          if (this.progressionManager?.repTracker && this.role === 'plug' && group === this.bulletsD && !b._repTracked) {
-            this.progressionManager.repTracker.onBulletFired(false); // Missed shot
+          if (this.repTracker && this.role === 'plug' && group === this.bulletsD && !b._repTracked) {
+            this.repTracker.onBulletFired(false); // Missed shot
             b._repTracked = true;
           }
           impact(b.x, b.y, b._color || 0xffffff);
@@ -1577,8 +2363,8 @@ export class BaseGameScene extends Phaser.Scene {
       if (this.decoySprite && rectsOverlap(b, this.decoySprite)){
         this._spawnBulletImpact?.(b.x, b.y, b._color || 0xffffff);
         // Track bullet hit decoy (counts as hit for plug)
-        if (this.progressionManager?.repTracker && this.role === 'plug' && !b._repTracked) {
-          this.progressionManager.repTracker.onBulletFired(true);
+        if (this.repTracker && this.role === 'plug' && !b._repTracked) {
+          this.repTracker.onBulletFired(true);
           b._repTracked = true;
         }
         b._glow?.destroy?.(); b._rim?.destroy?.(); b.destroy();
@@ -1589,8 +2375,8 @@ export class BaseGameScene extends Phaser.Scene {
         if (phasing) return;
         this._spawnBulletImpact?.(b.x, b.y, b._color || 0xffffff);
         // Track bullet hit runner (counts as hit for plug)
-        if (this.progressionManager?.repTracker && this.role === 'plug' && !b._repTracked) {
-          this.progressionManager.repTracker.onBulletFired(true);
+        if (this.repTracker && this.role === 'plug' && !b._repTracked) {
+          this.repTracker.onBulletFired(true);
           b._repTracked = true;
         }
         b._glow?.destroy?.(); b._rim?.destroy?.(); b.destroy();
@@ -1613,8 +2399,8 @@ export class BaseGameScene extends Phaser.Scene {
     who.iUntil = performance.now() + (this.iFrameMs || 900);
 
     // Track damage for REP system
-    if (this.progressionManager?.repTracker && who === this.attacker && this.role === 'runner') {
-      this.progressionManager.repTracker.onBulletHitPlayer();
+    if (this.repTracker && who === this.attacker && this.role === 'runner') {
+      this.repTracker.onBulletHitPlayer();
     }
 
     // Play a quick 'ouch' hit SFX
@@ -1680,8 +2466,8 @@ export class BaseGameScene extends Phaser.Scene {
     const currentRound = this.pveRound || 1;
 
     // Track runner elimination for REP calculation
-    if (this.progressionManager?.repTracker) {
-      this.progressionManager.repTracker.onRunnerEliminated();
+    if (this.repTracker) {
+      this.repTracker.onRunnerEliminated();
     }
 
     // Calculate rewards using new tracking system
@@ -1690,8 +2476,8 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Calculate REP using RepTracker
     let repEarned = 0;
-    if (this.progressionManager?.repTracker) {
-      const repResult = this.progressionManager.repTracker.calculateFinalRep(roundCompletion.repMultiplier);
+    if (this.repTracker) {
+      const repResult = this.repTracker.calculateFinalRep(roundCompletion.repMultiplier);
       repEarned = repResult.finalRep;
       console.log('[Plug] REP Breakdown:', repResult.breakdown);
     }
@@ -1771,12 +2557,71 @@ export class BaseGameScene extends Phaser.Scene {
     this._swipePid = null;
     this._swipeStart = null;
 
-    // Delegate touch input to PlayerController
-    const beginSwipe = (p) => this.playerController.beginSwipe(p);
+    const beginSwipe = (p) => {
+      // Track one touch ID at a time
+      if (this._swipePid !== null) return;
+      this._swipePid = p.id;
+      this._swipeStart = { x: p.x, y: p.y, t: performance.now() };
+      // When defending, treat drag as an aim gesture and slightly slow movement to help aiming
+      if (this.role === 'plug') this._aimDragActive = true;
 
-    const updateSwipe = (p) => this.playerController.updateSwipe(p);
+      // Note: Double-tap detection moved to pointer UP after confirming it's a tap
+    };
 
-    const endSwipe = (p) => this.playerController.endSwipe(p);
+    const updateSwipe = (p) => {
+      if (p.id !== this._swipePid || !p.isDown) return;
+      // Continuously update aim towards the current touch position relative to the controlled sprite.
+      const who = (this.role === 'plug') ? this.defender : this.attacker;
+      if (!who) return;
+      const dx = p.x - who.x;
+      const dy = p.y - who.y;
+      const L = Math.hypot(dx, dy);
+      if (L >= SWIPE_DEAD_PX) {
+        const nx = dx / (L||1), ny = dy / (L||1);
+        this.playerAim = { x: nx, y: ny };
+        this.playerDrift = { x: nx, y: ny };
+        if (this.role === 'runner') this._runnerInputDir = { x: nx, y: ny };
+        this.userTookOver = true;
+      }
+    };
+
+    const endSwipe = (p) => {
+      // Determine if the gesture qualifies as a tap (short duration and limited movement)
+      const sx = this._swipeStart?.x ?? p.x;
+      const sy = this._swipeStart?.y ?? p.y;
+      const dt = performance.now() - (this._swipeStart?.t || 0);
+      const moved = Math.hypot(p.x - sx, p.y - sy);
+      if (dt <= TAP_TIME_MS && moved <= TAP_MOVE_PX){
+        if (this.role === 'plug'){
+          // Single tap on mobile plugs fires a shot
+          this.tryMouseFire();
+        } else if (this.role === 'runner'){
+          // Runner: only trigger power on a confirmed double-tap within a
+          // strict window; simple taps update lastTapAt only.
+          const now = performance.now();
+          const diff = now - (this._lastTapAt || 0);
+          if (diff > 0 && diff <= DOUBLE_TAP_MAX_MS){
+            this._lastTapAt = 0;
+            const used = this.runnerPowersConsumed || [];
+            const idxPow = used[0] ? 1 : 0;
+            this.activateRunnerPowerByIndex(idxPow);
+          } else {
+            this._lastTapAt = now;
+          }
+        }
+      } else if (moved >= SWIPE_DEAD_PX) {
+        // Treat as directional swipe: set aim to movement direction.
+        const dx = p.x - sx, dy = p.y - sy; const L = Math.hypot(dx,dy) || 1;
+        const nx = dx / L, ny = dy / L;
+        this.playerAim = { x: nx, y: ny };
+        this.playerDrift = { x: nx, y: ny };
+        if (this.role === 'runner') this._runnerInputDir = { x: nx, y: ny };
+        this.userTookOver = true;
+      }
+      this._swipePid = null;
+      this._swipeStart = null;
+      this._aimDragActive = false;
+    };
 
     // Create a full-screen interactive zone to guarantee pointer delivery on mobile browsers.
     const vw = this.scale.gameSize.width;
@@ -1891,12 +2736,183 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   /* ----------------- Movement Trails (Flame-like) ----------------- */
-  // Trail effects (delegated to VFX controller - handled in vfx.update())
+  updateRunnerTrail(dt){
+    if (!this.attacker || !this.attacker.visible) return;
+
+    // Initialize trail tracking
+    if (!this._runnerTrailTimer) this._runnerTrailTimer = 0;
+    if (!this._runnerLastTrailPos) this._runnerLastTrailPos = { x: this.attacker.x, y: this.attacker.y };
+
+    this._runnerTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Calculate movement direction
+    const dx = this.attacker.x - this._runnerLastTrailPos.x;
+    const dy = this.attacker.y - this._runnerLastTrailPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1 && this._runnerTrailTimer >= 40) {
+      this._runnerTrailTimer = 0;
+
+      // Normalize direction to get unit vector
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+
+      // Place trail BEHIND the character (opposite of movement direction)
+      const trailDistance = this.cell * 0.3;
+      const baseX = this._runnerLastTrailPos.x;
+      const baseY = this._runnerLastTrailPos.y;
+
+      this._runnerLastTrailPos = { x: this.attacker.x, y: this.attacker.y };
+
+      // Create 2 particles behind the character
+      for (let i = 0; i < 2; i++) {
+        // Small perpendicular offset for width
+        const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+        const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+        // Blue flame colors - brighter to darker
+        const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const trail = this.add.circle(
+          baseX + perpX,
+          baseY + perpY,
+          this.cell * 0.35,
+          color,
+          0.7
+        ).setDepth(1);
+
+        // Fade and shrink
+        this.tweens.add({
+          targets: trail,
+          alpha: 0,
+          scale: 0.2,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => trail.destroy()
+        });
+      }
+    }
+  }
+
+  updateDefenderTrail(dt){
+    if (!this.defender || !this.defender.visible) return;
+
+    // Initialize trail tracking
+    if (!this._defenderTrailTimer) this._defenderTrailTimer = 0;
+    if (!this._defenderLastTrailPos) this._defenderLastTrailPos = { x: this.defender.x, y: this.defender.y };
+
+    this._defenderTrailTimer += dt * 1000; // Convert to milliseconds
+
+    // Calculate movement direction
+    const dx = this.defender.x - this._defenderLastTrailPos.x;
+    const dy = this.defender.y - this._defenderLastTrailPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1 && this._defenderTrailTimer >= 40) {
+      this._defenderTrailTimer = 0;
+
+      // Normalize direction to get unit vector
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+
+      // Place trail BEHIND the character (opposite of movement direction)
+      const trailDistance = this.cell * 0.3;
+      const baseX = this._defenderLastTrailPos.x;
+      const baseY = this._defenderLastTrailPos.y;
+
+      this._defenderLastTrailPos = { x: this.defender.x, y: this.defender.y };
+
+      // Create 2 particles behind the character
+      for (let i = 0; i < 2; i++) {
+        // Small perpendicular offset for width
+        const perpX = -dirY * (Math.random() - 0.5) * this.cell * 0.3;
+        const perpY = dirX * (Math.random() - 0.5) * this.cell * 0.3;
+
+        // Red flame colors - brighter to darker
+        const colors = [0xef4444, 0xdc2626, 0xb91c1c];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const trail = this.add.circle(
+          baseX + perpX,
+          baseY + perpY,
+          this.cell * 0.35,
+          color,
+          0.7
+        ).setDepth(1);
+
+        // Fade and shrink
+        this.tweens.add({
+          targets: trail,
+          alpha: 0,
+          scale: 0.2,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => trail.destroy()
+        });
+      }
+    }
+  }
 
   /* ----------------- PvE Difficulty Scaling ----------------- */
-  // Difficulty scaling has been moved to separate AI modules:
-  // - PlugAI.js: applyPlugProgression() for Runner mode opponent
-  // - RunnerAI.js: applyRunnerProgression() for Plug mode opponent
+  applyPvEDifficulty(){
+    if (!this.pveRound || this.pveRound <= 1) return;
+
+    const round = this.pveRound;
+
+    // Speed scaling: Gentle ramp - +0.8% per round, caps at +80% (round 100)
+    // Base is 3.0 cells/sec, scales up to 5.4 cells/sec at round 100
+    const speedBoost = Math.min(0.80, (round - 1) * 0.008);
+    const AI_PLUG_CPS = 3.0 * (1 + speedBoost);
+    this.aiPlug.speed = AI_PLUG_CPS * this.cell;
+
+    // Shoot cooldown: -0.5% per round, caps at -50% (round 100) = shoots 50% faster
+    const cooldownReduction = Math.min(0.50, (round - 1) * 0.005);
+    this.aiPlug.shootEvery = 0.90 * (1 - cooldownReduction);
+
+    // Accuracy: reduce inaccuracy by 0.5% per round, caps at 50% reduction (round 100)
+    const accuracyBoost = Math.min(0.50, (round - 1) * 0.005);
+    this.aiPlug.inaccuracy = 0.45 * (1 - accuracyBoost);
+
+    // Reaction time: -5ms per round, caps at -350ms (round 70) = reacts 350ms faster
+    const reactionBoost = Math.min(350, (round - 1) * 5);
+    this.aiPlug.reactDelay = Math.max(200, 550 - reactionBoost);
+
+    // Vision range: +0.08 cells per round, caps at +8 cells (round 100)
+    // Base is ~15 cells at 20px/cell, scales to ~23 cells
+    const rangeBoost = Math.min(8, (round - 1) * 0.08);
+    this.aiPlug.maxRange = (15 + rangeBoost) * this.cell;
+  }
+
+  applyRunnerAIDifficulty(){
+    if (this.role !== 'plug') return;
+
+    const round = Math.max(1, this.pveRound || 1);
+
+    // Start the AI runner noticeably slower and ramp gently as rounds progress
+    // Extra nerf for rounds 1-3 to make early game easier
+    const baseRunnerCps = round <= 3 ? 4.0 : 4.6; // even slower start for first 3 rounds
+    const runnerSpeedBoost = Math.min(0.60, (round - 1) * 0.006); // gentle growth: +60% max at round 100
+    this.runnerSpeed = baseRunnerCps * (1 + runnerSpeedBoost) * this.cell;
+
+    // Keep dependent stats (e.g., decoy) in sync with new speed
+    if (this.runnerPowerStats?.decoy) {
+      this.runnerPowerStats.decoy.speed = this.runnerSpeed * 0.9;
+    }
+    if (this.runnerPowerStats?.phase) {
+      this.runnerPowerStats.phase.dashDist = this.cell * 3.5;
+    }
+
+    if (!this.aiRunner) return;
+    // Worse decision-making in early rounds
+    const planningPenalty = round <= 3 ? 100 : 0; // +100ms slower planning for rounds 1-3
+    this.aiRunner.planEvery = Math.max(90, 240 + planningPenalty - (round - 1) * 1.5); // planning improves slower: -150ms max at round 100
+    this.aiRunner.sprintMul = 1.05 + Math.min(0.40, (round - 1) * 0.004); // sprint multiplier: +40% max at round 100
+    this.aiRunner.sprintDist = 5 + Math.min(4, (round - 1) * 0.04); // sprint distance: +4 cells max at round 100
+    this.aiRunner.centerBias = 12 + Math.min(14, (round - 1) * 0.14); // centering: +14 max at round 100
+    this.aiRunner.slideNudge = Math.min(0.4, 0.16 + (round - 1) * 0.0024); // slide nudge: +0.24 max at round 100
+    this.aiRunner.keepDirMs = Math.max(160, 300 - (round - 1) * 1.4); // direction persistence: -140ms max at round 100
+  }
 
   applyMusicRamp(){
     if (!this.pveRound || this.pveRound <= 1) return;
@@ -1947,11 +2963,98 @@ export class BaseGameScene extends Phaser.Scene {
     return 100 + (roundNum * 50);
   }
 
-  // Floating rewards display (delegated to VFX controller)
   showFloatingRewards(stashEarned, repEarned, origin){
-    return this.vfx.showFloatingRewards(stashEarned, repEarned, origin);
-  }
+    // Use provided origin (e.g., runner death spot) or fall back to extraction/car location
+    const originX = origin?.x ?? this.car?.x ?? this.attacker?.x ?? (this.scale.width / 2);
+    const originY = origin?.y ?? this.car?.y ?? this.attacker?.y ?? (this.scale.height / 2);
 
+    // Convert world position to screen position
+    const cam = this.cameras.main;
+    const screenX = (originX - cam.scrollX) * cam.zoom + cam.x;
+    const screenY = (originY - cam.scrollY) * cam.zoom + cam.y;
+
+    // Calculate direction towards screen center
+    const centerX = this.cameras.main.centerX;
+    const centerY = this.cameras.main.centerY;
+
+    // Vector from extraction point to center
+    const dx = centerX - screenX;
+    const dy = centerY - screenY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Normalize and scale to float distance (60% of the way to center)
+    const floatDistance = Math.min(120, distance * 0.6);
+    const normalizedDx = distance > 0 ? (dx / distance) * floatDistance : 0;
+    const normalizedDy = distance > 0 ? (dy / distance) * floatDistance : -80; // fallback: float up if already at center
+
+    // Add some perpendicular offset to space them out (perpendicular to the direction vector)
+    const perpX = -normalizedDy; // perpendicular vector
+    const perpY = normalizedDx;
+    const perpScale = 0.3; // how much to offset perpendicular
+
+    // Stash goes slightly to one side, Rep goes to the other
+    const stashEndX = screenX + normalizedDx + perpX * perpScale;
+    const stashEndY = screenY + normalizedDy + perpY * perpScale;
+    const repEndX = screenX + normalizedDx - perpX * perpScale;
+    const repEndY = screenY + normalizedDy - perpY * perpScale;
+
+    // Create floating stash text
+    const stashText = this.add.text(screenX, screenY, `+${stashEarned} STASH`, {
+      color: '#86efac',
+      fontSize: '28px',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(20001).setScrollFactor(0);
+
+    // Create floating rep text (at same start position)
+    const repText = this.add.text(screenX, screenY, `+${repEarned} REP`, {
+      color: '#ffd166',
+      fontSize: '22px',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(20001).setScrollFactor(0);
+
+    // Animate stash: float towards center (with slight offset) and fade out
+    stashText.setAlpha(0);
+    this.tweens.add({
+      targets: stashText,
+      alpha: 1,
+      x: stashEndX,
+      y: stashEndY,
+      duration: 2000,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: stashText,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => stashText.destroy()
+        });
+      }
+    });
+
+    // Animate rep: float towards center (with offset on opposite side) and fade out
+    repText.setAlpha(0);
+    this.tweens.add({
+      targets: repText,
+      alpha: 1,
+      x: repEndX,
+      y: repEndY,
+      duration: 2000,
+      delay: 100, // slight delay after stash
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: repText,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => repText.destroy()
+        });
+      }
+    });
+  }
 
   showPowerSelectionForNextRound(){
     // Freeze input
@@ -1983,13 +3086,140 @@ export class BaseGameScene extends Phaser.Scene {
     this.currentModal = modal;
   }
 
-  /* ----------------- Round End / UI (delegated to ProgressionManager) ----------------- */
+  /* ----------------- Round End / UI ----------------- */
   endRound(winner){
-    return this.progressionManager.endRound(winner);
+    if (this.roundOver) return;
+    this.roundOver = true;
+
+    // clear bullets & effects
+    this.bulletsA?.getChildren?.().forEach(b=>b.destroy());
+    this.bulletsD?.getChildren?.().forEach(b=>b.destroy());
+    this.destroyDecoySprite();
+
+    const runnerWon = (winner === 'attacker');
+
+    // freeze movement input
+    this.input.keyboard.enabled = false;
+
+    console.log('[endRound] Mode:', this.mode, 'Winner:', winner, 'Runner won:', runnerWon);
+
+    // PvE mode: only show game over modal on death
+    // (successful extraction handled by startExtractionSequence)
+    if (this.mode === 'pve') {
+      console.log('[endRound] PvE mode detected!');
+      if (!runnerWon) {
+        console.log('[endRound] Runner died, showing game over modal');
+        this.showPvEGameOver();
+      }
+      return;
+    }
+
+    // PvP mode: original behavior
+    const title = runnerWon ? 'Runner Extracted!' : 'Plug Defended!';
+    const sub   = runnerWon ? 'Package delivered to the getaway.' : 'Runner was stopped (or time ran out).';
+
+    const modal = this.showModal({
+      title,
+      lines: [sub],
+      buttons: [
+        { label: 'Rematch (same role)', bg: 0x1a2038, color:'#cbd1ff', onClick: ()=> this.scene.restart({ role: this.role, seed: (Math.random()*2**32)|0 }) },
+        { label: 'Switch Role',         bg: 0x1a2038, color:'#cbd1ff', onClick: ()=> this.scene.restart({ role: (this.role==='runner'?'plug':'runner'), seed: (Math.random()*2**32)|0 }) },
+      ]
+    });
+
+    this.currentModal = modal;
   }
 
+
   showPvEGameOver(context = {}){
-    return this.progressionManager.showPvEGameOver(context);
+    const roundNumber = this.pveRound || 1;
+    const isPlug = this.role === 'plug';
+    const reason = context.reason || (isPlug ? 'runner_eliminated' : 'runner_eliminated');
+    const roundLabel = `ROUND ${roundNumber}`;
+
+    let title;
+    let descriptor;
+    if (isPlug) {
+      if (reason === 'runner_extracted') {
+        title = `STASH STOLEN - ${roundLabel}`;
+        descriptor = 'The AI runner escaped with the stash.';
+      } else {
+        title = `DEFENSE ENDED - ${roundLabel}`;
+        descriptor = 'Defense concluded.';
+      }
+    } else {
+      title = `ELIMINATED - ${roundLabel}`;
+      descriptor = 'Run Ended';
+    }
+
+    this.pveBestRound = Math.max(this.pveBestRound ?? 0, roundNumber);
+
+    // Track route progress for leaderboard
+    updateRouteProgress(this.role, roundNumber);
+
+    // Submit score to daily leaderboard
+    submitScore(this.role, roundNumber, this.pveSessionStash);
+
+    // Submit to all-time leaderboard
+    submitAllTimeScore(this.role, roundNumber, this.pveSessionStash);
+
+    // Build buttons array
+    const routeID = this.currentRouteID ?? getCurrentRouteID();
+    const continueSeed = getRouteSeed(routeID, roundNumber, this.role);
+    const restartSeed = getRouteSeed(routeID, 1, this.role);
+
+    const buttons = [
+      {
+        label: `Continue from Round ${roundNumber}`,
+        bg: 0x2a1a38,
+        color:'#fbbf24',
+        onClick: ()=> this.scene.restart({
+          mode: 'pve',
+          role: isPlug ? 'plug' : 'runner',
+          pveRound: roundNumber, // Same round
+          pveSessionStash: this.pveSessionStash,
+          pveSessionRep: this.pveSessionRep,
+          pveBestRound: this.pveBestRound,
+          seed: continueSeed
+        })
+      },
+      {
+        label: isPlug ? 'Defend Again (Round 1)' : 'Run Again (Round 1)',
+        bg: 0x1a2038,
+        color:'#86efac',
+        onClick: ()=> {
+          this.scene.restart({
+            mode: 'pve',
+            role: isPlug ? 'plug' : 'runner',
+            pveRound: 1,
+            pveSessionStash: 0,
+            pveSessionRep: 0,
+            pveBestRound: 0,
+            seed: restartSeed
+          });
+        }
+      },
+      {
+        label: 'Exit',
+        bg: 0x1a2038,
+        color:'#cbd1ff',
+        onClick: ()=> this.scene.start('MENU')
+      }
+    ];
+
+    const modal = this.showModal({
+      title,
+      lines: [
+        descriptor,
+        ``,
+        `Total Stash Collected: ${this.pveSessionStash}`,
+        `Total Rep Earned: ${this.pveSessionRep}`,
+        `Best Round: ${this.pveBestRound}`
+      ],
+      buttons
+    });
+
+    this.currentModal = modal;
   }
 
   /* -------------- Scene lifecycle cleanup -------------- */
@@ -2027,7 +3257,7 @@ export class BaseGameScene extends Phaser.Scene {
  *     this.update_core(_, delta);
  *   };
  *
- * If you d rather not monkey-patch, simply insert:
+ * If you�d rather not monkey-patch, simply insert:
  *   this._drawStashHalo?.();
  *   this._drawExtractHalo?.();
  * near the top of your existing update() function (already done in your snippet).

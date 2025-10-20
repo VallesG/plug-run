@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Project Backups/all modes work/plug-run-la/client/src/scenes/**)",
+      "Bash(git log --all --oneline --grep=\"spawn\" --grep=\"enclosed\" --grep=\"trapped\" --grep=\"pocket\" -i)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

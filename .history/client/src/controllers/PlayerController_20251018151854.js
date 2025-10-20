@@ -15,6 +15,11 @@ export default class PlayerController {
     this.playerGunAim = { x: 1, y: 0 };  // Gun aim direction (for plug)
     this.playerIntendedDir = { x: 1, y: 0 }; // Intended movement direction for smart navigation
 
+    // Corner assist state
+    this._cornerAssistActive = false;
+    this._cornerAssistIntended = null;
+    this._cornerAssistTimeout = 0;
+
     // Touch/swipe state
     this._swipePid = null;
     this._swipeStart = null;
@@ -26,11 +31,6 @@ export default class PlayerController {
     this._runnerMoveDir = null;
     this._runnerLastAim = null;
 
-    // Legacy-style initial drift (fallback movement when no input)
-    this._initDrift = null;
-    this.playerDrift = null;
-    this.playerAim = null;
-
     // Input references (set by scene)
     this.cursors = null;
     this.wasdKeys = null;
@@ -38,7 +38,7 @@ export default class PlayerController {
     // Touch input thresholds
     this.SWIPE_DEAD_PX = 1;    // minimum movement to count as a swipe (reduced from 10 for quicker response)
     this.TAP_TIME_MS = 220;    // maximum duration to count as a tap
-    this.TAP_MOVE_PX = 20;     // maximum movement to still count as a tap (increased to prevent accidental swipes during double-tap)
+    this.TAP_MOVE_PX = 8;      // maximum movement to still count as a tap
     this.DOUBLE_TAP_MAX_MS = 250; // window for double-tap power
   }
 
@@ -71,7 +71,7 @@ export default class PlayerController {
   }
 
   /**
-   * Core player movement logic with keyboard and touch support - Legacy style
+   * Core player movement logic with keyboard and touch support
    */
   handlePlayerMovement(sprite, speed, dt) {
     // Verify this is the user-controlled sprite
@@ -92,35 +92,32 @@ export default class PlayerController {
     const usingKeys = keyboardInput.usingKeys;
 
     if (usingKeys) {
-      // Use keyboard for movement (now with diagonal support from legacy)
       vx = keyboardInput.vx * speed;
       vy = keyboardInput.vy * speed;
 
-      // Update gun aim direction for plug when using keyboard
-      if (keyboardInput.vx !== 0 || keyboardInput.vy !== 0) {
-        const normLen = Math.hypot(keyboardInput.vx, keyboardInput.vy);
-        const nx = keyboardInput.vx / normLen;
-        const ny = keyboardInput.vy / normLen;
-
-        if (sprite === this.scene.defender) {
-          // Update gun aim for plug
-          this.playerGunAim = { x: nx, y: ny };
-        }
+      // Update movement direction when using keys (always cardinal)
+      const mag = Math.hypot(vx, vy);
+      if (mag > 0.0001) {
+        const nx = vx / mag;
+        const ny = vy / mag;
         this.playerMoveDir = { x: nx, y: ny };
-
         if (sprite === this.scene.attacker) {
           this._runnerInputDir = { x: nx, y: ny };
         }
       }
     } else {
-      // Legacy fallback: use player's aim or drift
-      // After first user interaction, never fall back to initial drift
-      const drift = this.scene.userTookOver ? (this.playerDrift || null) : (this.playerDrift || this._initDrift || null);
-      const aim = this.playerAim || drift || { x: 1, y: 0 };
-      const lenAim = Math.hypot(aim.x, aim.y);
-      if (lenAim > 0.0001) {
-        vx = (aim.x / lenAim) * speed;
-        vy = (aim.y / lenAim) * speed;
+      // No keys: use straight-line movement direction (from swipe/touch)
+      // ONLY move if player has given input - don't auto-move idle players!
+      const moveDir = this.playerMoveDir;
+      if (moveDir) {
+        const lenDir = Math.hypot(moveDir.x, moveDir.y);
+        if (lenDir > 0.0001) {
+          vx = (moveDir.x / lenDir) * speed;
+          vy = (moveDir.y / lenDir) * speed;
+          if (sprite === this.scene.attacker) {
+            this._runnerInputDir = { x: moveDir.x / lenDir, y: moveDir.y / lenDir };
+          }
+        }
       }
     }
 
@@ -134,31 +131,11 @@ export default class PlayerController {
       // Calculate distance to opponent
       const opponent = (this.scene.role === 'runner') ? this.scene.defender : this.scene.attacker;
       const distToOpponent = Math.hypot(sprite.x - opponent.x, sprite.y - opponent.y);
-
-      // Check if we're in a tight corridor (1x1 entrance)
-      const spriteCell = this.scene.toCell(sprite.x, sprite.y);
-      let wallsOnSides = 0;
-      if (dir.x !== 0) {
-        // Moving horizontally - check for walls above and below
-        const northWall = this.scene.isWallAtWorld(sprite.x, sprite.y - this.scene.cell);
-        const southWall = this.scene.isWallAtWorld(sprite.x, sprite.y + this.scene.cell);
-        if (northWall) wallsOnSides++;
-        if (southWall) wallsOnSides++;
-      } else if (dir.y !== 0) {
-        // Moving vertically - check for walls left and right
-        const westWall = this.scene.isWallAtWorld(sprite.x - this.scene.cell, sprite.y);
-        const eastWall = this.scene.isWallAtWorld(sprite.x + this.scene.cell, sprite.y);
-        if (westWall) wallsOnSides++;
-        if (eastWall) wallsOnSides++;
-      }
-      const inTightCorridor = wallsOnSides === 2;
-
-      // Only reduce corridor assist when opponent is close AND we're NOT in a tight corridor
-      // In tight corridors, we need maximum assist to navigate properly
       const proximityThreshold = this.scene.cell * 4; // 4 cells
-      const originalStrength = this.scene.corridorAssistStrength;
 
-      if (!inTightCorridor && distToOpponent < proximityThreshold) {
+      // Temporarily reduce corridor assist when opponent is very close
+      const originalStrength = this.scene.corridorAssistStrength;
+      if (distToOpponent < proximityThreshold) {
         // Smoothly reduce assist from 1.0 → 0.3 as opponent gets closer
         const proximityFactor = Math.max(0.3, distToOpponent / proximityThreshold);
         this.scene.corridorAssistStrength = originalStrength * proximityFactor;
@@ -170,8 +147,8 @@ export default class PlayerController {
       this.scene.corridorAssistStrength = originalStrength;
     }
 
-    // Legacy-style movement with sub-stepping to prevent tunneling
-    this.applyLegacyMovement(sprite, vx, vy, dt);
+    // Apply smart corner navigation and movement
+    this.applySmartMovement(sprite, vx, vy, speed, dt, usingKeys);
 
     // Cache facing direction for runner powers when moving
     const spdLen = Math.hypot(vx, vy);
@@ -190,16 +167,13 @@ export default class PlayerController {
     this.scene.playerMoveDir = this.playerMoveDir;
     this.scene.playerGunAim = this.playerGunAim;
     this.scene.playerIntendedDir = this.playerIntendedDir;
-    this.scene.playerDrift = this.playerDrift;
-    this.scene.playerAim = this.playerAim;
-    this.scene._initDrift = this._initDrift;
     this.scene._runnerInputDir = this._runnerInputDir;
     this.scene._runnerMoveDir = this._runnerMoveDir;
     this.scene._runnerLastAim = this._runnerLastAim;
   }
 
   /**
-   * Process keyboard input (WASD/arrows) - Legacy style with diagonal movement
+   * Process keyboard input (WASD/arrows)
    */
   processKeyboardInput() {
     const k = this.cursors || this.scene.cursors;
@@ -216,69 +190,136 @@ export default class PlayerController {
     let vy = 0;
 
     if (usingKeys) {
-      // Legacy-style movement - allows diagonal movement (8-directional)
-      if (leftDown) vx = -1;
-      else if (rightDown) vx = 1;
-
-      if (upDown) vy = -1;
-      else if (downDown) vy = 1;
+      // Use keyboard for movement (cardinal only - Snake style)
+      // Priority: horizontal > vertical
+      if (leftDown || rightDown) {
+        // Horizontal movement takes priority
+        if (leftDown) vx = -1;
+        else if (rightDown) vx = 1;
+        vy = 0; // No vertical when moving horizontal
+      } else if (upDown || downDown) {
+        // Vertical movement only if no horizontal
+        vx = 0;
+        if (upDown) vy = -1;
+        else if (downDown) vy = 1;
+      }
     }
 
     return { vx, vy, usingKeys };
   }
 
   /**
-   * Apply legacy-style movement with sub-stepping to prevent tunneling through thin walls
+   * Apply smart corner navigation and wall sliding
    */
-  applyLegacyMovement(sprite, vx, vy, dt) {
-    // Attempt to move in X and Y with sub-steps to prevent tunneling through thin walls
-    const dxTot = vx * dt;
-    const dyTot = vy * dt;
-    const stepMax = this.scene.cell * 0.28; // less than half a tile
+  applySmartMovement(sprite, vx, vy, speed, dt, usingKeys) {
+    // Check if corner-assist mode has expired
+    if (this._cornerAssistActive && performance.now() > this._cornerAssistTimeout) {
+      this._cornerAssistActive = false;
+      this._cornerAssistIntended = null;
+    }
 
-    const moveAxis = (amount, axis) => {
-      let remaining = amount;
-      const dir = Math.sign(remaining) || 0;
-      const step = stepMax * dir;
-      let guard = 0;
+    // Movement with smart positioning - always try intended direction first
+    let intendedDir = this.playerIntendedDir || { x: 1, y: 0 };
 
-      while (Math.abs(remaining) > 0.0001 && guard++ < 32) {
-        const d = (Math.abs(remaining) > stepMax) ? step : remaining;
-        const nx = axis === 'x' ? sprite.x + d : sprite.x;
-        const ny = axis === 'y' ? sprite.y + d : sprite.y;
+    // If in corner-assist mode and intended direction is still blocked, find perpendicular
+    if (this._cornerAssistActive && this._cornerAssistIntended) {
+      const testDist = this.scene.cell * 0.8;
+      const testX = sprite.x + this._cornerAssistIntended.x * testDist;
+      const testY = sprite.y + this._cornerAssistIntended.y * testDist;
 
-        if (this.scene.canMoveTo(sprite, nx, ny)) {
-          if (axis === 'x') sprite.x = nx;
-          else sprite.y = ny;
-          remaining -= d;
-        } else {
-          break; // blocked on this axis
+      // If still blocked, use perpendicular direction to navigate around
+      if (!this.scene.canMoveTo(sprite, testX, testY)) {
+        const perpDirs = this._cornerAssistIntended.x !== 0
+          ? [{ x: 0, y: 1 }, { x: 0, y: -1 }]
+          : [{ x: 1, y: 0 }, { x: -1, y: 0 }];
+
+        for (const alt of perpDirs) {
+          const altX = sprite.x + alt.x * testDist;
+          const altY = sprite.y + alt.y * testDist;
+          if (this.scene.canMoveTo(sprite, altX, altY)) {
+            intendedDir = alt; // Use perpendicular to navigate corner
+            break;
+          }
+        }
+      } else {
+        // Intended direction is now clear, resume it
+        this._cornerAssistActive = false;
+        intendedDir = this._cornerAssistIntended;
+      }
+    }
+
+    // Calculate intended movement
+    const intendedDist = Math.hypot(intendedDir.x, intendedDir.y);
+    const intendedVx = (intendedDir.x / intendedDist) * (Math.abs(vx) > 0 ? Math.abs(vx) : speed);
+    const intendedVy = (intendedDir.y / intendedDist) * (Math.abs(vy) > 0 ? Math.abs(vy) : speed);
+
+    const dxTot = intendedVx * dt;
+    const dyTot = intendedVy * dt;
+
+    const targetX = sprite.x + dxTot;
+    const targetY = sprite.y + dyTot;
+
+    let movedX = false, movedY = false;
+
+    // Try full movement in intended direction first
+    if (this.scene.canMoveTo(sprite, targetX, targetY)) {
+      sprite.x = targetX;
+      sprite.y = targetY;
+      movedX = movedY = true;
+    } else {
+      // Try moving along each axis independently (wall sliding)
+      if (this.scene.canMoveTo(sprite, targetX, sprite.y)) {
+        sprite.x = targetX;
+        movedX = true;
+      }
+      if (this.scene.canMoveTo(sprite, sprite.x, targetY)) {
+        sprite.y = targetY;
+        movedY = true;
+      }
+
+      // If still stuck on primary intended axis, try smaller steps
+      if (!movedX && Math.abs(intendedDir.x) > 0 && Math.abs(dxTot) > 0.1) {
+        const stepX = dxTot * 0.5;
+        if (this.scene.canMoveTo(sprite, sprite.x + stepX, sprite.y)) {
+          sprite.x += stepX;
+          movedX = true;
         }
       }
-    };
+      if (!movedY && Math.abs(intendedDir.y) > 0 && Math.abs(dyTot) > 0.1) {
+        const stepY = dyTot * 0.5;
+        if (this.scene.canMoveTo(sprite, sprite.x, sprite.y + stepY)) {
+          sprite.y += stepY;
+          movedY = true;
+        }
+      }
+    }
 
-    // Store position before movement for stuck detection
-    const preX = sprite.x, preY = sprite.y;
-
-    // Move on each axis
-    moveAxis(dxTot, 'x');
-    moveAxis(dyTot, 'y');
-
-    // Legacy corner unstick logic:
-    // If we barely moved (corner caught), softly nudge toward tile center to unstick
-    if (Math.hypot(sprite.x - preX, sprite.y - preY) < 0.5 && (Math.abs(vx) + Math.abs(vy) > 0)) {
+    // Smart positioning: gently center when blocked to help navigate corners
+    // ONLY apply this on touch/mobile controls - keyboard users have precise control
+    if (!usingKeys && (!movedX || !movedY) && (Math.abs(vx) + Math.abs(vy) > 0)) {
       const c = this.scene.toCell(sprite.x, sprite.y);
       const cx = this.scene.toWorldX(c.x);
       const cy = this.scene.toWorldY(c.y);
-      const ux = cx - sprite.x, uy = cy - sprite.y;
-      const ul = Math.hypot(ux, uy) || 1;
-      const nudge = Math.min(this.scene.cell * 0.20, ul);
-      const nx = sprite.x + (ux/ul) * nudge;
-      const ny = sprite.y + (uy/ul) * nudge;
 
-      if (this.scene.canMoveTo(sprite, nx, ny)) {
-        sprite.x = nx;
-        sprite.y = ny;
+      // Check if we're off-center in the corridor
+      const offsetX = sprite.x - cx;
+      const offsetY = sprite.y - cy;
+      const threshold = this.scene.cell * 0.35;
+
+      // If blocked horizontally, gently center vertically to help with upcoming turns
+      if (!movedX && Math.abs(intendedDir.x) > 0 && Math.abs(offsetY) > threshold) {
+        const nudgeY = Math.sign(cy - sprite.y) * this.scene.cell * 0.15 * dt;
+        if (this.scene.canMoveTo(sprite, sprite.x, sprite.y + nudgeY)) {
+          sprite.y += nudgeY;
+        }
+      }
+
+      // If blocked vertically, gently center horizontally
+      if (!movedY && Math.abs(intendedDir.y) > 0 && Math.abs(offsetX) > threshold) {
+        const nudgeX = Math.sign(cx - sprite.x) * this.scene.cell * 0.15 * dt;
+        if (this.scene.canMoveTo(sprite, sprite.x + nudgeX, sprite.y)) {
+          sprite.x += nudgeX;
+        }
       }
     }
   }
@@ -307,9 +348,18 @@ export default class PlayerController {
       const nx = dx / (L || 1), ny = dy / (L || 1);
 
       // During drag: update gun aim in cardinal direction closest to drag
-      // Update gun aim with smooth 360° direction (no cardinal snapping)
-      // This allows full circular aiming without affecting movement
-      this.playerGunAim = { x: nx, y: ny };
+      // Convert to cardinal for Snake-like feel
+      let cardinalX = 0, cardinalY = 0;
+      if (Math.abs(nx) > Math.abs(ny)) {
+        cardinalX = nx > 0 ? 1 : -1;
+        cardinalY = 0;
+      } else {
+        cardinalX = 0;
+        cardinalY = ny > 0 ? 1 : -1;
+      }
+
+      // Update gun aim only (cardinal direction)
+      this.playerGunAim = { x: cardinalX, y: cardinalY };
       // DON'T update playerMoveDir during drag - keeps movement straight
     }
   }
@@ -339,8 +389,8 @@ export default class PlayerController {
           this._lastTapAt = now;
         }
       }
-    } else if (moved >= this.SWIPE_DEAD_PX) {
-      // Quick swipe: change intended movement direction
+    } else if (moved >= this.SWIPE_DEAD_PX && dt > this.TAP_TIME_MS) {
+      // Quick swipe: change movement direction (cardinal only - like Snake)
       const dx = pointer.x - sx, dy = pointer.y - sy;
 
       // Convert to cardinal direction only (no diagonals)
@@ -355,20 +405,47 @@ export default class PlayerController {
         ny = dy > 0 ? 1 : -1;
       }
 
-      // Simply update the movement direction
-      this.playerMoveDir = { x: nx, y: ny };
-      this.playerIntendedDir = { x: nx, y: ny };
-      this.playerDrift = { x: nx, y: ny };  // Legacy-style drift
-
-      // Update gun aim for plug so orientation updates correctly
-      if (this.scene.role === 'plug') {
-        this.playerGunAim = { x: nx, y: ny };
-      }
-
-      // Update running direction for sprite
+      // Check if this swipe direction is blocked at a corner
       const who = (this.scene.role === 'plug') ? this.scene.defender : this.scene.attacker;
-      if (who && this.scene.role === 'runner') {
-        this._runnerInputDir = { x: nx, y: ny };
+      if (who) {
+        const testDist = this.scene.cell * 0.8;
+        const testX = who.x + nx * testDist;
+        const testY = who.y + ny * testDist;
+
+        // If swiped direction is blocked, enable corner assist mode temporarily
+        if (!this.scene.canMoveTo(who, testX, testY)) {
+          // Try perpendicular directions to navigate around corner
+          const perpDirs = nx !== 0
+            ? [{ x: 0, y: 1 }, { x: 0, y: -1 }]
+            : [{ x: 1, y: 0 }, { x: -1, y: 0 }];
+
+          let altDir = null;
+          for (const alt of perpDirs) {
+            const altX = who.x + alt.x * testDist;
+            const altY = who.y + alt.y * testDist;
+            if (this.scene.canMoveTo(who, altX, altY)) {
+              altDir = alt;
+              break;
+            }
+          }
+
+          if (altDir) {
+            // Temporarily move perpendicular to navigate the corner
+            this.playerMoveDir = altDir;
+            this._cornerAssistActive = true;
+            this._cornerAssistIntended = { x: nx, y: ny };
+            this._cornerAssistTimeout = performance.now() + 400; // 400ms to clear corner
+          } else {
+            // Can't navigate - just update intended direction
+            this.playerMoveDir = { x: nx, y: ny };
+            this.playerIntendedDir = { x: nx, y: ny };
+          }
+        } else {
+          // Clear path in swiped direction
+          this.playerMoveDir = { x: nx, y: ny };
+          this.playerIntendedDir = { x: nx, y: ny };
+          this._cornerAssistActive = false;
+        }
       }
     }
 
@@ -387,25 +464,5 @@ export default class PlayerController {
     // Get references from scene
     this.cursors = this.scene.cursors;
     this.wasdKeys = this.scene.wasdKeys;
-
-    // Set initial drift from scene if available
-    if (this.scene._initDrift) {
-      this._initDrift = this.scene._initDrift;
-      this.playerDrift = this._initDrift;
-      this.playerMoveDir = this._initDrift;
-    }
-  }
-
-  /**
-   * Set initial drift direction (legacy support)
-   */
-  setInitialDrift(dir) {
-    if (dir && Math.hypot(dir.x, dir.y) > 0.0001) {
-      this._initDrift = { ...dir };
-      if (!this.scene.userTookOver) {
-        this.playerDrift = { ...dir };
-        this.playerMoveDir = { ...dir };
-      }
-    }
   }
 }
