@@ -9,6 +9,7 @@ import {
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
+import { trackGameStart, trackRoundComplete, trackGameOver } from '../utils/analytics.js';
 
 /**
  * ProgressionManager - Handles round flow, extraction, and session state
@@ -26,6 +27,11 @@ export default class ProgressionManager {
    * Initialize RepTracker for a new round
    */
   startRound(roundNum) {
+    // Track game start on round 1
+    if (roundNum === 1) {
+      trackGameStart('pve', this.scene.role, roundNum);
+    }
+
     if (!this.repTracker) {
       this.repTracker = new RepTracker(this.scene.role, this.scene);
     }
@@ -76,6 +82,8 @@ export default class ProgressionManager {
 
     // PvE mode: update stats and show floating rewards, then continue with normal extraction
     if (this.scene.mode === 'pve') {
+      // Track successful round completion
+      trackRoundComplete(this.scene.role, this.scene.pveRound || 1, true);
       console.log('[PvE] Extraction! Round:', this.scene.pveRound, 'Mode:', this.scene.mode);
 
       // Track round completion for REP calculation
@@ -313,6 +321,14 @@ export default class ProgressionManager {
     }
 
     this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, roundNumber);
+
+    // Track game over event
+    trackGameOver(
+      this.scene.role,
+      roundNumber,
+      this.scene.pveSessionStash || 0,
+      this.scene.pveSessionRep || 0
+    );
 
     // Track route progress for leaderboard
     updateRouteProgress(this.scene.role, roundNumber);

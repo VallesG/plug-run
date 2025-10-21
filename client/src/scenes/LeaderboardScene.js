@@ -5,6 +5,7 @@ import {
 } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { getUsername, getUserID, getCurrentUser } from '../utils/userManager.js';
+import { trackLeaderboardView } from '../utils/analytics.js';
 
 export default class LeaderboardScene extends Phaser.Scene {
   constructor() {
@@ -146,6 +147,7 @@ export default class LeaderboardScene extends Phaser.Scene {
         .setFontStyle(isActive ? 'bold' : '');
     });
 
+    trackLeaderboardView(tab, this.currentRole);
     this.refreshContent();
   }
 
@@ -164,6 +166,7 @@ export default class LeaderboardScene extends Phaser.Scene {
         .setFontStyle(isActive ? 'bold' : '');
     });
 
+    trackLeaderboardView(this.currentTab, role);
     this.refreshContent();
   }
 

@@ -5,6 +5,7 @@ import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
+import { trackNavigation } from '../utils/analytics.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -1325,6 +1326,7 @@ export class MenuScene extends Phaser.Scene {
       } catch {}
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
+        trackNavigation('tutorial');
         this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
       });
     } else if (k === 'runner'){
@@ -1339,6 +1341,7 @@ export class MenuScene extends Phaser.Scene {
       } catch {}
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
+        trackNavigation('runner_mode');
         this.scene.transition({
           target: 'RUNNER',
           duration: 250,
@@ -1358,6 +1361,7 @@ export class MenuScene extends Phaser.Scene {
       } catch {}
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
+        trackNavigation('plug_mode');
         this.scene.transition({
           target: 'PLUG',
           duration: 250,
@@ -1370,6 +1374,7 @@ export class MenuScene extends Phaser.Scene {
       // Street sounds continue playing for atmosphere
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
+        trackNavigation('leaderboard');
         this.scene.transition({ target: 'LEADERBOARD', duration: 250, moveBelow: true });
       });
     } else if (k === 'pvp') {

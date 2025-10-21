@@ -1,6 +1,7 @@
 ﻿// Tutorial scene built on PvP movement and controls
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
+import { trackTutorial } from '../utils/analytics.js';
 
 const STAGE_SEEDS = {
   S1_MOVEMENT: 0x71C1A5E1,
