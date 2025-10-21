@@ -1,24 +1,57 @@
 # Plug Run LA
 
-**A fast-paced arcade runner where you escape stash houses and outrun the plug.**
+**A fast-paced arcade game set in the streets of LA. Run from AI plugs, defend stashes, and climb the leaderboards.**
 
-## Concept
+## Game Modes
 
-You're a runner trying to escape from stash houses across LA. Chain together successful escapes, grab loot, unlock weapons, and make it to the getaway car before the AI plug catches you. The longer your chain, the higher your score.
+### 🏃 Run the Block (PvE Runner)
+Chain together successful stash-house escapes. Grab the package, dodge the AI plug, and make it to the getaway car. Progressive difficulty scales from beginner-friendly (Round 1) to expert-level (Round 50+).
 
-### Game Modes
+### 🛡️ Defend the Stash (PvE Plug)
+Stop the AI runner from stealing your stash. Hunt them down with limited ammo and strategic weapon switching. Run out of bullets? Switch to melee combat.
 
-- **Run the Block** (PvE): Chain stash-house escapes and build your reputation
-- **Learn the Streets**: Quick tutorial with zero pressure
-- **Street Wars** (Coming Soon): 1v1 PvP - Human Runner vs Human Plug
-- **Daily Drop** (Coming Soon): Shared daily route with leaderboards
+### 📚 Learn the Streets (Tutorial)
+Interactive 6-stage tutorial teaching movement, abilities, combat, and extraction mechanics. Perfect for new players.
+
+### 📊 The Board (Leaderboards)
+Daily and all-time leaderboards for both Runner and Plug modes. Track your Stash collected and REP earned.
+
+### ⚔️ Street Wars (Coming Soon)
+1v1 PvP - Human Runner vs Human Plug in real-time battles.
+
+## Features
+
+### Core Gameplay
+- **Dual Roles**: Play as Runner (escape) or Plug (defend)
+- **Runner Powers**: Phase (pass through walls), Dash (speed burst), Decoy (distraction)
+- **Plug Combat**: 3 weapons with limited ammo, melee fallback, tactical positioning
+- **Smart AI**: Progressive difficulty scaling, decoy detection, weapon switching
+- **Adaptive Music**: Dynamic audio that intensifies with round progression (volume + filter sweep)
+
+### Progression System
+- **Stash Collection**: Earn 1 stash per round (once per day, no duplicates)
+- **REP System**: Earn reputation based on performance with diminishing returns
+- **Daily Routes**: Seeded daily maps with shared leaderboards
+- **All-Time Stats**: Track career-long performance
+
+### Controls
+- **Desktop**: WASD/Arrow keys + mouse aiming + keyboard shortcuts (1-4 for weapons, Q/E for powers)
+- **Mobile**: Touch controls with virtual joystick and tap-to-shoot
+- **Corridor Assist**: Intelligent wall-sliding for smooth navigation
+
+### Technical Features
+- **Zoom Detection**: Warning banner when browser zoom ≠ 100%
+- **Seeded RNG**: Deterministic daily routes for fair leaderboard competition
+- **LocalStorage**: Persistent user data, inventory, and leaderboard scores
+- **Responsive Design**: Adapts to all screen sizes (mobile-first)
 
 ## Tech Stack
 
 - **Phaser 3** - Game engine
 - **Vite** - Build tool & dev server
-- **rexUI** - UI plugin for polished components
-- **LocalStorage** - Inventory & progression persistence
+- **rexUI** - Polished UI components
+- **Web Audio API** - Adaptive music system with low-pass filtering
+- **LocalStorage** - Persistence layer
 
 ## Project Structure
 
@@ -26,11 +59,14 @@ You're a runner trying to escape from stash houses across LA. Chain together suc
 plug-run-la/
 ├── client/
 │   ├── src/
-│   │   ├── scenes/       # Game scenes (Menu, PvP, Tutorial, etc.)
-│   │   ├── logic/        # Game logic (maze, controls, RNG)
-│   │   └── state/        # Global state (inventory)
-│   ├── public/           # Assets (sprites, tiles, cars)
-│   └── index.html        # Entry point
+│   │   ├── scenes/           # Game scenes (Menu, Runner, Plug, Tutorial, Leaderboard)
+│   │   ├── controllers/      # Modular controllers (AI, Combat, VFX, UI, etc.)
+│   │   ├── utils/            # Utilities (maze gen, seeded RNG, leaderboards, etc.)
+│   │   ├── audio/            # AudioManager with adaptive music
+│   │   └── main.js           # Phaser config & initialization
+│   ├── public/
+│   │   └── audio/            # Music tracks & SFX
+│   └── index.html            # Entry point
 └── README.md
 ```
 
@@ -69,66 +105,73 @@ Output in `client/dist/`
 npm run preview
 ```
 
-## Game Features
+## AI System
 
-### Core Mechanics
-- **Smooth movement** with keyboard (WASD/Arrows) + touch/mouse controls
-- **Dash mechanic** (double-tap or Shift) for quick escapes
-- **Phase ability** (Space) for brief invulnerability
-- **Corridor assist** for touch-friendly navigation
-- **Auto-drift** to keep you moving even when not actively controlling
+### Plug AI (Runner Mode Opponent)
+- **Progressive Difficulty**: Scales from Round 1 (tutorial-easy) → Round 50 (human-level) → ∞
+- **Speed Scaling**: 50 px/s → 99 px/s (Round 50) → continues scaling
+- **Fire Rate**: 1.8s → 0.75s (Round 50) → 0.3s minimum
+- **Accuracy**: 1.0 spread → 0.35 (Round 50) → 0.1 minimum
+- **Weapon System**: Random weapon each round (pistol/doublebarrel/rifle), limited ammo
+- **Decoy Detection**: 95% fooled (Round 1) → 5% fooled (Round 50+)
+- **Melee Fallback**: Automatically switches to melee when out of ammo
 
-### Progression
-- Collect coins and product from stash houses
-- Unlock weapons (pistol, shotgun, rifle, laser, double barrel)
-- Manage ammo across runs
-- Build up chain streaks for higher scores
+### Runner AI (Plug Mode Opponent)
+- **Progressive Difficulty**: Scales from Round 1 (very easy) → Round 50 (human-level) → ∞
+- **Speed Scaling**: 60 px/s → 98 px/s (Round 50) → continues scaling
+- **Human-like Mistakes**: Wander chance, hesitation, panic behavior (all reduce with rounds)
+- **Power Usage**: 20% optimal (Round 4) → 95% optimal (Round 30+)
+- **Orientation Delay**: 2.5s thinking time (Round 1) → 0.3s (Round 50)
 
-### AI Behavior
-- Smart pathfinding that hunts you through the maze
-- Only catches you if you mess up - skill-based gameplay
-- Adaptive difficulty based on player positioning
+## Adaptive Music System
 
-## Monetization Plans
+Music dynamically responds to difficulty progression:
 
-- Rewarded video ads (continue runs, unlock items, 2x coins)
-- Interstitial ads (between sessions)
-- Optional IAPs (remove ads, weapon packs, cosmetics)
-- Future: Battle pass for PvP seasons
+- **Volume Ramping**: Quiet (20-28%) → Loud (45-50%) over rounds 1-30
+- **Filter Sweep**: Muffled 600Hz → Clear 20kHz over rounds 1-30
+- **Track Selection**: Different beats for Runner (`bg_main`) and Plug (`bg_plug`) modes
+- **Music Ducking**: Automatic volume reduction during gunshots/impacts
 
 ## Roadmap
 
-### v1.0 (Current)
-- [x] Core PvE gameplay loop
-- [x] Menu system with mode selection
-- [x] Tutorial modes (multiple versions)
-- [x] Touch + keyboard controls
-- [x] Inventory & weapon system
-- [ ] Final polish on chain runs
-- [ ] Ad integration
+### ✅ Completed (Alpha v1.0)
+- [x] Dual-mode PvE (Runner & Plug)
+- [x] Interactive tutorial system
+- [x] Smart AI with progressive difficulty
+- [x] Daily & all-time leaderboards
+- [x] Adaptive music system
+- [x] Mobile + desktop controls
+- [x] Weapon system with ammo management
+- [x] Runner power system (phase, dash, decoy)
+- [x] Stash & REP progression
+- [x] Zoom detection warning
 
-### v2.0 (Planned)
-- [ ] 1v1 PvP mode (Runner vs Plug)
-- [ ] Leaderboards
-- [ ] Daily challenges
-- [ ] Account system
-- [ ] Cosmetic skins
+### 🚧 In Progress (Alpha Testing)
+- [ ] Balance tuning based on player feedback
+- [ ] Bug fixes from alpha testers
+- [ ] Performance optimization
 
-### v3.0+ (Future)
+### 📋 Planned (v1.1+)
+- [ ] Account system (Firebase/Supabase)
+- [ ] Cloud-synced leaderboards
+- [ ] PvP mode (Street Wars)
+- [ ] Weekly challenges
+- [ ] Cosmetic unlocks
+- [ ] Achievement system
+
+### 🔮 Future (v2.0+)
 - [ ] Multiple LA-themed maps
-- [ ] More weapon types
-- [ ] Power-ups and special items
-- [ ] Ranked matchmaking for PvP
-- [ ] Tournaments & seasonal events
-
-## Contributing
-
-This is a solo project but feedback is welcome! Open an issue for bugs or feature suggestions.
+- [ ] Battle pass system
+- [ ] Ranked matchmaking
+- [ ] Tournaments & events
+- [ ] Mobile app (Capacitor)
 
 ## License
 
-All rights reserved.
+All rights reserved. Private repository - do not distribute.
 
 ---
 
-**Built with love in LA**
+**Built with love in LA** 🌴
+
+Repository: https://github.com/VallesG/plug-run
