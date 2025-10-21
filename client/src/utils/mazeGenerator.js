@@ -577,10 +577,18 @@ export function decorateArenaFurniture(scene, { cell, cols, rows, pad, isWall, i
       }
 
       if (!placed.table && ((w === 2 && h === 2) || (w === 3 && h === 2) || (w === 2 && h === 3))) {
+        // Find the center position
         const cx0 = Math.floor((minx + maxx) / 2);
         const cy0 = Math.floor((miny + maxy) / 2);
-        const wx0 = pad.x + cx0 * cell + cell / 2;
-        const wy0 = pad.y + cy0 * cell + cell / 2;
+
+        // Check if center is actually part of the component
+        const centerIsOnBlock = component.some(([bx, by]) => bx === cx0 && by === cy0);
+
+        // If center isn't on a block, pick the first component cell instead
+        const [tableCx, tableCy] = centerIsOnBlock ? [cx0, cy0] : component[0];
+
+        const wx0 = pad.x + tableCx * cell + cell / 2;
+        const wy0 = pad.y + tableCy * cell + cell / 2;
         scene
           .add.image(wx0, wy0, RoundTable)
           .setDepth(5)
@@ -593,9 +601,11 @@ export function decorateArenaFurniture(scene, { cell, cols, rows, pad, isWall, i
           [-1, 0]
         ];
         for (const [dx, dy] of around) {
-          const tx = cx0 + dx;
-          const ty = cy0 + dy;
-          if (tx >= minx && tx <= maxx && ty >= miny && ty <= maxy) {
+          const tx = tableCx + dx;
+          const ty = tableCy + dy;
+          // Only place chair if the position is actually part of this block component
+          const isOnBlock = component.some(([bx, by]) => bx === tx && by === ty);
+          if (isOnBlock) {
             const key = Chair[(Math.random() * Chair.length) | 0];
             scene
               .add.image(pad.x + tx * cell + cell / 2, pad.y + ty * cell + cell / 2, key)

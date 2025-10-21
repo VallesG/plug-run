@@ -13,11 +13,12 @@ const STORAGE_KEY_ALLTIME = 'pr_alltime_';
 //   username: string,
 //   round: number,
 //   stash: number,
+//   rep: number,
 //   timestamp: number
 // }
 
 // Submit score to leaderboard
-export function submitScore(role, round, stash) {
+export function submitScore(role, round, stash, rep = 0) {
   const routeID = getCurrentRouteID();
   const userId = getUserID();
   const username = getUsername();
@@ -27,6 +28,7 @@ export function submitScore(role, round, stash) {
     username,
     round,
     stash,
+    rep,
     timestamp: Date.now()
   };
 
@@ -37,9 +39,11 @@ export function submitScore(role, round, stash) {
   const existingIndex = leaderboard.findIndex(e => e.userId === userId);
 
   if (existingIndex >= 0) {
-    // Update if this score is better (higher round, or same round with more stash)
+    // Update if this score is better (higher round, or same round with more stash/rep)
     const existing = leaderboard[existingIndex];
-    if (round > existing.round || (round === existing.round && stash > existing.stash)) {
+    if (round > existing.round ||
+        (round === existing.round && stash > existing.stash) ||
+        (round === existing.round && stash === existing.stash && rep > (existing.rep || 0))) {
       leaderboard[existingIndex] = entry;
       console.log('[Leaderboard] Updated score for', username, '- Round', round);
     } else {
@@ -52,10 +56,11 @@ export function submitScore(role, round, stash) {
     console.log('[Leaderboard] New score for', username, '- Round', round);
   }
 
-  // Sort by round (desc), then stash (desc)
+  // Sort by round (desc), then stash (desc), then rep (desc)
   leaderboard.sort((a, b) => {
     if (b.round !== a.round) return b.round - a.round;
-    return b.stash - a.stash;
+    if (b.stash !== a.stash) return b.stash - a.stash;
+    return (b.rep || 0) - (a.rep || 0);
   });
 
   // Keep top 100 only
@@ -214,7 +219,7 @@ export function importLeaderboardData(data) {
 // ============ ALL-TIME LEADERBOARDS ============
 
 // Submit all-time score (tracks best ever performance)
-export function submitAllTimeScore(role, round, stash) {
+export function submitAllTimeScore(role, round, stash, rep = 0) {
   const userId = getUserID();
   const username = getUsername();
 
@@ -223,6 +228,7 @@ export function submitAllTimeScore(role, round, stash) {
     username,
     round,
     stash,
+    rep,
     timestamp: Date.now()
   };
 
@@ -231,7 +237,9 @@ export function submitAllTimeScore(role, round, stash) {
 
   if (existingIndex >= 0) {
     const existing = leaderboard[existingIndex];
-    if (round > existing.round || (round === existing.round && stash > existing.stash)) {
+    if (round > existing.round ||
+        (round === existing.round && stash > existing.stash) ||
+        (round === existing.round && stash === existing.stash && rep > (existing.rep || 0))) {
       leaderboard[existingIndex] = entry;
       console.log('[AllTime] Updated all-time score for', username, '- Round', round);
     } else {
@@ -244,7 +252,8 @@ export function submitAllTimeScore(role, round, stash) {
 
   leaderboard.sort((a, b) => {
     if (b.round !== a.round) return b.round - a.round;
-    return b.stash - a.stash;
+    if (b.stash !== a.stash) return b.stash - a.stash;
+    return (b.rep || 0) - (a.rep || 0);
   });
 
   const trimmed = leaderboard.slice(0, 100);

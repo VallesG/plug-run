@@ -42,6 +42,8 @@ export class AudioManager {
     // Music state for ducking/crossfades
     this._duck = { token: 0, priority: -1, endAt: 0, mult: 1, timeline: null };
     this._musicVolState = { base: 0 }; // base target before ducking
+    this._musicFilter = null; // low-pass filter for adaptive music
+    this._filterCutoff = 20000; // current filter cutoff frequency (20kHz = no filtering)
 
     this.lastPlay = new Map();
     this.minInterval = {
@@ -205,6 +207,9 @@ export class AudioManager {
     try {
       next = this.sound.add(key, { loop: !!loop, volume: 0 });
       next.play();
+
+      // Set up low-pass filter for adaptive music (Web Audio API)
+      this._setupMusicFilter(next);
     } catch (e) {
       next = null;
       // eslint-disable-next-line no-console
@@ -246,13 +251,72 @@ export class AudioManager {
   stopMusic(fade = 200) {
     const prev = this.music?.sound;
     if (!prev) return;
-    const stopPrev = () => { try { prev.stop(); prev.destroy(); } catch {} };
+    const stopPrev = () => {
+      try {
+        prev.stop();
+        prev.destroy();
+      } catch {}
+      // Clean up filter
+      this._musicFilter = null;
+    };
     if (fade > 0) {
       this.scene?.tweens?.add({ targets: prev, volume: 0, duration: fade, ease: 'Sine.easeIn', onComplete: stopPrev });
     } else {
       stopPrev();
     }
     this.music = { key: null, sound: null };
+  }
+
+  // Set up low-pass filter for adaptive music (Web Audio API)
+  _setupMusicFilter(sound) {
+    if (!this._hasWebAudio || !this._ctx) return;
+
+    try {
+      // Get the sound's audio node (Phaser exposes this on HTML5 audio sounds)
+      const audioNode = sound?.source?.source;
+      if (!audioNode) return;
+
+      // Create low-pass filter
+      const filter = this._ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(this._filterCutoff, this._ctx.currentTime);
+      filter.Q.setValueAtTime(1, this._ctx.currentTime); // Gentle slope
+
+      // Insert filter into signal chain
+      // Disconnect from destination, route through filter
+      audioNode.disconnect();
+      audioNode.connect(filter);
+      filter.connect(this._ctx.destination);
+
+      this._musicFilter = filter;
+    } catch (e) {
+      // Filter setup failed - music will play unfiltered (graceful fallback)
+      console.info('[Audio] Could not set up music filter:', e?.message || e);
+    }
+  }
+
+  // Set low-pass filter cutoff frequency (adaptive music)
+  setMusicFilterCutoff(freq, fade = 800) {
+    this._filterCutoff = Math.max(20, Math.min(20000, freq));
+
+    if (!this._musicFilter || !this._ctx) return;
+
+    try {
+      if (fade > 0) {
+        // Smooth ramp to new cutoff frequency
+        this._musicFilter.frequency.cancelScheduledValues(this._ctx.currentTime);
+        this._musicFilter.frequency.setValueAtTime(
+          this._musicFilter.frequency.value,
+          this._ctx.currentTime
+        );
+        this._musicFilter.frequency.linearRampToValueAtTime(
+          this._filterCutoff,
+          this._ctx.currentTime + (fade / 1000)
+        );
+      } else {
+        this._musicFilter.frequency.setValueAtTime(this._filterCutoff, this._ctx.currentTime);
+      }
+    } catch {}
   }
 
   // Internal: recompute and apply final music volume

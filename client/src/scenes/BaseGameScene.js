@@ -89,6 +89,11 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('engine_idle',  ['/audio/engine_idle.ogg',  '/audio/engine_idle.mp3']);
       this.load.audio('ouch',         ['/audio/ouch.ogg',         '/audio/ouch.mp3']);
 
+      // Power-up sounds
+      this.load.audio('dash',         ['/audio/dash.ogg',         '/audio/dash.mp3']);
+      this.load.audio('decoy',        ['/audio/decoy.ogg',        '/audio/decoy.mp3']);
+      this.load.audio('phase',        ['/audio/phase.ogg',        '/audio/phase.mp3']);
+
       // Background music
       this.load.audio('main_beat',    ['/audio/main_beat.ogg',    '/audio/main_beat.mp3']);
       this.load.audio('learn_beat',   ['/audio/learn_beat.ogg',   '/audio/learn_beat.mp3']);
@@ -525,7 +530,16 @@ export class BaseGameScene extends Phaser.Scene {
     if (!this.availableGuns.length) this.availableGuns = ['pistol'];
 
     this.roundAmmo = Object.fromEntries(DEFAULT_GUNS.map((g) => [g, 0]));
-    this.allowedGuns = [this.availableGuns[0]];
+
+    // PvE runner mode: AI plug gets random weapon (no laser)
+    if (this.mode === 'pve' && this.role === 'runner') {
+      const aiWeapons = ['pistol', 'doublebarrel', 'rifle'];
+      const randomWeapon = aiWeapons[Math.floor(Math.random() * aiWeapons.length)];
+      this.allowedGuns = [randomWeapon];
+    } else {
+      this.allowedGuns = [this.availableGuns[0]];
+    }
+
     this.weapon = this.allowedGuns[0] || null;
     this.refreshAmmoForLoadout();
 
@@ -1219,10 +1233,18 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     if (power === 'phase'){
+      // Play phase sound effect (louder)
+      try {
+        this.sound.play('phase', { volume: 0.7 });
+      } catch {}
       // No dash: only set intangibility window and visual fade
       this.attacker.setAlpha(stats.fadeAlpha ?? 0.45);
       this.phaseActiveUntil = now + (stats.duration || 600);
     } else if (power === 'dash'){
+      // Play dash sound effect (quieter and much faster to match instant teleport)
+      try {
+        this.sound.play('dash', { volume: 0.2, rate: 2.5 });
+      } catch {}
       // Jump forward a few tiles along current facing, blocked by walls
       const moveDir = this._runnerInputDir || this._runnerMoveDir || this._runnerLastAim || null;
       const aim = moveDir || this.getRunnerFacing();
@@ -1238,6 +1260,10 @@ export class BaseGameScene extends Phaser.Scene {
       this.attacker.x = this.toWorldX(cx);
       this.attacker.y = this.toWorldY(cy);
     } else if (power === 'decoy'){
+      // Play decoy sound effect
+      try {
+        this.sound.play('decoy', { volume: 0.4 });
+      } catch {}
       this.destroyDecoySprite();
       const decoy = makeRunnerSprite(this, this.attacker.x, this.attacker.y, this.cell)
         .setDepth(this.attacker.depth - 0.5)
@@ -1465,6 +1491,27 @@ export class BaseGameScene extends Phaser.Scene {
         } else if (this.progressionManager?.repTracker && this.role === 'plug') {
           this.progressionManager.repTracker.onStashPickup(false); // Plug sees runner got real stash
         }
+
+        // PvE mode: Immediately bank this stash to leaderboard (so it's saved even if player dies/leaves)
+        if (this.mode === 'pve') {
+          // Check if this is first time completing this round (for +1 stash)
+          const roundCompletion = recordRoundCompletion(this.role, this.pveRound || 1);
+          if (roundCompletion.earnedStash) {
+            this.pveSessionStash += 1;
+            console.log('[PvE] Stash collected! Session total:', this.pveSessionStash);
+            // Update user's total accumulated stash
+            const user = getCurrentUser();
+            updateUserStats({
+              totalStash: (user.stats?.totalStash || 0) + 1
+            });
+          }
+          // Track route progress for leaderboard
+          updateRouteProgress(this.role, this.pveRound || 1);
+          // Immediately update leaderboards so stash is banked even if player doesn't extract
+          submitScore(this.role, this.pveRound || 1, this.pveSessionStash, this.pveSessionRep);
+          submitAllTimeScore(this.role, this.pveRound || 1, this.pveSessionStash, this.pveSessionRep);
+        }
+
         // Play pickup sounds (generic pickup + real stash pickup)
         try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
         try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
@@ -1900,38 +1947,43 @@ export class BaseGameScene extends Phaser.Scene {
   // - RunnerAI.js: applyRunnerProgression() for Plug mode opponent
 
   applyMusicRamp(){
-    if (!this.pveRound || this.pveRound <= 1) return;
+    if (!this.pveRound) return;
     if (!this.audio?.music?.sound) return;
 
     const round = this.pveRound;
     const musicKey = this.audio.music.key;
 
-    // Define base volumes and max volumes per music track (lowered for better SFX balance)
-    let baseVol = 0.12;  // starting volume (much lower)
+    // Define base/max volumes per track (matches MenuScene initial volumes)
+    let baseVol = 0.20;  // starting volume (round 1)
     let maxVol = 0.50;   // max volume at high rounds
 
     if (musicKey === 'bg_plug') {
-      baseVol = 0.12;
-      maxVol = 0.45;  // plug beat caps at 45%
+      baseVol = 0.28;  // matches MenuScene.js:1354
+      maxVol = 0.50;
     } else if (musicKey === 'bg_main') {
-      baseVol = 0.08;
-      maxVol = 0.38;  // runner beat caps at 38%
+      baseVol = 0.20;  // matches MenuScene.js:1336
+      maxVol = 0.45;
     } else if (musicKey === 'bg_learn') {
-      baseVol = 0.10;
-      maxVol = 0.32;  // tutorial stays calmer
+      baseVol = 0.30;  // matches MenuScene.js:1323
+      maxVol = 0.40;
     }
 
-    // Gradual ramp: increases volume as rounds progress
-    // Round 1-5: baseVol, Round 30: maxVol (full intensity)
-    // Formula: ramp starts at round 5, reaches max by round 30
-    const rampStart = 5;
+    // VOLUME RAMP: Gradual increase from round 1 → round 30
+    // Round 1: baseVol, Round 30+: maxVol
     const rampEnd = 30;
-    const volumeBoost = round <= rampStart ? 0 : Math.min(1.0, (round - rampStart) / (rampEnd - rampStart));
+    const volumeBoost = Math.min(1.0, (round - 1) / (rampEnd - 1));
     const targetVolume = baseVol + (maxVol - baseVol) * volumeBoost;
 
-    // Apply new volume with smooth fade
+    // FILTER SWEEP: Low-pass filter opens up from muffled → clear
+    // Round 1: 600 Hz (muffled/distant), Round 30+: 20000 Hz (full clarity)
+    const minCutoff = 600;   // very muffled at start
+    const maxCutoff = 20000; // full frequency range (no filtering)
+    const targetCutoff = minCutoff + (maxCutoff - minCutoff) * volumeBoost;
+
+    // Apply volume and filter changes with smooth transitions
     try {
       this.audio.playMusic(musicKey, { volume: targetVolume, loop: true, fade: 800 });
+      this.audio.setMusicFilterCutoff(targetCutoff, 800);
     } catch {}
   }
 

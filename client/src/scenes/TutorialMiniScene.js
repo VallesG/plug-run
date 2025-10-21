@@ -396,6 +396,11 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.load.audio('bpickup',      ['/audio/bpickup.ogg',      '/audio/bpickup.mp3']);
       this.load.audio('engine_start', ['/audio/engine_start.ogg', '/audio/engine_start.mp3']);
       this.load.audio('engine_idle',  ['/audio/engine_idle.ogg',  '/audio/engine_idle.mp3']);
+
+      // Power-up sounds
+      this.load.audio('dash',         ['/audio/dash.ogg',         '/audio/dash.mp3']);
+      this.load.audio('decoy',        ['/audio/decoy.ogg',        '/audio/decoy.mp3']);
+      this.load.audio('phase',        ['/audio/phase.ogg',        '/audio/phase.mp3']);
     } catch {}
   }
   init(data){
@@ -488,6 +493,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.children.removeAll();
     this.stageIdx = idx;
 
+    // Stop any running engine from previous stage
+    try { this.audio?.stopEngineLoop(); } catch {}
+
     // Reset extraction state so the car depart animation can run in each stage
     this._carDeparting = false;
 
@@ -503,6 +511,14 @@ export class TutorialMiniScene extends Phaser.Scene {
     // the player will choose two abilities; until then nothing is selected.
     this.runnerPowersSelected = null;
     this.runnerPowersConsumed = null;
+
+    // Clean up decoy from previous stages
+    if (this.decoySprite) {
+      this.decoySprite.destroy();
+      this.decoySprite = null;
+    }
+    this.decoyExpiresAt = 0;
+    this.decoyVelocity = { x: 0, y: 0 };
 
     // Clean up AI sprites from previous stages
     if (this.aiPlug){
@@ -1112,25 +1128,33 @@ export class TutorialMiniScene extends Phaser.Scene {
       // smaller scale factor for compact layouts.  The message introduces the stash
       // objective and warns about fakes.
       const stashLines = [
-        'Get the stash, then escape to the car.',
-        'Fake stashes do not count.'
+        'Get the stash and get to the getaway car.',
+        '',
+        'Tip: Bunk stashes wont start the getaway car'
       ];
       // Apply a smaller scale so the dialog fits comfortably on narrow screens.  A
       // scale of around 0.65 trims the title and content sizes while retaining
       // readability.  Should further adjustments be needed, update this value.
-      this.showModal('Stash & BUNK', stashLines, 'Go', () => this.resumeFromModal(), { scale: 0.65 });
+      this.showModal('Stash & Bunk Stash', stashLines, 'Go', () => this.resumeFromModal(), { scale: 0.65 });
     } else if (idx === 3){
       // In the power-up stage, introduce the available abilities.  List phase, dash, and decoy
       // with brief descriptions.  After closing the intro modal, present a choice modal.
       const desktop = this.sys.game.device.os.desktop;
       const introLines = [
-        'PHASE: phase through walls',
-        'DASH: quickly dash in a direction',
-        'DECOY: send out a decoy runner',
+        'Double Tap screen to activate',
         '',
-        desktop ? '' : 'Tip: Double tap screen to activate'
-      ].filter(line => line !== '');
-      this.showModal('Power-ups', introLines, 'Go', () => {
+        '',
+        '👻 PHASE: phase through walls',
+        '',
+        '⚡ DASH: quick dash in a direction',
+        '',
+        '🎭 DECOY: send out a decoy runner',
+        '',
+        '',
+        '*Tutorial: Use both powers to start getaway car',
+        '       (Optional in full game)'
+      ];
+      this.showModal('Runner Power-ups', introLines, 'Go', () => {
         this.resumeFromModal();
         this.showPowerSelectionModal();
       });
@@ -1254,12 +1278,25 @@ export class TutorialMiniScene extends Phaser.Scene {
     } else {
       scaleFac = opts.small ? 0.85 : 1.0;
     }
+    // Calculate max width to keep modal narrower and taller (prevents edge-to-edge borders)
+    const maxContentWidth = Math.floor(Math.min(this.scale.width * 0.75, 420));
+
     const dlg = this.rexUI.add.dialog({
       x: this.scale.width / 2,
       y: this.scale.height * 0.42,
       background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 10, 0x0f172a, 0.96).setStrokeStyle(2, 0x2f3650),
-      title: this.add.text(0, 0, title, { color: '#cbd1ff', fontSize: Math.max(22, Math.floor(this.scale.height * 0.036 * scaleFac)) + 'px', fontStyle: 'bold' }),
-      content: this.add.text(0, 0, lines.join('\n'), { color: '#aab5ff', fontSize: Math.max(15, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px' }),
+      title: this.add.text(0, 0, title, {
+        color: '#cbd1ff',
+        fontSize: Math.max(22, Math.floor(this.scale.height * 0.036 * scaleFac)) + 'px',
+        fontStyle: 'bold',
+        wordWrap: { width: maxContentWidth }
+      }),
+      content: this.add.text(0, 0, lines.join('\n'), {
+        color: '#aab5ff',
+        fontSize: Math.max(15, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px',
+        wordWrap: { width: maxContentWidth },
+        lineSpacing: 4
+      }),
       actions: [
         this.rexUI.add.label({
           background: this.rexUI.add.roundRectangle(0, 0, 2, 2, 8, 0xfbbf24).setStrokeStyle(4, 0xfde047),
@@ -1271,7 +1308,7 @@ export class TutorialMiniScene extends Phaser.Scene {
           space: { left: 28, right: 28, top: 14, bottom: 14 }
         })
       ],
-      space: { title: 12, content: 12, action: 10, left: 18, right: 18, top: 16, bottom: 16 }
+      space: { title: 12, content: 16, action: 12, left: 20, right: 20, top: 18, bottom: 18 }
     }).layout().setDepth(9999).popUp(200);
     dlg.on('button.click', () => {
       dlg.scaleDownDestroy(140);
@@ -1360,9 +1397,34 @@ export class TutorialMiniScene extends Phaser.Scene {
     const opts = [
       { key:'phase', label:'PHASE', symbol:'👻', color:'#a78bfa', disabled:false },
       { key:'dash', label:'DASH', symbol:'⚡', color:'#fbbf24', disabled:false },
-      { key:'decoy', label:'DECOY', symbol:'🎭', color:'#60a5fa', disabled:true }
+      { key:'decoy', label:'DECOY', symbol:'🎭', color:'#60a5fa', disabled:false }
     ];
     const chosen = [];
+    const badges = new Map(); // Map of powerId -> { badge1, badge2 }
+
+    // Function to update all badges based on selection order
+    const updateAllBadges = () => {
+      // Hide all badges first
+      badges.forEach(badgeObjs => {
+        badgeObjs.badge1.setVisible(false);
+        badgeObjs.badge2.setVisible(false);
+      });
+
+      // Show badges based on selection order
+      chosen.forEach((powerId, index) => {
+        const badgeObjs = badges.get(powerId);
+        if (!badgeObjs) return;
+
+        if (index === 0) {
+          // First selection - show badge "1"
+          badgeObjs.badge1.setVisible(true);
+        } else if (index === 1) {
+          // Second selection - show badge "2"
+          badgeObjs.badge2.setVisible(true);
+        }
+      });
+    };
+
     // Horizontal spacing
     const btnW = panelW / opts.length;
     const btnH = 80;
@@ -1372,44 +1434,76 @@ export class TutorialMiniScene extends Phaser.Scene {
       const x = panel.x - panelW/2 + btnW * (idx + 0.5);
       const y = panel.y + panelH/2 - btnH/2 - 16;
       const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
-        .setStrokeStyle(2, opt.disabled ? 0x374151 : parseInt(opt.color.replace('#', '0x')))
+        .setStrokeStyle(2, parseInt(opt.color.replace('#', '0x')))
         .setDepth(20002)
-        .setInteractive({ useHandCursor: !opt.disabled });
+        .setInteractive({ useHandCursor: true });
 
       // Symbol (emoji) above name
       const symbol = this.add.text(x, y - 15, opt.symbol, {
         fontSize: '32px'
-      }).setOrigin(0.5).setDepth(20003).setAlpha(opt.disabled ? 0.4 : 1.0);
+      }).setOrigin(0.5).setDepth(20003);
 
       // Power name below symbol
       const txt = this.add.text(x, y + 20, opt.label, {
-        color: opt.disabled ? '#6b7280' : opt.color,
+        color: opt.color,
         fontSize: Math.max(16, Math.floor(height * 0.028)) + 'px',
         fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(20003);
 
-      // Selection marker (small number badge in top-right corner)
-      const mark = this.add.text(x + (btnW*0.30), y - btnH*0.40, '', {
-        color: '#ffffff', fontSize: Math.max(14, Math.floor(height * 0.026)) + 'px', fontStyle:'bold', backgroundColor:'#10b981',
-        padding: { x: 6, y: 4 }
+      // Badge 1 - Green background (first selection, positioned on LEFT)
+      const badge1 = this.add.text(x + (btnW / 2) - 24, y - btnH*0.40, '1', {
+        color: '#ffffff',
+        fontSize: Math.max(14, Math.floor(height * 0.026)) + 'px',
+        fontStyle: 'bold',
+        backgroundColor: '#10b981',
+        padding: { x: 5, y: 3 }
       }).setOrigin(0.5).setDepth(20004).setVisible(false);
-      elements.push(rect, txt, symbol, mark);
+
+      // Badge 2 - Orange background (second selection, positioned on RIGHT)
+      const badge2 = this.add.text(x + (btnW / 2) - 8, y - btnH*0.40, '2', {
+        color: '#ffffff',
+        fontSize: Math.max(14, Math.floor(height * 0.026)) + 'px',
+        fontStyle: 'bold',
+        backgroundColor: '#f97316', // Orange color for second selection
+        padding: { x: 5, y: 3 }
+      }).setOrigin(0.5).setDepth(20004).setVisible(false);
+
+      badges.set(opt.key, { badge1, badge2 });
+      elements.push(rect, txt, symbol, badge1, badge2);
+
       rect.on('pointerdown', () => {
-        if (opt.disabled) return;
-        // Toggle selection: allow deselect by tapping again
-        const idxIn = chosen.indexOf(opt.key);
-        if (idxIn !== -1){
-          chosen.splice(idxIn,1);
-          mark.setVisible(false);
-        } else {
+        // Count how many times this power is currently selected
+        const count = chosen.filter(id => id === opt.key).length;
+
+        if (count === 0) {
+          // Not selected yet - add first instance if we have room
           if (chosen.length >= 2) return;
           chosen.push(opt.key);
-          mark.setText(String(chosen.length)).setVisible(true);
-          // When two powers are chosen, close modal
-          if (chosen.length === 2){
-            // Persist the chosen power order.  Players can use each once per run.
-            this.runnerPowersSelected = chosen.slice();
-            this.runnerPowersConsumed = [false, false];
+        } else if (count === 1) {
+          // Selected once - toggle to either 2 selections or 0
+          if (chosen.length >= 2) {
+            // Already at max, cycle back to 0 (deselect completely)
+            const idx = chosen.indexOf(opt.key);
+            chosen.splice(idx, 1);
+          } else {
+            // Can add second instance
+            chosen.push(opt.key);
+          }
+        } else if (count === 2) {
+          // Selected twice - click removes last instance
+          const idx = chosen.lastIndexOf(opt.key);
+          chosen.splice(idx, 1);
+        }
+
+        updateAllBadges();
+
+        // When two powers are chosen, close modal after delay
+        if (chosen.length === 2){
+          // Persist the chosen power order. Players can use each once per run.
+          this.runnerPowersSelected = chosen.slice();
+          this.runnerPowersConsumed = [false, false];
+          // Add delay so user can see both badges before modal closes
+          this.time.delayedCall(600, () => {
             // Clean up modal elements and resume the game
             overlay.destroy();
             panel.destroy();
@@ -1417,7 +1511,7 @@ export class TutorialMiniScene extends Phaser.Scene {
             subtitle.destroy();
             elements.forEach(el => el.destroy());
             this.pausedForModal = false;
-          }
+          });
         }
       });
     });
@@ -1693,6 +1787,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.runner.x = this.toWorldX(cx);
     this.runner.y = this.toWorldY(cy);
     this._didDash = true;
+    // In stage 3, start engine if both power slots consumed AND stash picked up
+    if (this.stageIdx === 3 && this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
+      try { this.audio?.startEngineLoop(); } catch {}
+    }
   }
 
   // --- Runner power helpers (order-based execution) ---
@@ -1710,6 +1808,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     const power = this.runnerPowersSelected[idx];
     this.performRunnerPower(power);
     this.runnerPowersConsumed[idx] = true;
+    // In stage 3, start engine if both power slots now consumed AND stash picked up
+    if (this.stageIdx === 3 && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
+      try { this.audio?.startEngineLoop(); } catch {}
+    }
   }
 
   /**
@@ -1739,23 +1841,57 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   /**
-   * Execute the logic for a specific power.  Only dash and phase are
-   * implemented here.  Phase grants temporary intangibility and fades
-   * the runner.  Dash teleports forward a few tiles along the facing.
+   * Execute the logic for a specific power. Phase, dash, and decoy are
+   * implemented here. Phase grants temporary intangibility and fades
+   * the runner. Dash teleports forward a few tiles along the facing.
+   * Decoy spawns a duplicate runner that runs in the current direction.
    * @param {string} power
    */
   performRunnerPower(power){
     const now = performance.now();
     if (!this.runner) return;
     if (power === 'phase'){
+      // Play phase sound effect (louder)
+      try {
+        this.sound.play('phase', { volume: 0.7 });
+      } catch {}
       // Phase: become intangible and semi-transparent for ~600ms
       this._phaseUntil = now + 600;
       this._didPhase = true;
       this._phaseActive = true;
       if (this.runner?.sprite) this.runner.sprite.setAlpha(0.35);
+      // In stage 3, start engine if both power slots consumed AND stash picked up
+      if (this.stageIdx === 3 && this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
+        try { this.audio?.startEngineLoop(); } catch {}
+      }
     } else if (power === 'dash'){
+      // Play dash sound effect (quieter and much faster to match instant teleport)
+      try {
+        this.sound.play('dash', { volume: 0.2, rate: 2.5 });
+      } catch {}
       // Dash: teleport forward up to 3 tiles
       this.queueDash();
+    } else if (power === 'decoy'){
+      // Play decoy sound effect
+      try {
+        this.sound.play('decoy', { volume: 0.4 });
+      } catch {}
+      // Decoy: spawn a duplicate runner sprite that runs in the current direction
+      const dir = this._runnerInputDir || this._runnerMoveDir || this.playerAim || { x: 1, y: 0 };
+      const decoy = this.add.container(this.runner.x, this.runner.y).setDepth(8);
+      const sh = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
+      const ds = this.add.sprite(0, 0, 'td_runner').setOrigin(0.5);
+      ds.setScale((this.cell / 128) * 3.0);
+      ds.setTint(0x60a5fa); // Blue tint to distinguish from real runner
+      decoy.add([sh, ds]);
+      this.decoySprite = decoy;
+      this.decoyExpiresAt = now + 5500; // 5.5 seconds
+      const speed = this.cell * 7.0 * 0.9; // Slightly slower than runner
+      this.decoyVelocity = { x: dir.x * speed, y: dir.y * speed };
+      // In stage 3, start engine if both power slots consumed AND stash picked up
+      if (this.stageIdx === 3 && this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
+        try { this.audio?.startEngineLoop(); } catch {}
+      }
     }
   }
 
@@ -1783,6 +1919,11 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.aiPlug.sprite = sprite;
     this.aiPlug.hbRadius = this.hitboxRadius;
     this.aiPlug.hp = 3;
+
+    // Select random weapon for AI (no laser)
+    const aiWeapons = ['pistol', 'shotgun', 'rifle'];
+    this.aiPlugWeapon = aiWeapons[Math.floor(Math.random() * aiWeapons.length)];
+    this.aiPlugAmmo = this.weaponStats[this.aiPlugWeapon].clip;
   }
 
   // Create AI runner sprite for stage 5
@@ -1928,13 +2069,26 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (!this.aiPlug || !this.runner) return;
 
     const d = this.aiPlug;
-    const ax = this.runner.x;
-    const ay = this.runner.y;
+
+    // Determine target (runner or decoy - tutorial AI falls for decoy 80% of the time)
+    let targetX = this.runner.x;
+    let targetY = this.runner.y;
+
+    if (this.decoySprite && this.decoySprite.active) {
+      // Tutorial AI is naive - falls for decoy 80% of the time
+      if (Math.random() < 0.8) {
+        targetX = this.decoySprite.x;
+        targetY = this.decoySprite.y;
+      }
+    }
+
+    const ax = targetX;
+    const ay = targetY;
     const now = performance.now();
     // Tutorial AI plug speed: 3.0 cells/sec (same as PvE round 1, but shoots slower)
     const speed = this.cell * 3.0;
 
-    // Chase the runner with improved pathfinding
+    // Chase the target with improved pathfinding
     const vx = ax - d.x;
     const vy = ay - d.y;
     const dist = Math.hypot(vx, vy);
@@ -1962,9 +2116,9 @@ export class TutorialMiniScene extends Phaser.Scene {
       }
     }
 
-    // Shoot if aligned and in range
+    // Shoot if aligned and in range (check ammo first)
     const maxRange = this.cell * 12;
-    if (dist <= maxRange){
+    if (dist <= maxRange && this.aiPlugAmmo > 0){
       const aligned = (Math.abs(ax - d.x) < this.cell*0.4) || (Math.abs(ay - d.y) < this.cell*0.4);
       if (aligned){
         this._aiPlugTick = (this._aiPlugTick || 0) + dt;
@@ -1976,7 +2130,9 @@ export class TutorialMiniScene extends Phaser.Scene {
           const aim = (adx > ady)
             ? {x: Math.sign(ax - d.x), y: 0}
             : {x: 0, y: Math.sign(ay - d.y)};
-          this.spawnWeaponBurst(d, aim, this.bulletsPlug);
+          // Decrement ammo (fixes infinite ammo bug)
+          this.aiPlugAmmo -= 1;
+          this.spawnWeaponBurst(d, aim, this.bulletsPlug, this.aiPlugWeapon);
         }
       }
     }
@@ -2459,6 +2615,38 @@ export class TutorialMiniScene extends Phaser.Scene {
       draw(this.stash);
       draw(this.bunkStash);
     }
+
+    // Update decoy sprite (if active)
+    if (this.decoySprite) {
+      const now = performance.now();
+      if (now >= this.decoyExpiresAt) {
+        // Decoy expired - fade out and destroy
+        this.tweens.add({
+          targets: this.decoySprite,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => {
+            this.decoySprite?.destroy();
+            this.decoySprite = null;
+          }
+        });
+      } else {
+        // Move decoy in its direction
+        const vx = this.decoyVelocity.x * dt;
+        const vy = this.decoyVelocity.y * dt;
+        const newX = this.decoySprite.x + vx;
+        const newY = this.decoySprite.y + vy;
+        // Check if new position is walkable
+        if (!this.isWallAtWorld(newX, newY)) {
+          this.decoySprite.x = newX;
+          this.decoySprite.y = newY;
+        } else {
+          // Hit a wall - stop the decoy
+          this.decoyVelocity = { x: 0, y: 0 };
+        }
+      }
+    }
+
     // Update player sprite animation and rotation
     if (this.runner?.sprite){
       const dx = this.runner.x - (this.lastPos?.x ?? this.runner.x);
@@ -2576,10 +2764,13 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this.bunkStash) { this.bunkStash.destroy(); this.bunkStash = null; }
           // Clear stash halo graphics
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
-          // Play pickup sounds and start engine
+          // Play pickup sounds
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
           try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
-          try { this.audio?.startEngineLoop(); } catch {}
+          // Only start engine if both power slots have been consumed
+          if (this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1]) {
+            try { this.audio?.startEngineLoop(); } catch {}
+          }
           this.toast('Nice. Get to the car.');
           this.showCarBeacon();
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)) {
@@ -2592,12 +2783,13 @@ export class TutorialMiniScene extends Phaser.Scene {
           this.tweens.add({ targets: decoy, alpha: 0, scale: 0.86, duration: 800, ease: 'Cubic.easeOut', onComplete: () => decoy.destroy() });
         }
       }
-      // Turn on car lights once both dash and phase have been used.  Boarding
-      // the car is only allowed after demonstrating both powers; the player
+      // Turn on car lights once both power slots have been consumed. Boarding
+      // the car is only allowed after using both powers; the player
       // can still collect the stash before using powers but cannot depart.
-      if (this._didDash && this._didPhase) this.setCarLights(true);
-      if ((this._didDash && this._didPhase) && this.overlaps(this.runner, this.extractPad)) {
-        // Final stage: after demonstrating dash and phase, board the car and depart
+      const bothPowersUsed = this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1];
+      if (bothPowersUsed) this.setCarLights(true);
+      if (bothPowersUsed && this.overlaps(this.runner, this.extractPad)) {
+        // Final stage: after using both powers, board the car and depart
         this.playCarDepartAndGoNext();
       }
     } else if (this.stageIdx === 4){

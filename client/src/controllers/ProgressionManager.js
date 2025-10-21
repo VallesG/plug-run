@@ -120,10 +120,10 @@ export default class ProgressionManager {
       });
 
       // Submit score to daily leaderboard
-      submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash);
+      submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
 
       // Submit to all-time leaderboard
-      submitAllTimeScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash);
+      submitAllTimeScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
 
       // Show floating numbers at extraction point (will stay visible during fade and next round's power modal)
       this.scene.vfx?.showFloatingRewards?.(stashEarned, repEarned);
@@ -318,10 +318,10 @@ export default class ProgressionManager {
     updateRouteProgress(this.scene.role, roundNumber);
 
     // Submit score to daily leaderboard
-    submitScore(this.scene.role, roundNumber, this.scene.pveSessionStash);
+    submitScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep);
 
     // Submit to all-time leaderboard
-    submitAllTimeScore(this.scene.role, roundNumber, this.scene.pveSessionStash);
+    submitAllTimeScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep);
 
     // Build buttons array
     const routeID = this.scene.currentRouteID ?? getCurrentRouteID();

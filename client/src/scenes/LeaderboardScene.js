@@ -33,35 +33,14 @@ export default class LeaderboardScene extends Phaser.Scene {
       fontStyle: 'italic'
     }).setOrigin(0.5);
 
-    // User stats (stash and REP)
-    const user = getCurrentUser();
-    const statsBg = this.add.rectangle(cx, 105, Math.min(300, W - 80), 22, 0x1a2038, 0.7)
-      .setOrigin(0.5);
-
-    const stashText = this.add.text(cx - 65, 105, `💰 ${user.stats?.totalStash || 0}`, {
-      fontSize: '13px',
-      color: '#fbbf24',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    const separatorText = this.add.text(cx, 105, '|', {
-      fontSize: '13px',
-      color: '#6b7280'
-    }).setOrigin(0.5);
-
-    const repText = this.add.text(cx + 65, 105, `⭐ ${user.stats?.totalRep || 0}`, {
-      fontSize: '13px',
-      color: '#86efac',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Tab buttons
+    // Tab buttons (closer to title, no stats bar)
     this.currentTab = 'daily';
-    this.createTabButtons(cx, 140);
+    this.currentRole = 'runner'; // Track selected role (runner/plug)
+    this.createTabButtons(cx, 125);
+    this.createRoleButtons(cx, 175);
 
     // Scrollable content container
     this.contentContainer = this.add.container(0, 0);
-    this.currentDetailView = null; // Track if we're in detailed view
 
     this.refreshContent();
 
@@ -70,23 +49,15 @@ export default class LeaderboardScene extends Phaser.Scene {
       .setStrokeStyle(2, 0x2f3660)
       .setInteractive({ useHandCursor: true });
 
-    const backText = this.add.text(60, H - 40, 'Back', {
+    const backText = this.add.text(60, H - 40, 'Menu', {
       fontSize: '16px',
       color: '#cbd1ff'
     }).setOrigin(0.5);
 
     backBtn.on('pointerdown', () => {
-      if (this.currentDetailView) {
-        // Exit detailed view, return to summary
-        this.currentDetailView = null;
-        this.refreshContent();
-      } else {
-        // Exit to menu
-        this.scene.start('MENU');
-      }
+      this.scene.start('MENU');
     });
 
-    // Update back button text based on view
     this.backBtn = backBtn;
     this.backText = backText;
   }
@@ -97,9 +68,9 @@ export default class LeaderboardScene extends Phaser.Scene {
     const gap = 10;
 
     const tabs = [
-      { key: 'daily', label: '🏆 Daily', x: cx - tabW - gap },
-      { key: 'alltime', label: '📅 All-Time', x: cx },
-      { key: 'pvp', label: '⚔️ PvP', x: cx + tabW + gap }
+      { key: 'daily', label: 'Daily', x: cx - tabW - gap },
+      { key: 'alltime', label: 'All-Time', x: cx },
+      { key: 'pvp', label: 'PvP', x: cx + tabW + gap }
     ];
 
     this.tabButtons = {};
@@ -126,9 +97,42 @@ export default class LeaderboardScene extends Phaser.Scene {
     });
   }
 
+  createRoleButtons(cx, y) {
+    const roleW = 90;
+    const roleH = 36;
+    const gap = 10;
+
+    const roles = [
+      { key: 'runner', label: 'Runner', x: cx - roleW/2 - gap/2 },
+      { key: 'plug', label: 'Plug', x: cx + roleW/2 + gap/2 }
+    ];
+
+    this.roleButtons = {};
+    this.roleTexts = {};
+
+    roles.forEach(role => {
+      const isActive = role.key === this.currentRole;
+      const bg = this.add.rectangle(role.x, y, roleW, roleH, isActive ? 0x2a1a38 : 0x1a2038, 1)
+        .setStrokeStyle(2, isActive ? 0x60a5fa : 0x2f3660)
+        .setInteractive({ useHandCursor: true });
+
+      const text = this.add.text(role.x, y, role.label, {
+        fontSize: '13px',
+        color: isActive ? '#93c5fd' : '#aab5ff',
+        fontStyle: isActive ? 'bold' : ''
+      }).setOrigin(0.5);
+
+      bg.on('pointerdown', () => {
+        this.switchRole(role.key);
+      });
+
+      this.roleButtons[role.key] = bg;
+      this.roleTexts[role.key] = text;
+    });
+  }
+
   switchTab(tab) {
     this.currentTab = tab;
-    this.currentDetailView = null; // Reset detail view when switching tabs
 
     // Update tab visuals
     Object.keys(this.tabButtons).forEach(key => {
@@ -145,39 +149,33 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.refreshContent();
   }
 
+  switchRole(role) {
+    this.currentRole = role;
+
+    // Update role button visuals
+    Object.keys(this.roleButtons).forEach(key => {
+      const isActive = key === role;
+      this.roleButtons[key]
+        .setFillStyle(isActive ? 0x2a1a38 : 0x1a2038)
+        .setStrokeStyle(2, isActive ? 0x60a5fa : 0x2f3660);
+
+      this.roleTexts[key]
+        .setColor(isActive ? '#93c5fd' : '#aab5ff')
+        .setFontStyle(isActive ? 'bold' : '');
+    });
+
+    this.refreshContent();
+  }
+
   refreshContent() {
     // Clear existing content
     this.contentContainer?.removeAll(true);
 
-    // Update back button text
-    if (this.currentDetailView) {
-      this.backText?.setText('← Back');
-    } else {
-      this.backText?.setText('Menu');
-    }
-
-    if (this.currentDetailView) {
-      this.showDetailedView(this.currentDetailView.type, this.currentDetailView.role);
-    } else {
-      this.showSummaryView();
-    }
-  }
-
-  showSummaryView() {
     const cx = this.scale.width / 2;
-    let y = 205;
+    const W = this.scale.width;
+    let y = 230;
 
-    if (this.currentTab === 'daily') {
-      // Daily tab: Top Runners and Top Plugs
-      y = this.createSummaryBlock('🏃 Top Runners (Today)', 'runner', 'daily', cx, y);
-      y += 20;
-      y = this.createSummaryBlock('🚨 Top Plugs (Today)', 'plug', 'daily', cx, y);
-    } else if (this.currentTab === 'alltime') {
-      // All-time tab
-      y = this.createSummaryBlock('🏃 Top Runners (All-Time)', 'runner', 'alltime', cx, y);
-      y += 20;
-      y = this.createSummaryBlock('🚨 Top Plugs (All-Time)', 'plug', 'alltime', cx, y);
-    } else {
+    if (this.currentTab === 'pvp') {
       // PvP tab - coming soon
       const comingSoon = this.add.text(cx, y + 80, 'PvP Leaderboards\nComing Soon', {
         fontSize: '18px',
@@ -185,97 +183,12 @@ export default class LeaderboardScene extends Phaser.Scene {
         align: 'center'
       }).setOrigin(0.5);
       this.contentContainer.add(comingSoon);
-    }
-  }
-
-  createSummaryBlock(title, role, type, cx, y) {
-    const blockW = Math.min(400, this.scale.width - 40);
-    const entryLimit = this.scale.height > 600 ? 5 : 3;
-
-    // Get data
-    const topScores = type === 'daily'
-      ? getTopScores(role, entryLimit)
-      : getAllTimeTopScores(role, entryLimit);
-
-    // Block background
-    const blockH = 60 + topScores.length * 35;
-    const blockBg = this.add.rectangle(cx, y + blockH / 2, blockW, blockH, 0x0a0d1a, 0.6)
-      .setStrokeStyle(2, 0x2f3660)
-      .setInteractive({ useHandCursor: true });
-
-    // Make entire block clickable to expand
-    blockBg.on('pointerdown', () => {
-      this.currentDetailView = { type, role };
-      this.refreshContent();
-    });
-
-    // Title
-    const titleText = this.add.text(cx, y + 20, title, {
-      fontSize: '16px',
-      color: '#cbd1ff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Top entries
-    let entryY = y + 50;
-    const entries = [];
-
-    if (topScores.length === 0) {
-      const emptyText = this.add.text(cx, entryY, 'No scores yet', {
-        fontSize: '14px',
-        color: '#6b7280',
-        fontStyle: 'italic'
-      }).setOrigin(0.5);
-      entries.push(emptyText);
-    } else {
-      topScores.forEach((score, index) => {
-        const rank = index + 1;
-        let rankColor = '#aab5ff';
-        if (rank === 1) rankColor = '#fbbf24';
-        else if (rank === 2) rankColor = '#cbd5e1';
-        else if (rank === 3) rankColor = '#d97706';
-
-        const rankText = this.add.text(cx - blockW / 2 + 30, entryY, `#${rank}`, {
-          fontSize: '14px',
-          color: rankColor,
-          fontStyle: rank === 1 ? 'bold' : ''
-        }).setOrigin(0, 0.5);
-
-        const nameText = this.add.text(cx - blockW / 2 + 70, entryY, score.username, {
-          fontSize: '14px',
-          color: '#cbd1ff'
-        }).setOrigin(0, 0.5);
-
-        const statText = this.add.text(cx + blockW / 2 - 30, entryY, `R${score.round}`, {
-          fontSize: '14px',
-          color: '#86efac'
-        }).setOrigin(1, 0.5);
-
-        entries.push(rankText, nameText, statText);
-        entryY += 35;
-      });
+      return;
     }
 
-    // Tap to expand hint
-    const hintText = this.add.text(cx, entryY + 10, '(Tap to view full list)', {
-      fontSize: '12px',
-      color: '#6b7280',
-      fontStyle: 'italic'
-    }).setOrigin(0.5);
-
-    this.contentContainer.add([blockBg, titleText, ...entries, hintText]);
-
-    return entryY + 30;
-  }
-
-  showDetailedView(type, role) {
-    const cx = this.scale.width / 2;
-    const W = this.scale.width;
-    let y = 205;
-
-    // Title
-    const roleLabel = role === 'runner' ? '🏃 Runners' : '🚨 Plugs';
-    const typeLabel = type === 'daily' ? 'Today' : 'All-Time';
+    // Show single leaderboard for selected role and tab
+    const roleLabel = this.currentRole === 'runner' ? 'Runners' : 'Plugs';
+    const typeLabel = this.currentTab === 'daily' ? 'Today' : 'All-Time';
     const title = `${roleLabel} - ${typeLabel}`;
 
     const titleText = this.add.text(cx, y, title, {
@@ -287,17 +200,17 @@ export default class LeaderboardScene extends Phaser.Scene {
     y += 40;
 
     // Get data
-    const topScores = type === 'daily'
-      ? getTopScores(role, 20)
-      : getAllTimeTopScores(role, 20);
+    const topScores = this.currentTab === 'daily'
+      ? getTopScores(this.currentRole, 20)
+      : getAllTimeTopScores(this.currentRole, 20);
 
     const userId = getUserID();
-    const userRank = type === 'daily'
-      ? getUserRank(role)
-      : getAllTimeRank(role);
-    const userScore = type === 'daily'
-      ? getUserScore(role)
-      : getAllTimeScore(role);
+    const userRank = this.currentTab === 'daily'
+      ? getUserRank(this.currentRole)
+      : getAllTimeRank(this.currentRole);
+    const userScore = this.currentTab === 'daily'
+      ? getUserScore(this.currentRole)
+      : getAllTimeScore(this.currentRole);
 
     // Table header
     const headerBg = this.add.rectangle(cx, y, Math.min(400, W - 40), 35, 0x1a2038, 0.5);
@@ -309,12 +222,16 @@ export default class LeaderboardScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#6b7280'
     }).setOrigin(0, 0.5);
-    const roundHeader = this.add.text(cx + 140, y, 'ROUND', {
+    const stashHeader = this.add.text(cx + 80, y, 'STASH', {
+      fontSize: '12px',
+      color: '#6b7280'
+    }).setOrigin(0.5, 0.5);
+    const repHeader = this.add.text(cx + 155, y, 'REP', {
       fontSize: '12px',
       color: '#6b7280'
     }).setOrigin(1, 0.5);
 
-    this.contentContainer.add([titleText, headerBg, rankHeader, nameHeader, roundHeader]);
+    this.contentContainer.add([titleText, headerBg, rankHeader, nameHeader, stashHeader, repHeader]);
     y += 45;
 
     // Entries
@@ -362,21 +279,21 @@ export default class LeaderboardScene extends Phaser.Scene {
           fontStyle: isUser ? 'bold' : ''
         }).setOrigin(0, 0.5);
 
-        // Round
-        const roundText = this.add.text(cx + 140, y, entry.round, {
+        // Stash
+        const stashText = this.add.text(cx + 80, y, entry.stash || 0, {
           fontSize: '14px',
           color: '#86efac'
+        }).setOrigin(0.5, 0.5);
+
+        // Rep (formatted to 2 decimals)
+        const repValue = entry.rep || 0;
+        const repFormatted = repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2);
+        const repText = this.add.text(cx + 155, y, repFormatted, {
+          fontSize: '14px',
+          color: '#ffd166'
         }).setOrigin(1, 0.5);
 
-        // Winner crown
-        if (rank === 1) {
-          const crown = this.add.text(cx - 160, y, '👑', {
-            fontSize: '16px'
-          }).setOrigin(0.5, 0.5);
-          entries.push(crown);
-        }
-
-        entries.push(rowBg, rankText, nameText, roundText);
+        entries.push(rowBg, rankText, nameText, stashText, repText);
         y += 35;
       });
     }
@@ -396,12 +313,22 @@ export default class LeaderboardScene extends Phaser.Scene {
         fontStyle: 'bold'
       }).setOrigin(0, 0.5);
 
-      const yourScoreText = this.add.text(cx + 140, y, `Round ${userScore.round}`, {
+      const stashValue = userScore.stash || 0;
+      const repValue = userScore.rep || 0;
+      const repFormatted = repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2);
+
+      const yourStashText = this.add.text(cx + 50, y, `Stash: ${stashValue}`, {
         fontSize: '14px',
         color: '#86efac'
+      }).setOrigin(0, 0.5);
+
+      const yourRepText = this.add.text(cx + 155, y, `Rep: ${repFormatted}`, {
+        fontSize: '14px',
+        color: '#ffd166'
       }).setOrigin(1, 0.5);
 
-      this.contentContainer.add([userBg, yourRankText, yourScoreText]);
+      this.contentContainer.add([userBg, yourRankText, yourStashText, yourRepText]);
     }
   }
+
 }

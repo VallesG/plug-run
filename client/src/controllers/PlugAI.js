@@ -95,8 +95,27 @@ export function resetPlugOrientation(scene) {
  */
 export function updatePlugBehavior(scene, dt) {
   const d = scene.defender;
-  const ax = scene.attacker.x;
-  const ay = scene.attacker.y;
+
+  // Determine target (runner or decoy with scaling difficulty)
+  let targetX = scene.attacker.x;
+  let targetY = scene.attacker.y;
+
+  // Decoy detection with round-based scaling (AI gets smarter over time)
+  if (scene.decoySprite && scene.decoySprite.active) {
+    const round = scene.pveRound || 1;
+    // Early rounds: AI always falls for decoy
+    // Round 50+: AI rarely falls for decoy
+    // Formula: 95% chance at round 1 → 5% chance at round 50+
+    const decoyChance = Math.max(0.05, 0.95 - (round - 1) * 0.0184);
+
+    if (Math.random() < decoyChance) {
+      targetX = scene.decoySprite.x;
+      targetY = scene.decoySprite.y;
+    }
+  }
+
+  const ax = targetX;
+  const ay = targetY;
   const speed = scene.meleeEnabled ? scene.plugSpeedNoAmmo : scene.aiPlug.speed;
 
   // Track orientation delay timer (time since AI became active)
@@ -106,7 +125,7 @@ export function updatePlugBehavior(scene, dt) {
   // Check if AI is still in "thinking" phase
   const isOrienting = scene._aiOrientationTimer < scene.aiPlug.orientationDelay;
 
-  // Calculate vector to runner (used for movement, aim, and shooting)
+  // Calculate vector to target (used for movement, aim, and shooting)
   const vx = ax - d.x, vy = ay - d.y;
   const dist = Math.hypot(vx, vy);
 
@@ -146,6 +165,8 @@ export function updatePlugBehavior(scene, dt) {
         const ry = vy / dist + (Math.random() - 0.5) * inaccuracy;
         const weaponType = scene.allowedGuns[(Math.random() * scene.allowedGuns.length) | 0];
         if (scene.roundAmmo[weaponType] && scene.roundAmmo[weaponType] > 0) {
+          // Decrement ammo (fixes infinite ammo bug)
+          scene.roundAmmo[weaponType] -= 1;
           scene.combatSystem.spawnWeaponBurst(d, { x: rx, y: ry }, weaponType, scene.bulletsD);
         }
       }
