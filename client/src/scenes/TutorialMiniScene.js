@@ -464,8 +464,8 @@ export class TutorialMiniScene extends Phaser.Scene {
     });
   }
   computeLayout(){
-    const usableW = Math.max(1, this.scale.gameSize.width);
-    const usableH = Math.max(1, this.scale.gameSize.height);
+    const usableW = Math.max(1, this.scale.width);
+    const usableH = Math.max(1, this.scale.height);
     const MIN_CELL = 14;
     const cellFit = Math.floor(Math.min(usableW / this.cols, usableH / this.rows));
     const cell = Math.max(MIN_CELL, cellFit);
@@ -627,8 +627,8 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   drawArena(){
     const { cell, cols, rows } = this;
-    const width = Math.max(1, this.scale.gameSize.width);
-    const height = Math.max(1, this.scale.gameSize.height);
+    const width = Math.max(1, this.scale.width);
+    const height = Math.max(1, this.scale.height);
     const padX = this.pad.x;
     const padY = this.pad.y;
     const theme = this.theme ?? {};
@@ -820,7 +820,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     cam.setRoundPixels(true);
     cam.setZoom(1);
     cam.setScroll(0, 0);
-    cam.setBounds(0, 0, this.scale.gameSize.width, this.scale.gameSize.height);
+    cam.setBounds(0, 0, this.scale.width, this.scale.height);
   }
   toWorldX(cx){
     return this.pad.x + cx * this.cell + this.cell / 2;
