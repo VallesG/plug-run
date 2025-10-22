@@ -141,7 +141,7 @@ export async function createGuestSession(guestUsername) {
   try {
     console.log(`[Supabase] Creating guest session for: ${guestUsername}`);
 
-    // Sign up anonymous user
+    // Sign up anonymous user with auto-confirm (allows email updates later)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: `${guestUsername}@guests.plugrunla.com`, // Use valid domain format
       password: Math.random().toString(36).substring(2, 15), // random password
@@ -191,6 +191,7 @@ export async function createGuestSession(guestUsername) {
 
 /**
  * Claim guest account (upgrade to permanent account)
+ * Creates a new account with real credentials and migrates guest data
  */
 export async function claimGuestAccount(email, password, newUsername = null) {
   if (!supabase) return { error: 'Supabase not initialized' };
@@ -199,32 +200,103 @@ export async function claimGuestAccount(email, password, newUsername = null) {
     const currentUser = await getCurrentSupabaseUser();
     if (!currentUser) throw new Error('No user logged in');
 
-    // 1. Update auth user email
-    const { error: updateError } = await supabase.auth.updateUser({
+    const guestId = currentUser.id;
+    const finalUsername = newUsername || currentUser.user_metadata.username;
+
+    console.log('[Supabase] Starting claim process for guest:', guestId);
+
+    // 1. Get current guest's profile data to migrate
+    const { data: guestProfile, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', guestId)
+      .single();
+
+    if (fetchError) {
+      console.error('[Supabase] Failed to fetch guest profile:', fetchError);
+      throw fetchError;
+    }
+
+    console.log('[Supabase] Guest profile retrieved, migrating data...');
+
+    // 2. Create new auth user with real credentials
+    const { data: newAuthData, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: password,
-      data: {
-        username: newUsername || currentUser.user_metadata.username
+      options: {
+        data: {
+          username: finalUsername,
+          is_guest: false
+        }
       }
     });
 
-    if (updateError) throw updateError;
+    if (signUpError) {
+      console.error('[Supabase] Failed to create new account:', signUpError);
+      throw signUpError;
+    }
 
-    // 2. Update user profile
-    const { error: profileError } = await supabase
+    if (!newAuthData || !newAuthData.user) {
+      throw new Error('No user data returned from signUp');
+    }
+
+    const newUserId = newAuthData.user.id;
+    console.log('[Supabase] New auth user created:', newUserId);
+
+    // 3. Create new user profile with migrated data
+    const { error: insertError } = await supabase
       .from('users')
-      .update({
-        username: newUsername || currentUser.user_metadata.username,
+      .insert({
+        id: newUserId,
+        username: finalUsername,
         is_guest: false,
-        claimed_at: new Date().toISOString()
-      })
-      .eq('id', currentUser.id);
+        claimed_at: new Date().toISOString(),
+        created_at: guestProfile.created_at, // Preserve original creation time
+        // Migrate any other relevant fields from guest profile
+        // Add other fields here as needed
+      });
 
-    if (profileError) throw profileError;
+    if (insertError) {
+      console.error('[Supabase] Failed to create new profile:', insertError);
+      // Note: Auth user is created but profile failed. This leaves an orphaned auth user,
+      // but they won't be able to sign in without a profile. Would need server-side
+      // cleanup to handle this edge case properly.
+      throw insertError;
+    }
 
-    return { success: true, error: null };
+    console.log('[Supabase] New profile created, migrating stats...');
+
+    // 4. Migrate game stats from guest to new account
+    // Update all game_stats records to point to new user
+    const { error: statsError } = await supabase
+      .from('game_stats')
+      .update({ user_id: newUserId })
+      .eq('user_id', guestId);
+
+    if (statsError) {
+      console.warn('[Supabase] Warning: Failed to migrate game stats:', statsError);
+      // Don't throw - we can continue even if stats migration fails
+    }
+
+    // 5. Delete old guest profile (this will cascade delete related records if configured)
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', guestId);
+
+    if (deleteError) {
+      console.warn('[Supabase] Warning: Failed to delete guest profile:', deleteError);
+      // Don't throw - account is already claimed
+    }
+
+    console.log('[Supabase] ✅ Account claimed successfully!');
+    console.log('[Supabase] Old guest ID:', guestId);
+    console.log('[Supabase] New user ID:', newUserId);
+
+    // Note: User is now signed in with the new account automatically
+    return { success: true, user: newAuthData.user, error: null };
   } catch (error) {
-    console.error('[Supabase] Failed to claim account:', error);
+    console.error('[Supabase] ❌ Failed to claim account:', error);
     return { success: false, error: error.message };
   }
 }

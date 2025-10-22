@@ -78,6 +78,17 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
   }).setOrigin(0, 1).setDepth(Z + 2).setScrollFactor(0);
 
   const usernameInput = createHTMLInput(scene, fieldX + fieldW/2, fieldY + 22, fieldW, fieldH, 'text', 'Choose a username');
+
+  // Pre-fill with guest username (stripped of @guests.plugrun.la domain)
+  try {
+    const currentUsername = getUsername();
+    if (currentUsername && currentUsername.includes('@guests.plugrun.la')) {
+      // Extract just the "userXXXXX" part
+      const usernamePart = currentUsername.split('@')[0];
+      usernameInput.value = usernamePart;
+    }
+  } catch {}
+
   const usernameError = scene.add.text(fieldX, fieldY + 45, '', {
     color: COLORS.textError,
     fontSize: '11px'
