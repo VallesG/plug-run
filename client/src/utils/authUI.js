@@ -574,11 +574,7 @@ export function showSignInModal(scene, onSuccess, onCancel) {
         const username = user.user_metadata?.username || 'Player';
         showToast(scene, `Welcome back, ${username}!`, COLORS.success);
         destroyAll();
-
-        // Reload page to fetch user profile
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        onSuccess?.();
       }
     } catch (error) {
       console.error('[AuthUI] Sign in failed:', error);
@@ -712,11 +708,6 @@ export function showSignOutModal(scene, onConfirm, onCancel) {
       showToast(scene, 'Signed out successfully', COLORS.success);
       destroyAll();
       onConfirm?.();
-
-      // Reload to create new guest account
-      setTimeout(() => {
-        window.location.reload();
-      }, 800);
     } catch (error) {
       console.error('[AuthUI] Sign out failed:', error);
       showToast(scene, 'Failed to sign out');

@@ -209,6 +209,9 @@ export class MenuScene extends Phaser.Scene {
     this.reposition();
     this.scale.on('resize', () => this.reposition());
 
+    // Initialize user data from Supabase (async)
+    this.initializeUserData();
+
     // Initial layout to selected index
     this.layoutCards(0, false);
 
@@ -1248,6 +1251,43 @@ export class MenuScene extends Phaser.Scene {
     return c;
   }
 
+  async initializeUserData() {
+    // Get the username before Supabase check
+    const cachedUsername = getUsername();
+
+    // Wait for user data to load from Supabase (checks session and updates localStorage)
+    await getCurrentUser();
+
+    // Get username after Supabase check
+    const currentUsername = getUsername();
+
+    // If username changed, update the profile chip
+    if (cachedUsername !== currentUsername) {
+      this.updateProfileChipSync();
+    }
+  }
+
+  updateProfileChipSync() {
+    // Destroy old chip
+    if (this.profileChip) {
+      this.profileChip.destroy();
+    }
+
+    // Create new chip with updated username
+    this.profileChip = this.makeUserProfileChip();
+
+    // Reposition it
+    this.reposition();
+  }
+
+  async updateProfileChip() {
+    // Wait for user data to be loaded from Supabase
+    await getCurrentUser();
+
+    // Update the chip
+    this.updateProfileChipSync();
+  }
+
   makeDailyBonusButton(){
     // Check if already claimed for today's route (PST-based, synced with daily routes)
     try {
@@ -1636,7 +1676,7 @@ export class MenuScene extends Phaser.Scene {
     veil.on('pointerdown', destroyAll);
   }
 
-  openProfileModal(){
+  async openProfileModal(){
     const W = this.scale.width, H = this.scale.height;
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
@@ -1646,8 +1686,9 @@ export class MenuScene extends Phaser.Scene {
     const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
     const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.96).setDepth(51).setStrokeStyle(2, PALETTE.stroke);
 
+    // Wait for user data to load from Supabase
+    await getCurrentUser();
     const username = getUsername();
-    const user = getCurrentUser();
     const isGuest = isGuestAccount();
 
     // Title with username
@@ -1854,9 +1895,10 @@ export class MenuScene extends Phaser.Scene {
 
       claimBg.on('pointerdown', () => {
         destroyAll();
-        showClaimAccountModal(this, () => {
-          // On success, reload to show updated profile
-          window.location.reload();
+        showClaimAccountModal(this, async () => {
+          // On success, update profile chip and reopen modal
+          await this.updateProfileChip();
+          this.openProfileModal();
         }, () => {
           // On cancel, reopen profile modal
           this.openProfileModal();
@@ -1877,9 +1919,10 @@ export class MenuScene extends Phaser.Scene {
 
       signOutBg.on('pointerdown', () => {
         destroyAll();
-        showSignOutModal(this, () => {
-          // On confirm, reload to create new guest
-          window.location.reload();
+        showSignOutModal(this, async () => {
+          // On confirm, update profile chip to show new guest
+          await this.updateProfileChip();
+          this.openProfileModal();
         }, () => {
           // On cancel, reopen profile modal
           this.openProfileModal();
