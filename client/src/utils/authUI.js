@@ -35,11 +35,12 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
   const veil = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.85)
     .setScrollFactor(0).setDepth(Z).setInteractive();
 
-  // Panel
+  // Panel (interactive to block clicks from reaching veil)
   const panelW = Math.min(400, W - 40);
   const panelH = Math.min(480, H - 60);
   const panel = scene.add.rectangle(cx, cy, panelW, panelH, COLORS.panel, 0.98)
-    .setStrokeStyle(3, COLORS.claim).setScrollFactor(0).setDepth(Z + 1);
+    .setStrokeStyle(3, COLORS.claim).setScrollFactor(0).setDepth(Z + 1)
+    .setInteractive();
 
   // Title
   const title = scene.add.text(cx, cy - panelH/2 + 30, 'CLAIM YOUR ACCOUNT', {
@@ -122,6 +123,12 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
   }).setOrigin(0, 0).setDepth(Z + 2).setScrollFactor(0);
 
   elements.push(confirmLabel, confirmError);
+
+  // Prevent input clicks from closing modal
+  [usernameInput, emailInput, passwordInput, confirmInput].forEach(input => {
+    input.addEventListener('mousedown', (e) => e.stopPropagation());
+    input.addEventListener('click', (e) => e.stopPropagation());
+  });
 
   // Loading indicator (hidden initially)
   const loadingText = scene.add.text(cx, cy + panelH/2 - 110, 'Creating account...', {
@@ -345,8 +352,13 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
     onCancel?.();
   });
 
-  // Veil click closes modal
+  // Veil click closes modal (but not if clicking on input fields)
   veil.on('pointerdown', () => {
+    // Don't close if an input field is focused or if clicking on an input
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.tagName === 'INPUT') {
+      return;
+    }
     destroyAll();
     onCancel?.();
   });
@@ -381,11 +393,12 @@ export function showSignInModal(scene, onSuccess, onCancel) {
   const veil = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.85)
     .setScrollFactor(0).setDepth(Z).setInteractive();
 
-  // Panel
+  // Panel (interactive to block clicks from reaching veil)
   const panelW = Math.min(380, W - 40);
   const panelH = Math.min(360, H - 80);
   const panel = scene.add.rectangle(cx, cy, panelW, panelH, COLORS.panel, 0.98)
-    .setStrokeStyle(3, COLORS.signIn).setScrollFactor(0).setDepth(Z + 1);
+    .setStrokeStyle(3, COLORS.signIn).setScrollFactor(0).setDepth(Z + 1)
+    .setInteractive();
 
   // Title
   const title = scene.add.text(cx, cy - panelH/2 + 30, 'SIGN IN', {
@@ -438,6 +451,12 @@ export function showSignInModal(scene, onSuccess, onCancel) {
   }).setOrigin(0, 0).setDepth(Z + 2).setScrollFactor(0);
 
   elements.push(passwordLabel, passwordError);
+
+  // Prevent input clicks from closing modal
+  [emailInput, passwordInput].forEach(input => {
+    input.addEventListener('mousedown', (e) => e.stopPropagation());
+    input.addEventListener('click', (e) => e.stopPropagation());
+  });
 
   // Loading indicator
   const loadingText = scene.add.text(cx, cy + panelH/2 - 110, 'Signing in...', {
@@ -545,8 +564,13 @@ export function showSignInModal(scene, onSuccess, onCancel) {
     onCancel?.();
   });
 
-  // Veil click closes modal
+  // Veil click closes modal (but not if clicking on input fields)
   veil.on('pointerdown', () => {
+    // Don't close if an input field is focused or if clicking on an input
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.tagName === 'INPUT') {
+      return;
+    }
     destroyAll();
     onCancel?.();
   });
@@ -582,11 +606,12 @@ export function showSignOutModal(scene, onConfirm, onCancel) {
   const veil = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.85)
     .setScrollFactor(0).setDepth(Z).setInteractive();
 
-  // Panel
+  // Panel (interactive to block clicks from reaching veil)
   const panelW = Math.min(360, W - 40);
   const panelH = 220;
   const panel = scene.add.rectangle(cx, cy, panelW, panelH, COLORS.panel, 0.98)
-    .setStrokeStyle(2, COLORS.signOut).setScrollFactor(0).setDepth(Z + 1);
+    .setStrokeStyle(2, COLORS.signOut).setScrollFactor(0).setDepth(Z + 1)
+    .setInteractive();
 
   // Title
   const title = scene.add.text(cx, cy - panelH/2 + 30, 'SIGN OUT?', {
@@ -659,8 +684,13 @@ export function showSignOutModal(scene, onConfirm, onCancel) {
     onCancel?.();
   });
 
-  // Veil click closes modal
+  // Veil click closes modal (but not if clicking on input fields)
   veil.on('pointerdown', () => {
+    // Don't close if an input field is focused or if clicking on an input
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.tagName === 'INPUT') {
+      return;
+    }
     destroyAll();
     onCancel?.();
   });
