@@ -1745,7 +1745,7 @@ export class MenuScene extends Phaser.Scene {
     baseElements.push(runnerBtn, runnerText, plugBtn, plugText);
 
     // Function to update stats display
-    const updateStats = (role) => {
+    const updateStats = async (role) => {
       selectedRole = role;
 
       // Update button visuals
@@ -1765,11 +1765,11 @@ export class MenuScene extends Phaser.Scene {
       statsElements.forEach(el => el?.destroy());
       statsElements = [];
 
-      // Get stats for selected role
-      const dailyRank = getUserRank(role);
-      const dailyScore = getUserScore(role);
-      const allTimeRank = getAllTimeRank(role);
-      const allTimeScore = getAllTimeScore(role);
+      // Get stats for selected role (await since these are now async)
+      const dailyRank = await getUserRank(role);
+      const dailyScore = await getUserScore(role);
+      const allTimeRank = await getAllTimeRank(role);
+      const allTimeScore = await getAllTimeScore(role);
 
       let y = cy - panelH/2 + 110;
 

@@ -45,53 +45,16 @@ export async function submitScore(role, round, stash, rep = 0) {
   const userId = getUserID();
   const username = getUsername();
 
-  const entry = {
-    userId,
-    username,
-    round,
-    stash,
-    rep,
-    timestamp: Date.now()
-  };
+  console.log('[Leaderboard] Submitting score for', username, '- Round', round, 'Stash', stash);
 
-  // 1. Submit to local leaderboard (always works offline)
-  const leaderboard = getLeaderboard(routeID, role);
-  const existingIndex = leaderboard.findIndex(e => e.userId === userId);
-
-  if (existingIndex >= 0) {
-    const existing = leaderboard[existingIndex];
-    if (round > existing.round ||
-        (round === existing.round && stash > existing.stash) ||
-        (round === existing.round && stash === existing.stash && rep > (existing.rep || 0))) {
-      leaderboard[existingIndex] = entry;
-      console.log('[Leaderboard] Updated local score for', username, '- Round', round);
-    } else {
-      console.log('[Leaderboard] Score not better than existing');
-      return { updated: false, rank: existingIndex + 1, local: true };
-    }
-  } else {
-    leaderboard.push(entry);
-    console.log('[Leaderboard] New local score for', username, '- Round', round);
-  }
-
-  leaderboard.sort((a, b) => {
-    if (b.round !== a.round) return b.round - a.round;
-    if (b.stash !== a.stash) return b.stash - a.stash;
-    return (b.rep || 0) - (a.rep || 0);
-  });
-
-  const trimmed = leaderboard.slice(0, 100);
-  saveLeaderboard(routeID, role, trimmed);
-  const rank = trimmed.findIndex(e => e.userId === userId) + 1;
-
-  // 2. Submit to global leaderboard (Supabase) if online
+  // Submit to global leaderboard (Supabase only - no local storage)
   if (isOnline()) {
-    submitScoreToSupabase(role, routeID, round, stash, rep).catch(err => {
+    await submitScoreToSupabase(role, routeID, round, stash, rep).catch(err => {
       console.warn('[Leaderboard] Failed to submit to global leaderboard:', err);
     });
   }
 
-  return { updated: true, rank, total: trimmed.length, local: true };
+  return { updated: true, rank: 0, total: 0, local: false };
 }
 
 // Submit score to Supabase global leaderboard (non-blocking)
@@ -193,44 +156,59 @@ export async function getTodaysLeaderboards() {
   };
 }
 
-// Get user's rank on today's leaderboard
-export function getUserRank(role) {
-  const routeID = getCurrentRouteID();
-  const userId = getUserID();
-  const leaderboard = getLeaderboard(routeID, role);
-
-  const rank = leaderboard.findIndex(e => e.userId === userId) + 1;
-  return rank > 0 ? rank : null;
+// Get user's rank on today's leaderboard (uses Supabase only)
+export async function getUserRank(role) {
+  return await getGlobalDailyRank(role);
 }
 
-// Get user's score on today's leaderboard
-export function getUserScore(role) {
-  const routeID = getCurrentRouteID();
-  const userId = getUserID();
-  const leaderboard = getLeaderboard(routeID, role);
+// Get user's score on today's leaderboard (uses Supabase only)
+export async function getUserScore(role) {
+  if (!isOnline()) return null;
 
-  return leaderboard.find(e => e.userId === userId) || null;
+  try {
+    const routeID = getCurrentRouteID();
+    const userId = getUserID();
+
+    const { data, error } = await supabase
+      .from('daily_scores')
+      .select('round, stash, rep, timestamp')
+      .eq('route_id', routeID)
+      .eq('role', role)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+
+    return data ? {
+      userId,
+      round: data.round,
+      stash: data.stash,
+      rep: data.rep,
+      timestamp: new Date(data.timestamp).getTime()
+    } : null;
+  } catch (error) {
+    console.warn('[Leaderboard] Failed to get user score:', error);
+    return null;
+  }
 }
 
 // Get top N entries (GLOBAL by default, local fallback if offline)
 export async function getTopScores(role, limit = 10) {
   const routeID = getCurrentRouteID();
 
-  // Try global first if online
+  // Fetch from Supabase only (no local fallback)
   if (isOnline()) {
     try {
       const globalScores = await getGlobalDailyLeaderboard(role, routeID, limit);
-      if (globalScores.length > 0) {
-        return globalScores;
-      }
+      return globalScores;
     } catch (error) {
-      console.warn('[Leaderboard] Failed to fetch global top scores, using local:', error);
+      console.warn('[Leaderboard] Failed to fetch global top scores:', error);
+      return [];
     }
   }
 
-  // Fallback to local
-  const leaderboard = getLeaderboard(routeID, role);
-  return leaderboard.slice(0, limit);
+  // Offline - return empty
+  return [];
 }
 
 // Get winners (top scorer for each role)
@@ -316,53 +294,16 @@ export async function submitAllTimeScore(role, round, stash, rep = 0) {
   const userId = getUserID();
   const username = getUsername();
 
-  const entry = {
-    userId,
-    username,
-    round,
-    stash,
-    rep,
-    timestamp: Date.now()
-  };
+  console.log('[AllTime] Submitting all-time score for', username, '- Round', round, 'Stash', stash);
 
-  // 1. Submit to local all-time leaderboard
-  const leaderboard = getAllTimeLeaderboard(role);
-  const existingIndex = leaderboard.findIndex(e => e.userId === userId);
-
-  if (existingIndex >= 0) {
-    const existing = leaderboard[existingIndex];
-    if (round > existing.round ||
-        (round === existing.round && stash > existing.stash) ||
-        (round === existing.round && stash === existing.stash && rep > (existing.rep || 0))) {
-      leaderboard[existingIndex] = entry;
-      console.log('[AllTime] Updated local all-time score for', username, '- Round', round);
-    } else {
-      return { updated: false, rank: existingIndex + 1, local: true };
-    }
-  } else {
-    leaderboard.push(entry);
-    console.log('[AllTime] New local all-time score for', username, '- Round', round);
-  }
-
-  leaderboard.sort((a, b) => {
-    if (b.round !== a.round) return b.round - a.round;
-    if (b.stash !== a.stash) return b.stash - a.stash;
-    return (b.rep || 0) - (a.rep || 0);
-  });
-
-  const trimmed = leaderboard.slice(0, 100);
-  saveAllTimeLeaderboard(role, trimmed);
-  const rank = trimmed.findIndex(e => e.userId === userId) + 1;
-
-  // 2. Submit to global all-time leaderboard (Supabase) if online
-  // Pass: role, stash (this round), rep (this round), bestRound (highest ever)
+  // Submit to global all-time leaderboard (Supabase only - no local storage)
   if (isOnline()) {
-    submitAllTimeScoreToSupabase(role, stash, rep, round).catch(err => {
+    await submitAllTimeScoreToSupabase(role, stash, rep, round).catch(err => {
       console.warn('[AllTime] Failed to submit to global leaderboard:', err);
     });
   }
 
-  return { updated: true, rank, total: trimmed.length, local: true };
+  return { updated: true, rank: 0, total: 0, local: false };
 }
 
 // Submit all-time score to Supabase (non-blocking)
@@ -445,39 +386,55 @@ function saveAllTimeLeaderboard(role, entries) {
 }
 
 // Get user's all-time rank
-export function getAllTimeRank(role) {
-  const userId = getUserID();
-  const leaderboard = getAllTimeLeaderboard(role);
-
-  const rank = leaderboard.findIndex(e => e.userId === userId) + 1;
-  return rank > 0 ? rank : null;
+export async function getAllTimeRank(role) {
+  return await getGlobalAllTimeRank(role);
 }
 
-// Get user's all-time score
-export function getAllTimeScore(role) {
-  const userId = getUserID();
-  const leaderboard = getAllTimeLeaderboard(role);
+// Get user's all-time score (uses Supabase only)
+export async function getAllTimeScore(role) {
+  if (!isOnline()) return null;
 
-  return leaderboard.find(e => e.userId === userId) || null;
+  try {
+    const userId = getUserID();
+
+    const { data, error } = await supabase
+      .from('alltime_scores')
+      .select('total_stash, total_rep, games_played, best_round, timestamp')
+      .eq('role', role)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+
+    return data ? {
+      userId,
+      stash: data.total_stash,
+      rep: data.total_rep,
+      round: data.best_round,
+      gamesPlayed: data.games_played,
+      timestamp: new Date(data.timestamp).getTime()
+    } : null;
+  } catch (error) {
+    console.warn('[AllTime] Failed to get user all-time score:', error);
+    return null;
+  }
 }
 
 // Get top N all-time entries (GLOBAL by default, local fallback if offline)
 export async function getAllTimeTopScores(role, limit = 10) {
-  // Try global first if online
+  // Fetch from Supabase only (no local fallback)
   if (isOnline()) {
     try {
       const globalScores = await getGlobalAllTimeLeaderboard(role, limit);
-      if (globalScores.length > 0) {
-        return globalScores;
-      }
+      return globalScores;
     } catch (error) {
-      console.warn('[Leaderboard] Failed to fetch global all-time scores, using local:', error);
+      console.warn('[Leaderboard] Failed to fetch global all-time scores:', error);
+      return [];
     }
   }
 
-  // Fallback to local
-  const leaderboard = getAllTimeLeaderboard(role);
-  return leaderboard.slice(0, limit);
+  // Offline - return empty
+  return [];
 }
 
 // ============ GLOBAL LEADERBOARDS (SUPABASE) ============
