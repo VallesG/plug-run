@@ -44,7 +44,66 @@ function generateGuestID() {
 // Get or create current user (hybrid: Supabase + localStorage)
 export async function getCurrentUser() {
   try {
-    // First check localStorage (fast, works offline)
+    // Check if there's a Supabase session first (prioritize server state)
+    if (supabaseIsOnline()) {
+      try {
+        const supabaseUser = await getCurrentSupabaseUser();
+
+        // If there's a valid Supabase session, load that user
+        if (supabaseUser) {
+          const stored = localStorage.getItem(STORAGE_KEY_USER);
+          const localUser = stored ? JSON.parse(stored) : null;
+
+          // If localStorage user doesn't match Supabase session, fetch from Supabase
+          if (!localUser || localUser.supabaseId !== supabaseUser.id) {
+            console.log('[UserManager] Supabase session found, loading user profile...');
+            const { profile, error } = await getUserProfile(supabaseUser.id);
+
+            if (profile && !error) {
+              // Create user object from Supabase profile
+              const user = {
+                id: profile.id,
+                supabaseId: profile.id,
+                username: profile.username,
+                isGuest: profile.is_guest,
+                createdAt: new Date(profile.created_at).getTime(),
+                stats: {
+                  totalStash: profile.total_stash || 0,
+                  totalRep: profile.total_rep || 0,
+                  gamesPlayed: profile.games_played || 0,
+                  bestPlugRound: profile.best_plug_round || 0,
+                  bestRunnerRound: profile.best_runner_round || 0
+                }
+              };
+              saveUser(user);
+              console.log('[UserManager] Loaded user from Supabase:', user.username);
+              return user;
+            }
+          } else {
+            // IDs match, just sync latest data
+            const { profile } = await getUserProfile(supabaseUser.id);
+            if (profile) {
+              localUser.username = profile.username;
+              localUser.isGuest = profile.is_guest;
+              localUser.stats.totalStash = profile.total_stash || 0;
+              localUser.stats.totalRep = profile.total_rep || 0;
+              localUser.stats.gamesPlayed = profile.games_played || 0;
+              localUser.stats.bestPlugRound = profile.best_plug_round || 0;
+              localUser.stats.bestRunnerRound = profile.best_runner_round || 0;
+              saveUser(localUser);
+              return localUser;
+            }
+          }
+        }
+      } catch (err) {
+        // Session error means no user signed in - continue to localStorage check
+        if (!err.message?.includes('Auth session missing')) {
+          console.warn('[UserManager] Failed to check Supabase session:', err);
+        }
+      }
+    }
+
+    // No Supabase session or offline - check localStorage
     const stored = localStorage.getItem(STORAGE_KEY_USER);
     if (stored) {
       const user = JSON.parse(stored);
@@ -55,33 +114,6 @@ export async function getCurrentUser() {
         syncGuestToSupabase(user).catch(err => {
           console.error('[UserManager] Failed to sync existing guest:', err);
         });
-      }
-
-      // If user has Supabase ID and we're online, sync from Supabase
-      if (user.supabaseId && supabaseIsOnline()) {
-        try {
-          const supabaseUser = await getCurrentSupabaseUser();
-          if (supabaseUser && supabaseUser.id === user.supabaseId) {
-            // Fetch latest profile from database
-            const { profile } = await getUserProfile(supabaseUser.id);
-            if (profile) {
-              // Update local cache with latest data
-              user.username = profile.username;
-              user.isGuest = profile.is_guest;
-              user.stats.totalStash = profile.total_stash || 0;
-              user.stats.totalRep = profile.total_rep || 0;
-              user.stats.gamesPlayed = profile.games_played || 0;
-              user.stats.bestPlugRound = profile.best_plug_round || 0;
-              user.stats.bestRunnerRound = profile.best_runner_round || 0;
-              saveUser(user);
-            }
-          }
-        } catch (err) {
-          // Session error is OK for guest users - just use local data
-          if (!err.message?.includes('Auth session missing')) {
-            console.warn('[UserManager] Failed to sync with Supabase:', err);
-          }
-        }
       }
 
       return user;
