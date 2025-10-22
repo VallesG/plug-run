@@ -213,12 +213,6 @@ export default class LeaderboardScene extends Phaser.Scene {
       : await getAllTimeTopScores(this.currentRole, 20);
 
     const userId = getUserID();
-    const userRank = this.currentTab === 'daily'
-      ? getUserRank(this.currentRole)
-      : getAllTimeRank(this.currentRole);
-    const userScore = this.currentTab === 'daily'
-      ? getUserScore(this.currentRole)
-      : getAllTimeScore(this.currentRole);
 
     // Table header
     const headerBg = this.add.rectangle(cx, y, Math.min(400, W - 40), 35, 0x1a2038, 0.5);
@@ -244,7 +238,6 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     // Entries
     const entries = [];
-    const userInTop20 = userRank && userRank <= 20;
 
     if (topScores.length === 0) {
       const emptyText = this.add.text(cx, y, 'No scores yet.\nBe the first!', {
@@ -311,40 +304,6 @@ export default class LeaderboardScene extends Phaser.Scene {
     }
 
     this.contentContainer.add(entries);
-
-    // User's rank at bottom (if not in top 20)
-    if (userRank && !userInTop20 && userScore) {
-      y = Math.max(y + 20, this.scale.height - 100);
-
-      const userBg = this.add.rectangle(cx, y, Math.min(400, W - 40), 50, 0x1a2a3a, 0.9)
-        .setStrokeStyle(2, 0xfbbf24);
-
-      const yourRankText = this.add.text(cx - 180, y, `Your Rank: #${userRank}`, {
-        fontSize: '16px',
-        color: '#fbbf24',
-        fontStyle: 'bold'
-      }).setOrigin(0, 0.5);
-
-      const stashValue = userScore.stash || 0;
-      const stashFormatted = formatNumber(stashValue);
-
-      const repValue = userScore.rep || 0;
-      const repFormatted = repValue >= 10000
-        ? formatNumber(repValue)
-        : (repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2));
-
-      const yourStashText = this.add.text(cx + 50, y, `Stash: ${stashFormatted}`, {
-        fontSize: '14px',
-        color: '#86efac'
-      }).setOrigin(0, 0.5);
-
-      const yourRepText = this.add.text(cx + 155, y, `Rep: ${repFormatted}`, {
-        fontSize: '14px',
-        color: '#ffd166'
-      }).setOrigin(1, 0.5);
-
-      this.contentContainer.add([userBg, yourRankText, yourStashText, yourRepText]);
-    }
   }
 
 }
