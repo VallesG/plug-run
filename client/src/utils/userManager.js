@@ -183,10 +183,13 @@ export async function updateUserStats(updates) {
 async function syncStatsToSupabase(user, updates) {
   if (!supabaseIsOnline()) return;
 
-  try {
-    const supabaseUser = await getCurrentSupabaseUser();
-    if (!supabaseUser) return;
+  // Only sync if user has a Supabase ID (i.e., already synced as guest or claimed)
+  if (!user.supabaseId) {
+    console.log('[UserManager] User not yet synced to Supabase, skipping stats sync');
+    return;
+  }
 
+  try {
     // Map local stats to Supabase columns
     const supabaseUpdates = {};
     if (updates.totalStash !== undefined) supabaseUpdates.total_stash = updates.totalStash;
@@ -195,10 +198,13 @@ async function syncStatsToSupabase(user, updates) {
     if (updates.bestPlugRound !== undefined) supabaseUpdates.best_plug_round = updates.bestPlugRound;
     if (updates.bestRunnerRound !== undefined) supabaseUpdates.best_runner_round = updates.bestRunnerRound;
 
-    await updateUserProfile(supabaseUser.id, supabaseUpdates);
+    await updateUserProfile(user.supabaseId, supabaseUpdates);
     console.log('[UserManager] Stats synced to Supabase');
   } catch (error) {
-    console.warn('[UserManager] Failed to sync stats to Supabase:', error);
+    // Ignore auth session errors (user hasn't authenticated yet)
+    if (!error.message?.includes('Auth session missing')) {
+      console.warn('[UserManager] Failed to sync stats to Supabase:', error);
+    }
   }
 }
 

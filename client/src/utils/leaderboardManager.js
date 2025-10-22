@@ -81,6 +81,13 @@ async function submitScoreToSupabase(role, routeID, round, stash, rep) {
     const userId = getUserID();
     const username = getUsername();
 
+    // Only submit if userId is a Supabase UUID (not a local guest ID)
+    // Guest sync happens asynchronously, so we wait until they have a Supabase ID
+    if (userId.startsWith('guest_')) {
+      console.log('[Leaderboard] User not yet synced to Supabase, score will be submitted after sync');
+      return;
+    }
+
     // Upsert to daily_scores
     const { error } = await supabase
       .from('daily_scores')
@@ -342,6 +349,12 @@ async function submitAllTimeScoreToSupabase(role, round, stash, rep) {
 
   try {
     const userId = getUserID();
+
+    // Only submit if userId is a Supabase UUID (not a local guest ID)
+    if (userId.startsWith('guest_')) {
+      console.log('[AllTime] User not yet synced to Supabase, score will be submitted after sync');
+      return;
+    }
 
     // Upsert to alltime_scores
     const { error } = await supabase
