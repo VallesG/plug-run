@@ -125,9 +125,12 @@ export function createGuestAccount() {
 
   // Optionally sync guest to Supabase for global leaderboards (non-blocking)
   if (supabaseIsOnline()) {
+    console.log('[UserManager] Starting guest sync to Supabase...');
     syncGuestToSupabase(user).catch(err => {
-      console.warn('[UserManager] Failed to sync guest to Supabase:', err);
+      console.error('[UserManager] Failed to sync guest to Supabase:', err);
     });
+  } else {
+    console.log('[UserManager] Supabase offline, skipping guest sync');
   }
 
   return user;
@@ -135,20 +138,37 @@ export function createGuestAccount() {
 
 // Sync guest account to Supabase for global leaderboard participation
 async function syncGuestToSupabase(user) {
-  if (!supabaseIsOnline() || !user.isGuest) return;
+  if (!supabaseIsOnline() || !user.isGuest) {
+    console.log('[UserManager] Skipping guest sync - offline or not a guest');
+    return;
+  }
 
   try {
+    console.log(`[UserManager] Creating Supabase session for guest: ${user.username}`);
+
     // Create anonymous Supabase session for this guest
     const { user: supabaseUser, error } = await createGuestSession(user.username);
-    if (error) throw new Error(error);
 
-    console.log('[UserManager] Guest synced to Supabase for leaderboards');
+    if (error) {
+      console.error('[UserManager] createGuestSession error:', error);
+      throw new Error(error);
+    }
+
+    if (!supabaseUser) {
+      console.error('[UserManager] No user returned from createGuestSession');
+      return;
+    }
+
+    console.log('[UserManager] ✅ Guest synced to Supabase! ID:', supabaseUser.id);
 
     // Update local user with Supabase ID (for score submissions)
     user.supabaseId = supabaseUser.id;
     saveUser(user);
+
+    console.log('[UserManager] Saved supabaseId to local user');
   } catch (error) {
-    console.warn('[UserManager] Failed to sync guest to Supabase:', error);
+    console.error('[UserManager] ❌ Failed to sync guest to Supabase:', error);
+    console.error('[UserManager] Error details:', error.message, error.stack);
   }
 }
 

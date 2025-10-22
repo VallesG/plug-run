@@ -133,9 +133,14 @@ export async function signOut() {
  * Create anonymous guest session
  */
 export async function createGuestSession(guestUsername) {
-  if (!supabase) return { error: 'Supabase not initialized' };
+  if (!supabase) {
+    console.error('[Supabase] createGuestSession: Supabase not initialized');
+    return { error: 'Supabase not initialized' };
+  }
 
   try {
+    console.log(`[Supabase] Creating guest session for: ${guestUsername}`);
+
     // Sign up anonymous user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: `${guestUsername}@guest.plugrunla.local`,
@@ -144,11 +149,22 @@ export async function createGuestSession(guestUsername) {
         data: {
           username: guestUsername,
           is_guest: true
-        }
+        },
+        emailRedirectTo: undefined // Don't send confirmation email
       }
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error('[Supabase] Auth signup error:', authError);
+      throw authError;
+    }
+
+    if (!authData || !authData.user) {
+      console.error('[Supabase] No user data returned from signUp');
+      throw new Error('No user data returned from signUp');
+    }
+
+    console.log('[Supabase] Auth user created:', authData.user.id);
 
     // Create user profile
     const { error: profileError } = await supabase
@@ -159,11 +175,16 @@ export async function createGuestSession(guestUsername) {
         is_guest: true
       });
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('[Supabase] Profile insert error:', profileError);
+      throw profileError;
+    }
+
+    console.log('[Supabase] ✅ Guest profile created successfully');
 
     return { user: authData.user, error: null };
   } catch (error) {
-    console.error('[Supabase] Failed to create guest session:', error);
+    console.error('[Supabase] ❌ Failed to create guest session:', error);
     return { user: null, error: error.message };
   }
 }
