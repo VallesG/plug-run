@@ -1492,25 +1492,8 @@ export class BaseGameScene extends Phaser.Scene {
           this.progressionManager.repTracker.onStashPickup(false); // Plug sees runner got real stash
         }
 
-        // PvE mode: Immediately bank this stash to leaderboard (so it's saved even if player dies/leaves)
-        if (this.mode === 'pve') {
-          // Check if this is first time completing this round (for +1 stash)
-          const roundCompletion = recordRoundCompletion(this.role, this.pveRound || 1);
-          if (roundCompletion.earnedStash) {
-            this.pveSessionStash += 1;
-            console.log('[PvE] Stash collected! Session total:', this.pveSessionStash);
-            // Update user's total accumulated stash
-            const user = getCurrentUser();
-            updateUserStats({
-              totalStash: (user.stats?.totalStash || 0) + 1
-            });
-          }
-          // Track route progress for leaderboard
-          updateRouteProgress(this.role, this.pveRound || 1);
-          // Immediately update leaderboards so stash is banked even if player doesn't extract
-          submitScore(this.role, this.pveRound || 1, this.pveSessionStash, this.pveSessionRep);
-          submitAllTimeScore(this.role, this.pveRound || 1, this.pveSessionStash, this.pveSessionRep);
-        }
+        // PvE mode: Stash is awarded on extraction, not pickup
+        // (This prevents double-counting with extraction rewards in ProgressionManager)
 
         // Play pickup sounds (generic pickup + real stash pickup)
         try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
