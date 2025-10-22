@@ -44,42 +44,42 @@ function generateGuestID() {
 // Get or create current user (hybrid: Supabase + localStorage)
 export async function getCurrentUser() {
   try {
-    // Try to get user from Supabase if online
-    if (supabaseIsOnline()) {
-      const supabaseUser = await getCurrentSupabaseUser();
-      if (supabaseUser) {
-        // Fetch full profile from database
-        const { profile } = await getUserProfile(supabaseUser.id);
-        if (profile) {
-          // Cache to localStorage for offline access
-          const localUser = {
-            id: profile.id,
-            username: profile.username,
-            isGuest: profile.is_guest,
-            createdAt: new Date(profile.created_at).getTime(),
-            claimedAt: profile.claimed_at ? new Date(profile.claimed_at).getTime() : null,
-            stats: {
-              totalStash: profile.total_stash || 0,
-              totalRep: profile.total_rep || 0,
-              gamesPlayed: profile.games_played || 0,
-              bestPlugRound: profile.best_plug_round || 0,
-              bestRunnerRound: profile.best_runner_round || 0
-            }
-          };
-          saveUser(localUser);
-          return localUser;
-        }
-      }
-    }
-
-    // Fall back to localStorage (offline mode or no Supabase session)
+    // First check localStorage (fast, works offline)
     const stored = localStorage.getItem(STORAGE_KEY_USER);
     if (stored) {
       const user = JSON.parse(stored);
+
+      // If user has Supabase ID and we're online, sync from Supabase
+      if (user.supabaseId && supabaseIsOnline()) {
+        try {
+          const supabaseUser = await getCurrentSupabaseUser();
+          if (supabaseUser && supabaseUser.id === user.supabaseId) {
+            // Fetch latest profile from database
+            const { profile } = await getUserProfile(supabaseUser.id);
+            if (profile) {
+              // Update local cache with latest data
+              user.username = profile.username;
+              user.isGuest = profile.is_guest;
+              user.stats.totalStash = profile.total_stash || 0;
+              user.stats.totalRep = profile.total_rep || 0;
+              user.stats.gamesPlayed = profile.games_played || 0;
+              user.stats.bestPlugRound = profile.best_plug_round || 0;
+              user.stats.bestRunnerRound = profile.best_runner_round || 0;
+              saveUser(user);
+            }
+          }
+        } catch (err) {
+          // Session error is OK for guest users - just use local data
+          if (!err.message?.includes('Auth session missing')) {
+            console.warn('[UserManager] Failed to sync with Supabase:', err);
+          }
+        }
+      }
+
       return user;
     }
 
-    // No user exists - create guest account
+    // No local user exists - create guest account
     return createGuestAccount();
   } catch (e) {
     console.warn('[UserManager] Failed to load user, creating new guest:', e);

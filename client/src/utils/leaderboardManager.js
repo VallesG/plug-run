@@ -132,13 +132,36 @@ function saveLeaderboard(routeID, role, entries) {
   }
 }
 
-// Get current daily leaderboards
-export function getTodaysLeaderboards() {
+// Get current daily leaderboards (GLOBAL by default, local fallback if offline)
+export async function getTodaysLeaderboards() {
   const routeID = getCurrentRouteID();
+
+  // Try to fetch global leaderboards if online
+  if (isOnline()) {
+    try {
+      const [plugGlobal, runnerGlobal] = await Promise.all([
+        getGlobalDailyLeaderboard('plug', routeID),
+        getGlobalDailyLeaderboard('runner', routeID)
+      ]);
+
+      console.log(`[Leaderboard] Loaded GLOBAL leaderboards - Plug: ${plugGlobal.length} entries, Runner: ${runnerGlobal.length} entries`);
+      return {
+        routeID,
+        plug: plugGlobal,
+        runner: runnerGlobal,
+        source: 'global'
+      };
+    } catch (error) {
+      console.warn('[Leaderboard] Failed to fetch global leaderboards, using local:', error);
+    }
+  }
+
+  // Fallback to local leaderboards if offline or error
   return {
     routeID,
     plug: getLeaderboard(routeID, 'plug'),
-    runner: getLeaderboard(routeID, 'runner')
+    runner: getLeaderboard(routeID, 'runner'),
+    source: 'local'
   };
 }
 
@@ -161,9 +184,23 @@ export function getUserScore(role) {
   return leaderboard.find(e => e.userId === userId) || null;
 }
 
-// Get top N entries
-export function getTopScores(role, limit = 10) {
+// Get top N entries (GLOBAL by default, local fallback if offline)
+export async function getTopScores(role, limit = 10) {
   const routeID = getCurrentRouteID();
+
+  // Try global first if online
+  if (isOnline()) {
+    try {
+      const globalScores = await getGlobalDailyLeaderboard(role, routeID, limit);
+      if (globalScores.length > 0) {
+        return globalScores;
+      }
+    } catch (error) {
+      console.warn('[Leaderboard] Failed to fetch global top scores, using local:', error);
+    }
+  }
+
+  // Fallback to local
   const leaderboard = getLeaderboard(routeID, role);
   return leaderboard.slice(0, limit);
 }
@@ -373,8 +410,21 @@ export function getAllTimeScore(role) {
   return leaderboard.find(e => e.userId === userId) || null;
 }
 
-// Get top N all-time entries
-export function getAllTimeTopScores(role, limit = 10) {
+// Get top N all-time entries (GLOBAL by default, local fallback if offline)
+export async function getAllTimeTopScores(role, limit = 10) {
+  // Try global first if online
+  if (isOnline()) {
+    try {
+      const globalScores = await getGlobalAllTimeLeaderboard(role, limit);
+      if (globalScores.length > 0) {
+        return globalScores;
+      }
+    } catch (error) {
+      console.warn('[Leaderboard] Failed to fetch global all-time scores, using local:', error);
+    }
+  }
+
+  // Fallback to local
   const leaderboard = getAllTimeLeaderboard(role);
   return leaderboard.slice(0, limit);
 }
