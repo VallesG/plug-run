@@ -170,7 +170,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.refreshContent();
   }
 
-  refreshContent() {
+  async refreshContent() {
     // Clear existing content
     this.contentContainer?.removeAll(true);
 
@@ -202,10 +202,10 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     y += 40;
 
-    // Get data
+    // Get data (now async - fetches from global leaderboards)
     const topScores = this.currentTab === 'daily'
-      ? getTopScores(this.currentRole, 20)
-      : getAllTimeTopScores(this.currentRole, 20);
+      ? await getTopScores(this.currentRole, 20)
+      : await getAllTimeTopScores(this.currentRole, 20);
 
     const userId = getUserID();
     const userRank = this.currentTab === 'daily'
