@@ -122,6 +122,13 @@ export async function signOut() {
   try {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+
+    // Clear local storage to ensure user is fully signed out
+    localStorage.removeItem('pr_user');
+    localStorage.removeItem('pr_guest_id');
+    localStorage.removeItem('pr_synced');
+
+    console.log('[Supabase] Sign out successful - cleared local storage');
     return { error: null };
   } catch (error) {
     console.error('[Supabase] Sign out failed:', error);
