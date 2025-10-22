@@ -278,7 +278,29 @@ export async function claimGuestAccount(email, password, newUsername = null) {
       // Don't throw - we can continue even if stats migration fails
     }
 
-    // 5. Delete old guest profile (this will cascade delete related records if configured)
+    // 5. Migrate all-time leaderboard scores
+    const { error: alltimeError } = await supabase
+      .from('alltime_scores')
+      .update({ user_id: newUserId })
+      .eq('user_id', guestId);
+
+    if (alltimeError) {
+      console.warn('[Supabase] Warning: Failed to migrate all-time scores:', alltimeError);
+      // Don't throw - we can continue even if migration fails
+    }
+
+    // 6. Migrate daily leaderboard scores
+    const { error: dailyError } = await supabase
+      .from('daily_scores')
+      .update({ user_id: newUserId })
+      .eq('user_id', guestId);
+
+    if (dailyError) {
+      console.warn('[Supabase] Warning: Failed to migrate daily scores:', dailyError);
+      // Don't throw - we can continue even if migration fails
+    }
+
+    // 7. Delete old guest profile (this will cascade delete related records if configured)
     const { error: deleteError } = await supabase
       .from('users')
       .delete()
