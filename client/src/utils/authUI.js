@@ -58,6 +58,12 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
 
   const elements = [veil, panel, title, subtitle];
 
+  // Disable game keyboard input while modal is open
+  const wasKeyboardEnabled = scene.input?.keyboard?.enabled ?? true;
+  if (scene.input?.keyboard) {
+    scene.input.keyboard.enabled = false;
+  }
+
   // Form fields
   const fieldY = cy - panelH/2 + 100;
   const fieldW = panelW - 80; // Shorter fields (was -60)
@@ -124,10 +130,14 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
 
   elements.push(confirmLabel, confirmError);
 
-  // Prevent input clicks from closing modal
+  // Prevent input clicks from closing modal and keyboard events from reaching Phaser
   [usernameInput, emailInput, passwordInput, confirmInput].forEach(input => {
     input.addEventListener('mousedown', (e) => e.stopPropagation());
     input.addEventListener('click', (e) => e.stopPropagation());
+    // Stop keyboard events from propagating to Phaser (prevents A/D movement keys from interfering)
+    input.addEventListener('keydown', (e) => e.stopPropagation());
+    input.addEventListener('keyup', (e) => e.stopPropagation());
+    input.addEventListener('keypress', (e) => e.stopPropagation());
   });
 
   // Loading indicator (hidden initially)
@@ -371,6 +381,10 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
     passwordInput.remove();
     confirmInput.remove();
     elements.forEach(el => el?.destroy?.());
+    // Re-enable game keyboard input
+    if (scene.input?.keyboard) {
+      scene.input.keyboard.enabled = wasKeyboardEnabled;
+    }
   }
 
   return { destroy: destroyAll };
@@ -416,6 +430,12 @@ export function showSignInModal(scene, onSuccess, onCancel) {
 
   const elements = [veil, panel, title, subtitle];
 
+  // Disable game keyboard input while modal is open
+  const wasKeyboardEnabled = scene.input?.keyboard?.enabled ?? true;
+  if (scene.input?.keyboard) {
+    scene.input.keyboard.enabled = false;
+  }
+
   // Form fields
   const fieldY = cy - panelH/2 + 110;
   const fieldW = panelW - 80; // Shorter fields (was -60)
@@ -452,10 +472,14 @@ export function showSignInModal(scene, onSuccess, onCancel) {
 
   elements.push(passwordLabel, passwordError);
 
-  // Prevent input clicks from closing modal
+  // Prevent input clicks from closing modal and keyboard events from reaching Phaser
   [emailInput, passwordInput].forEach(input => {
     input.addEventListener('mousedown', (e) => e.stopPropagation());
     input.addEventListener('click', (e) => e.stopPropagation());
+    // Stop keyboard events from propagating to Phaser (prevents A/D movement keys from interfering)
+    input.addEventListener('keydown', (e) => e.stopPropagation());
+    input.addEventListener('keyup', (e) => e.stopPropagation());
+    input.addEventListener('keypress', (e) => e.stopPropagation());
   });
 
   // Loading indicator
@@ -580,6 +604,10 @@ export function showSignInModal(scene, onSuccess, onCancel) {
     emailInput.remove();
     passwordInput.remove();
     elements.forEach(el => el?.destroy?.());
+    // Re-enable game keyboard input
+    if (scene.input?.keyboard) {
+      scene.input.keyboard.enabled = wasKeyboardEnabled;
+    }
   }
 
   return { destroy: destroyAll };
@@ -632,6 +660,12 @@ export function showSignOutModal(scene, onConfirm, onCancel) {
   }).setOrigin(0.5).setDepth(Z + 2).setScrollFactor(0);
 
   const elements = [veil, panel, title, warning];
+
+  // Disable game keyboard input while modal is open
+  const wasKeyboardEnabled = scene.input?.keyboard?.enabled ?? true;
+  if (scene.input?.keyboard) {
+    scene.input.keyboard.enabled = false;
+  }
 
   // Buttons
   const btnY = cy + panelH/2 - 40;
@@ -698,6 +732,10 @@ export function showSignOutModal(scene, onConfirm, onCancel) {
   // Cleanup function
   function destroyAll() {
     elements.forEach(el => el?.destroy?.());
+    // Re-enable game keyboard input
+    if (scene.input?.keyboard) {
+      scene.input.keyboard.enabled = wasKeyboardEnabled;
+    }
   }
 
   return { destroy: destroyAll };

@@ -18,6 +18,7 @@ import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundComple
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
+import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { createBottomLeftButtons } from '../utils/authUI.js';
 import { applyStreetWarsAI, updateStreetWarsPlugAI, applyStreetWarsShootingBehavior, updateStreetWarsRunnerAI, considerStreetWarsPowerUse } from '../utils/streetWarsAI.js';
 import PlayerController from '../controllers/PlayerController.js';
@@ -349,6 +350,9 @@ export class BaseGameScene extends Phaser.Scene {
       this.audio.ensureUnlocked(this);
       // Music already started in MenuScene when card was clicked
     } catch {}
+
+    // Portrait mode enforcement overlay for mobile landscape
+    createPortraitOverlay(this);
 
     this.roundPausedForMenu = false;
     this.carrySprite = null;

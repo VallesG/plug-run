@@ -7,6 +7,7 @@ import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore } from '../u
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
+import { createPortraitOverlay } from '../utils/portraitMode.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -132,9 +133,9 @@ export class MenuScene extends Phaser.Scene {
     // Cards data
     const modes = [
       { key:'learn',  title:'Learn the Streets',  sub:'Quick tutorial. Zero pressure.' },
-      { key:'runner', title:'Run the Block',      sub:'Escape endless stash houses. Build your chain.' },
-      { key:'plug',   title:'Defend the Stash',   sub:'Play as the plug. Stop the runner.' },
-      { key:'leaderboard', title:'Leaderboard',   sub:'Top runners on today\'s route.' },
+      { key:'runner', title:'Run the Block',      sub:'Play as the runner. Evade the plug.', showTimer: true },
+      { key:'plug',   title:'Defend the Block',   sub:'Play as the plug. Stop the runner.', showTimer: true },
+      { key:'leaderboard', title:'Leaderboard',   sub:'Top players on today\'s block.' },
       { key:'pvp',    title:'Street Wars',        sub:'1v1 PVP. Coming soon.' }
     ];
 
@@ -142,7 +143,7 @@ export class MenuScene extends Phaser.Scene {
     this.carousel = this.add.container(0, 0).setDepth(3);
 
     modes.forEach((m, idx)=>{
-      const card = this.makeCard(m.title, m.sub, m.key); // rexUI-based card
+      const card = this.makeCard(m.title, m.sub, m.key, m.showTimer); // rexUI-based card
       card.modeKey = m.key;
       card.index = idx;
       this.carousel.add(card);
@@ -153,6 +154,13 @@ export class MenuScene extends Phaser.Scene {
     this.input.on('pointerdown', (p)=>{
       this.dragging = true; this.dragStartX = p.x; this.dragLastX = p.x; this.dragPixels = 0;
       this._tapCandidate = null;
+
+      // Cancel swipe hint animation if user interacts before it plays
+      this.userHasSwiped = true;
+      if (this.swipeHintTimer) {
+        this.swipeHintTimer.remove();
+        this.swipeHintTimer = null;
+      }
     });
     this.input.on('pointermove', (p)=>{
       if (!this.dragging) return;
@@ -256,11 +264,88 @@ export class MenuScene extends Phaser.Scene {
         }
       } catch {}
     });
+
+    // Portrait mode enforcement overlay for mobile landscape
+    createPortraitOverlay(this);
+
+    // Card swipe hint animation (subtle nudge to indicate swipeable)
+    this.showCardSwipeHint();
+
+    // Update card timers every second
+    this.time.addEvent({
+      delay: 1000,
+      loop: true,
+      callback: () => {
+        if (this.cards) {
+          this.cards.forEach(card => {
+            if (card._timerUpdate) {
+              card._timerUpdate();
+            }
+          });
+        }
+      }
+    });
+  }
+
+
+  // Card swipe hint animation
+  showCardSwipeHint(){
+    // Track if user has already interacted
+    this.userHasSwiped = false;
+
+    // Wait a moment after scene loads
+    this.swipeHintTimer = this.time.delayedCall(1200, () => {
+      // Don't play if user already swiped
+      if (this.userHasSwiped) return;
+      if (!this.cards || this.cards.length === 0) return;
+
+      // Get the currently selected card
+      const selectedCard = this.cards[this.selected];
+      if (!selectedCard) return;
+
+      // Store original position
+      const originalX = selectedCard.x;
+
+      // Subtle nudge animation to indicate swipeability
+      this.tweens.add({
+        targets: selectedCard,
+        x: originalX - 20, // Nudge left slightly
+        duration: 300,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: 1, // Do it twice (left-right-left-right)
+        onComplete: () => {
+          // Ensure it's back at original position
+          selectedCard.x = originalX;
+        }
+      });
+    });
+  }
+
+  // Calculate time until next block reset (1:00 AM UTC)
+  getTimeUntilReset(){
+    const now = new Date();
+    const nextReset = new Date();
+
+    // Set to 1:00 AM UTC
+    nextReset.setUTCHours(1, 0, 0, 0);
+
+    // If we're past 1am UTC today, add a day
+    if (now >= nextReset) {
+      nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+    }
+
+    const diff = nextReset - now;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return `${hours}h ${minutes}m ${seconds}s`;
   }
 
   // MENU: UI helpers -------------------------------------------------
   // Simple card with background and text overlay
-  makeCard(title, sub, modeKey){
+  makeCard(title, sub, modeKey, showTimer = false){
     const W = this.scale.width, H = this.scale.height;
     const cw = Math.min(520, Math.floor(W * 0.82));
     const ch = Math.min(320, Math.floor(H * 0.45));
@@ -327,9 +412,37 @@ export class MenuScene extends Phaser.Scene {
     cont.add(titleObj);
     cont.add(addressObj);
 
-    // Subtitle at BOTTOM
-    const subSize = Math.max(11, Math.floor(ch * 0.08));
-    const subTxt = this.add.text(0, ch * 0.35, sub, {
+    // Timer (if enabled) - positioned right below title bar in black space
+    let timerTxt = null;
+    if (showTimer) {
+      const timerSize = Math.max(9, Math.floor(ch * 0.055)); // Smaller font
+      const timerY = -ch * 0.5 + titleBgHeight + 18; // Just below title bar
+      timerTxt = this.add.text(0, timerY, '', {
+        color: '#86efac', // STASH green color
+        fontSize: timerSize + 'px',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 1.5,
+        align: 'center'
+      }).setOrigin(0.5, 0.5);
+      cont.add(timerTxt);
+
+      // Update timer text
+      const updateTimer = () => {
+        if (timerTxt && timerTxt.active) {
+          timerTxt.setText(`Next Block Reset: ${this.getTimeUntilReset()}`);
+        }
+      };
+      updateTimer(); // Initial update
+
+      // Store timer updater on card
+      cont._timerUpdate = updateTimer;
+    }
+
+    // Subtitle at BOTTOM (moved lower if timer is shown)
+    const subSize = Math.max(10, Math.floor(ch * 0.07)); // Smaller to avoid border overlap
+    const subY = ch * 0.40; // Lower position to avoid animation clutter
+    const subTxt = this.add.text(0, subY, sub, {
       color: '#cbd5e1',
       fontSize: subSize + 'px',
       align: 'center',

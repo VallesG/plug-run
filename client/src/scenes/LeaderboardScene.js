@@ -7,6 +7,7 @@ import {
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { getUsername, getUserID, getCurrentUser } from '../utils/userManager.js';
 import { trackLeaderboardView } from '../utils/analytics.js';
+import { createPortraitOverlay } from '../utils/portraitMode.js';
 
 export default class LeaderboardScene extends Phaser.Scene {
   constructor() {
@@ -20,6 +21,9 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     // Background
     this.add.rectangle(cx, H / 2, W, H, 0x080a10, 1);
+
+    // Portrait mode enforcement overlay for mobile landscape
+    createPortraitOverlay(this);
 
     // Title
     this.add.text(cx, 50, 'THE BOARD', {
