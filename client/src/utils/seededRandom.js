@@ -11,26 +11,25 @@ export function createSeededRNG(seed) {
   };
 }
 
-// Calculate current route ID based on PST time
-// Routes reset every 24 hours at 12:00 AM PST (midnight)
+// Calculate current route ID based on UTC time
+// Routes reset every 24 hours at 1:00 AM UTC (6:00 PM PDT/PST)
 // Returns: unique number for each day (YYYYMMDD format)
 export function getCurrentRouteID() {
   // Get current UTC time
   const now = new Date();
 
-  // Convert to PST (UTC-8, or UTC-7 during daylight saving)
-  // For simplicity, we'll use a fixed UTC-8 offset (can adjust for DST if needed)
-  const PST_OFFSET = -8 * 60; // PST is UTC-8
-  const localOffset = now.getTimezoneOffset(); // minutes from UTC
-  const pstTime = new Date(now.getTime() + (localOffset + PST_OFFSET) * 60000);
+  // Subtract 1 hour to shift the day boundary from midnight UTC to 1am UTC
+  // This makes routes reset at 6pm PDT (1am UTC) instead of midnight
+  const offsetTime = new Date(now.getTime() - (1 * 60 * 60 * 1000));
 
-  // Get year, month, day in PST
-  const year = pstTime.getUTCFullYear();
-  const month = pstTime.getUTCMonth() + 1;
-  const day = pstTime.getUTCDate();
+  // Get year, month, day from the offset time
+  const year = offsetTime.getUTCFullYear();
+  const month = offsetTime.getUTCMonth() + 1;
+  const day = offsetTime.getUTCDate();
 
   // Create unique route ID: YYYYMMDD
-  // Example: October 16, 2025 → 20251016
+  // Example: October 22, 2025 at 1:15am UTC (6:15pm PDT Oct 21) → 20251022
+  // Example: October 22, 2025 at 12:30am UTC (5:30pm PDT Oct 21) → 20251021
   const routeID = year * 10000 + month * 100 + day;
 
   return routeID;
