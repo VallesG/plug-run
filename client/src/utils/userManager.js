@@ -1,8 +1,25 @@
-// Local user management system (easily portable to server auth later)
-// Supports guest accounts and claimed accounts
+// User management system with Supabase integration
+// Supports guest accounts (localStorage), claimed accounts (Supabase)
+// Falls back to localStorage-only when offline
+
+import {
+  supabase,
+  isOnline as supabaseIsOnline,
+  getCurrentSupabaseUser,
+  signUpWithEmail,
+  createGuestSession,
+  claimGuestAccount,
+  isUsernameAvailable,
+  getUserProfile,
+  updateUserProfile
+} from './supabaseClient.js';
+
+// Re-export isOnline for other modules
+export const isOnline = supabaseIsOnline;
 
 const STORAGE_KEY_USER = 'pr_user';
 const STORAGE_KEY_GUEST_ID = 'pr_guest_id';
+const STORAGE_KEY_SYNCED = 'pr_synced'; // Track if user data is synced to Supabase
 
 // User object structure
 // {
@@ -24,9 +41,38 @@ function generateGuestID() {
   return Math.floor(10000 + Math.random() * 90000).toString();
 }
 
-// Get or create current user
-export function getCurrentUser() {
+// Get or create current user (hybrid: Supabase + localStorage)
+export async function getCurrentUser() {
   try {
+    // Try to get user from Supabase if online
+    if (supabaseIsOnline()) {
+      const supabaseUser = await getCurrentSupabaseUser();
+      if (supabaseUser) {
+        // Fetch full profile from database
+        const { profile } = await getUserProfile(supabaseUser.id);
+        if (profile) {
+          // Cache to localStorage for offline access
+          const localUser = {
+            id: profile.id,
+            username: profile.username,
+            isGuest: profile.is_guest,
+            createdAt: new Date(profile.created_at).getTime(),
+            claimedAt: profile.claimed_at ? new Date(profile.claimed_at).getTime() : null,
+            stats: {
+              totalStash: profile.total_stash || 0,
+              totalRep: profile.total_rep || 0,
+              gamesPlayed: profile.games_played || 0,
+              bestPlugRound: profile.best_plug_round || 0,
+              bestRunnerRound: profile.best_runner_round || 0
+            }
+          };
+          saveUser(localUser);
+          return localUser;
+        }
+      }
+    }
+
+    // Fall back to localStorage (offline mode or no Supabase session)
     const stored = localStorage.getItem(STORAGE_KEY_USER);
     if (stored) {
       const user = JSON.parse(stored);
@@ -41,7 +87,23 @@ export function getCurrentUser() {
   }
 }
 
-// Create a new guest account
+// Synchronous version for places that can't use async (kept for backward compatibility)
+export function getCurrentUserSync() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_USER);
+    if (stored) {
+      const user = JSON.parse(stored);
+      return user;
+    }
+    // If no stored user, create guest (but won't be synced to Supabase yet)
+    return createGuestAccount();
+  } catch (e) {
+    console.warn('[UserManager] Failed to load user, creating new guest:', e);
+    return createGuestAccount();
+  }
+}
+
+// Create a new guest account (localStorage only initially)
 export function createGuestAccount() {
   const guestID = generateGuestID();
   const user = {
@@ -60,7 +122,34 @@ export function createGuestAccount() {
 
   saveUser(user);
   console.log('[UserManager] Created guest account:', user.username);
+
+  // Optionally sync guest to Supabase for global leaderboards (non-blocking)
+  if (supabaseIsOnline()) {
+    syncGuestToSupabase(user).catch(err => {
+      console.warn('[UserManager] Failed to sync guest to Supabase:', err);
+    });
+  }
+
   return user;
+}
+
+// Sync guest account to Supabase for global leaderboard participation
+async function syncGuestToSupabase(user) {
+  if (!supabaseIsOnline() || !user.isGuest) return;
+
+  try {
+    // Create anonymous Supabase session for this guest
+    const { user: supabaseUser, error } = await createGuestSession(user.username);
+    if (error) throw new Error(error);
+
+    console.log('[UserManager] Guest synced to Supabase for leaderboards');
+
+    // Update local user with Supabase ID (for score submissions)
+    user.supabaseId = supabaseUser.id;
+    saveUser(user);
+  } catch (error) {
+    console.warn('[UserManager] Failed to sync guest to Supabase:', error);
+  }
 }
 
 // Save user to localStorage
@@ -74,18 +163,48 @@ export function saveUser(user) {
   }
 }
 
-// Update user stats
-export function updateUserStats(updates) {
-  const user = getCurrentUser();
+// Update user stats (sync to Supabase if online)
+export async function updateUserStats(updates) {
+  const user = getCurrentUserSync(); // Use sync version to avoid async issues
   user.stats = { ...user.stats, ...updates };
   saveUser(user);
+
+  // Sync to Supabase if online
+  if (supabaseIsOnline()) {
+    syncStatsToSupabase(user, updates).catch(err => {
+      console.warn('[UserManager] Failed to sync stats to Supabase:', err);
+    });
+  }
+
   return user;
 }
 
-// Claim guest account - upgrade to permanent account
-// This is where you'd integrate server auth later
-export function claimAccount(username, email = null, password = null) {
-  const user = getCurrentUser();
+// Sync stats to Supabase (non-blocking)
+async function syncStatsToSupabase(user, updates) {
+  if (!supabaseIsOnline()) return;
+
+  try {
+    const supabaseUser = await getCurrentSupabaseUser();
+    if (!supabaseUser) return;
+
+    // Map local stats to Supabase columns
+    const supabaseUpdates = {};
+    if (updates.totalStash !== undefined) supabaseUpdates.total_stash = updates.totalStash;
+    if (updates.totalRep !== undefined) supabaseUpdates.total_rep = updates.totalRep;
+    if (updates.gamesPlayed !== undefined) supabaseUpdates.games_played = updates.gamesPlayed;
+    if (updates.bestPlugRound !== undefined) supabaseUpdates.best_plug_round = updates.bestPlugRound;
+    if (updates.bestRunnerRound !== undefined) supabaseUpdates.best_runner_round = updates.bestRunnerRound;
+
+    await updateUserProfile(supabaseUser.id, supabaseUpdates);
+    console.log('[UserManager] Stats synced to Supabase');
+  } catch (error) {
+    console.warn('[UserManager] Failed to sync stats to Supabase:', error);
+  }
+}
+
+// Claim guest account - upgrade to permanent account (Supabase integrated)
+export async function claimAccount(username, email, password) {
+  const user = getCurrentUserSync();
 
   if (!user.isGuest) {
     return { success: false, error: 'Account already claimed' };
@@ -96,51 +215,93 @@ export function claimAccount(username, email = null, password = null) {
     return { success: false, error: 'Username must be 3-20 characters' };
   }
 
-  // Check if username is taken (local check - would be server check later)
-  if (isUsernameTaken(username)) {
-    return { success: false, error: 'Username already taken' };
+  // Validate alphanumeric + underscore
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    return { success: false, error: 'Username can only contain letters, numbers, and underscores' };
   }
 
-  // Upgrade account
+  // Check if email and password provided
+  if (!email || !password) {
+    return { success: false, error: 'Email and password are required' };
+  }
+
+  // Validate password length
+  if (password.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters' };
+  }
+
+  // Online mode: Use Supabase
+  if (supabaseIsOnline()) {
+    try {
+      // Check if username is available
+      const { available, error: availError } = await isUsernameAvailable(username);
+      if (availError) throw new Error(availError);
+      if (!available) {
+        return { success: false, error: 'Username already taken' };
+      }
+
+      // If user already has Supabase session (guest), claim it
+      const supabaseUser = await getCurrentSupabaseUser();
+      if (supabaseUser) {
+        // Upgrade existing guest session
+        const { success, error } = await claimGuestAccount(email, password, username);
+        if (error) throw new Error(error);
+      } else {
+        // Create new account
+        const { user: newUser, error } = await signUpWithEmail(email, password, username);
+        if (error) throw new Error(error);
+
+        // Migrate local stats to Supabase
+        await updateUserProfile(newUser.id, {
+          total_stash: user.stats.totalStash || 0,
+          total_rep: user.stats.totalRep || 0,
+          games_played: user.stats.gamesPlayed || 0,
+          best_plug_round: user.stats.bestPlugRound || 0,
+          best_runner_round: user.stats.bestRunnerRound || 0
+        });
+      }
+
+      // Update local user
+      user.username = username;
+      user.isGuest = false;
+      user.claimedAt = Date.now();
+      saveUser(user);
+
+      console.log('[UserManager] Account claimed via Supabase:', username);
+      return { success: true, user };
+    } catch (error) {
+      console.error('[UserManager] Failed to claim account:', error);
+      return { success: false, error: error.message || 'Failed to claim account' };
+    }
+  }
+
+  // Offline mode: Local-only claim (will sync when online)
   user.username = username;
   user.isGuest = false;
   user.claimedAt = Date.now();
-
-  // Would send to server here:
-  // await fetch('/api/claim-account', { method: 'POST', body: { user, email, password } })
-
+  user.pendingClaim = { email, password }; // Store for later sync
   saveUser(user);
-  console.log('[UserManager] Account claimed:', username);
-  return { success: true, user };
-}
 
-// Check if username is already taken (local only for now)
-function isUsernameTaken(username) {
-  // For local-only, just check if it matches current user
-  const user = getCurrentUser();
-  return user.username.toLowerCase() === username.toLowerCase();
-
-  // Server version would be:
-  // const response = await fetch(`/api/check-username?username=${username}`)
-  // return response.json().taken
+  console.log('[UserManager] Account claimed locally (offline):', username);
+  return { success: true, user, offline: true };
 }
 
 // Get username for display
 export function getUsername() {
-  const user = getCurrentUser();
+  const user = getCurrentUserSync();
   return user.username;
 }
 
 // Check if user is guest
 export function isGuestAccount() {
-  const user = getCurrentUser();
+  const user = getCurrentUserSync();
   return user.isGuest;
 }
 
-// Get user ID for leaderboard submissions
+// Get user ID for leaderboard submissions (use Supabase ID if available)
 export function getUserID() {
-  const user = getCurrentUser();
-  return user.id;
+  const user = getCurrentUserSync();
+  return user.supabaseId || user.id;
 }
 
 // Reset user (for testing)
@@ -177,6 +338,7 @@ export function importUserData(userData) {
 
 export default {
   getCurrentUser,
+  getCurrentUserSync,
   createGuestAccount,
   saveUser,
   updateUserStats,
@@ -186,5 +348,6 @@ export default {
   getUserID,
   resetUser,
   exportUserData,
-  importUserData
+  importUserData,
+  isOnline
 };

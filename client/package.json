@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
     "phaser": "^3.90.0",
     "phaser3-rex-plugins": "^1.80.16"
   },

@@ -1,8 +1,9 @@
-// Leaderboard management for daily challenges (local storage, easily portable to server)
-// Tracks daily high scores for Plug and Runner modes
+// Leaderboard management with Supabase integration
+// Supports local leaderboards (localStorage) and global leaderboards (Supabase)
 
 import { getCurrentRouteID } from './seededRandom.js';
-import { getUserID, getUsername } from './userManager.js';
+import { getUserID, getUsername, isOnline } from './userManager.js';
+import { supabase } from './supabaseClient.js';
 
 const STORAGE_KEY_PREFIX = 'pr_leaderboard_';
 const STORAGE_KEY_ALLTIME = 'pr_alltime_';
@@ -17,8 +18,8 @@ const STORAGE_KEY_ALLTIME = 'pr_alltime_';
 //   timestamp: number
 // }
 
-// Submit score to leaderboard
-export function submitScore(role, round, stash, rep = 0) {
+// Submit score to leaderboard (local + global)
+export async function submitScore(role, round, stash, rep = 0) {
   const routeID = getCurrentRouteID();
   const userId = getUserID();
   const username = getUsername();
@@ -32,47 +33,74 @@ export function submitScore(role, round, stash, rep = 0) {
     timestamp: Date.now()
   };
 
-  // Get current leaderboard for this route and role
+  // 1. Submit to local leaderboard (always works offline)
   const leaderboard = getLeaderboard(routeID, role);
-
-  // Check if user already has a score
   const existingIndex = leaderboard.findIndex(e => e.userId === userId);
 
   if (existingIndex >= 0) {
-    // Update if this score is better (higher round, or same round with more stash/rep)
     const existing = leaderboard[existingIndex];
     if (round > existing.round ||
         (round === existing.round && stash > existing.stash) ||
         (round === existing.round && stash === existing.stash && rep > (existing.rep || 0))) {
       leaderboard[existingIndex] = entry;
-      console.log('[Leaderboard] Updated score for', username, '- Round', round);
+      console.log('[Leaderboard] Updated local score for', username, '- Round', round);
     } else {
       console.log('[Leaderboard] Score not better than existing');
-      return { updated: false, rank: existingIndex + 1 };
+      return { updated: false, rank: existingIndex + 1, local: true };
     }
   } else {
-    // Add new entry
     leaderboard.push(entry);
-    console.log('[Leaderboard] New score for', username, '- Round', round);
+    console.log('[Leaderboard] New local score for', username, '- Round', round);
   }
 
-  // Sort by round (desc), then stash (desc), then rep (desc)
   leaderboard.sort((a, b) => {
     if (b.round !== a.round) return b.round - a.round;
     if (b.stash !== a.stash) return b.stash - a.stash;
     return (b.rep || 0) - (a.rep || 0);
   });
 
-  // Keep top 100 only
   const trimmed = leaderboard.slice(0, 100);
-
-  // Save back to storage
   saveLeaderboard(routeID, role, trimmed);
-
-  // Find user's rank
   const rank = trimmed.findIndex(e => e.userId === userId) + 1;
 
-  return { updated: true, rank, total: trimmed.length };
+  // 2. Submit to global leaderboard (Supabase) if online
+  if (isOnline()) {
+    submitScoreToSupabase(role, routeID, round, stash, rep).catch(err => {
+      console.warn('[Leaderboard] Failed to submit to global leaderboard:', err);
+    });
+  }
+
+  return { updated: true, rank, total: trimmed.length, local: true };
+}
+
+// Submit score to Supabase global leaderboard (non-blocking)
+async function submitScoreToSupabase(role, routeID, round, stash, rep) {
+  if (!supabase) return;
+
+  try {
+    const userId = getUserID();
+    const username = getUsername();
+
+    // Upsert to daily_scores
+    const { error } = await supabase
+      .from('daily_scores')
+      .upsert({
+        user_id: userId,
+        route_id: routeID,
+        role: role,
+        round: round,
+        stash: stash,
+        rep: rep || 0,
+        timestamp: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,route_id,role'
+      });
+
+    if (error) throw error;
+    console.log('[Leaderboard] Submitted to global daily leaderboard');
+  } catch (error) {
+    console.error('[Leaderboard] Failed to submit to Supabase:', error);
+  }
 }
 
 // Get leaderboard for a route and role
@@ -218,8 +246,8 @@ export function importLeaderboardData(data) {
 
 // ============ ALL-TIME LEADERBOARDS ============
 
-// Submit all-time score (tracks best ever performance)
-export function submitAllTimeScore(role, round, stash, rep = 0) {
+// Submit all-time score (tracks best ever performance) - local + global
+export async function submitAllTimeScore(role, round, stash, rep = 0) {
   const userId = getUserID();
   const username = getUsername();
 
@@ -232,6 +260,7 @@ export function submitAllTimeScore(role, round, stash, rep = 0) {
     timestamp: Date.now()
   };
 
+  // 1. Submit to local all-time leaderboard
   const leaderboard = getAllTimeLeaderboard(role);
   const existingIndex = leaderboard.findIndex(e => e.userId === userId);
 
@@ -241,13 +270,13 @@ export function submitAllTimeScore(role, round, stash, rep = 0) {
         (round === existing.round && stash > existing.stash) ||
         (round === existing.round && stash === existing.stash && rep > (existing.rep || 0))) {
       leaderboard[existingIndex] = entry;
-      console.log('[AllTime] Updated all-time score for', username, '- Round', round);
+      console.log('[AllTime] Updated local all-time score for', username, '- Round', round);
     } else {
-      return { updated: false, rank: existingIndex + 1 };
+      return { updated: false, rank: existingIndex + 1, local: true };
     }
   } else {
     leaderboard.push(entry);
-    console.log('[AllTime] New all-time score for', username, '- Round', round);
+    console.log('[AllTime] New local all-time score for', username, '- Round', round);
   }
 
   leaderboard.sort((a, b) => {
@@ -258,9 +287,44 @@ export function submitAllTimeScore(role, round, stash, rep = 0) {
 
   const trimmed = leaderboard.slice(0, 100);
   saveAllTimeLeaderboard(role, trimmed);
-
   const rank = trimmed.findIndex(e => e.userId === userId) + 1;
-  return { updated: true, rank, total: trimmed.length };
+
+  // 2. Submit to global all-time leaderboard (Supabase) if online
+  if (isOnline()) {
+    submitAllTimeScoreToSupabase(role, round, stash, rep).catch(err => {
+      console.warn('[AllTime] Failed to submit to global leaderboard:', err);
+    });
+  }
+
+  return { updated: true, rank, total: trimmed.length, local: true };
+}
+
+// Submit all-time score to Supabase (non-blocking)
+async function submitAllTimeScoreToSupabase(role, round, stash, rep) {
+  if (!supabase) return;
+
+  try {
+    const userId = getUserID();
+
+    // Upsert to alltime_scores
+    const { error } = await supabase
+      .from('alltime_scores')
+      .upsert({
+        user_id: userId,
+        role: role,
+        round: round,
+        stash: stash,
+        rep: rep || 0,
+        timestamp: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,role'
+      });
+
+    if (error) throw error;
+    console.log('[AllTime] Submitted to global all-time leaderboard');
+  } catch (error) {
+    console.error('[AllTime] Failed to submit all-time score to Supabase:', error);
+  }
 }
 
 // Get all-time leaderboard
@@ -315,7 +379,159 @@ export function getAllTimeTopScores(role, limit = 10) {
   return leaderboard.slice(0, limit);
 }
 
+// ============ GLOBAL LEADERBOARDS (SUPABASE) ============
+
+/**
+ * Fetch global daily leaderboard from Supabase
+ * @param {string} role - 'runner' or 'plug'
+ * @param {number} routeID - Route ID (date in YYYYMMDD format)
+ * @param {number} limit - Number of entries to fetch (default 100)
+ * @returns {Promise<Array>} Leaderboard entries with usernames
+ */
+export async function getGlobalDailyLeaderboard(role, routeID = null, limit = 100) {
+  if (!isOnline() || !supabase) {
+    console.warn('[Leaderboard] Cannot fetch global leaderboard - offline or Supabase not initialized');
+    return [];
+  }
+
+  try {
+    const targetRouteID = routeID || getCurrentRouteID();
+
+    const { data, error } = await supabase
+      .from('daily_scores')
+      .select(`
+        round,
+        stash,
+        rep,
+        timestamp,
+        users!inner(id, username)
+      `)
+      .eq('route_id', targetRouteID)
+      .eq('role', role)
+      .order('round', { ascending: false })
+      .order('stash', { ascending: false })
+      .order('rep', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    // Transform to match local leaderboard format
+    const leaderboard = data.map(entry => ({
+      userId: entry.users.id,
+      username: entry.users.username,
+      round: entry.round,
+      stash: entry.stash,
+      rep: entry.rep,
+      timestamp: new Date(entry.timestamp).getTime()
+    }));
+
+    console.log(`[Leaderboard] Fetched ${leaderboard.length} global daily scores for ${role}`);
+    return leaderboard;
+  } catch (error) {
+    console.error('[Leaderboard] Failed to fetch global daily leaderboard:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch global all-time leaderboard from Supabase
+ * @param {string} role - 'runner' or 'plug'
+ * @param {number} limit - Number of entries to fetch (default 100)
+ * @returns {Promise<Array>} Leaderboard entries with usernames
+ */
+export async function getGlobalAllTimeLeaderboard(role, limit = 100) {
+  if (!isOnline() || !supabase) {
+    console.warn('[Leaderboard] Cannot fetch global all-time leaderboard - offline or Supabase not initialized');
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('alltime_scores')
+      .select(`
+        round,
+        stash,
+        rep,
+        timestamp,
+        users!inner(id, username)
+      `)
+      .eq('role', role)
+      .order('round', { ascending: false })
+      .order('stash', { ascending: false })
+      .order('rep', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    // Transform to match local leaderboard format
+    const leaderboard = data.map(entry => ({
+      userId: entry.users.id,
+      username: entry.users.username,
+      round: entry.round,
+      stash: entry.stash,
+      rep: entry.rep,
+      timestamp: new Date(entry.timestamp).getTime()
+    }));
+
+    console.log(`[Leaderboard] Fetched ${leaderboard.length} global all-time scores for ${role}`);
+    return leaderboard;
+  } catch (error) {
+    console.error('[Leaderboard] Failed to fetch global all-time leaderboard:', error);
+    return [];
+  }
+}
+
+/**
+ * Get user's global rank for today's route
+ */
+export async function getGlobalDailyRank(role) {
+  if (!isOnline()) return null;
+
+  try {
+    const routeID = getCurrentRouteID();
+    const userId = getUserID();
+
+    // Get all scores better than user's
+    const { count, error } = await supabase
+      .from('daily_scores')
+      .select('*', { count: 'exact', head: true })
+      .eq('route_id', routeID)
+      .eq('role', role)
+      .or(`round.gt.${userId},and(round.eq.${userId},stash.gt.${userId})`);
+
+    if (error) throw error;
+    return (count || 0) + 1; // rank is count + 1
+  } catch (error) {
+    console.error('[Leaderboard] Failed to get global daily rank:', error);
+    return null;
+  }
+}
+
+/**
+ * Get user's global all-time rank
+ */
+export async function getGlobalAllTimeRank(role) {
+  if (!isOnline()) return null;
+
+  try {
+    const userId = getUserID();
+
+    const { count, error } = await supabase
+      .from('alltime_scores')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', role)
+      .or(`round.gt.${userId},and(round.eq.${userId},stash.gt.${userId})`);
+
+    if (error) throw error;
+    return (count || 0) + 1;
+  } catch (error) {
+    console.error('[Leaderboard] Failed to get global all-time rank:', error);
+    return null;
+  }
+}
+
 export default {
+  // Local leaderboards
   submitScore,
   getLeaderboard,
   getTodaysLeaderboards,
@@ -326,5 +542,15 @@ export default {
   isWinner,
   cleanupOldLeaderboards,
   exportLeaderboardData,
-  importLeaderboardData
+  importLeaderboardData,
+  submitAllTimeScore,
+  getAllTimeLeaderboard,
+  getAllTimeRank,
+  getAllTimeScore,
+  getAllTimeTopScores,
+  // Global leaderboards (Supabase)
+  getGlobalDailyLeaderboard,
+  getGlobalAllTimeLeaderboard,
+  getGlobalDailyRank,
+  getGlobalAllTimeRank
 };
