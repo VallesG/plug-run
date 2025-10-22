@@ -143,7 +143,7 @@ export async function createGuestSession(guestUsername) {
 
     // Sign up anonymous user
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: `${guestUsername}@guest.plugrunla.local`,
+      email: `${guestUsername}@guests.plugrunla.com`, // Use valid domain format
       password: Math.random().toString(36).substring(2, 15), // random password
       options: {
         data: {
