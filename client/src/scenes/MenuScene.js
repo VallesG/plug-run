@@ -2,10 +2,11 @@
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
-import { getUsername, getCurrentUser } from '../utils/userManager.js';
+import { getUsername, getCurrentUser, isGuestAccount } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
+import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -1534,6 +1535,7 @@ export class MenuScene extends Phaser.Scene {
 
     const username = getUsername();
     const user = getCurrentUser();
+    const isGuest = isGuestAccount();
 
     // Title with username
     const title = this.add.text(cx, cy - panelH/2 + 25, username, {
@@ -1543,6 +1545,19 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(52);
 
     const baseElements = [veil, panel, title];
+
+    // Guest badge (if guest user)
+    if (isGuest) {
+      const badge = this.add.rectangle(cx + 100, cy - panelH/2 + 25, 55, 20, 0x6b7280, 0.3)
+        .setStrokeStyle(1, 0x9ca3af)
+        .setDepth(52);
+      const badgeText = this.add.text(cx + 100, cy - panelH/2 + 25, 'GUEST', {
+        color: '#9ca3af',
+        fontSize: '10px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(53);
+      baseElements.push(badge, badgeText);
+    }
     let selectedRole = 'runner'; // Default to runner
     let statsElements = [];
 
@@ -1708,6 +1723,56 @@ export class MenuScene extends Phaser.Scene {
 
     // Initialize with runner stats
     updateStats('runner');
+
+    // Auth button (Claim Account or Sign Out)
+    const authY = cy + panelH/2 - 70;
+    if (isGuest) {
+      // Claim Account button
+      const claimBg = this.add.rectangle(cx, authY, 150, 34, 0xfbbf24, 1)
+        .setStrokeStyle(2, 0xffd700)
+        .setDepth(52)
+        .setInteractive({ useHandCursor: true });
+      const claimTx = this.add.text(cx, authY, 'Claim Account', {
+        color: '#000000',
+        fontSize: '14px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(53);
+      baseElements.push(claimBg, claimTx);
+
+      claimBg.on('pointerdown', () => {
+        destroyAll();
+        showClaimAccountModal(this, () => {
+          // On success, reload to show updated profile
+          window.location.reload();
+        }, () => {
+          // On cancel, reopen profile modal
+          this.openProfileModal();
+        });
+      });
+    } else {
+      // Sign Out button
+      const signOutBg = this.add.rectangle(cx, authY, 110, 32, 0xef4444, 0.9)
+        .setStrokeStyle(2, 0xfca5a5)
+        .setDepth(52)
+        .setInteractive({ useHandCursor: true });
+      const signOutTx = this.add.text(cx, authY, 'Sign Out', {
+        color: '#ffffff',
+        fontSize: '14px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(53);
+      baseElements.push(signOutBg, signOutTx);
+
+      signOutBg.on('pointerdown', () => {
+        destroyAll();
+        showSignOutModal(this, () => {
+          // On confirm, reload to create new guest
+          window.location.reload();
+        }, () => {
+          // On cancel, reopen profile modal
+          this.openProfileModal();
+        });
+      });
+    }
 
     // Close button
     const closeBg = this.add.rectangle(cx, cy + panelH/2 - 30, 92, 28, 0x1a2038, 1)

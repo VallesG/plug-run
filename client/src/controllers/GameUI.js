@@ -1,4 +1,5 @@
 import { isPremiumUser, getCurrentRouteProgress } from '../utils/routeProgress.js';
+import { createBottomLeftButtons } from '../utils/authUI.js';
 
 /**
  * GameUI - Handles all UI modals and user interactions
@@ -30,8 +31,8 @@ export default class GameUI {
       .setScrollFactor(0).setDepth(Z - 1).setInteractive();
 
     const panelW = Math.min(480, W - 40);
-    // Increased panel height to accommodate vertically stacked buttons
-    const baseH = 240; // Increased from 180 to fit continue button at bottom
+    // Increased panel height to accommodate vertically stacked buttons + Claim/Settings
+    const baseH = 280; // Increased from 240 to fit Claim/Settings buttons at bottom
     const btnH = 36;
     const btnGap = 10;
     const btnAreaH = buttons.length * btnH + (buttons.length - 1) * btnGap + 40;
@@ -154,7 +155,16 @@ export default class GameUI {
     options.forEach((weapon, idx) => {
       const r = Math.floor(idx / cols);
       const c = idx % cols;
-      const x = startX + c * gridGapX;
+
+      // Center third button (rifle) horizontally if there are 3 weapons in 2x2 grid
+      let x;
+      if (options.length === 3 && cols === 2 && idx === 2) {
+        // Center the third button between the first two
+        x = cx; // Center of panel
+      } else {
+        x = startX + c * gridGapX;
+      }
+
       const y = firstRowY + r * rowGapY;
       lastRowY = y;
 
@@ -221,6 +231,13 @@ export default class GameUI {
 
         registerExtra(continueBg, continueText);
       }
+    } else {
+      // Round 2+: Add Claim/Settings buttons inside panel at bottom-left
+      // Calculate actual panel height (base 280 + weapon buttons area + spacing)
+      const weaponBtnAreaH = 110; // Approx height for weapon selection grid
+      const estimatedPanelH = 280 + weaponBtnAreaH + 60; // Base + buttons + padding
+      const bottomButtons = createBottomLeftButtons(this.scene, cx, cy, panelW, estimatedPanelH, 20005);
+      registerExtra(...bottomButtons);
     }
   }
 
@@ -421,6 +438,13 @@ export default class GameUI {
 
         registerExtra(continueBg, continueText);
       }
+    } else {
+      // Round 2+: Add Claim/Settings buttons inside panel at bottom-left
+      const panelW = panel?.width ?? Math.min(480, this.scene.scale.width - 40);
+      // Use generous panel height estimate to ensure buttons are well inside
+      const estimatedPanelH = 420; // Runner power selection panel height
+      const bottomButtons = createBottomLeftButtons(this.scene, cx, cy, panelW, estimatedPanelH, 20005);
+      registerExtra(...bottomButtons);
     }
   }
 

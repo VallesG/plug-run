@@ -18,6 +18,7 @@ import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundComple
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
+import { createBottomLeftButtons } from '../utils/authUI.js';
 import { applyStreetWarsAI, updateStreetWarsPlugAI, applyStreetWarsShootingBehavior, updateStreetWarsRunnerAI, considerStreetWarsPowerUse } from '../utils/streetWarsAI.js';
 import PlayerController from '../controllers/PlayerController.js';
 import AIController from '../controllers/AIController.js';
@@ -523,10 +524,12 @@ export class BaseGameScene extends Phaser.Scene {
     if (!Object.values(owns).some(Boolean)) {
       DEFAULT_GUNS.forEach((g) => { owns[g] = true; });
     }
-    ['pistol', 'doublebarrel', 'laser'].forEach((g) => {
+    // Ensure basic weapons are always available (removed laser - it's useless)
+    ['pistol', 'doublebarrel'].forEach((g) => {
       if (!owns[g]) owns[g] = true;
     });
-    this.availableGuns = DEFAULT_GUNS.filter((g) => owns[g]);
+    // Filter out laser from available guns
+    this.availableGuns = DEFAULT_GUNS.filter((g) => owns[g] && g !== 'laser');
     if (!this.availableGuns.length) this.availableGuns = ['pistol'];
 
     this.roundAmmo = Object.fromEntries(DEFAULT_GUNS.map((g) => [g, 0]));
@@ -2015,6 +2018,17 @@ export class BaseGameScene extends Phaser.Scene {
         }
       ]
     });
+
+    // Add Claim/Settings buttons inside panel at bottom-left (NOT round 1, since Continue button is there)
+    if (this.pveRound > 1) {
+      const cx = this.cameras.main.centerX;
+      const cy = this.cameras.main.centerY;
+      const panelW = Math.min(480, this.scale.width - 40);
+      const estimatedPanelH = 280; // Generous estimate for this simple modal
+
+      const bottomButtons = createBottomLeftButtons(this, cx, cy, panelW, estimatedPanelH, 20005);
+      modal.registerExtra(...bottomButtons);
+    }
 
     this.currentModal = modal;
   }
