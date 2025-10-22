@@ -49,6 +49,14 @@ export async function getCurrentUser() {
     if (stored) {
       const user = JSON.parse(stored);
 
+      // If guest user doesn't have Supabase ID yet, try to sync them
+      if (user.isGuest && !user.supabaseId && supabaseIsOnline()) {
+        console.log('[UserManager] Found guest without Supabase ID, syncing now...');
+        syncGuestToSupabase(user).catch(err => {
+          console.error('[UserManager] Failed to sync existing guest:', err);
+        });
+      }
+
       // If user has Supabase ID and we're online, sync from Supabase
       if (user.supabaseId && supabaseIsOnline()) {
         try {
