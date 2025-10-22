@@ -8,6 +8,27 @@ import { supabase } from './supabaseClient.js';
 const STORAGE_KEY_PREFIX = 'pr_leaderboard_';
 const STORAGE_KEY_ALLTIME = 'pr_alltime_';
 
+// ============================================
+// NUMBER FORMATTING
+// ============================================
+
+/**
+ * Format large numbers for display (10.2k, 1.5M)
+ * @param {number} value - The number to format
+ * @returns {string} Formatted string
+ */
+export function formatNumber(value) {
+  if (value >= 1000000) {
+    // Format as millions (1.5M)
+    return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  } else if (value >= 10000) {
+    // Format as thousands (10.2k)
+    return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  }
+  // Return as-is for smaller numbers
+  return value.toString();
+}
+
 // Leaderboard entry structure:
 // {
 //   userId: string,
@@ -334,8 +355,9 @@ export async function submitAllTimeScore(role, round, stash, rep = 0) {
   const rank = trimmed.findIndex(e => e.userId === userId) + 1;
 
   // 2. Submit to global all-time leaderboard (Supabase) if online
+  // Pass: role, stash (this round), rep (this round), bestRound (highest ever)
   if (isOnline()) {
-    submitAllTimeScoreToSupabase(role, round, stash, rep).catch(err => {
+    submitAllTimeScoreToSupabase(role, stash, rep, round).catch(err => {
       console.warn('[AllTime] Failed to submit to global leaderboard:', err);
     });
   }
@@ -344,7 +366,8 @@ export async function submitAllTimeScore(role, round, stash, rep = 0) {
 }
 
 // Submit all-time score to Supabase (non-blocking)
-async function submitAllTimeScoreToSupabase(role, round, stash, rep) {
+// Now accumulates totals instead of tracking best ever
+async function submitAllTimeScoreToSupabase(role, stash, rep, bestRound) {
   if (!supabase) return;
 
   try {
@@ -356,22 +379,37 @@ async function submitAllTimeScoreToSupabase(role, round, stash, rep) {
       return;
     }
 
-    // Upsert to alltime_scores
+    // Fetch current all-time record
+    const { data: existing } = await supabase
+      .from('alltime_scores')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('role', role)
+      .single();
+
+    // Calculate new accumulated totals
+    const newTotalStash = (existing?.total_stash || 0) + stash;
+    const newTotalRep = (existing?.total_rep || 0) + rep;
+    const newGamesPlayed = (existing?.games_played || 0) + 1;
+    const newBestRound = Math.max(existing?.best_round || 0, bestRound);
+
+    // Upsert accumulated totals
     const { error } = await supabase
       .from('alltime_scores')
       .upsert({
         user_id: userId,
         role: role,
-        round: round,
-        stash: stash,
-        rep: rep || 0,
+        total_stash: newTotalStash,
+        total_rep: newTotalRep,
+        games_played: newGamesPlayed,
+        best_round: newBestRound,
         timestamp: new Date().toISOString()
       }, {
         onConflict: 'user_id,role'
       });
 
     if (error) throw error;
-    console.log('[AllTime] Submitted to global all-time leaderboard');
+    console.log(`[AllTime] Updated all-time stats - Total Stash: ${newTotalStash}, Total Rep: ${newTotalRep}, Games: ${newGamesPlayed}`);
   } catch (error) {
     console.error('[AllTime] Failed to submit all-time score to Supabase:', error);
   }
@@ -471,9 +509,9 @@ export async function getGlobalDailyLeaderboard(role, routeID = null, limit = 10
       `)
       .eq('route_id', targetRouteID)
       .eq('role', role)
-      .order('round', { ascending: false })
-      .order('stash', { ascending: false })
-      .order('rep', { ascending: false })
+      .order('stash', { ascending: false })  // Sort by stash first (highest wins)
+      .order('rep', { ascending: false })    // Then by rep (tiebreaker)
+      .order('round', { ascending: false })  // Then by round (secondary tiebreaker)
       .limit(limit);
 
     if (error) throw error;
@@ -498,6 +536,7 @@ export async function getGlobalDailyLeaderboard(role, routeID = null, limit = 10
 
 /**
  * Fetch global all-time leaderboard from Supabase
+ * Now shows accumulated totals instead of best ever
  * @param {string} role - 'runner' or 'plug'
  * @param {number} limit - Number of entries to fetch (default 100)
  * @returns {Promise<Array>} Leaderboard entries with usernames
@@ -509,19 +548,19 @@ export async function getGlobalAllTimeLeaderboard(role, limit = 100) {
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('alltime_scores')
       .select(`
-        round,
-        stash,
-        rep,
+        total_stash,
+        total_rep,
+        games_played,
+        best_round,
         timestamp,
         users!inner(id, username)
       `)
       .eq('role', role)
-      .order('round', { ascending: false })
-      .order('stash', { ascending: false })
-      .order('rep', { ascending: false })
+      .order('total_stash', { ascending: false })  // Sort by total stash first
+      .order('total_rep', { ascending: false })    // Then by total rep (tiebreaker)
       .limit(limit);
 
     if (error) throw error;
@@ -530,9 +569,10 @@ export async function getGlobalAllTimeLeaderboard(role, limit = 100) {
     const leaderboard = data.map(entry => ({
       userId: entry.users.id,
       username: entry.users.username,
-      round: entry.round,
-      stash: entry.stash,
-      rep: entry.rep,
+      stash: entry.total_stash,        // Total accumulated stash
+      rep: entry.total_rep,              // Total accumulated rep
+      round: entry.best_round,           // Highest round reached (for display)
+      gamesPlayed: entry.games_played,   // Number of games played
       timestamp: new Date(entry.timestamp).getTime()
     }));
 

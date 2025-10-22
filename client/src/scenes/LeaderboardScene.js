@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import {
   getTopScores, getUserRank, getUserScore,
-  getAllTimeTopScores, getAllTimeRank, getAllTimeScore
+  getAllTimeTopScores, getAllTimeRank, getAllTimeScore,
+  formatNumber
 } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { getUsername, getUserID, getCurrentUser } from '../utils/userManager.js';
@@ -282,15 +283,19 @@ export default class LeaderboardScene extends Phaser.Scene {
           fontStyle: isUser ? 'bold' : ''
         }).setOrigin(0, 0.5);
 
-        // Stash
-        const stashText = this.add.text(cx + 80, y, entry.stash || 0, {
+        // Stash (formatted for large numbers)
+        const stashValue = entry.stash || 0;
+        const stashFormatted = formatNumber(stashValue);
+        const stashText = this.add.text(cx + 80, y, stashFormatted, {
           fontSize: '14px',
           color: '#86efac'
         }).setOrigin(0.5, 0.5);
 
-        // Rep (formatted to 2 decimals)
+        // Rep (formatted to 2 decimals, or k/M for large numbers)
         const repValue = entry.rep || 0;
-        const repFormatted = repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2);
+        const repFormatted = repValue >= 10000
+          ? formatNumber(repValue)
+          : (repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2));
         const repText = this.add.text(cx + 155, y, repFormatted, {
           fontSize: '14px',
           color: '#ffd166'
@@ -317,10 +322,14 @@ export default class LeaderboardScene extends Phaser.Scene {
       }).setOrigin(0, 0.5);
 
       const stashValue = userScore.stash || 0;
-      const repValue = userScore.rep || 0;
-      const repFormatted = repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2);
+      const stashFormatted = formatNumber(stashValue);
 
-      const yourStashText = this.add.text(cx + 50, y, `Stash: ${stashValue}`, {
+      const repValue = userScore.rep || 0;
+      const repFormatted = repValue >= 10000
+        ? formatNumber(repValue)
+        : (repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2));
+
+      const yourStashText = this.add.text(cx + 50, y, `Stash: ${stashFormatted}`, {
         fontSize: '14px',
         color: '#86efac'
       }).setOrigin(0, 0.5);
