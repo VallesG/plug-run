@@ -27,6 +27,9 @@ export class MenuScene extends Phaser.Scene {
   constructor(){ super('MENU'); }
 
   preload(){
+    // Load emblem logo
+    this.load.image('emblem', '/emblem.png');
+
     // Load character sprites for card visuals
     this.load.image('td_runner', '/sprites/td/runner.png');
     this.load.image('td_runner_step', '/sprites/td/runner_step.png');
@@ -100,6 +103,16 @@ export class MenuScene extends Phaser.Scene {
     // Add subtle shadow for depth
     const signShadow = this.add.rectangle(W/2 + 2, logoY + signH/2 + 2, signW, signH, 0x000000, 0.3)
       .setDepth(3);
+
+    // Emblem - circular logo on the left side of the sign
+    const emblemSize = signH * 0.85; // Slightly smaller than sign height
+    this.emblem = this.add.image(
+      W/2 - signW/2 + emblemSize/2 + 8, // Left side with small padding
+      logoY + signH/2,
+      'emblem'
+    )
+      .setDisplaySize(emblemSize, emblemSize)
+      .setDepth(5);
 
     // Static street number for main sign (888 WAY - memorable and consistent)
     const mainStreetNum = 888;
@@ -2030,6 +2043,14 @@ export class MenuScene extends Phaser.Scene {
     // Reposition street sign elements
     this.signShadow?.setPosition(W/2 + 2, logoY + signH/2 + 2);
     this.signBg?.setPosition(W/2, logoY + signH/2);
+
+    // Reposition emblem
+    const cardWidth = Math.min(520, Math.floor(W * 0.82));
+    const signW = cardWidth;
+    const emblemSize = signH * 0.85;
+    this.emblem?.setPosition(W/2 - signW/2 + emblemSize/2 + 8, logoY + signH/2);
+    this.emblem?.setDisplaySize(emblemSize, emblemSize);
+
     this.logo?.setPosition(W/2, logoY + signH/2 - logoSize * 0.35);
     this.logoAddress?.setPosition(W/2, logoY + signH/2 + logoSize * 0.45);
 
