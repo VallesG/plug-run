@@ -1750,10 +1750,10 @@ export class BaseGameScene extends Phaser.Scene {
     updateRouteProgress(this.role, currentRound);
 
     // Submit score to daily leaderboard
-    submitScore(this.role, currentRound, this.pveSessionStash);
+    submitScore(this.role, currentRound, this.pveSessionStash, this.pveSessionRep);
 
     // Submit to all-time leaderboard
-    submitAllTimeScore(this.role, currentRound, this.pveSessionStash);
+    submitAllTimeScore(this.role, currentRound, this.pveSessionStash, this.pveSessionRep);
 
     this.showFloatingRewards(stashEarned, repEarned, origin);
 
