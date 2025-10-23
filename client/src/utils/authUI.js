@@ -858,8 +858,8 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
       }
 
       showClaimAccountModal(scene, () => {
-        // On success, reload
-        window.location.reload();
+        // On success, show success message (no reload needed)
+        console.log('[AuthUI] Account claimed successfully from in-game button');
       }, () => {
         // On cancel, do nothing (game continues)
       });
