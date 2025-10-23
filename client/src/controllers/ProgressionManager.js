@@ -130,9 +130,6 @@ export default class ProgressionManager {
       // Submit score to daily leaderboard
       submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
 
-      // Submit to all-time leaderboard
-      submitAllTimeScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
-
       // Show floating numbers at extraction point (will stay visible during fade and next round's power modal)
       this.scene.vfx?.showFloatingRewards?.(stashEarned, repEarned);
       // Continue with normal extraction sequence (fade, restart, power modal will show automatically)
