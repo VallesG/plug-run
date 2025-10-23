@@ -76,7 +76,26 @@ async function submitScoreToSupabase(role, routeID, round, stash, rep) {
       return;
     }
 
-    // Upsert to daily_scores
+    // Fetch existing score to check if new score is better
+    const { data: existing } = await supabase
+      .from('daily_scores')
+      .select('stash, rep, round')
+      .eq('user_id', userId)
+      .eq('route_id', routeID)
+      .eq('role', role)
+      .single();
+
+    // Only update if new score is better (higher stash, or same stash with higher rep)
+    const shouldUpdate = !existing ||
+                        stash > existing.stash ||
+                        (stash === existing.stash && rep > existing.rep);
+
+    if (!shouldUpdate) {
+      console.log('[Leaderboard] New score not better than existing, skipping update');
+      return;
+    }
+
+    // Upsert to daily_scores (only called if score is better)
     const { error } = await supabase
       .from('daily_scores')
       .upsert({
@@ -92,7 +111,7 @@ async function submitScoreToSupabase(role, routeID, round, stash, rep) {
       });
 
     if (error) throw error;
-    console.log('[Leaderboard] Submitted to global daily leaderboard');
+    console.log('[Leaderboard] Submitted to global daily leaderboard - NEW BEST!');
   } catch (error) {
     console.error('[Leaderboard] Failed to submit to Supabase:', error);
   }
