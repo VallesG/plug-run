@@ -1735,7 +1735,7 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     this.pveSessionStash += stashEarned;
-    this.pveSessionRep += repEarned;
+    this.pveSessionRep = Math.round((this.pveSessionRep || 0) + repEarned);
     this.pveBestRound = Math.max(this.pveBestRound ?? 0, currentRound);
     console.log('[Plug] Round', currentRound, '- Stash earned:', stashEarned, '(first completion:', roundCompletion.isFirstCompletion, ')');
     console.log('[Plug] Session totals - Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep);
@@ -1745,7 +1745,7 @@ export class BaseGameScene extends Phaser.Scene {
     const user = getCurrentUser();
     updateUserStats({
       totalStash: (user.stats?.totalStash || 0) + stashEarned,
-      totalRep: (user.stats?.totalRep || 0) + repEarned
+      totalRep: Math.round((user.stats?.totalRep || 0) + repEarned)
     });
 
     // Track route progress for leaderboard

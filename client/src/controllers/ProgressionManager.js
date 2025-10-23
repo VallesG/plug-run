@@ -104,7 +104,7 @@ export default class ProgressionManager {
       }
 
       this.scene.pveSessionStash += stashEarned;
-      this.scene.pveSessionRep += repEarned;
+      this.scene.pveSessionRep = Math.round((this.scene.pveSessionRep || 0) + repEarned);
       this.scene.pveBestRound = Math.max(this.scene.pveBestRound, this.scene.pveRound);
       console.log('[PvE] Stats - Stash:', stashEarned, 'Rep:', repEarned, 'Total Stash:', this.scene.pveSessionStash, 'Total Rep:', this.scene.pveSessionRep);
       console.log('[PvE] Completion:', roundCompletion.completionCount, 'times, multiplier:', roundCompletion.repMultiplier);
@@ -113,7 +113,7 @@ export default class ProgressionManager {
       const user = getCurrentUser();
       updateUserStats({
         totalStash: (user.stats?.totalStash || 0) + stashEarned,
-        totalRep: (user.stats?.totalRep || 0) + repEarned
+        totalRep: Math.round((user.stats?.totalRep || 0) + repEarned)
       });
 
       // Track route progress for leaderboard
