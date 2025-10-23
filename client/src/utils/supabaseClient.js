@@ -286,25 +286,31 @@ export async function claimGuestAccount(email, password, newUsername = null) {
     }
 
     // 5. Migrate all-time leaderboard scores
-    const { error: alltimeError } = await supabase
+    console.log('[Supabase] Migrating all-time scores from', guestId, 'to', newUserId);
+    const { data: alltimeData, error: alltimeError } = await supabase
       .from('alltime_scores')
       .update({ user_id: newUserId })
-      .eq('user_id', guestId);
+      .eq('user_id', guestId)
+      .select();
 
     if (alltimeError) {
       console.warn('[Supabase] Warning: Failed to migrate all-time scores:', alltimeError);
-      // Don't throw - we can continue even if migration fails
+    } else {
+      console.log('[Supabase] ✅ Migrated', alltimeData?.length || 0, 'all-time score records');
     }
 
     // 6. Migrate daily leaderboard scores
-    const { error: dailyError } = await supabase
+    console.log('[Supabase] Migrating daily scores from', guestId, 'to', newUserId);
+    const { data: dailyData, error: dailyError } = await supabase
       .from('daily_scores')
       .update({ user_id: newUserId })
-      .eq('user_id', guestId);
+      .eq('user_id', guestId)
+      .select();
 
     if (dailyError) {
       console.warn('[Supabase] Warning: Failed to migrate daily scores:', dailyError);
-      // Don't throw - we can continue even if migration fails
+    } else {
+      console.log('[Supabase] ✅ Migrated', dailyData?.length || 0, 'daily score records');
     }
 
     // 7. Delete old guest profile (this will cascade delete related records if configured)
