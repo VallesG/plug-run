@@ -1098,7 +1098,16 @@ export class MenuScene extends Phaser.Scene {
       const totalHeight = leaderboardData.length * lineHeight;
       const scrollDuration = (totalHeight / scrollSpeed) * 1000; // Convert to milliseconds
 
+      // Store active timer to allow cleanup
+      let activeScrollTimer = null;
+
       const scrollLeaderboard = () => {
+        // Clear any existing timer
+        if (activeScrollTimer) {
+          activeScrollTimer.remove();
+          activeScrollTimer = null;
+        }
+
         entries.forEach((entry) => {
           // Reset to starting position
           entry.rank.y = entry.initialY;
@@ -1108,38 +1117,21 @@ export class MenuScene extends Phaser.Scene {
           entry.repLabel.y = entry.initialY;
           entry.repValue.y = entry.initialY;
 
-          // Animate upward scroll with fade effects
+          // Set full alpha at start
           const allTargets = [entry.rank, entry.name, entry.stashLabel, entry.stashValue, entry.repLabel, entry.repValue];
+          allTargets.forEach(target => target.setAlpha(alpha));
+
+          // Animate upward scroll (removed expensive onUpdate callback)
           this.tweens.add({
             targets: allTargets,
             y: entry.initialY - totalHeight - lineHeight * 2, // Scroll all the way up and off screen
             duration: scrollDuration,
             ease: 'Linear',
-            onUpdate: (tween) => {
-              // Fade in when entering view, fade out when leaving
-              const currentY = entry.rank.y;
-              const viewTop = -ch * 0.25;
-              const viewBottom = ch * 0.25;
-
-              // Calculate alpha based on position
-              let fadeAlpha = alpha;
-              if (currentY < viewTop) {
-                // Fading in from top
-                const fadeRange = lineHeight * 2;
-                const distFromTop = viewTop - currentY;
-                fadeAlpha = alpha * Math.max(0, 1 - (distFromTop / fadeRange));
-              } else if (currentY > viewBottom) {
-                // Fading out at bottom
-                const fadeRange = lineHeight * 2;
-                const distFromBottom = currentY - viewBottom;
-                fadeAlpha = alpha * Math.max(0, 1 - (distFromBottom / fadeRange));
-              }
-
-              allTargets.forEach(target => target.setAlpha(fadeAlpha));
-            },
             onComplete: () => {
-              // Loop: restart the scroll after a brief pause
-              this.time.delayedCall(100, scrollLeaderboard);
+              // Loop: restart the scroll after a brief pause (only set timer on last entry)
+              if (entry === entries[entries.length - 1]) {
+                activeScrollTimer = this.time.delayedCall(100, scrollLeaderboard);
+              }
             }
           });
         });
@@ -1147,9 +1139,18 @@ export class MenuScene extends Phaser.Scene {
 
       // Store cleanup function
       cont._animationCleanup = () => {
+        // Cancel the scroll timer to prevent it from restarting
+        if (activeScrollTimer) {
+          activeScrollTimer.remove();
+          activeScrollTimer = null;
+        }
+
+        // Kill all entry tweens
         entries.forEach(entry => {
           this.tweens.killTweensOf([entry.rank, entry.name, entry.stashLabel, entry.stashValue, entry.repLabel, entry.repValue]);
         });
+
+        // Kill glow tweens and update events
         glows.forEach(glow => {
           this.tweens.killTweensOf(glow);
           if (glow._updateEvent) {
