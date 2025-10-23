@@ -228,6 +228,9 @@ export class MenuScene extends Phaser.Scene {
     // Initial layout to selected index
     this.layoutCards(0, false);
 
+    // Show one-time notice for desktop users that game is mobile-optimized
+    this.showDesktopNotice();
+
     // Keep menu silent; stop any residual gameplay music when returning
     try {
       const audio = AudioManager.get(this);
@@ -1108,6 +1111,11 @@ export class MenuScene extends Phaser.Scene {
           activeScrollTimer = null;
         }
 
+        // Define visible bounds (top and bottom of card content area)
+        const visibleTop = -ch * 0.28; // Tighter bound at top to prevent overflow
+        const visibleBottom = ch * 0.3;
+        const fadeRange = lineHeight * 2; // Shorter fade range for quicker clipping
+
         entries.forEach((entry) => {
           // Reset to starting position
           entry.rank.y = entry.initialY;
@@ -1117,16 +1125,34 @@ export class MenuScene extends Phaser.Scene {
           entry.repLabel.y = entry.initialY;
           entry.repValue.y = entry.initialY;
 
-          // Set full alpha at start
           const allTargets = [entry.rank, entry.name, entry.stashLabel, entry.stashValue, entry.repLabel, entry.repValue];
-          allTargets.forEach(target => target.setAlpha(alpha));
 
-          // Animate upward scroll (removed expensive onUpdate callback)
+          // Animate upward scroll with visibility culling
           this.tweens.add({
             targets: allTargets,
-            y: entry.initialY - totalHeight - lineHeight * 2, // Scroll all the way up and off screen
+            y: entry.initialY - totalHeight - lineHeight * 2,
             duration: scrollDuration,
             ease: 'Linear',
+            onUpdate: () => {
+              // Only update alpha based on position (much cheaper than before)
+              const currentY = entry.rank.y;
+              let fadeAlpha = alpha;
+
+              // Hide entries completely when outside visible bounds
+              if (currentY < visibleTop - fadeRange || currentY > visibleBottom + fadeRange) {
+                fadeAlpha = 0;
+              } else if (currentY < visibleTop) {
+                // Fade in from top
+                const distFromTop = visibleTop - currentY;
+                fadeAlpha = alpha * Math.max(0, 1 - (distFromTop / fadeRange));
+              } else if (currentY > visibleBottom) {
+                // Fade out at bottom
+                const distFromBottom = currentY - visibleBottom;
+                fadeAlpha = alpha * Math.max(0, 1 - (distFromBottom / fadeRange));
+              }
+
+              allTargets.forEach(target => target.setAlpha(fadeAlpha));
+            },
             onComplete: () => {
               // Loop: restart the scroll after a brief pause (only set timer on last entry)
               if (entry === entries[entries.length - 1]) {
@@ -1600,6 +1626,88 @@ export class MenuScene extends Phaser.Scene {
       if (this._activeToast === toast) {
         this._activeToast = null;
       }
+    });
+  }
+
+  showDesktopNotice(){
+    // Only show for desktop users (non-touch devices)
+    const isMobile = this.sys.game.device.input.touch;
+    if (isMobile) return;
+
+    // Check if user has already seen the notice
+    try {
+      const hasSeenNotice = localStorage.getItem('pr_desktop_notice_seen');
+      if (hasSeenNotice) return;
+    } catch {}
+
+    // Show notice after a short delay so it doesn't interfere with menu load
+    this.time.delayedCall(1500, () => {
+      // Create a more prominent notice banner at the bottom
+      const W = this.scale.width;
+      const H = this.scale.height;
+      const bannerHeight = 50;
+
+      const banner = this.add.container(W/2, H - bannerHeight/2).setDepth(100);
+
+      // Background
+      const bg = this.add.rectangle(0, 0, W, bannerHeight, 0x1a2038, 0.95)
+        .setStrokeStyle(2, 0x2f3650, 1, 0);
+
+      // Icon
+      const icon = this.add.text(-W/2 + 20, 0, '📱', { fontSize: '24px' }).setOrigin(0, 0.5);
+
+      // Message
+      const message = this.add.text(-W/2 + 60, 0,
+        'Plug Run is optimized for mobile. For the best experience, play on your phone!',
+        {
+          color: '#cbd1ff',
+          fontSize: '14px',
+          wordWrap: { width: W - 180 }
+        }
+      ).setOrigin(0, 0.5);
+
+      // Dismiss button
+      const dismissBtn = this.add.rectangle(W/2 - 50, 0, 80, 32, 0x2a1a38, 1)
+        .setStrokeStyle(1, 0xfbbf24)
+        .setInteractive({ useHandCursor: true });
+
+      const dismissText = this.add.text(W/2 - 50, 0, 'Got it', {
+        color: '#fbbf24',
+        fontSize: '14px'
+      }).setOrigin(0.5);
+
+      banner.add([bg, icon, message, dismissBtn, dismissText]);
+
+      // Slide in from bottom
+      banner.y = H + bannerHeight;
+      this.tweens.add({
+        targets: banner,
+        y: H - bannerHeight/2,
+        duration: 400,
+        ease: 'Cubic.easeOut'
+      });
+
+      // Dismiss functionality
+      const dismiss = () => {
+        // Mark as seen
+        try {
+          localStorage.setItem('pr_desktop_notice_seen', 'true');
+        } catch {}
+
+        // Slide out
+        this.tweens.add({
+          targets: banner,
+          y: H + bannerHeight,
+          duration: 300,
+          ease: 'Cubic.easeIn',
+          onComplete: () => banner.destroy()
+        });
+      };
+
+      dismissBtn.on('pointerdown', dismiss);
+
+      // Auto-dismiss after 8 seconds
+      this.time.delayedCall(8000, dismiss);
     });
   }
 
