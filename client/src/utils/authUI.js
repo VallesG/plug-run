@@ -353,6 +353,11 @@ export function showClaimAccountModal(scene, onSuccess, onCancel) {
       if (result.success) {
         showToast(scene, 'Account claimed! You\'re all set.', COLORS.success);
         destroyAll();
+
+        // Reload user data from Supabase to get the new user ID
+        const { getCurrentUser } = await import('../utils/userManager.js');
+        await getCurrentUser();
+
         onSuccess?.();
       } else {
         throw new Error(result.error || 'Failed to claim account');

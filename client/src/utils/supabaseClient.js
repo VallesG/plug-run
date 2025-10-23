@@ -273,6 +273,9 @@ export async function claimGuestAccount(email, password, newUsername = null) {
 
     console.log('[Supabase] New profile created, migrating stats...');
 
+    // Wait a moment for any in-flight score submissions to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // 4. Migrate game stats from guest to new account
     // Update all game_stats records to point to new user
     const { error: statsError } = await supabase

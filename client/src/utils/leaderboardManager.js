@@ -48,10 +48,14 @@ export async function submitScore(role, round, stash, rep = 0) {
   console.log('[Leaderboard] Submitting score for', username, '- Round', round, 'Stash', stash);
 
   // Submit to global leaderboard (Supabase only - no local storage)
+  // IMPORTANT: Await to ensure submission completes before continuing
   if (isOnline()) {
-    await submitScoreToSupabase(role, routeID, round, stash, rep).catch(err => {
+    try {
+      await submitScoreToSupabase(role, routeID, round, stash, rep);
+      console.log('[Leaderboard] Score submitted successfully');
+    } catch (err) {
       console.warn('[Leaderboard] Failed to submit to global leaderboard:', err);
-    });
+    }
   }
 
   return { updated: true, rank: 0, total: 0, local: false };
@@ -297,10 +301,14 @@ export async function submitAllTimeScore(role, round, stash, rep = 0) {
   console.log('[AllTime] Submitting all-time score for', username, '- Round', round, 'Stash', stash);
 
   // Submit to global all-time leaderboard (Supabase only - no local storage)
+  // IMPORTANT: Await to ensure submission completes before continuing
   if (isOnline()) {
-    await submitAllTimeScoreToSupabase(role, stash, rep, round).catch(err => {
+    try {
+      await submitAllTimeScoreToSupabase(role, stash, rep, round);
+      console.log('[AllTime] All-time score submitted successfully');
+    } catch (err) {
       console.warn('[AllTime] Failed to submit to global leaderboard:', err);
-    });
+    }
   }
 
   return { updated: true, rank: 0, total: 0, local: false };
