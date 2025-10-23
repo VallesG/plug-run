@@ -550,10 +550,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.weapon = this.allowedGuns[0] || null;
     this.refreshAmmoForLoadout();
 
-    this.input.keyboard.on('keydown-ONE',   () => this.setWeapon('pistol'));
-    this.input.keyboard.on('keydown-TWO',   () => this.setWeapon('doublebarrel'));
-    this.input.keyboard.on('keydown-THREE', () => this.setWeapon('laser'));
-    this.input.keyboard.on('keydown-FOUR',  () => this.setWeapon('rifle'));
+    this.input.keyboard.on('keydown-ONE',   () => { if (!this.roundPausedForMenu) this.setWeapon('pistol'); });
+    this.input.keyboard.on('keydown-TWO',   () => { if (!this.roundPausedForMenu) this.setWeapon('doublebarrel'); });
+    this.input.keyboard.on('keydown-THREE', () => { if (!this.roundPausedForMenu) this.setWeapon('rifle'); });
 
     // Runner power stats
     this.runnerPowerStats = {
@@ -722,6 +721,8 @@ export class BaseGameScene extends Phaser.Scene {
       this._mouseRateMs = 140;
       this._pointerDownHandler = (p) => {
         if (p.button !== 0) return;
+        // Ignore clicks while modal is open
+        if (this.roundPausedForMenu) return;
         if (this.role === 'plug') {
           this._mouseDown = true; this.combatSystem.tryMouseFire();
         } else if (this.role === 'runner') {
@@ -735,7 +736,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this._pointerDownHandler);
     this.input.on('pointerup', this._pointerUpHandler);
     // Fallback: ensure left click fires even if desktop detection flips
-    this.input.on('pointerdown', (p)=>{ if (p.button===0 && this.role==='plug') this.combatSystem.tryMouseFire(); });
+    this.input.on('pointerdown', (p)=>{ if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu) this.combatSystem.tryMouseFire(); });
     } else {
       this.makeMobileControls();
     }
@@ -789,7 +790,11 @@ export class BaseGameScene extends Phaser.Scene {
     this.userTookOver = false;
 
     if (!this._runnerAbilityKeyHandler){
-      this._runnerAbilityKeyHandler = () => this.activateRunnerPower(); // single-power fallback
+      this._runnerAbilityKeyHandler = () => {
+        // Ignore key presses while modal is open
+        if (this.roundPausedForMenu) return;
+        this.activateRunnerPower(); // single-power fallback
+      };
     }
     const abilityKeyEvents = ['keydown-Q','keydown-E','keydown-SHIFT'];
     abilityKeyEvents.forEach(evt => this.input.keyboard.off(evt, this._runnerAbilityKeyHandler));

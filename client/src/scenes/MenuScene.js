@@ -155,12 +155,19 @@ export class MenuScene extends Phaser.Scene {
     // Carousel root container to keep z-order tidy
     this.carousel = this.add.container(0, 0).setDepth(3);
 
+    // Store start buttons separately (outside cards)
+    this.startButtons = [];
+
     modes.forEach((m, idx)=>{
       const card = this.makeCard(m.title, m.sub, m.key, m.showTimer); // rexUI-based card
       card.modeKey = m.key;
       card.index = idx;
       this.carousel.add(card);
       this.cards.push(card);
+
+      // Create start button for this card (outside the card container)
+      const startBtn = this.makeStartButton(card, idx);
+      this.startButtons.push(startBtn);
     });
 
     // Controls: swipe + arrows/A-D + Enter/Space
@@ -173,6 +180,10 @@ export class MenuScene extends Phaser.Scene {
       if (this.swipeHintTimer) {
         this.swipeHintTimer.remove();
         this.swipeHintTimer = null;
+      }
+      // Also kill any running nudge tween
+      if (this.cards && this.cards[this.selected]) {
+        this.tweens.killTweensOf(this.cards[this.selected]);
       }
     });
     this.input.on('pointermove', (p)=>{
@@ -460,7 +471,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Subtitle at BOTTOM (moved lower if timer is shown)
     const subSize = Math.max(10, Math.floor(ch * 0.07)); // Smaller to avoid border overlap
-    const subY = ch * 0.40; // Lower position to avoid animation clutter
+    const subY = ch * 0.35; // Raised slightly to make room for button below
     const subTxt = this.add.text(0, subY, sub, {
       color: '#cbd5e1',
       fontSize: subSize + 'px',
@@ -486,6 +497,61 @@ export class MenuScene extends Phaser.Scene {
 
     cont._bg = bg; cont._sub = subTxt;
     return cont;
+  }
+
+  makeStartButton(card, cardIndex) {
+    const W = this.scale.width, H = this.scale.height;
+    const btnWidth = Math.min(200, Math.floor(W * 0.4));
+    const btnHeight = 40;
+
+    const container = this.add.container(0, 0).setDepth(10);
+
+    // Store which card this button belongs to
+    container.cardIndex = cardIndex;
+
+    // Make container itself interactive with a hit area
+    container.setSize(btnWidth, btnHeight);
+    container.setInteractive(
+      new Phaser.Geom.Rectangle(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+    container.input.cursor = 'pointer';
+
+    const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0x2a1a38, 1)
+      .setStrokeStyle(2, 0xfbbf24);
+
+    const text = this.add.text(0, 0, 'START', {
+      fontSize: '16px',
+      color: '#fbbf24',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    container.add([bg, text]);
+
+    // Container launches the specific card for this button
+    container.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+
+      // Cancel nudge animation
+      this.userHasSwiped = true;
+      if (this.swipeHintTimer) {
+        this.swipeHintTimer.remove();
+        this.swipeHintTimer = null;
+      }
+
+      // Get the card this button belongs to
+      const targetCard = this.cards[container.cardIndex];
+      this.tweens.killTweensOf(targetCard);
+
+      // Select and launch the specific card
+      if (container.cardIndex !== this.selected) {
+        this.setSelected(container.cardIndex);
+      }
+      this._tapDirectUsed = true;
+      this.launchCard(targetCard);
+    });
+
+    return container;
   }
 
   addCardVisuals(cont, modeKey, cw, ch){
@@ -1493,6 +1559,31 @@ export class MenuScene extends Phaser.Scene {
         card._animationActive = false;
         card._animationCleanup();
       }
+
+      // Position start button below this card
+      if (this.startButtons && this.startButtons[i]) {
+        const btn = this.startButtons[i];
+        const cardHeight = Math.min(320, Math.floor(this.scale.height * 0.45));
+        const btnY = y + (cardHeight / 2) * scl + 30; // Below card with gap
+
+        // Check if this is first layout (button hasn't been positioned yet)
+        const isFirstLayout = !btn._positioned;
+
+        if (isFirstLayout) {
+          // First layout: set immediately without interpolation
+          btn.setPosition(x, btnY).setAlpha(alpha).setAngle(ang);
+          btn._positioned = true;
+        } else if (tweenBack) {
+          this.tweens.add({ targets: btn, x, y: btnY, alpha, angle: ang, duration: 240, ease: 'Cubic.easeOut' });
+        } else {
+          // Smooth interpolation during drag
+          const lerp = 0.25;
+          btn.x += (x - btn.x) * lerp;
+          btn.y += (btnY - btn.y) * lerp;
+          btn.alpha += (alpha - btn.alpha) * lerp;
+          btn.angle += (ang - btn.angle) * lerp;
+        }
+      }
     });
   }
 
@@ -2136,9 +2227,25 @@ export class MenuScene extends Phaser.Scene {
 
   update(){
     // keyboard navigation
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.A)){ this.selectPrev(); }
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.D)){ this.selectNext(); }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.ENTER) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)){
+    const leftPressed = Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.A);
+    const rightPressed = Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.D);
+    const actionPressed = Phaser.Input.Keyboard.JustDown(this.keys.ENTER) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+
+    // Cancel nudge animation on any keyboard input
+    if (leftPressed || rightPressed || actionPressed) {
+      this.userHasSwiped = true;
+      if (this.swipeHintTimer) {
+        this.swipeHintTimer.remove();
+        this.swipeHintTimer = null;
+      }
+      if (this.cards && this.cards[this.selected]) {
+        this.tweens.killTweensOf(this.cards[this.selected]);
+      }
+    }
+
+    if (leftPressed) { this.selectPrev(); }
+    if (rightPressed) { this.selectNext(); }
+    if (actionPressed) {
       this.launchCard(this.cards[this.selected]);
     }
   }

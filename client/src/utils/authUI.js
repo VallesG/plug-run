@@ -838,19 +838,19 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
   const gap = 8;
   const isGuest = isGuestAccount();
 
-  // Position at bottom-left of the panel (inside the panel)
+  // Position at top-left of the panel, aligned with title text (matches showModal title position)
   const leftEdge = panelX - panelW/2 + 16; // 16px padding from left edge
-  const bottomEdge = panelY + panelH/2 - 85 - btnH/2; // 85px padding from bottom (well inside panel)
+  const topEdge = panelY - panelH/2 + 28; // Exact same Y as title text
 
   // Claim Account button (only for guests)
   if (isGuest) {
-    const claimBg = scene.add.rectangle(leftEdge + btnW/2, bottomEdge, btnW, btnH, COLORS.claim, 0.95)
+    const claimBg = scene.add.rectangle(leftEdge + btnW/2, topEdge, btnW, btnH, COLORS.claim, 0.95)
       .setStrokeStyle(1, 0xffd700)
       .setDepth(Z)
       .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
 
-    const claimText = scene.add.text(leftEdge + btnW/2, bottomEdge, 'Claim', {
+    const claimText = scene.add.text(leftEdge + btnW/2, topEdge, 'Claim', {
       color: '#000000',
       fontSize: '11px',
       fontStyle: 'bold'
@@ -875,13 +875,13 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
 
   // Settings button (always visible) - just icon, no text
   const settingsX = isGuest ? leftEdge + btnW + gap + iconBtnW/2 : leftEdge + iconBtnW/2;
-  const settingsBg = scene.add.rectangle(settingsX, bottomEdge, iconBtnW, btnH, 0x1a2038, 0.95)
+  const settingsBg = scene.add.rectangle(settingsX, topEdge, iconBtnW, btnH, 0x1a2038, 0.95)
     .setStrokeStyle(1, 0x2f3660)
     .setDepth(Z)
     .setScrollFactor(0)
     .setInteractive({ useHandCursor: true });
 
-  const settingsIcon = scene.add.text(settingsX, bottomEdge, '⚙', {
+  const settingsIcon = scene.add.text(settingsX, topEdge, '⚙', {
     color: '#cbd1ff',
     fontSize: '16px'
   }).setOrigin(0.5).setDepth(Z + 1).setScrollFactor(0);

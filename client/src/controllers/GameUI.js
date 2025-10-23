@@ -31,8 +31,8 @@ export default class GameUI {
       .setScrollFactor(0).setDepth(Z - 1).setInteractive();
 
     const panelW = Math.min(480, W - 40);
-    // Increased panel height to accommodate vertically stacked buttons + Claim/Settings
-    const baseH = 280; // Increased from 240 to fit Claim/Settings buttons at bottom
+    // Increased panel height to accommodate Start Round + Main Menu buttons
+    const baseH = 340; // Increased to fit Start Round + Main Menu buttons at bottom
     const btnH = 36;
     const btnGap = 10;
     const btnAreaH = buttons.length * btnH + (buttons.length - 1) * btnGap + 40;
@@ -127,59 +127,54 @@ export default class GameUI {
     const cols = isNarrow ? Math.min(2, options.length) : Math.min(options.length, 4);
     const rows = Math.ceil(options.length / cols);
 
-    // Smaller buttons positioned higher
-    const gridGapX = Math.min(115, Math.max(80, panelW / Math.max(cols, 1) * 0.65));
+    // Match powerup button spacing for consistency
+    const weaponBtnW = 110; // Smaller width
+    const weaponBtnH = 38; // Smaller height
+    const gridGapX = 130; // Gap between button centers (weapon width + spacing)
     const totalW = (cols - 1) * gridGapX;
     const startX = cx - totalW / 2;
     const firstRowY = cy + (rows > 1 ? -10 : 0); // Moved up
     const rowGapY = 50; // Tighter spacing
-    const weaponBtnW = 110; // Smaller width
-    const weaponBtnH = 38; // Smaller height
+
+    let selectedWeapon = null;
 
     const select = (weapon) => {
+      selectedWeapon = weapon;
       this.scene.selectLoadout(weapon);
-      this.scene.input.keyboard.enabled = true;
-      destroy();
-      this.scene.roundPausedForMenu = false;
-      onDone?.();
+
+      // Update all weapon button styles to show selection
+      weaponButtons.forEach((btnData) => {
+        if (btnData.weapon === weapon) {
+          // Highlight selected weapon
+          btnData.bg.setFillStyle(0x2a3b5a);
+          btnData.bg.setStrokeStyle(2, 0xfbbf24); // Gold border
+        } else {
+          // Dim unselected weapons
+          btnData.bg.setFillStyle(0x1a2038);
+          btnData.bg.setStrokeStyle(1, 0x2f3660);
+        }
+      });
+
+      // Enable Start Round button (weapon selection always allows starting)
+      if (startRoundButton) {
+        startRoundButton.bg.setFillStyle(0xfbbf24); // Yellow/gold when ready
+        startRoundButton.bg.setStrokeStyle(2, 0xfcd34d);
+        startRoundButton.text.setColor('#000000');
+      }
     };
 
     const friendlyName = (name) => ({
       pistol: 'Pistol',
-      doublebarrel: 'Double Barrel',
+      doublebarrel: 'Triple Barrel',
       laser: 'Laser',
       rifle: 'Rifle'
     })[name] || (name[0].toUpperCase() + name.slice(1));
 
-    let lastRowY = firstRowY;
-    options.forEach((weapon, idx) => {
-      const r = Math.floor(idx / cols);
-      const c = idx % cols;
+    const weaponButtons = []; // Track weapon buttons for selection styling
+    let startRoundButton = null; // Reference to Start Round button
 
-      // Center third button (rifle) horizontally if there are 3 weapons in 2x2 grid
-      let x;
-      if (options.length === 3 && cols === 2 && idx === 2) {
-        // Center the third button between the first two
-        x = cx; // Center of panel
-      } else {
-        x = startX + c * gridGapX;
-      }
-
-      const y = firstRowY + r * rowGapY;
-      lastRowY = y;
-
-      const btn = this.scene.add.rectangle(x, y, weaponBtnW, weaponBtnH, 0x1a2038, 1)
-        .setStrokeStyle(1, 0x2f3660)
-        .setDepth(20004)
-        .setInteractive({ useHandCursor: true });
-      const label = friendlyName(weapon);
-      const txt = this.scene.add.text(x, y, label, { color: '#cbd1ff', fontSize: '14px' })
-        .setOrigin(0.5).setDepth(20005);
-      btn.on('pointerdown', () => select(weapon));
-      registerExtra(btn, txt);
-    });
-
-    // Add Continue button at bottom (session priority, then route progress for premium)
+    // Add Continue button ABOVE weapons (Round 1 only)
+    let firstRowY_adjusted = firstRowY;
     if (this.scene.pveRound === 1) {
       let continueData = null;
       let continueLabel = null;
@@ -205,7 +200,7 @@ export default class GameUI {
       }
 
       if (continueData && continueLabel) {
-        const continueY = lastRowY + weaponBtnH / 2 + 45; // Below weapon buttons
+        const continueY = cy - 50; // Above weapon buttons
         const continueW = Math.min(280, panelW - 80);
         const continueH = 36;
 
@@ -220,7 +215,8 @@ export default class GameUI {
           fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(20005);
 
-        continueBg.on('pointerdown', () => {
+        continueBg.on('pointerdown', (pointer, localX, localY, event) => {
+          if (event) event.stopPropagation();
           destroy();
           this.scene.scene.restart({
             mode: 'pve',
@@ -230,15 +226,101 @@ export default class GameUI {
         });
 
         registerExtra(continueBg, continueText);
+        firstRowY_adjusted = firstRowY + 10; // Push weapon buttons down slightly
       }
-    } else {
-      // Round 2+: Add Claim/Settings buttons inside panel at bottom-left
-      // Calculate actual panel height (base 280 + weapon buttons area + spacing)
-      const weaponBtnAreaH = 110; // Approx height for weapon selection grid
-      const estimatedPanelH = 280 + weaponBtnAreaH + 60; // Base + buttons + padding
-      const bottomButtons = createBottomLeftButtons(this.scene, cx, cy, panelW, estimatedPanelH, 20005);
-      registerExtra(...bottomButtons);
     }
+
+    let lastRowY = firstRowY_adjusted;
+    options.forEach((weapon, idx) => {
+      const r = Math.floor(idx / cols);
+      const c = idx % cols;
+
+      // Center third button (rifle) horizontally if there are 3 weapons in 2x2 grid
+      let x;
+      if (options.length === 3 && cols === 2 && idx === 2) {
+        // Center the third button between the first two
+        x = cx; // Center of panel
+      } else {
+        x = startX + c * gridGapX;
+      }
+
+      const y = firstRowY_adjusted + r * rowGapY;
+      lastRowY = y;
+
+      const btn = this.scene.add.rectangle(x, y, weaponBtnW, weaponBtnH, 0x1a2038, 1)
+        .setStrokeStyle(1, 0x2f3660)
+        .setDepth(20004)
+        .setInteractive({ useHandCursor: true });
+      const label = friendlyName(weapon);
+      const txt = this.scene.add.text(x, y, label, { color: '#cbd1ff', fontSize: '14px' })
+        .setOrigin(0.5).setDepth(20005);
+
+      weaponButtons.push({ weapon, bg: btn, text: txt });
+      btn.on('pointerdown', () => select(weapon));
+      registerExtra(btn, txt);
+    });
+
+    // Add Start Round button at bottom (always shown)
+    const startY = lastRowY + weaponBtnH / 2 + 50; // Below weapon buttons
+    const startW = Math.min(280, panelW - 80);
+    const startH = 40;
+
+    // Start disabled (gray) until weapon selected
+    const startBg = this.scene.add.rectangle(cx, startY, startW, startH, 0x374151, 1)
+      .setStrokeStyle(2, 0x4b5563)
+      .setDepth(20004)
+      .setInteractive({ useHandCursor: true });
+
+    const startText = this.scene.add.text(cx, startY, 'START ROUND', {
+      color: '#9ca3af',
+      fontSize: '16px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20005);
+
+    startRoundButton = { bg: startBg, text: startText };
+
+    startBg.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+      // Only start if weapon selected
+      if (!selectedWeapon) return;
+
+      this.scene.input.keyboard.enabled = true;
+      destroy();
+      this.scene.roundPausedForMenu = false;
+      onDone?.();
+    });
+
+    registerExtra(startBg, startText);
+
+    // Add Main Menu button below Start Round button
+    const menuBtnW = startW;
+    const menuBtnH = 32;
+    const menuBtnY = startY + startH / 2 + menuBtnH / 2 + 12; // Below Start Round with gap
+
+    const menuBg = this.scene.add.rectangle(cx, menuBtnY, menuBtnW, menuBtnH, 0x1a2038, 0.95)
+      .setStrokeStyle(1, 0x2f3660)
+      .setDepth(20004)
+      .setInteractive({ useHandCursor: true });
+
+    const menuText = this.scene.add.text(cx, menuBtnY, 'Main Menu', {
+      color: '#cbd1ff',
+      fontSize: '14px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20005);
+
+    menuBg.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+      destroy();
+      this.scene.scene.start('MENU');
+    });
+
+    registerExtra(menuBg, menuText);
+
+    // Add Claim/Settings buttons inside panel at top-left (all rounds)
+    const actualPanelW = panel?.width ?? panelW;
+    const actualPanelH = panel?.height ?? panelW; // Use actual panel height from modal
+    const bottomButtons = createBottomLeftButtons(this.scene, cx, cy, actualPanelW, actualPanelH, 20005);
+    registerExtra(...bottomButtons);
   }
 
   /**
@@ -276,10 +358,67 @@ export default class GameUI {
     const btnHeight = 70;
     const gap = 105;
     const startX = cx - gap * (powers.length - 1) / 2;
-    const y = cy + 10; // Moved up from cy + 40
+    let y = cy + 10; // Moved up from cy + 40
+
+    // Add Continue button ABOVE powers (Round 1 only)
+    if (this.scene.pveRound === 1) {
+      let continueData = null;
+      let continueLabel = null;
+
+      // Check for active session first (highest priority)
+      if (this.scene.savedSession && this.scene.savedSession.pveRound > 1) {
+        continueData = this.scene.savedSession;
+        continueLabel = `Continue from Round ${this.scene.savedSession.pveRound}`;
+      }
+      // Otherwise check for route progress (if premium user)
+      else if (isPremiumUser()) {
+        const routeProgress = getCurrentRouteProgress();
+        const highestRound = this.scene.role === 'runner' ? routeProgress.runnerHighestRound : routeProgress.plugHighestRound;
+        if (highestRound > 1) {
+          continueData = {
+            pveRound: highestRound,
+            pveSessionStash: 0,
+            pveSessionRep: 0,
+            pveBestRound: highestRound
+          };
+          continueLabel = `Continue from Round ${highestRound}`;
+        }
+      }
+
+      if (continueData && continueLabel) {
+        const continueY = cy - 50; // Above power buttons
+        const continueW = Math.min(280, panel?.width - 80 || 200);
+        const continueH = 36;
+
+        const continueBg = this.scene.add.rectangle(cx, continueY, continueW, continueH, 0x16a34a, 1)
+          .setStrokeStyle(2, 0x22c55e)
+          .setDepth(20004)
+          .setInteractive({ useHandCursor: true });
+
+        const continueText = this.scene.add.text(cx, continueY, continueLabel, {
+          color: '#ffffff',
+          fontSize: '14px',
+          fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(20005);
+
+        continueBg.on('pointerdown', (pointer, localX, localY, event) => {
+          if (event) event.stopPropagation();
+          destroy();
+          this.scene.scene.restart({
+            mode: 'pve',
+            role: this.scene.role,
+            ...continueData
+          });
+        });
+
+        registerExtra(continueBg, continueText);
+        y = cy + 20; // Push power buttons down slightly if Continue button is shown
+      }
+    }
 
     const chosen = [];
     const badges = new Map(); // Map of powerId -> { badge1, badge2 }
+    let startRoundButton = null; // Reference to Start Round button for enabling/disabling
 
     const updateAllBadges = () => {
       // Hide all badges first
@@ -329,16 +468,17 @@ export default class GameUI {
 
       updateAllBadges();
 
-      if (chosen.length === 2) {
-        this.scene.runnerPowersSelected = chosen.slice();
-        this.scene.runnerPowersConsumed = [false, false];
-        // Add delay so user can see both badges before modal closes
-        this.scene.time.delayedCall(600, () => {
-          this.scene.input.keyboard.enabled = true;
-          destroy();
-          this.scene.roundPausedForMenu = false;
-          onDone?.();
-        });
+      // Update Start Round button state
+      if (startRoundButton) {
+        if (chosen.length === 2) {
+          startRoundButton.bg.setFillStyle(0xfbbf24); // Yellow/gold when ready
+          startRoundButton.bg.setStrokeStyle(2, 0xfcd34d);
+          startRoundButton.text.setColor('#000000');
+        } else {
+          startRoundButton.bg.setFillStyle(0x374151); // Gray when disabled
+          startRoundButton.bg.setStrokeStyle(2, 0x4b5563);
+          startRoundButton.text.setColor('#9ca3af');
+        }
       }
     };
 
@@ -386,66 +526,69 @@ export default class GameUI {
       registerExtra(btn, symbol, txt, badge1, badge2);
     });
 
-    // Add Continue button at bottom (session priority, then route progress for premium)
-    if (this.scene.pveRound === 1) {
-      let continueData = null;
-      let continueLabel = null;
+    // Add Start Round button at bottom (always shown)
+    const startY = y + btnHeight / 2 + 50; // Below power buttons
+    const startW = Math.min(280, panel?.width - 80 || 200);
+    const startH = 40;
 
-      // Check for active session first (highest priority)
-      if (this.scene.savedSession && this.scene.savedSession.pveRound > 1) {
-        continueData = this.scene.savedSession;
-        continueLabel = `Continue from Round ${this.scene.savedSession.pveRound}`;
-      }
-      // Otherwise check for route progress (if premium user)
-      else if (isPremiumUser()) {
-        const routeProgress = getCurrentRouteProgress();
-        const highestRound = this.scene.role === 'runner' ? routeProgress.runnerHighestRound : routeProgress.plugHighestRound;
-        if (highestRound > 1) {
-          continueData = {
-            pveRound: highestRound,
-            pveSessionStash: 0,
-            pveSessionRep: 0,
-            pveBestRound: highestRound
-          };
-          continueLabel = `Continue from Round ${highestRound}`;
-        }
-      }
+    // Start disabled (gray) until 2 powers selected
+    const startBg = this.scene.add.rectangle(cx, startY, startW, startH, 0x374151, 1)
+      .setStrokeStyle(2, 0x4b5563)
+      .setDepth(20004)
+      .setInteractive({ useHandCursor: true });
 
-      if (continueData && continueLabel) {
-        const continueY = y + btnHeight / 2 + 45; // Below power buttons
-        const continueW = Math.min(280, panel?.width - 80 || 200);
-        const continueH = 36;
+    const startText = this.scene.add.text(cx, startY, 'START ROUND', {
+      color: '#9ca3af',
+      fontSize: '16px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20005);
 
-        const continueBg = this.scene.add.rectangle(cx, continueY, continueW, continueH, 0x16a34a, 1)
-          .setStrokeStyle(2, 0x22c55e)
-          .setDepth(20004)
-          .setInteractive({ useHandCursor: true });
+    startRoundButton = { bg: startBg, text: startText };
 
-        const continueText = this.scene.add.text(cx, continueY, continueLabel, {
-          color: '#ffffff',
-          fontSize: '14px',
-          fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(20005);
+    startBg.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+      // Only start if 2 powers selected
+      if (chosen.length !== 2) return;
 
-        continueBg.on('pointerdown', () => {
-          destroy();
-          this.scene.scene.restart({
-            mode: 'pve',
-            role: this.scene.role,
-            ...continueData
-          });
-        });
+      this.scene.runnerPowersSelected = chosen.slice();
+      this.scene.runnerPowersConsumed = [false, false];
+      this.scene.input.keyboard.enabled = true;
+      destroy();
+      this.scene.roundPausedForMenu = false;
+      onDone?.();
+    });
 
-        registerExtra(continueBg, continueText);
-      }
-    } else {
-      // Round 2+: Add Claim/Settings buttons inside panel at bottom-left
-      const panelW = panel?.width ?? Math.min(480, this.scene.scale.width - 40);
-      // Use generous panel height estimate to ensure buttons are well inside
-      const estimatedPanelH = 420; // Runner power selection panel height
-      const bottomButtons = createBottomLeftButtons(this.scene, cx, cy, panelW, estimatedPanelH, 20005);
-      registerExtra(...bottomButtons);
-    }
+    registerExtra(startBg, startText);
+
+    // Add Main Menu button below Start Round button
+    const menuBtnW = startW;
+    const menuBtnH = 32;
+    const menuBtnY = startY + startH / 2 + menuBtnH / 2 + 12; // Below Start Round with gap
+
+    const menuBg = this.scene.add.rectangle(cx, menuBtnY, menuBtnW, menuBtnH, 0x1a2038, 0.95)
+      .setStrokeStyle(1, 0x2f3660)
+      .setDepth(20004)
+      .setInteractive({ useHandCursor: true });
+
+    const menuText = this.scene.add.text(cx, menuBtnY, 'Main Menu', {
+      color: '#cbd1ff',
+      fontSize: '14px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20005);
+
+    menuBg.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+      destroy();
+      this.scene.scene.start('MENU');
+    });
+
+    registerExtra(menuBg, menuText);
+
+    // Add Claim/Settings buttons inside panel at top-left (all rounds)
+    const actualPanelW = panel?.width ?? Math.min(480, this.scene.scale.width - 40);
+    const actualPanelH = panel?.height ?? 420; // Use actual panel height from modal
+    const bottomButtons = createBottomLeftButtons(this.scene, cx, cy, actualPanelW, actualPanelH, 20005);
+    registerExtra(...bottomButtons);
   }
 
   /**
