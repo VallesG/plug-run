@@ -9,12 +9,12 @@
  * Get base stats for the AI plug (Round 1 values)
  *
  * These are the STARTING values for Round 1 (very easy).
- * The progression system scales these up to human-level by Round 50.
+ * The progression system scales these up to human-level by Round 20.
  *
  * Design Philosophy:
  * - Rounds 1-10: Very forgiving (almost everyone makes it)
- * - Round 50: Basic human level
- * - Round 50+: Continues scaling infinitely
+ * - Round 20: Basic human level
+ * - Round 20+: Continues scaling infinitely
  */
 export function getPlugBaseStats() {
   return {
@@ -30,15 +30,15 @@ export function getPlugBaseStats() {
 /**
  * Apply progressive difficulty scaling based on PvE round
  *
- * Linear scaling from Round 1 (very easy) → Round 50 (human level) → infinity
+ * Linear scaling from Round 1 (very easy) → Round 20 (human level) → infinity
  *
  * Progression Milestones:
  * - Round 1: Tutorial difficulty (50 speed, 1.8s fire, 1.0 inaccuracy)
- * - Round 10: Still easy (59 speed, 1.6s fire, 0.88 inaccuracy)
- * - Round 27: Mobile challenge begins (76 speed, approaching mobile runner at 98)
- * - Round 50: Mobile human level (99 speed, 0.75s fire, 0.35 inaccuracy)
- * - Round 91: Desktop human level (140 speed)
- * - Round 100+: Expert level (149+ speed, continues scaling, some stats capped)
+ * - Round 10: Getting tougher (72 speed, 1.3s fire, 0.71 inaccuracy)
+ * - Round 11: Mobile challenge begins (76 speed, approaching mobile runner at 98)
+ * - Round 20: Mobile human level (98 speed, 0.75s fire, 0.38 inaccuracy)
+ * - Round 37: Desktop human level (140 speed)
+ * - Round 40+: Expert level (continues scaling, some stats capped)
  *
  * Scaling Strategy:
  * - Speed & Vision: Scale infinitely (no cap)
@@ -49,38 +49,38 @@ export function applyPlugProgression(scene) {
 
   const round = scene.pveRound || 1;
 
-  // SPEED: Linear scaling from 50 → 99 (round 50) → continues forever
-  // Formula: 50 + (round - 1) * 1.0
-  // Round 1: 50 | Round 10: 59 | Round 27: 76 | Round 50: 99 | Round 91: 140 | Round 100: 149
-  // Mobile-friendly: AI catches mobile runner (98 px/s) around round 50
-  // Desktop: AI catches desktop runner (140 px/s) around round 91
-  scene.aiPlug.speed = 50 + (round - 1) * 1.0;
+  // SPEED: Linear scaling from 50 → 98 (round 20) → continues forever
+  // Formula: 50 + (round - 1) * 2.5
+  // Round 1: 50 | Round 10: 72 | Round 11: 76 | Round 20: 98 | Round 37: 140 | Round 40: 148
+  // Mobile-friendly: AI catches mobile runner (98 px/s) around round 20
+  // Desktop: AI catches desktop runner (140 px/s) around round 37
+  scene.aiPlug.speed = 50 + (round - 1) * 2.5;
 
-  // FIRE RATE: Linear scaling from 1.8s → 0.75s (round 50) → min 0.3s
-  // Formula: 1.8 - (round - 1) * 0.0214
-  // Round 1: 1.8s | Round 10: 1.6s | Round 50: 0.75s | Round 100: 0.3s (capped)
-  scene.aiPlug.shootEvery = Math.max(0.3, 1.8 - (round - 1) * 0.0214);
+  // FIRE RATE: Linear scaling from 1.8s → 0.75s (round 20) → min 0.3s
+  // Formula: 1.8 - (round - 1) * 0.0535
+  // Round 1: 1.8s | Round 10: 1.3s | Round 20: 0.77s | Round 40: 0.3s (capped)
+  scene.aiPlug.shootEvery = Math.max(0.3, 1.8 - (round - 1) * 0.0535);
 
-  // ACCURACY: Linear scaling from 1.0 → 0.35 (round 50) → min 0.1
-  // Formula: 1.0 - (round - 1) * 0.0133
-  // Round 1: 1.0 | Round 10: 0.88 | Round 50: 0.35 | Round 100: 0.1 (capped)
-  scene.aiPlug.inaccuracy = Math.max(0.1, 1.0 - (round - 1) * 0.0133);
+  // ACCURACY: Linear scaling from 1.0 → 0.38 (round 20) → min 0.1
+  // Formula: 1.0 - (round - 1) * 0.0326
+  // Round 1: 1.0 | Round 10: 0.71 | Round 20: 0.38 | Round 40: 0.1 (capped)
+  scene.aiPlug.inaccuracy = Math.max(0.1, 1.0 - (round - 1) * 0.0326);
 
-  // REACTION TIME: Linear scaling from 800ms → 400ms (round 50) → min 100ms
-  // Formula: 800 - (round - 1) * 8.16
-  // Round 1: 800ms | Round 10: 726ms | Round 50: 400ms | Round 100: 100ms (capped)
-  scene.aiPlug.reactDelay = Math.max(100, 800 - (round - 1) * 8.16);
+  // REACTION TIME: Linear scaling from 800ms → 410ms (round 20) → min 100ms
+  // Formula: 800 - (round - 1) * 20.4
+  // Round 1: 800ms | Round 10: 616ms | Round 20: 412ms | Round 40: 100ms (capped)
+  scene.aiPlug.reactDelay = Math.max(100, 800 - (round - 1) * 20.4);
 
-  // VISION RANGE: Linear scaling from 250 → 350 (round 50) → continues forever
-  // Formula: 250 + (round - 1) * 2.04
-  // Round 1: 250 | Round 10: 268 | Round 50: 350 | Round 100: 452
-  scene.aiPlug.maxRange = 250 + (round - 1) * 2.04;
+  // VISION RANGE: Linear scaling from 250 → 348 (round 20) → continues forever
+  // Formula: 250 + (round - 1) * 5.1
+  // Round 1: 250 | Round 10: 296 | Round 20: 347 | Round 40: 450
+  scene.aiPlug.maxRange = 250 + (round - 1) * 5.1;
 
-  // ORIENTATION DELAY: Linear scaling from 2.5s → 0.3s (round 50) → min 0.1s
-  // Formula: 2.5 - (round - 1) * 0.0449
-  // Round 1: 2.5s | Round 10: 2.1s | Round 25: 1.4s | Round 50: 0.3s | Round 100: 0.1s (capped)
+  // ORIENTATION DELAY: Linear scaling from 2.5s → 0.37s (round 20) → min 0.1s
+  // Formula: 2.5 - (round - 1) * 0.1123
+  // Round 1: 2.5s | Round 10: 1.5s | Round 20: 0.37s | Round 40: 0.1s (capped)
   // This simulates the AI "thinking" before it locks onto the player at round start
-  scene.aiPlug.orientationDelay = Math.max(0.1, 2.5 - (round - 1) * 0.0449);
+  scene.aiPlug.orientationDelay = Math.max(0.1, 2.5 - (round - 1) * 0.1123);
 }
 
 /**
@@ -104,9 +104,9 @@ export function updatePlugBehavior(scene, dt) {
   if (scene.decoySprite && scene.decoySprite.active) {
     const round = scene.pveRound || 1;
     // Early rounds: AI always falls for decoy
-    // Round 50+: AI rarely falls for decoy
-    // Formula: 95% chance at round 1 → 5% chance at round 50+
-    const decoyChance = Math.max(0.05, 0.95 - (round - 1) * 0.0184);
+    // Round 20+: AI rarely falls for decoy
+    // Formula: 95% chance at round 1 → 5% chance at round 20+
+    const decoyChance = Math.max(0.05, 0.95 - (round - 1) * 0.0474);
 
     if (Math.random() < decoyChance) {
       targetX = scene.decoySprite.x;

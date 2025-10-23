@@ -15,7 +15,7 @@ import {
  * Get base stats for the AI runner (Round 1 values)
  *
  * These are the STARTING values for Round 1 (very easy).
- * The progression system scales these up to human-level by Round 50.
+ * The progression system scales these up to human-level by Round 20.
  */
 export function getRunnerBaseStats() {
   return {
@@ -43,27 +43,27 @@ export function getRunnerBaseStats() {
  * Apply progressive difficulty scaling based on PvE round
  * Only applies when player is in plug mode
  *
- * Scaling progression (Human-like by Round 50):
- * - Speed: 60 px/s → 98 px/s (round 50) → 136 px/s (round 100)
- * - Planning: Starts at 240-340ms, improves to 90ms at round 100
- * - Sprint multiplier: 1.05x to 1.45x at round 100
- * - Sprint distance: 5 cells to 9 cells at round 100
- * - Orientation delay: 2.5s → 0.3s (round 50) → 0.1s (round 100)
- * - Wander chance: 40% → 5% (round 50) → 1% (round 100)
- * - Panic threshold: 6 cells → 4 cells (round 50) → 2 cells (round 100)
- * - Power skill: 20% → 95% (round 50+)
+ * Scaling progression (Human-like by Round 20):
+ * - Speed: 60 px/s → 97 px/s (round 20) → 137 px/s (round 40)
+ * - Planning: Starts at 240-340ms, improves to 90ms at round 40
+ * - Sprint multiplier: 1.05x to 1.45x at round 40
+ * - Sprint distance: 5 cells to 9 cells at round 40
+ * - Orientation delay: 2.5s → 0.37s (round 20) → 0.1s (round 40)
+ * - Wander chance: 40% → 0.09% (round 20) → 0.01% (round 40)
+ * - Panic threshold: 6 cells → 4 cells (round 20) → 2 cells (round 40)
+ * - Power skill: 20% → 95% (round 20+)
  */
 export function applyRunnerProgression(scene) {
   if (scene.role !== 'plug') return; // Only scale when player is defender
 
   const round = Math.max(1, scene.pveRound || 1);
 
-  // SPEED: Linear scaling from 60 → 98 (round 50) → continues forever
-  // Formula: 60 + (round - 1) * 0.77
-  // Round 1: 60 | Round 10: 67 | Round 25: 78 | Round 50: 98 | Round 100: 136
-  // Mobile-friendly: AI catches mobile runner (98 px/s) around round 50
-  // Desktop: AI catches desktop runner (140 px/s) around round 104
-  scene.runnerSpeed = 60 + (round - 1) * 0.77;
+  // SPEED: Linear scaling from 60 → 97 (round 20) → continues forever
+  // Formula: 60 + (round - 1) * 1.95
+  // Round 1: 60 | Round 10: 78 | Round 20: 97 | Round 40: 136 | Round 42: 140
+  // Mobile-friendly: AI catches mobile runner (98 px/s) around round 20
+  // Desktop: AI catches desktop runner (140 px/s) around round 42
+  scene.runnerSpeed = 60 + (round - 1) * 1.95;
 
   // Keep dependent stats (e.g., decoy) in sync with new speed
   if (scene.runnerPowerStats?.decoy) {
@@ -77,58 +77,58 @@ export function applyRunnerProgression(scene) {
 
   // Worse decision-making in early rounds
   const planningPenalty = round <= 3 ? 100 : 0; // +100ms slower planning for rounds 1-3
-  scene.aiRunner.planEvery = Math.max(90, 240 + planningPenalty - (round - 1) * 1.5); // planning improves slower: -150ms max at round 100
-  scene.aiRunner.sprintMul = 1.05 + Math.min(0.40, (round - 1) * 0.004); // sprint multiplier: +40% max at round 100
-  scene.aiRunner.sprintDist = 5 + Math.min(4, (round - 1) * 0.04); // sprint distance: +4 cells max at round 100
-  scene.aiRunner.centerBias = 12 + Math.min(14, (round - 1) * 0.14); // centering: +14 max at round 100
+  scene.aiRunner.planEvery = Math.max(90, 240 + planningPenalty - (round - 1) * 3.75); // planning improves: -150ms max at round 40
+  scene.aiRunner.sprintMul = 1.05 + Math.min(0.40, (round - 1) * 0.01); // sprint multiplier: +40% max at round 40
+  scene.aiRunner.sprintDist = 5 + Math.min(4, (round - 1) * 0.1); // sprint distance: +4 cells max at round 40
+  scene.aiRunner.centerBias = 12 + Math.min(14, (round - 1) * 0.35); // centering: +14 max at round 40
 
   // SLIDE NUDGE: Fixed at 0.11 (doesn't scale - it's a physics constant, not skill)
   // This provides smooth corridor navigation without exploitative wall-hugging
   // No progression needed - works the same at all speeds
 
-  scene.aiRunner.keepDirMs = Math.max(160, 300 - (round - 1) * 1.4); // direction persistence: -140ms max at round 100
+  scene.aiRunner.keepDirMs = Math.max(160, 300 - (round - 1) * 3.5); // direction persistence: -140ms max at round 40
 
-  // ORIENTATION DELAY: Linear scaling from 2.5s → 0.3s (round 50) → min 0.1s
-  // Formula: 2.5 - (round - 1) * 0.0449
-  // Round 1: 2.5s | Round 10: 2.1s | Round 25: 1.4s | Round 50: 0.3s | Round 100: 0.1s (capped)
+  // ORIENTATION DELAY: Linear scaling from 2.5s → 0.37s (round 20) → min 0.1s
+  // Formula: 2.5 - (round - 1) * 0.1123
+  // Round 1: 2.5s | Round 10: 1.5s | Round 20: 0.37s | Round 40: 0.1s (capped)
   // Runner pauses before heading to objective (simulates human assessment time)
-  scene.aiRunner.orientationDelay = Math.max(0.1, 2.5 - (round - 1) * 0.0449);
+  scene.aiRunner.orientationDelay = Math.max(0.1, 2.5 - (round - 1) * 0.1123);
 
   // WANDER CHANCE: Steep early drop, then minimal at high rounds
-  // Formula: 0.4 - (round - 1) * 0.02
-  // Round 1: 0.40 (40%) | Round 10: 0.22 (22%) | Round 20: 0.02 (2%) | Round 50+: 0.01 (1%)
+  // Formula: 0.4 - (round - 1) * 0.05
+  // Round 1: 0.40 (40%) | Round 8: 0.05 (5%) | Round 9: 0.01 (1% capped) | Round 20+: 0.01 (1%)
   // Probability of taking a suboptimal path (routing mistakes)
-  scene.aiRunner.wanderChance = Math.max(0.01, 0.4 - (round - 1) * 0.02);
+  scene.aiRunner.wanderChance = Math.max(0.01, 0.4 - (round - 1) * 0.05);
 
-  // HESITATION CHANCE: Steep early drop, eliminates by round 20
-  // Formula: 0.3 - (round - 1) * 0.015
-  // Round 1: 0.30 (30%) | Round 10: 0.17 (17%) | Round 20: 0.02 (2%) | Round 50+: 0.0 (0%)
+  // HESITATION CHANCE: Steep early drop, eliminates by round 8
+  // Formula: 0.3 - (round - 1) * 0.0375
+  // Round 1: 0.30 (30%) | Round 8: 0.04 (4%) | Round 9: 0.0 (0% capped)
   // Probability of unnecessary replanning (indecision)
-  scene.aiRunner.hesitationChance = Math.max(0.0, 0.3 - (round - 1) * 0.015);
+  scene.aiRunner.hesitationChance = Math.max(0.0, 0.3 - (round - 1) * 0.0375);
 
   // OVERCOMMIT CHANCE: Steep early drop, stays minimal at high rounds
-  // Formula: 0.5 - (round - 1) * 0.024
-  // Round 1: 0.50 (50%) | Round 10: 0.28 (28%) | Round 20: 0.04 (4%) | Round 50+: 0.02 (2%)
+  // Formula: 0.5 - (round - 1) * 0.06
+  // Round 1: 0.50 (50%) | Round 8: 0.08 (8%) | Round 9: 0.02 (2% capped) | Round 20+: 0.02 (2%)
   // Probability of chasing plug instead of going to objective (poor prioritization)
-  scene.aiRunner.overcommitChance = Math.max(0.02, 0.5 - (round - 1) * 0.024);
+  scene.aiRunner.overcommitChance = Math.max(0.02, 0.5 - (round - 1) * 0.06);
 
-  // PANIC THRESHOLD: Linear scaling from 6 → 4 (round 50) → min 2
-  // Formula: 6 - (round - 1) * 0.0408
-  // Round 1: 6 cells | Round 10: 5.6 | Round 50: 4.0 | Round 100: 2.0 (capped)
+  // PANIC THRESHOLD: Linear scaling from 6 → 4 (round 20) → min 2
+  // Formula: 6 - (round - 1) * 0.102
+  // Round 1: 6 cells | Round 10: 5.1 | Round 20: 4.1 | Round 40: 2.0 (capped)
   // Distance (in cells) at which AI starts panicking when plug is close
-  scene.aiRunner.panicThreshold = Math.max(2, 6 - (round - 1) * 0.0408);
+  scene.aiRunner.panicThreshold = Math.max(2, 6 - (round - 1) * 0.102);
 
-  // PANIC MULTIPLIER: Linear scaling from 5.0x → 3.0x (round 50) → min 1.5x
-  // Formula: 5.0 - (round - 1) * 0.0408
-  // Round 1: 5.0x | Round 10: 4.6x | Round 50: 3.0x | Round 100: 1.5x (capped)
+  // PANIC MULTIPLIER: Linear scaling from 5.0x → 3.0x (round 20) → min 1.5x
+  // Formula: 5.0 - (round - 1) * 0.102
+  // Round 1: 5.0x | Round 10: 4.1x | Round 20: 3.1x | Round 40: 1.5x (capped)
   // How much all mistake chances are multiplied when AI is panicking
-  scene.aiRunner.panicMultiplier = Math.max(1.5, 5.0 - (round - 1) * 0.0408);
+  scene.aiRunner.panicMultiplier = Math.max(1.5, 5.0 - (round - 1) * 0.102);
 
-  // POWER SKILL: Steep improvement, reaches 95% by round 30
-  // Formula: 0.2 + (round - 1) * 0.025
-  // Round 4: 0.28 (28%) | Round 10: 0.43 (43%) | Round 20: 0.68 (68%) | Round 30: 0.93 (93%) | Round 50+: 0.95 (capped)
+  // POWER SKILL: Steep improvement, reaches 95% by round 12
+  // Formula: 0.2 + (round - 1) * 0.0625
+  // Round 4: 0.39 (39%) | Round 10: 0.76 (76%) | Round 12: 0.89 (89%) | Round 13: 0.95 (capped)
   // Probability of using power optimally (vs random/panic usage)
-  scene.aiRunner.powerSkill = Math.min(0.95, 0.2 + (round - 1) * 0.025);
+  scene.aiRunner.powerSkill = Math.min(0.95, 0.2 + (round - 1) * 0.0625);
 }
 
 /**

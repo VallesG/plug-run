@@ -832,10 +832,10 @@ function createHTMLInput(scene, x, y, width, height, type, placeholder) {
  */
 export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z = 20005) {
   const elements = [];
-  const btnW = 70;
-  const btnH = 26;
-  const iconBtnW = 32; // Settings icon button (square)
-  const gap = 8;
+  const btnW = 55; // Reduced from 70
+  const btnH = 22; // Reduced from 26
+  const iconBtnW = 26; // Reduced from 32 (Settings icon button)
+  const gap = 6; // Reduced from 8
   const isGuest = isGuestAccount();
 
   // Position at top-left of the panel, aligned with title text (matches showModal title position)
@@ -852,7 +852,7 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
 
     const claimText = scene.add.text(leftEdge + btnW/2, topEdge, 'Claim', {
       color: '#000000',
-      fontSize: '11px',
+      fontSize: '10px', // Reduced from 11px
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(Z + 1).setScrollFactor(0);
 
@@ -883,7 +883,7 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
 
   const settingsIcon = scene.add.text(settingsX, topEdge, '⚙', {
     color: '#cbd1ff',
-    fontSize: '16px'
+    fontSize: '14px' // Reduced from 16px
   }).setOrigin(0.5).setDepth(Z + 1).setScrollFactor(0);
 
   settingsBg.on('pointerdown', () => {
