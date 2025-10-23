@@ -1737,7 +1737,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.pveSessionStash += stashEarned;
     this.pveSessionRep += repEarned;
     this.pveBestRound = Math.max(this.pveBestRound ?? 0, currentRound);
-    console.log('[Plug] Stats - Stash:', stashEarned, 'Rep:', repEarned, 'Completion:', roundCompletion.completionCount, 'times');
+    console.log('[Plug] Round', currentRound, '- Stash earned:', stashEarned, '(first completion:', roundCompletion.isFirstCompletion, ')');
+    console.log('[Plug] Session totals - Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep);
+    console.log('[Plug] Submitting to leaderboard - Round:', currentRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep);
 
     // Update user's total accumulated stash and REP
     const user = getCurrentUser();
