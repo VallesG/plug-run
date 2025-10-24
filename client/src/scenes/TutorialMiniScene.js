@@ -769,7 +769,8 @@ export class TutorialMiniScene extends Phaser.Scene {
               this._mobileShootRequested = true;
             }
             // Handle double tap to trigger the next power (dash/phase) if selected
-            else if (this.stageIdx >= 3 && this.runnerPowersSelected){
+            // Don't activate powers during modal selection
+            else if (this.stageIdx >= 3 && this.runnerPowersSelected && !this.pausedForModal){
               const diff = now - (this._lastPointerTapAt || 0);
               if (diff > 0 && diff <= 280){
                 this._lastPointerTapAt = 0;
@@ -1136,13 +1137,13 @@ export class TutorialMiniScene extends Phaser.Scene {
       // Apply a smaller scale so the dialog fits comfortably on narrow screens.  A
       // scale of around 0.65 trims the title and content sizes while retaining
       // readability.  Should further adjustments be needed, update this value.
-      this.showModal('Stash & Bunk Stash', stashLines, 'Go', () => this.resumeFromModal(), { scale: 0.65 });
+      this.showModal('Stash & Bunk Stash', stashLines, 'Go', () => this.resumeFromModal(), { scale: 0.65, showReplay: true });
     } else if (idx === 3){
       // In the power-up stage, introduce the available abilities.  List phase, dash, and decoy
       // with brief descriptions.  After closing the intro modal, present a choice modal.
       const desktop = this.sys.game.device.os.desktop;
       const introLines = [
-        'Double Tap screen to activate',
+        desktop ? 'Click to activate' : 'Double Tap screen to activate',
         '',
         '',
         '👻 PHASE: phase through walls',
@@ -1158,7 +1159,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.showModal('Runner Power-ups', introLines, 'Go', () => {
         this.resumeFromModal();
         this.showPowerSelectionModal();
-      });
+      }, { showReplay: true });
     } else if (idx === 4) {
       // Stage 4: Runner PvP tutorial - show runner power selection first, then intro modal
       const runnerLines = [
@@ -1171,7 +1172,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.showModal('Run from the Plug', runnerLines, 'Go', () => {
         this.resumeFromModal();
         this.showPowerSelectionModal();
-      }, { scale: 0.70 });
+      }, { scale: 0.70, showReplay: true });
     } else if (idx === 5) {
       // Stage 5: Plug PvP tutorial - show gun selection first, then start
       const plugLines = [
@@ -1184,7 +1185,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.showModal('Defend the Block', plugLines, 'Go', () => {
         this.resumeFromModal();
         this.showGunSelectionModal();
-      }, { scale: 0.65 });
+      }, { scale: 0.65, showReplay: true, extraBottomSpace: 28 });
       // Add plug character preview with red trail inline with text
       this.time.delayedCall(250, () => this.showCharacterPreview('plug'));
     }
@@ -1282,6 +1283,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Calculate max width to keep modal narrower and taller (prevents edge-to-edge borders)
     const maxContentWidth = Math.floor(Math.min(this.scale.width * 0.75, 420));
 
+    // Replay button text - always use shorter version
+    const replayButtonText = 'Replay Last';
+
+    // Create dialog without action buttons (we'll add them manually outside)
     const dlg = this.rexUI.add.dialog({
       x: this.scale.width / 2,
       y: this.scale.height * 0.42,
@@ -1298,25 +1303,93 @@ export class TutorialMiniScene extends Phaser.Scene {
         wordWrap: { width: maxContentWidth },
         lineSpacing: 4
       }),
-      actions: [
-        this.rexUI.add.label({
-          background: this.rexUI.add.roundRectangle(0, 0, 2, 2, 8, 0xfbbf24).setStrokeStyle(4, 0xfde047),
-          text: this.add.text(0, 0, btn, {
-            color: '#000000',
-            fontSize: Math.max(18, Math.floor(this.scale.height * 0.032 * scaleFac)) + 'px',
-            fontStyle: 'bold'
-          }),
-          space: { left: 28, right: 28, top: 14, bottom: 14 }
-        })
-      ],
-      space: { title: 12, content: 16, action: 12, left: 20, right: 20, top: 18, bottom: 18 }
+      space: { title: 12, content: 16, action: 0, left: 20, right: 20, top: 18, bottom: opts.showReplay ? 80 : 70 }
     }).layout().setDepth(9999).popUp(200);
-    dlg.on('button.click', () => {
+
+    // Store stage index before modal closes
+    const currentStageIdx = this.stageIdx;
+
+    // Calculate button positions INSIDE the dialog (at the bottom)
+    const dialogBottom = dlg.y + dlg.height / 2;
+    const buttonY = dialogBottom - 35; // Position buttons inside modal, near bottom
+
+    // Create buttons manually at higher depth to appear on top of dialog background
+    const buttons = [];
+
+    if (opts.showReplay) {
+      // Replay button (left side) - blue background, smaller for mobile
+      const replayBg = this.add.rectangle(
+        this.scale.width / 2 - 80,
+        buttonY,
+        140,
+        42,
+        0x3b82f6
+      ).setStrokeStyle(3, 0x60a5fa).setDepth(10000).setInteractive({ useHandCursor: true });
+
+      const replayText = this.add.text(
+        this.scale.width / 2 - 80,
+        buttonY,
+        replayButtonText,
+        {
+          color: '#ffffff',
+          fontSize: Math.max(14, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px',
+          fontStyle: 'bold'
+        }
+      ).setOrigin(0.5).setDepth(10001);
+
+      replayBg.on('pointerdown', () => {
+        // Keep everything covered/paused until stage restarts
+        dlg.scaleDownDestroy(140);
+        replayBg.destroy();
+        replayText.destroy();
+        if (mainBg) mainBg.destroy();
+        if (mainText) mainText.destroy();
+        const previousStage = Math.max(1, currentStageIdx - 1);
+        // Start stage immediately, then clean up veil after stage loads
+        this.startStage(previousStage);
+        this.time.delayedCall(100, () => {
+          veil.destroy();
+          this.pausedForModal = false;
+        });
+      });
+
+      buttons.push(replayBg, replayText);
+    }
+
+    // Main button (right side or centered if no replay)
+    const mainX = opts.showReplay ? this.scale.width / 2 + 80 : this.scale.width / 2;
+    const mainBg = this.add.rectangle(
+      mainX,
+      buttonY,
+      140,
+      42,
+      0xfbbf24
+    ).setStrokeStyle(4, 0xfde047).setDepth(10000).setInteractive({ useHandCursor: true });
+
+    const mainText = this.add.text(
+      mainX,
+      buttonY,
+      btn,
+      {
+        color: '#000000',
+        fontSize: Math.max(18, Math.floor(this.scale.height * 0.032 * scaleFac)) + 'px',
+        fontStyle: 'bold'
+      }
+    ).setOrigin(0.5).setDepth(10001);
+
+    mainBg.on('pointerdown', () => {
       dlg.scaleDownDestroy(140);
       veil.destroy();
+      mainBg.destroy();
+      mainText.destroy();
+      buttons.forEach(b => b.destroy());
       this.pausedForModal = false;
+      // Prevent power activation from this same click
+      this._ignoreNextPowerClick = true;
       onStart && onStart();
     });
+
+    buttons.push(mainBg, mainText);
   }
   toast(msg, hold = 1000, color = '#cbd1ff'){
     if (this.tipTween){
@@ -1380,7 +1453,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       .setInteractive();
     // Panel sizing
     const panelW = Math.min(width * 0.80, 480);
-    const panelH = 240;
+    const panelH = 380;
     const panel = this.add.rectangle(width/2, height*0.40, panelW, panelH, 0x0f172a, 0.96)
       .setStrokeStyle(2, 0x274060)
       .setDepth(20001);
@@ -1433,7 +1506,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     const elements = [];
     opts.forEach((opt, idx) => {
       const x = panel.x - panelW/2 + btnW * (idx + 0.5);
-      const y = panel.y + panelH/2 - btnH/2 - 16;
+      const y = panel.y - 20;
       const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
         .setStrokeStyle(2, parseInt(opt.color.replace('#', '0x')))
         .setDepth(20002)
@@ -1498,24 +1571,50 @@ export class TutorialMiniScene extends Phaser.Scene {
 
         updateAllBadges();
 
-        // When two powers are chosen, close modal after delay
-        if (chosen.length === 2){
-          // Persist the chosen power order. Players can use each once per run.
-          this.runnerPowersSelected = chosen.slice();
-          this.runnerPowersConsumed = [false, false];
-          // Add delay so user can see both badges before modal closes
-          this.time.delayedCall(600, () => {
-            // Clean up modal elements and resume the game
-            overlay.destroy();
-            panel.destroy();
-            title.destroy();
-            subtitle.destroy();
-            elements.forEach(el => el.destroy());
-            this.pausedForModal = false;
-          });
+        // Enable/disable Start Round button based on selection
+        if (chosen.length === 2) {
+          startBtn.setFillStyle(0xfbbf24); // Gold when ready
+          startBtn.setInteractive({ useHandCursor: true });
+          startTxt.setColor('#000000');
+        } else {
+          startBtn.setFillStyle(0x374151); // Gray when disabled
+          startBtn.removeInteractive();
+          startTxt.setColor('#6b7280');
         }
       });
     });
+
+    // START ROUND button
+    const startBtnY = panel.y + 90;
+    const startBtn = this.add.rectangle(panel.x, startBtnY, panelW - 40, 48, 0x374151, 1)
+      .setDepth(20002)
+      .setStrokeStyle(2, 0x4b5563);
+    const startTxt = this.add.text(panel.x, startBtnY, 'START ROUND', {
+      color: '#6b7280',
+      fontSize: Math.max(18, Math.floor(height * 0.030)) + 'px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20003);
+
+    startBtn.on('pointerdown', () => {
+      if (chosen.length === 2) {
+        // Persist the chosen power order
+        this.runnerPowersSelected = chosen.slice();
+        this.runnerPowersConsumed = [false, false];
+        // Clean up modal elements and resume the game
+        overlay.destroy();
+        panel.destroy();
+        title.destroy();
+        subtitle.destroy();
+        elements.forEach(el => el.destroy());
+        startBtn.destroy();
+        startTxt.destroy();
+        this.pausedForModal = false;
+        // Prevent power activation from this same click
+        this._ignoreNextPowerClick = true;
+      }
+    });
+
+    elements.push(startBtn, startTxt);
   }
 
   /**
@@ -1533,7 +1632,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       .setInteractive();
     // Panel sizing
     const panelW = Math.min(width * 0.85, 500);
-    const panelH = 240;
+    const panelH = 380;
     const panel = this.add.rectangle(width/2, height*0.40, panelW, panelH, 0x0f172a, 0.96)
       .setStrokeStyle(2, 0x274060)
       .setDepth(20001);
@@ -1551,10 +1650,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     const btnW = (panelW - 40) / guns.length;
     const btnH = 70;
     const elements = [];
+    let selectedWeapon = null;
+    const weaponRects = [];
 
     guns.forEach((gun, idx) => {
       const x = panel.x - panelW/2 + 20 + btnW * (idx + 0.5);
-      const y = panel.y + panelH/2 - btnH/2 - 20;
+      const y = panel.y - 20;
       const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
         .setStrokeStyle(2, 0x274060)
         .setDepth(20002)
@@ -1569,19 +1670,55 @@ export class TutorialMiniScene extends Phaser.Scene {
         fontSize: Math.max(12, Math.floor(height * 0.020)) + 'px'
       }).setOrigin(0.5).setDepth(20003);
       elements.push(rect, txt, ammoTxt);
+      weaponRects.push({ rect, gun });
 
       rect.on('pointerdown', () => {
         // Set weapon and ammo for stage 5
+        selectedWeapon = gun.key;
         this.selectedWeapon = gun.key;
         this.weaponAmmo = gun.ammo;
-        // Clean up modal
+
+        // Update all weapon button highlights
+        weaponRects.forEach(wr => {
+          if (wr.gun.key === selectedWeapon) {
+            wr.rect.setStrokeStyle(3, 0xfbbf24); // Gold highlight when selected
+          } else {
+            wr.rect.setStrokeStyle(2, 0x274060); // Default gray
+          }
+        });
+
+        // Enable Start Round button
+        startBtn.setFillStyle(0xfbbf24); // Gold when ready
+        startBtn.setInteractive({ useHandCursor: true });
+        startTxt.setColor('#000000');
+      });
+    });
+
+    // START ROUND button
+    const startBtnY = panel.y + 90;
+    const startBtn = this.add.rectangle(panel.x, startBtnY, panelW - 40, 48, 0x374151, 1)
+      .setDepth(20002)
+      .setStrokeStyle(2, 0x4b5563);
+    const startTxt = this.add.text(panel.x, startBtnY, 'START ROUND', {
+      color: '#6b7280',
+      fontSize: Math.max(18, Math.floor(height * 0.030)) + 'px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20003);
+
+    startBtn.on('pointerdown', () => {
+      if (selectedWeapon) {
+        // Clean up modal and resume game
         overlay.destroy();
         panel.destroy();
         title.destroy();
         elements.forEach(el => el.destroy());
+        startBtn.destroy();
+        startTxt.destroy();
         this.pausedForModal = false;
-      });
+      }
     });
+
+    elements.push(startBtn, startTxt);
   }
 
   addCarry(){
@@ -1820,9 +1957,17 @@ export class TutorialMiniScene extends Phaser.Scene {
    */
   activateNextRunnerPower(){
     if (!this.runnerPowersSelected || !this.runnerPowersConsumed) return;
+
+    // Add cooldown between power activations (like real game)
+    const now = performance.now();
+    if (this._lastPowerActivation && now - this._lastPowerActivation < 300) {
+      return; // Too soon, ignore this activation
+    }
+
     for (let i = 0; i < this.runnerPowersSelected.length; i++){
       if (!this.runnerPowersConsumed[i]){
         this.activateRunnerPowerByIndex(i);
+        this._lastPowerActivation = now;
         break;
       }
     }
@@ -2369,36 +2514,42 @@ export class TutorialMiniScene extends Phaser.Scene {
     const usingKeys = leftDown || rightDown || upDown || downDown;
 
     if (usingKeys){
-      // Cardinal movement only (matches main game - no diagonals)
-      // Prioritize horizontal over vertical when both pressed
+      // Diagonal movement support (matches main game - 8-directional)
       let dir = { x: 0, y: 0 };
+
+      // Allow both horizontal and vertical movement simultaneously
       if (leftDown) dir.x = -1;
       else if (rightDown) dir.x = 1;
 
-      // Only allow vertical if no horizontal input
-      if (dir.x === 0) {
-        if (upDown) dir.y = -1;
-        else if (downDown) dir.y = 1;
-      }
+      if (upDown) dir.y = -1;
+      else if (downDown) dir.y = 1;
 
-      if (dir.x !== 0 || dir.y !== 0){
-        vx = dir.x * speed;
-        vy = dir.y * speed;
-        this.playerDrift = dir;
-        this.playerAim = dir;
-        if (this.stageIdx !== 5) this._runnerInputDir = { x: dir.x, y: dir.y };
+      // Normalize for consistent speed (matches main game exactly)
+      const len = Math.hypot(dir.x, dir.y);
+      if (len > 0){
+        const nx = dir.x / len;
+        const ny = dir.y / len;
+        vx = nx * speed;
+        vy = ny * speed;
+        this.playerDrift = { x: nx, y: ny };
+        this.playerAim = { x: nx, y: ny };
+        if (this.stageIdx !== 5) this._runnerInputDir = { x: nx, y: ny };
         this.userTookOver = true;
       }
     } else {
+      // Match main game drift behavior - no default fallback to prevent auto-movement
       const allowDrift = this.autoDrift !== false;
-      const fallback = { x: 1, y: 0 };
-      const drift = allowDrift ? (this.playerDrift || this._initDrift || fallback) : { x: 0, y: 0 };
+      const drift = this.userTookOver ? (this.playerDrift || null) : (this.playerDrift || this._initDrift || null);
       const aim = allowDrift ? (this.playerAim || drift) : drift;
-      const lenAim = Math.hypot(aim.x, aim.y);
-      if (lenAim > 0.0001){
-        vx = (aim.x / lenAim) * speed;
-        vy = (aim.y / lenAim) * speed;
-        if (this.stageIdx !== 5) this._runnerInputDir = { x: aim.x / lenAim, y: aim.y / lenAim };
+
+      // Only move if there's a valid aim/drift (matches main game)
+      if (aim) {
+        const lenAim = Math.hypot(aim.x, aim.y);
+        if (lenAim > 0.0001){
+          vx = (aim.x / lenAim) * speed;
+          vy = (aim.y / lenAim) * speed;
+          if (this.stageIdx !== 5) this._runnerInputDir = { x: aim.x / lenAim, y: aim.y / lenAim };
+        }
       }
     }
 
@@ -2423,32 +2574,25 @@ export class TutorialMiniScene extends Phaser.Scene {
     const now = performance.now();
 
     // Determine whether runner powers are available.  Powers are only enabled in stage 3
-    // and after the player has chosen their abilities.  In earlier stages double-tap
-    // behaviour is ignored.
+    // and after the player has chosen their abilities.
     const powersActive = (this.stageIdx >= 3);
-    const tapDir = (Math.abs(vx) + Math.abs(vy) > 0.0001)
-      ? { x: Math.sign(vx), y: Math.sign(vy) }
-      : null;
-    if (!usingKeys){
-      this._lastTap = null;
-    } else if (tapDir){
-      if (!this._lastTap || now - this._lastTap.t > 340 || this._lastTap.dir.x !== tapDir.x || this._lastTap.dir.y !== tapDir.y){
-        this._lastTap = { t: now, dir: tapDir };
-      } else {
-        this._lastTap = null;
-        // On double-tap, execute the next selected power if available
-        if (powersActive && this.runnerPowersSelected){
+
+    // Desktop: single click to activate next power (like runner mode)
+    // Only activate with mouse clicks, not keyboard
+    if (powersActive && !this.pausedForModal){
+      const desktop = this.sys.game.device.os.desktop;
+      if (desktop && this.input.activePointer.isDown && !this.input.activePointer.wasTouch){
+        // Ignore clicks that happened during modal close
+        if (this._ignoreNextPowerClick){
+          this._ignoreNextPowerClick = false;
+          this._desktopClickHandled = true; // Mark as handled to prevent activation
+        } else if (!this._desktopClickHandled){
+          this._desktopClickHandled = true;
           this.activateNextRunnerPower();
         }
+      } else if (!this.input.activePointer.isDown){
+        this._desktopClickHandled = false;
       }
-    }
-
-    // Keyboard shortcuts for powers: SHIFT triggers dash, SPACE triggers phase
-    if (powersActive && this.dashKey?.isDown){
-      this.activateRunnerPowerByName('dash');
-    }
-    if (powersActive && this.phaseKey?.isDown){
-      this.activateRunnerPowerByName('phase');
     }
 
     // Phase state: become intangible while _phaseUntil is in the future

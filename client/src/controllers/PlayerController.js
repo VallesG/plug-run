@@ -107,6 +107,7 @@ export default class PlayerController {
           this.playerGunAim = { x: nx, y: ny };
         }
         this.playerMoveDir = { x: nx, y: ny };
+        this.playerDrift = { x: nx, y: ny }; // Update drift so player continues in this direction
 
         if (sprite === this.scene.attacker) {
           this._runnerInputDir = { x: nx, y: ny };
@@ -116,11 +117,15 @@ export default class PlayerController {
       // Legacy fallback: use player's aim or drift
       // After first user interaction, never fall back to initial drift
       const drift = this.scene.userTookOver ? (this.playerDrift || null) : (this.playerDrift || this._initDrift || null);
-      const aim = this.playerAim || drift || { x: 1, y: 0 };
-      const lenAim = Math.hypot(aim.x, aim.y);
-      if (lenAim > 0.0001) {
-        vx = (aim.x / lenAim) * speed;
-        vy = (aim.y / lenAim) * speed;
+      const aim = this.playerAim || drift;
+
+      // Only move if there's a valid aim/drift (don't default to right movement)
+      if (aim) {
+        const lenAim = Math.hypot(aim.x, aim.y);
+        if (lenAim > 0.0001) {
+          vx = (aim.x / lenAim) * speed;
+          vy = (aim.y / lenAim) * speed;
+        }
       }
     }
 
