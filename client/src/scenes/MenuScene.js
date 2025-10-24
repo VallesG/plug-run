@@ -189,18 +189,23 @@ export class MenuScene extends Phaser.Scene {
     this.input.on('pointermove', (p)=>{
       if (!this.dragging) return;
       const dx = p.x - this.dragLastX; this.dragLastX = p.x; this.dragPixels += dx;
-      // translate into fractional shift for tactile drag
-      const spacing = this.cardSpacing();
-      const shift = -(this.dragPixels / spacing);
-      this.layoutCards(shift);
+      // Only move carousel if user has dragged more than threshold (prevents tiny wobbles)
+      const MIN_DRAG_THRESHOLD = 30;
+      if (Math.abs(this.dragPixels) > MIN_DRAG_THRESHOLD) {
+        // translate into fractional shift for tactile drag
+        const spacing = this.cardSpacing();
+        const shift = -(this.dragPixels / spacing);
+        this.layoutCards(shift);
+      }
     });
     const endDrag = ()=>{
       if (!this.dragging) return;
       const total = this.dragLastX - this.dragStartX;
       this.dragging = false;
       if (this._tapDirectUsed){ this._tapDirectUsed = false; return; }
-      if (total > 48) { this.selectPrev(); return; }
-      if (total < -48) { this.selectNext(); return; }
+      // Increase swipe threshold to prevent accidental swipes (was 48, now 100)
+      if (total > 100) { this.selectPrev(); return; }
+      if (total < -100) { this.selectNext(); return; }
       // Treat as a tap: launch tapped card if any; otherwise launch selected
       const tapped = this._tapCandidate;
       if (tapped){
@@ -484,7 +489,8 @@ export class MenuScene extends Phaser.Scene {
     cont.on('pointerdown', ()=>{ this._tapCandidate = cont; });
     const directTap = ()=>{
       const moved = Math.abs((this.dragLastX||0) - (this.dragStartX||0));
-      if (moved < 12){
+      // Increase tap threshold to prevent accidental swipes (was 12, now 40)
+      if (moved < 40){
         const idx = this.cards.indexOf(cont);
         if (idx !== -1){
           if (idx !== this.selected) this.setSelected(idx);
@@ -517,12 +523,12 @@ export class MenuScene extends Phaser.Scene {
     );
     container.input.cursor = 'pointer';
 
-    const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0x2a1a38, 1)
-      .setStrokeStyle(2, 0xfbbf24);
+    const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0xfbbf24, 1)
+      .setStrokeStyle(3, 0xfde047);
 
     const text = this.add.text(0, 0, 'START', {
       fontSize: '16px',
-      color: '#fbbf24',
+      color: '#000000',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -530,7 +536,9 @@ export class MenuScene extends Phaser.Scene {
 
     // Container launches the specific card for this button
     container.on('pointerdown', (pointer, localX, localY, event) => {
+      // Stop event propagation to prevent carousel drag
       if (event) event.stopPropagation();
+      pointer.event.stopPropagation();
 
       // Cancel nudge animation
       this.userHasSwiped = true;
@@ -547,7 +555,11 @@ export class MenuScene extends Phaser.Scene {
       if (container.cardIndex !== this.selected) {
         this.setSelected(container.cardIndex);
       }
+
+      // Mark that carousel shouldn't process this as a tap
       this._tapDirectUsed = true;
+      this.dragging = false; // Prevent carousel from thinking this is a drag
+
       this.launchCard(targetCard);
     });
 
@@ -1596,8 +1608,13 @@ export class MenuScene extends Phaser.Scene {
   selectPrev(){ this.setSelected(this.selected - 1); }
 
   launchCard(card){
-    const k = card.modeKey;
     const cam = this.cameras.main;
+    // Prevent multiple launches - check if camera is already fading
+    if (cam.fadeEffect && cam.fadeEffect.isRunning) {
+      return; // Already launching, ignore
+    }
+
+    const k = card.modeKey;
 
     if (k === 'learn'){
       // Fade out street sounds
