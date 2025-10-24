@@ -579,13 +579,42 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Adjust runner spawn location depending on stage requirements
     if (idx === 1){
       // For the first tutorial scene, spawn the player near the top-left corner so
-      // they have to traverse the map to reach the car.  Find the first walkable
-      // floor cell scanning from (1,1) to the middle of the map.
-      outer: for (let y = 1; y < this.rows - 1; y++){
-        for (let x = 1; x < this.cols - 1; x++){
-          if (this.isWalkableCell?.(x, y)){
-            this.spawnRunnerCell = { x, y };
-            break outer;
+      // they have to traverse the map to reach the car.
+
+      const isDesktop = window.innerWidth >= 768 && this.scale.width <= 500;
+
+      if (isDesktop) {
+        // Desktop: spawn runner in the center of the map
+        const centerX = Math.floor(this.cols / 2);
+        const centerY = Math.floor(this.rows / 2);
+
+        // Find nearest walkable cell to center
+        let bestSpawn = null;
+        let minDistFromCenter = Infinity;
+
+        for (let y = 1; y < this.rows - 1; y++){
+          for (let x = 1; x < this.cols - 1; x++){
+            if (this.isWalkableCell?.(x, y)){
+              const distFromCenter = Math.hypot(x - centerX, y - centerY);
+              if (distFromCenter < minDistFromCenter) {
+                minDistFromCenter = distFromCenter;
+                bestSpawn = { x, y };
+              }
+            }
+          }
+        }
+
+        if (bestSpawn) {
+          this.spawnRunnerCell = bestSpawn;
+        }
+      } else {
+        // Mobile: use original logic (top-left scan)
+        outer: for (let y = 1; y < this.rows / 2; y++){
+          for (let x = 1; x < this.cols - 1; x++){
+            if (this.isWalkableCell?.(x, y)){
+              this.spawnRunnerCell = { x, y };
+              break outer;
+            }
           }
         }
       }
@@ -689,6 +718,10 @@ export class TutorialMiniScene extends Phaser.Scene {
   setupInput(){
     if (!this.cursors) this.cursors = this.input.keyboard.createCursorKeys();
     if (!this.wasdKeys) this.wasdKeys = this.input.keyboard.addKeys({ W: 'W', A: 'A', S: 'S', D: 'D' });
+
+    // Desktop detection
+    const isDesktop = !!(this.sys.game?.device?.os?.desktop);
+
     if (!this._quickAimBound){
       const setDir = (x, y) => {
         const len = Math.hypot(x, y) || 1;
@@ -697,6 +730,10 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.playerAim = { x: nx, y: ny };
         this.playerDrift = { x: nx, y: ny };
         this._runnerInputDir = { x: nx, y: ny };
+        // Desktop stage 5 (plug): Don't update gun aim from keyboard (mouse controls aim)
+        if (!(isDesktop && this.stageIdx === 5)) {
+          this.playerGunAim = { x: nx, y: ny };
+        }
         this.userTookOver = true;
       };
       this.input.keyboard.on('keydown-W', () => setDir(0, -1));
@@ -714,6 +751,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
     this.playerDrift = { x: this._initDrift.x, y: this._initDrift.y };
     this.playerAim = { x: this._initDrift.x, y: this._initDrift.y };
+    this.playerGunAim = { x: this._initDrift.x, y: this._initDrift.y };
     this._runnerInputDir = { x: this.playerAim.x, y: this.playerAim.y };
     this.userTookOver = false;
     this.autoDrift = true;
@@ -793,6 +831,7 @@ export class TutorialMiniScene extends Phaser.Scene {
             }
 
             this.playerAim = cardinalDir;
+            this.playerGunAim = cardinalDir;
             // In stage 5 (plug), only update aim, not drift (plug doesn't auto-move)
             if (this.stageIdx !== 5) {
               this.playerDrift = cardinalDir;
@@ -997,6 +1036,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       // Convert player sprite to plug
       if (this.runner?.sprite){
         this.runner.sprite.setTexture('td_plug');
+        this.runner.sprite.setTint(0xff6b6b); // Apply red tint like in regular game mode
       }
     }
   }
@@ -1022,6 +1062,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     const safeDrift = this.pickSafeInitialDirection();
     this.playerDrift = safeDrift;
     this.playerAim = safeDrift;
+    this.playerGunAim = safeDrift;
     this._runnerInputDir = { x: safeDrift.x, y: safeDrift.y };
   }
 
@@ -1095,6 +1136,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (L < 0.0001) return { x: px, y: py };
     const aim = { x: dx / L, y: dy / L };
     this.playerAim = aim;
+    this.playerGunAim = aim;
     if (this.autoDrift !== false){
       this.playerDrift = { x: aim.x, y: aim.y };
     }
@@ -1116,7 +1158,8 @@ export class TutorialMiniScene extends Phaser.Scene {
         'You are the RUNNER'
       ];
       const desktopLines = [
-        'Use arrow keys / WASD to move',
+        'You move automatically',
+        'Use arrow keys / WASD to change direction',
         'Reach the Getaway Car',
         '',
         'You are the RUNNER'
@@ -1163,9 +1206,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     } else if (idx === 4) {
       // Stage 4: Runner PvP tutorial - show runner power selection first, then intro modal
       const runnerLines = [
-        'Now that you know the basics, try and take',
-        'the stash from the plug while dodging',
-        'his bullets. Go to the getaway car.',
+        'Now that you know the basics, try and take the stash from the plug while dodging his bullets.',
+        '',
+         'Get to the getaway car.',
         '',
         'Tip: Don\'t get hit more than once!'
       ];
@@ -1191,16 +1234,20 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
   }
   showCharacterPreview(role){
-    // Create character preview inline with text at bottom of modal
+    // Create character preview to the right of "You are the RUNNER/PLUG" text (like a tab indent)
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Position to align perfectly with "You are the RUNNER/PLUG" text line (same vertical position as text)
-    const previewY = height * 0.475;  // Adjusted down to align with text line after modal content changes
-    const previewSize = Math.min(width, height) * 0.045;  // Smaller size (was 0.06) to fit inline
+    // Position sprite on the line below the "You are..." text, indented to the right like hitting tab
+    const previewY = height * 0.50;  // Just below the text line
+    const previewSize = Math.min(width, height) * 0.045;
 
-    // Container for character preview - positioned to the right of "You are the RUNNER/PLUG" text
-    const container = this.add.container(width / 2 + 80, previewY).setDepth(10001).setScrollFactor(0);
+    // Position to the right of center (like a tab indent)
+    // Stage 1 & 5 both use same X offset for consistency
+    const previewX = width / 2 + 120;
+
+    // Container for character preview - positioned to right of text like tab indent
+    const container = this.add.container(previewX, previewY).setDepth(10001).setScrollFactor(0);
 
     // Character sprite
     const texture = (role === 'runner') ? 'td_runner' : 'td_plug';
@@ -1284,7 +1331,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     const maxContentWidth = Math.floor(Math.min(this.scale.width * 0.75, 420));
 
     // Replay button text - always use shorter version
-    const replayButtonText = 'Replay Last';
+    const replayButtonText = 'Previous';
 
     // Create dialog without action buttons (we'll add them manually outside)
     const dlg = this.rexUI.add.dialog({
@@ -1346,10 +1393,10 @@ export class TutorialMiniScene extends Phaser.Scene {
         if (mainText) mainText.destroy();
         const previousStage = Math.max(1, currentStageIdx - 1);
         // Start stage immediately, then clean up veil after stage loads
+        // Note: pausedForModal stays true until the new stage's modal is dismissed
         this.startStage(previousStage);
         this.time.delayedCall(100, () => {
           veil.destroy();
-          this.pausedForModal = false;
         });
       });
 
@@ -1357,11 +1404,13 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
 
     // Main button (right side or centered if no replay)
+    // Stage 1 START button is wider to accommodate character sprite on the right
     const mainX = opts.showReplay ? this.scale.width / 2 + 80 : this.scale.width / 2;
+    const mainButtonWidth = opts.showReplay ? 140 : 180;  // Wider START button for stage 1
     const mainBg = this.add.rectangle(
       mainX,
       buttonY,
-      140,
+      mainButtonWidth,
       42,
       0xfbbf24
     ).setStrokeStyle(4, 0xfde047).setDepth(10000).setInteractive({ useHandCursor: true });
@@ -1885,14 +1934,27 @@ export class TutorialMiniScene extends Phaser.Scene {
         0.72
       ).setScrollFactor(0).setDepth(9998).setInteractive();
 
+      // Calculate max width for modal content to prevent text cutoff on desktop
+      const maxContentWidth = Math.floor(Math.min(this.scale.width * 0.75, 420));
+
       const dlg = this.rexUI.add.dialog({
         x: this.scale.width / 2,
         y: this.scale.height * 0.35,
         background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 8, 0x101522, 0.96).setStrokeStyle(2, 0x2f3650),
-        title: this.add.text(0, 0, "You're ready!", { color: '#cbd1ff', fontSize: Math.max(20, Math.floor(this.scale.height * 0.032)) + 'px', fontStyle: 'bold' }),
-        content: this.add.text(0, 0, 'Tutorial complete!\n\nTime to run the streets and defend the block.', { color: '#aab5ff', fontSize: Math.max(14, Math.floor(this.scale.height * 0.022)) + 'px', align: 'center' }),
-        actions: [ this.add.text(0, 0, 'Exit', { color: '#cbd1ff' }) ],
-        space: { title: 10, content: 10, action: 8, left: 14, right: 14, top: 12, bottom: 12 }
+        title: this.add.text(0, 0, "You're ready!", {
+          color: '#cbd1ff',
+          fontSize: Math.max(20, Math.floor(this.scale.height * 0.032)) + 'px',
+          fontStyle: 'bold',
+          wordWrap: { width: maxContentWidth }
+        }),
+        content: this.add.text(0, 0, 'Tutorial complete!\n\nTime to run the streets and defend the block.', {
+          color: '#aab5ff',
+          fontSize: Math.max(14, Math.floor(this.scale.height * 0.022)) + 'px',
+          align: 'center',
+          wordWrap: { width: maxContentWidth }
+        }),
+        actions: [ this.add.text(0, 0, 'Exit', { color: '#ef4444', fontStyle: 'bold' }) ],
+        space: { title: 10, content: 10, action: 8, left: 20, right: 20, top: 12, bottom: 12 }
       }).layout().setDepth(9999).popUp(160);
 
       dlg.on('button.click', () => {
@@ -2061,6 +2123,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     const shadow = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
     const sprite = this.add.sprite(0, 0, 'td_plug').setOrigin(0.5);
     sprite.setScale((this.cell / 128) * 3.0);
+    sprite.setTint(0xff6b6b); // Apply red tint like in regular game mode
     this.aiPlug.add([shadow, sprite]);
     this.aiPlug.sprite = sprite;
     this.aiPlug.hbRadius = this.hitboxRadius;
@@ -2429,12 +2492,8 @@ export class TutorialMiniScene extends Phaser.Scene {
         if (now >= (this._playerShootCooldown || 0)){
           this._playerShootCooldown = now + 250; // 250ms cooldown
 
-          // Aim from mouse position
-          const pointer = this.input.activePointer;
-          const dx = pointer.worldX - this.runner.x;
-          const dy = pointer.worldY - this.runner.y;
-          const len = Math.hypot(dx, dy) || 1;
-          const aim = { x: dx / len, y: dy / len };
+          // Use playerGunAim (updated every frame from mouse position)
+          const aim = this.playerGunAim || { x: 1, y: 0 };
 
           this.spawnWeaponBurst(this.runner, aim, this.bulletsPlayer, this.selectedWeapon);
         }
@@ -2533,6 +2592,11 @@ export class TutorialMiniScene extends Phaser.Scene {
         vy = ny * speed;
         this.playerDrift = { x: nx, y: ny };
         this.playerAim = { x: nx, y: ny };
+        // Desktop stage 5 (plug): Don't update gun aim from keyboard (mouse controls aim)
+        const isDesktopPlugStage = this.sys.game.device.os.desktop && this.stageIdx === 5;
+        if (!isDesktopPlugStage) {
+          this.playerGunAim = { x: nx, y: ny };
+        }
         if (this.stageIdx !== 5) this._runnerInputDir = { x: nx, y: ny };
         this.userTookOver = true;
       }
@@ -2663,6 +2727,15 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (!this.runner) return;
     const dt = delta / 1000;
     if (this.pausedForModal) return;
+
+    // Desktop stage 5 (plug): Update gun aim from mouse position every frame for instant response
+    if (this.sys.game.device.os.desktop && this.stageIdx === 5 && this.input.activePointer) {
+      const p = this.input.activePointer;
+      const dx = p.worldX - this.runner.x;
+      const dy = p.worldY - this.runner.y;
+      const L = Math.hypot(dx, dy) || 1;
+      this.playerGunAim = { x: dx/L, y: dy/L };
+    }
 
     // Handle movement for all stages (player controls runner in 1-4, plug in 5)
     this.handleMovement(dt);
@@ -2797,7 +2870,13 @@ export class TutorialMiniScene extends Phaser.Scene {
       const dx = this.runner.x - (this.lastPos?.x ?? this.runner.x);
       const dy = this.runner.y - (this.lastPos?.y ?? this.runner.y);
       const spd = Math.hypot(dx, dy);
-      if (spd > 0.001){
+
+      // Desktop stage 5 (plug): Rotate sprite to face mouse cursor, not movement direction
+      const isDesktopPlugStage = this.sys.game.device.os.desktop && this.stageIdx === 5;
+      if (isDesktopPlugStage && this.playerGunAim) {
+        const ang = Math.atan2(this.playerGunAim.y, this.playerGunAim.x) * 180 / Math.PI;
+        this.runner.sprite.setAngle(ang);
+      } else if (spd > 0.001){
         const ang = Math.atan2(dy, dx) * 180 / Math.PI;
         this.runner.sprite.setAngle(ang);
       }

@@ -18,12 +18,12 @@
  */
 export function getPlugBaseStats() {
   return {
-    speed: 50,              // Movement speed in pixels/sec (very slow at start)
-    shootEvery: 1.8,        // Fire rate in seconds (very slow shooting at start)
-    maxRange: 250,          // Vision range in pixels (slightly reduced at start)
-    inaccuracy: 1.0,        // Shot spread 0-1 (terrible aim at start)
-    reactDelay: 800,        // Reaction time in ms (slow reactions at start)
-    orientationDelay: 2.5   // Time in seconds before AI starts targeting (thinking delay)
+    speed: 60,              // Movement speed in pixels/sec (faster at start - was 50)
+    shootEvery: 1.5,        // Fire rate in seconds (faster shooting at start - was 1.8)
+    maxRange: 280,          // Vision range in pixels (better vision at start - was 250)
+    inaccuracy: 0.85,       // Shot spread 0-1 (better aim at start - was 1.0)
+    reactDelay: 500,        // Reaction time in ms (faster reactions at start - was 800)
+    orientationDelay: 1.5   // Time in seconds before AI starts targeting (faster thinking - was 2.5)
   };
 }
 
@@ -49,38 +49,35 @@ export function applyPlugProgression(scene) {
 
   const round = scene.pveRound || 1;
 
-  // SPEED: Linear scaling from 50 → 98 (round 20) → continues forever
-  // Formula: 50 + (round - 1) * 2.5
-  // Round 1: 50 | Round 10: 72 | Round 11: 76 | Round 20: 98 | Round 37: 140 | Round 40: 148
-  // Mobile-friendly: AI catches mobile runner (98 px/s) around round 20
-  // Desktop: AI catches desktop runner (140 px/s) around round 37
-  scene.aiPlug.speed = 50 + (round - 1) * 2.5;
+  // SPEED: Reduced progression (starts higher, scales slower)
+  // Formula: 60 + (round - 1) * 2.0 (was 50 + 2.5)
+  // Round 1: 60 | Round 10: 78 | Round 20: 98 | Round 40: 138
+  scene.aiPlug.speed = 60 + (round - 1) * 2.0;
 
-  // FIRE RATE: Linear scaling from 1.8s → 0.75s (round 20) → min 0.3s
-  // Formula: 1.8 - (round - 1) * 0.0535
-  // Round 1: 1.8s | Round 10: 1.3s | Round 20: 0.77s | Round 40: 0.3s (capped)
-  scene.aiPlug.shootEvery = Math.max(0.3, 1.8 - (round - 1) * 0.0535);
+  // FIRE RATE: Reduced progression (starts faster, scales slower)
+  // Formula: 1.5 - (round - 1) * 0.04 (was 1.8 - 0.0535)
+  // Round 1: 1.5s | Round 10: 1.14s | Round 20: 0.74s | Round 40: 0.3s (capped)
+  scene.aiPlug.shootEvery = Math.max(0.3, 1.5 - (round - 1) * 0.04);
 
-  // ACCURACY: Linear scaling from 1.0 → 0.38 (round 20) → min 0.1
-  // Formula: 1.0 - (round - 1) * 0.0326
-  // Round 1: 1.0 | Round 10: 0.71 | Round 20: 0.38 | Round 40: 0.1 (capped)
-  scene.aiPlug.inaccuracy = Math.max(0.1, 1.0 - (round - 1) * 0.0326);
+  // ACCURACY: Reduced progression (starts better, scales slower)
+  // Formula: 0.85 - (round - 1) * 0.025 (was 1.0 - 0.0326)
+  // Round 1: 0.85 | Round 10: 0.63 | Round 20: 0.38 | Round 40: 0.1 (capped)
+  scene.aiPlug.inaccuracy = Math.max(0.1, 0.85 - (round - 1) * 0.025);
 
-  // REACTION TIME: Linear scaling from 800ms → 410ms (round 20) → min 100ms
-  // Formula: 800 - (round - 1) * 20.4
-  // Round 1: 800ms | Round 10: 616ms | Round 20: 412ms | Round 40: 100ms (capped)
-  scene.aiPlug.reactDelay = Math.max(100, 800 - (round - 1) * 20.4);
+  // REACTION TIME: Reduced progression (starts faster, scales slower)
+  // Formula: 500 - (round - 1) * 15 (was 800 - 20.4)
+  // Round 1: 500ms | Round 10: 365ms | Round 20: 215ms | Round 40: 100ms (capped)
+  scene.aiPlug.reactDelay = Math.max(100, 500 - (round - 1) * 15);
 
-  // VISION RANGE: Linear scaling from 250 → 348 (round 20) → continues forever
-  // Formula: 250 + (round - 1) * 5.1
-  // Round 1: 250 | Round 10: 296 | Round 20: 347 | Round 40: 450
-  scene.aiPlug.maxRange = 250 + (round - 1) * 5.1;
+  // VISION RANGE: Reduced progression (starts better, scales slower)
+  // Formula: 280 + (round - 1) * 4.0 (was 250 + 5.1)
+  // Round 1: 280 | Round 10: 316 | Round 20: 356 | Round 40: 436
+  scene.aiPlug.maxRange = 280 + (round - 1) * 4.0;
 
-  // ORIENTATION DELAY: Linear scaling from 2.5s → 0.37s (round 20) → min 0.1s
-  // Formula: 2.5 - (round - 1) * 0.1123
-  // Round 1: 2.5s | Round 10: 1.5s | Round 20: 0.37s | Round 40: 0.1s (capped)
-  // This simulates the AI "thinking" before it locks onto the player at round start
-  scene.aiPlug.orientationDelay = Math.max(0.1, 2.5 - (round - 1) * 0.1123);
+  // ORIENTATION DELAY: Reduced progression (starts faster, scales slower)
+  // Formula: 1.5 - (round - 1) * 0.07 (was 2.5 - 0.1123)
+  // Round 1: 1.5s | Round 10: 0.87s | Round 20: 0.17s | Round 40: 0.1s (capped)
+  scene.aiPlug.orientationDelay = Math.max(0.1, 1.5 - (round - 1) * 0.07);
 }
 
 /**

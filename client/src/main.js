@@ -7,11 +7,18 @@ import LeaderboardScene from './scenes/LeaderboardScene.js';
 // import { PvpScene } from './scenes/PvpScene.js'; // Future multiplayer
 import rexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
 
+// Desktop: constrain to mobile-like viewport, Mobile: fill screen
+// Based on most common mobile resolutions from analytics:
+// 390x844, 414x896, 423x1080, 430x932
+const isMobile = window.innerWidth < 768;
+const gameWidth = isMobile ? window.innerWidth : Math.min(500, window.innerWidth);
+const gameHeight = isMobile ? window.innerHeight : Math.min(938, window.innerHeight);
+
 const config = {
   type: Phaser.AUTO,
   parent: 'app',
-  width: window.innerWidth,     // fill browser width
-  height: window.innerHeight,   // fill browser height
+  width: gameWidth,
+  height: gameHeight,
   backgroundColor: '#0b0b12',
   render: { pixelArt: true },
   physics: {
@@ -24,8 +31,10 @@ const config = {
     ]
   },
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    mode: isMobile ? Phaser.Scale.RESIZE : Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: gameWidth,
+    height: gameHeight
   },
   // Start at Menu, include tutorial and game scenes
   scene: [MenuScene, RunnerScene, PlugScene, TutorialMiniScene, LeaderboardScene]
@@ -56,8 +65,12 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', checkZoom);
 }
 
-// resize handler
+// resize handler - only resize on mobile
 window.addEventListener('resize', () => {
-  game.scale.resize(window.innerWidth, window.innerHeight);
+  const isMobileNow = window.innerWidth < 768;
+  if (isMobileNow) {
+    // Mobile: resize to fill screen
+    game.scale.resize(window.innerWidth, window.innerHeight);
+  }
   checkZoom();
 });

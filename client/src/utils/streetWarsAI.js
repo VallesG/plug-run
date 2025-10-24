@@ -1,32 +1,32 @@
 // Street Wars AI - Level 50 AI tuned to feel like a skilled human player
 // This AI is used when mode === 'streetwars' to provide a challenging PvP-like experience
 
-// Configuration for human-like AI behavior
+// Configuration for human-like AI behavior (Made harder based on feedback)
 export const STREET_WARS_CONFIG = {
   // Movement settings
-  speed: 140, // Fast but not superhuman (equivalent to ~level 50 PvE)
+  speed: 145, // Slightly faster (was 140)
   imperfectPathing: true, // Sometimes takes suboptimal routes
 
   // Shooting settings
-  shootEvery: 0.75, // Base shoot interval in seconds
-  shootDelayVariance: 0.3, // ±0.3s randomness (makes timing unpredictable)
-  inaccuracy: 0.25, // Better aim than early AI but not perfect
-  panicInaccuracy: 0.50, // When low health, aim gets worse
+  shootEvery: 0.65, // Faster shooting (was 0.75)
+  shootDelayVariance: 0.25, // Less variance (was 0.3)
+  inaccuracy: 0.20, // Better aim (was 0.25)
+  panicInaccuracy: 0.45, // Better aim under pressure (was 0.50)
 
-  // Reaction times
-  reactDelay: 300, // Quick but not instant (ms)
-  reactionVariance: 200, // Sometimes 300ms, sometimes 500ms
+  // Reaction times - Made faster
+  reactDelay: 250, // Faster reactions (was 300ms)
+  reactionVariance: 150, // Less variance (was 200ms)
 
   // Vision/awareness
-  maxRange: 350, // Slightly better vision than base AI
+  maxRange: 370, // Better vision (was 350)
 
-  // Human-like behavioral chances
-  fakeoutChance: 0.15, // 15% chance to juke/strafe when close
-  missEasyShot: 0.08, // 8% chance to whiff an easy aligned shot
-  takeBadAngle: 0.12, // 12% chance to shoot from suboptimal position
-  hesitateChance: 0.05, // 5% chance to pause briefly (looks human)
-  overcommitChance: 0.10, // 10% chance to chase too aggressively
-  wanderChance: 0.05, // 5% chance per frame to take random move
+  // Human-like behavioral chances - Reduced mistakes
+  fakeoutChance: 0.18, // More juking (was 0.15)
+  missEasyShot: 0.06, // Fewer misses (was 0.08)
+  takeBadAngle: 0.09, // Better positioning (was 0.12)
+  hesitateChance: 0.03, // Less hesitation (was 0.05)
+  overcommitChance: 0.08, // Better tactical decisions (was 0.10)
+  wanderChance: 0.03, // Less wandering (was 0.05)
 
   // Adaptive behavior
   retreatWhenLow: true, // Falls back when HP < 40%
@@ -34,9 +34,9 @@ export const STREET_WARS_CONFIG = {
   aggressiveWhenAhead: true, // Pushes harder when runner has low HP
 
   // Power usage (for AI runner in street wars)
-  powerUseDelay: 2000, // Cooldown between power uses (ms)
-  panicPowerChance: 0.7, // 70% chance to use defensive power when low HP
-  strategicPowerChance: 0.4, // 40% chance to use power strategically
+  powerUseDelay: 1800, // Faster cooldown (was 2000ms)
+  panicPowerChance: 0.75, // Better panic power usage (was 0.7)
+  strategicPowerChance: 0.5, // Better strategic power usage (was 0.4)
 };
 
 // Apply Street Wars AI configuration to a scene

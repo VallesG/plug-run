@@ -485,8 +485,11 @@ export class BaseGameScene extends Phaser.Scene {
       this.playerDrift = { x: nx, y: ny };
       this.playerMoveDir = { x: nx, y: ny }; // Set straight-line movement direction
       this.playerIntendedDir = { x: nx, y: ny }; // Track what player intended
-      // Also update gun aim when using keyboard (keeps consistency)
-      this.playerGunAim = { x: nx, y: ny };
+      // Desktop plug mode: Don't update gun aim from keyboard (mouse controls aim independently)
+      // Mobile/runner mode: Update gun aim from keyboard for consistency
+      if (!(this.isDesktop && this.role === 'plug')) {
+        this.playerGunAim = { x: nx, y: ny };
+      }
       this._runnerInputDir = { x: nx, y: ny };
       this.userTookOver = true;
     };
@@ -506,9 +509,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.addPointer(4); // left button + 3 more fingers
     // Treat as desktop only when reported desktop AND no touch support
     this.isDesktop = !!(this.sys.game?.device?.os?.desktop) && !!(this.sys.game?.device?.input?.touch === false);
-    this.cross = this.add.rectangle(0, 0, 10, 10, 0xffffff, 1)
-      .setStrokeStyle(1, 0xffffff)
-      .setVisible(this.isDesktop)
+    // Crosshair removed per user preference
+    this.cross = this.add.rectangle(0, 0, 1, 1, 0xffffff, 0)
+      .setVisible(false)
       .setDepth(998);
 
     // guns
@@ -706,14 +709,16 @@ export class BaseGameScene extends Phaser.Scene {
     this.destroyTouchUI?.();
 
     if (this.isDesktop) {
-      this.cross.setVisible(true);
+      // Crosshair removed - no longer visible
       this._pointerMoveHandler = (p) => {
-        this.cross.setPosition(p.x, p.y);
         const who = (this.role==='plug') ? this.defender : this.attacker;
+        if (!who) return;
         const dx = p.x - who.x, dy = p.y - who.y;
         const L = Math.hypot(dx,dy) || 1;
         // Desktop: mouse controls gun aim only, not movement direction
+        // Direct update for instant response
         this.playerGunAim = { x: dx/L, y: dy/L };
+        this.playerController.playerGunAim = { x: dx/L, y: dy/L };
       };
       this.input.on('pointermove', this._pointerMoveHandler);
       this._mouseDown = false;
@@ -1470,6 +1475,16 @@ export class BaseGameScene extends Phaser.Scene {
     this.combatSystem.update(delta);
     // Exit immediately if round ended during combat update (prevents race conditions)
     if (this.roundOver) return;
+
+    // Desktop plug mode: Update aim every frame for instant response
+    if (this.isDesktop && this.role === 'plug' && this.defender && this.input.activePointer) {
+      const p = this.input.activePointer;
+      const dx = p.x - this.defender.x;
+      const dy = p.y - this.defender.y;
+      const L = Math.hypot(dx, dy) || 1;
+      this.playerGunAim = { x: dx/L, y: dy/L };
+      this.playerController.playerGunAim = { x: dx/L, y: dy/L };
+    }
 
     updateAvatarVisuals(this, dt);
 

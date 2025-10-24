@@ -92,19 +92,23 @@ export default class PlayerController {
     const usingKeys = keyboardInput.usingKeys;
 
     if (usingKeys) {
-      // Use keyboard for movement (now with diagonal support from legacy)
-      vx = keyboardInput.vx * speed;
-      vy = keyboardInput.vy * speed;
-
       // Update gun aim direction for plug when using keyboard
       if (keyboardInput.vx !== 0 || keyboardInput.vy !== 0) {
+        // Normalize diagonal movement to prevent speed boost
         const normLen = Math.hypot(keyboardInput.vx, keyboardInput.vy);
         const nx = keyboardInput.vx / normLen;
         const ny = keyboardInput.vy / normLen;
 
+        // Use normalized values for movement (fixes diagonal speed boost)
+        vx = nx * speed;
+        vy = ny * speed;
+
         if (sprite === this.scene.defender) {
-          // Update gun aim for plug
-          this.playerGunAim = { x: nx, y: ny };
+          // Desktop plug mode: Don't update gun aim from keyboard (mouse controls aim independently)
+          // Mobile plug mode: Update gun aim from keyboard
+          if (!(this.scene.isDesktop && this.scene.role === 'plug')) {
+            this.playerGunAim = { x: nx, y: ny };
+          }
         }
         this.playerMoveDir = { x: nx, y: ny };
         this.playerDrift = { x: nx, y: ny }; // Update drift so player continues in this direction

@@ -44,9 +44,16 @@ export function createPortraitOverlay(scene) {
     // Update sizes based on Phaser scale (for rendering)
     const sceneWidth = scene.scale.width;
     const sceneHeight = scene.scale.height;
-    bg.setPosition(sceneWidth/2, sceneHeight/2).setSize(sceneWidth, sceneHeight);
-    icon.setPosition(sceneWidth/2, sceneHeight/2 - 40);
-    message.setPosition(sceneWidth/2, sceneHeight/2 + 40);
+    // Null check to prevent errors when scene is shutting down
+    if (bg && bg.active) {
+      bg.setPosition(sceneWidth/2, sceneHeight/2).setSize(sceneWidth, sceneHeight);
+    }
+    if (icon && icon.active) {
+      icon.setPosition(sceneWidth/2, sceneHeight/2 - 40);
+    }
+    if (message && message.active) {
+      message.setPosition(sceneWidth/2, sceneHeight/2 + 40);
+    }
   };
 
   // Check on Phaser resize
