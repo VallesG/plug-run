@@ -741,7 +741,8 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this._pointerDownHandler);
     this.input.on('pointerup', this._pointerUpHandler);
     // Fallback: ensure left click fires even if desktop detection flips
-    this.input.on('pointerdown', (p)=>{ if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu) this.combatSystem.tryMouseFire(); });
+    this._mouseFireHandler = (p) => { if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu) this.combatSystem.tryMouseFire(); };
+    this.input.on('pointerdown', this._mouseFireHandler);
     } else {
       this.makeMobileControls();
     }
@@ -2072,7 +2073,8 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.off('pointermove', this._pointerMoveHandler);
     this.input.off('pointerdown', this._pointerDownHandler);
     this.input.off('pointerup', this._pointerUpHandler);
-    this._pointerMoveHandler = this._pointerDownHandler = this._pointerUpHandler = null;
+    this.input.off('pointerdown', this._mouseFireHandler);
+    this._pointerMoveHandler = this._pointerDownHandler = this._pointerUpHandler = this._mouseFireHandler = null;
     this.scale.off('resize', this._onResizeCb);
   }
 

@@ -456,11 +456,41 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.scale.off('resize', this._onResizeCb);
         this._onResizeCb = null;
       }
+      // Clean up input handlers to prevent audio bugs
+      if (this._pointerDownHandler) {
+        this.input.off('pointerdown', this._pointerDownHandler);
+        this._pointerDownHandler = null;
+      }
+      if (this._pointerMoveHandler) {
+        this.input.off('pointermove', this._pointerMoveHandler);
+        this._pointerMoveHandler = null;
+      }
+      if (this._pointerUpHandler) {
+        this.input.off('pointerup', this._pointerUpHandler);
+        this.input.off('pointerupoutside', this._pointerUpHandler);
+        this.input.off('gameout', this._pointerUpHandler);
+        this._pointerUpHandler = null;
+      }
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       if (this._onResizeCb){
         this.scale.off('resize', this._onResizeCb);
         this._onResizeCb = null;
+      }
+      // Clean up input handlers to prevent audio bugs
+      if (this._pointerDownHandler) {
+        this.input.off('pointerdown', this._pointerDownHandler);
+        this._pointerDownHandler = null;
+      }
+      if (this._pointerMoveHandler) {
+        this.input.off('pointermove', this._pointerMoveHandler);
+        this._pointerMoveHandler = null;
+      }
+      if (this._pointerUpHandler) {
+        this.input.off('pointerup', this._pointerUpHandler);
+        this.input.off('pointerupoutside', this._pointerUpHandler);
+        this.input.off('gameout', this._pointerUpHandler);
+        this._pointerUpHandler = null;
       }
     });
   }

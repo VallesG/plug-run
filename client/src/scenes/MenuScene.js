@@ -55,11 +55,6 @@ export class MenuScene extends Phaser.Scene {
       const saved = (typeof localStorage !== 'undefined') ? localStorage.getItem('lastMode') : null;
       if (saved){ this.selected =  Math.max(0, Math.min(4, parseInt(saved, 10) || 0)); }
     } catch {}
-
-    this.dragging = false;
-    this.dragStartX = 0;
-    this.dragLastX = 0;
-    this.dragPixels = 0; // total dx during a swipe
   }
 
   create(){
@@ -170,58 +165,9 @@ export class MenuScene extends Phaser.Scene {
       this.startButtons.push(startBtn);
     });
 
-    // Controls: swipe + arrows/A-D + Enter/Space
-    this.input.on('pointerdown', (p)=>{
-      this.dragging = true; this.dragStartX = p.x; this.dragLastX = p.x; this.dragPixels = 0;
-      this._tapCandidate = null;
-
-      // Cancel swipe hint animation if user interacts before it plays
-      this.userHasSwiped = true;
-      if (this.swipeHintTimer) {
-        this.swipeHintTimer.remove();
-        this.swipeHintTimer = null;
-      }
-      // Also kill any running nudge tween
-      if (this.cards && this.cards[this.selected]) {
-        this.tweens.killTweensOf(this.cards[this.selected]);
-      }
-    });
-    this.input.on('pointermove', (p)=>{
-      if (!this.dragging) return;
-      const dx = p.x - this.dragLastX; this.dragLastX = p.x; this.dragPixels += dx;
-      // Only move carousel if user has dragged more than threshold (prevents tiny wobbles)
-      const MIN_DRAG_THRESHOLD = 30;
-      if (Math.abs(this.dragPixels) > MIN_DRAG_THRESHOLD) {
-        // translate into fractional shift for tactile drag
-        const spacing = this.cardSpacing();
-        const shift = -(this.dragPixels / spacing);
-        this.layoutCards(shift);
-      }
-    });
-    const endDrag = ()=>{
-      if (!this.dragging) return;
-      const total = this.dragLastX - this.dragStartX;
-      this.dragging = false;
-      if (this._tapDirectUsed){ this._tapDirectUsed = false; return; }
-      // Increase swipe threshold to prevent accidental swipes (was 48, now 100)
-      if (total > 100) { this.selectPrev(); return; }
-      if (total < -100) { this.selectNext(); return; }
-      // Treat as a tap: launch tapped card if any; otherwise launch selected
-      const tapped = this._tapCandidate;
-      if (tapped){
-        const idx = this.cards.indexOf(tapped);
-        if (idx !== -1){
-          // Single-tap launches the tapped card directly (also selects it)
-          if (idx !== this.selected) this.setSelected(idx);
-          this.launchCard(tapped);
-          return;
-        }
-      }
-      // No tap target? just snap back to layout
-      this.layoutCards(0, true);
-    };
-    this.input.on('pointerup', endDrag);
-    this.input.on('pointerupoutside', endDrag);
+    // Create navigation arrows (positioned next to START button)
+    this.leftArrow = this.makeArrowButton('left');
+    this.rightArrow = this.makeArrowButton('right');
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('A,D,ENTER,SPACE,ESC');
@@ -303,9 +249,6 @@ export class MenuScene extends Phaser.Scene {
     // Portrait mode enforcement overlay for mobile landscape
     createPortraitOverlay(this);
 
-    // Card swipe hint animation (subtle nudge to indicate swipeable)
-    this.showCardSwipeHint();
-
     // Update card timers every second
     this.time.addEvent({
       delay: 1000,
@@ -319,41 +262,6 @@ export class MenuScene extends Phaser.Scene {
           });
         }
       }
-    });
-  }
-
-
-  // Card swipe hint animation
-  showCardSwipeHint(){
-    // Track if user has already interacted
-    this.userHasSwiped = false;
-
-    // Wait a moment after scene loads
-    this.swipeHintTimer = this.time.delayedCall(1200, () => {
-      // Don't play if user already swiped
-      if (this.userHasSwiped) return;
-      if (!this.cards || this.cards.length === 0) return;
-
-      // Get the currently selected card
-      const selectedCard = this.cards[this.selected];
-      if (!selectedCard) return;
-
-      // Store original position
-      const originalX = selectedCard.x;
-
-      // Subtle nudge animation to indicate swipeability
-      this.tweens.add({
-        targets: selectedCard,
-        x: originalX - 20, // Nudge left slightly
-        duration: 300,
-        ease: 'Sine.easeInOut',
-        yoyo: true,
-        repeat: 1, // Do it twice (left-right-left-right)
-        onComplete: () => {
-          // Ensure it's back at original position
-          selectedCard.x = originalX;
-        }
-      });
     });
   }
 
@@ -387,7 +295,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Create container first
     const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
-    cont.setInteractive(new Phaser.Geom.Rectangle(-cw/2, -ch/2, cw, ch), Phaser.Geom.Rectangle.Contains);
+    // Cards are not interactive - only buttons control navigation
 
     // Dark background
     const bg = this.add.rectangle(0, 0, cw, ch, 0x0a0f1a, 0.85);
@@ -485,22 +393,7 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     cont.add(subTxt);
 
-    // Tap candidate: mark on pointerdown; also handle direct tap/click on release
-    cont.on('pointerdown', ()=>{ this._tapCandidate = cont; });
-    const directTap = ()=>{
-      const moved = Math.abs((this.dragLastX||0) - (this.dragStartX||0));
-      // Increase tap threshold to prevent accidental swipes (was 12, now 40)
-      if (moved < 40){
-        const idx = this.cards.indexOf(cont);
-        if (idx !== -1){
-          if (idx !== this.selected) this.setSelected(idx);
-          this._tapDirectUsed = true;
-          this.launchCard(cont);
-        }
-      }
-    };
-    cont.on('pointerup', directTap);
-
+    // Cards are not clickable - only START button launches modes
     cont._bg = bg; cont._sub = subTxt;
     return cont;
   }
@@ -515,16 +408,10 @@ export class MenuScene extends Phaser.Scene {
     // Store which card this button belongs to
     container.cardIndex = cardIndex;
 
-    // Make container itself interactive with a hit area
-    container.setSize(btnWidth, btnHeight);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight),
-      Phaser.Geom.Rectangle.Contains
-    );
-    container.input.cursor = 'pointer';
-
+    // Create background rectangle and make IT interactive (not the container)
     const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0xfbbf24, 1)
-      .setStrokeStyle(3, 0xfde047);
+      .setStrokeStyle(3, 0xfde047)
+      .setInteractive({ cursor: 'pointer' });
 
     const text = this.add.text(0, 0, 'START', {
       fontSize: '16px',
@@ -533,19 +420,18 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     container.add([bg, text]);
+    container._bg = bg; // Store reference for hover effect
 
-    // Container launches the specific card for this button
-    container.on('pointerdown', (pointer, localX, localY, event) => {
-      // Stop event propagation to prevent carousel drag
+    // Background rectangle handles the interaction
+    bg.on('pointerdown', (pointer, localX, localY, event) => {
+      // Stop event propagation
       if (event) event.stopPropagation();
-      pointer.event.stopPropagation();
+      if (pointer.event) pointer.event.stopPropagation();
 
-      // Cancel nudge animation
-      this.userHasSwiped = true;
-      if (this.swipeHintTimer) {
-        this.swipeHintTimer.remove();
-        this.swipeHintTimer = null;
-      }
+      // Prevent rapid-fire clicks (cooldown on mobile for reliability)
+      const now = Date.now();
+      if (this._lastStartClick && now - this._lastStartClick < 300) return;
+      this._lastStartClick = now;
 
       // Get the card this button belongs to
       const targetCard = this.cards[container.cardIndex];
@@ -556,11 +442,86 @@ export class MenuScene extends Phaser.Scene {
         this.setSelected(container.cardIndex);
       }
 
-      // Mark that carousel shouldn't process this as a tap
-      this._tapDirectUsed = true;
-      this.dragging = false; // Prevent carousel from thinking this is a drag
-
       this.launchCard(targetCard);
+    });
+
+    // Hover effect (lighter gold)
+    bg.on('pointerover', () => {
+      bg.setFillStyle(0xfde047, 1); // Lighter gold on hover
+    });
+    bg.on('pointerout', () => {
+      bg.setFillStyle(0xfbbf24, 1); // Back to gold
+    });
+
+    return container;
+  }
+
+  makeArrowButton(direction) {
+    // direction: 'left' or 'right'
+    const isMobile = this.scale.width < 768;
+    const btnHeight = 40; // Match START button height
+    const btnWidth = isMobile ? 60 : 80; // Shorter on mobile
+    const container = this.add.container(0, 0).setDepth(10);
+
+    // Create background rectangle and make IT interactive (not the container)
+    const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0xfbbf24, 1)
+      .setStrokeStyle(3, 0xfde047)
+      .setInteractive({ cursor: 'pointer' });
+
+    container.add(bg);
+    container._bg = bg; // Store reference for hover effect
+
+    // Draw arrow using graphics (centered in button)
+    const arrow = this.add.graphics();
+    arrow.fillStyle(0x000000, 1);
+
+    if (direction === 'left') {
+      // Left-pointing arrow (triangle + rectangle)
+      arrow.beginPath();
+      arrow.moveTo(-12, 0);  // Arrow point
+      arrow.lineTo(-2, -8);   // Top of triangle
+      arrow.lineTo(-2, 8);    // Bottom of triangle
+      arrow.closePath();
+      arrow.fillPath();
+      // Rectangle part
+      arrow.fillRect(-2, -4, 14, 8);
+    } else {
+      // Right-pointing arrow
+      arrow.beginPath();
+      arrow.moveTo(12, 0);   // Arrow point
+      arrow.lineTo(2, -8);    // Top of triangle
+      arrow.lineTo(2, 8);     // Bottom of triangle
+      arrow.closePath();
+      arrow.fillPath();
+      // Rectangle part
+      arrow.fillRect(-12, -4, 14, 8);
+    }
+
+    container.add(arrow);
+
+    // Background rectangle handles the interaction
+    bg.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+      if (pointer.event) pointer.event.stopPropagation();
+
+      // Prevent rapid-fire clicks (cooldown for reliability)
+      const now = Date.now();
+      if (this._lastArrowClick && now - this._lastArrowClick < 300) return;
+      this._lastArrowClick = now;
+
+      if (direction === 'left') {
+        this.selectPrev();
+      } else {
+        this.selectNext();
+      }
+    });
+
+    // Hover effect (lighter gold)
+    bg.on('pointerover', () => {
+      bg.setFillStyle(0xfde047, 1);
+    });
+    bg.on('pointerout', () => {
+      bg.setFillStyle(0xfbbf24, 1);
     });
 
     return container;
@@ -1311,11 +1272,22 @@ export class MenuScene extends Phaser.Scene {
   makeIconButton(label, onClick){
     const r = Math.max(22, Math.floor(this.scale.height * 0.034));
     const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, 0.92)
-      .setStrokeStyle(2, PALETTE.stroke);
+      .setStrokeStyle(2, PALETTE.stroke)
+      .setInteractive({ cursor: 'pointer' });
     const t = this.add.text(0, 0, label, { fontSize: Math.max(14, Math.floor(r*1.1)) + 'px', color: PALETTE.title }).setOrigin(0.5);
     const btn = this.add.container(0, 0, [bg, t]).setSize(r*2, r*2).setDepth(6);
-    btn.setInteractive(new Phaser.Geom.Rectangle(-r, -r, r*2, r*2), Phaser.Geom.Rectangle.Contains)
-      .on('pointerup', onClick);
+
+    // Background handles interaction
+    bg.on('pointerup', onClick);
+
+    // Hover effect
+    bg.on('pointerover', () => {
+      bg.setStrokeStyle(2, PALETTE.glow);
+    });
+    bg.on('pointerout', () => {
+      bg.setStrokeStyle(2, PALETTE.stroke);
+    });
+
     return btn;
   }
 
@@ -1335,9 +1307,10 @@ export class MenuScene extends Phaser.Scene {
     const w = Math.max(160, Math.floor(this.scale.width * 0.35));
     const h = Math.max(32, Math.floor(this.scale.height * 0.042));
 
-    // Background with subtle blue tint
+    // Background with subtle blue tint - make IT interactive
     const bg = this.rexUI.add.roundRectangle(0, 0, w, h, h/2, 0x1e3a8a, 0.85)
-      .setStrokeStyle(2, 0x3b82f6);
+      .setStrokeStyle(2, 0x3b82f6)
+      .setInteractive({ cursor: 'pointer' });
 
     // User icon
     const icon = this.add.text(-w/2 + h/2, 0, '👤', { fontSize: Math.floor(h * 0.6) + 'px' }).setOrigin(0.5);
@@ -1351,19 +1324,15 @@ export class MenuScene extends Phaser.Scene {
 
     c.add([bg, icon, t]);
 
-    // Make entire chip interactive with hand cursor for better UX
-    c.setSize(w, h);
-    c.setInteractive(new Phaser.Geom.Rectangle(-w/2, -h/2, w, h), Phaser.Geom.Rectangle.Contains, true)
-      .on('pointerup', () => this.openProfileModal());
+    // Background handles interaction
+    bg.on('pointerup', () => this.openProfileModal());
 
     // Add visual feedback on hover
-    c.on('pointerover', () => {
+    bg.on('pointerover', () => {
       bg.setStrokeStyle(2, 0x60a5fa);
-      this.input.setDefaultCursor('pointer');
     });
-    c.on('pointerout', () => {
+    bg.on('pointerout', () => {
       bg.setStrokeStyle(2, 0x3b82f6);
-      this.input.setDefaultCursor('default');
     });
 
     return c;
@@ -1522,44 +1491,49 @@ export class MenuScene extends Phaser.Scene {
   cardSpacing(){ return Math.min(520, Math.floor(this.scale.width * 0.82)) + Math.max(28, Math.floor(this.scale.width * 0.06)); }
 
   layoutCards(shift = 0, tweenBack = false){
-    // shift: fractional movement towards next (+) / prev (-)
-    const cx = this.scale.width / 2; const cy = this.scale.height * 0.54;
-    const spacing = this.cardSpacing();
+    // Simple layout: only show selected card, hide others
+    const cx = this.scale.width / 2;
+    const cy = this.scale.height * 0.54;
 
     const focusIdx = this.selected + shift;
     this.cards.forEach((card, i)=>{
-      const x = cx + (i - focusIdx) * spacing;
+      const isSelected = (i === Math.round(focusIdx));
+
+      // All cards at same center position
+      const x = cx;
       const y = cy;
-      const d  = Math.abs(i - focusIdx);
-      const scl = clamp(1.06 - 0.12 * d, 0.86, 1.08);
-      const ang = clamp((i - focusIdx) * -6, -10, 10);
-      const alpha = clamp(1.0 - 0.18 * Math.max(0, d - 0.2), 0.62, 1.0);
 
       if (tweenBack){
-        this.tweens.add({ targets: card, x, y, scaleX: scl, scaleY: scl, angle: ang, alpha, duration: 240, ease: 'Cubic.easeOut' });
+        // Smooth transition when changing cards (slower for better visibility)
+        this.tweens.add({
+          targets: card,
+          x,
+          y,
+          scaleX: 1,
+          scaleY: 1,
+          angle: 0,
+          alpha: isSelected ? 1 : 0,
+          duration: 400,
+          ease: 'Cubic.easeOut'
+        });
       } else {
         // Check if this is first layout (card hasn't been positioned yet)
         const isFirstLayout = !card._positioned;
 
         if (isFirstLayout) {
-          // First layout: set immediately without interpolation
-          card.setPosition(x, y).setScale(scl).setAngle(ang).setAlpha(alpha);
+          // First layout: set immediately
+          card.setPosition(x, y).setScale(1).setAngle(0).setAlpha(isSelected ? 1 : 0);
           card._positioned = true;
         } else {
-          // Subsequent layouts: smooth interpolation during drag for fluid swiping
-          const lerp = 0.25; // Smooth interpolation factor
-          card.x += (x - card.x) * lerp;
-          card.y += (y - card.y) * lerp;
-          card.scaleX += (scl - card.scaleX) * lerp;
-          card.scaleY += (scl - card.scaleY) * lerp;
-          card.angle += (ang - card.angle) * lerp;
-          card.alpha += (alpha - card.alpha) * lerp;
+          // Just update alpha for show/hide
+          card.setPosition(x, y).setScale(1).setAngle(0);
+          card.alpha = isSelected ? 1 : 0;
         }
       }
 
-      const focused = (Math.round(focusIdx) === i && d < 0.6);
+      // Update border for selected card
       if (card._bg) {
-        card._bg.setStrokeStyle(focused ? 3 : 2, focused ? 0x60a5fa : 0x2f3650, 1);
+        card._bg.setStrokeStyle(isSelected ? 3 : 2, isSelected ? 0x60a5fa : 0x2f3650, 1);
       }
 
       // Performance optimization: Only run animations on selected card
@@ -1572,31 +1546,82 @@ export class MenuScene extends Phaser.Scene {
         card._animationCleanup();
       }
 
-      // Position start button below this card
+      // Only show the START button for the selected card
       if (this.startButtons && this.startButtons[i]) {
         const btn = this.startButtons[i];
-        const cardHeight = Math.min(320, Math.floor(this.scale.height * 0.45));
-        const btnY = y + (cardHeight / 2) * scl + 30; // Below card with gap
+        const isSelected = (i === Math.round(focusIdx));
 
-        // Check if this is first layout (button hasn't been positioned yet)
-        const isFirstLayout = !btn._positioned;
-
-        if (isFirstLayout) {
-          // First layout: set immediately without interpolation
-          btn.setPosition(x, btnY).setAlpha(alpha).setAngle(ang);
-          btn._positioned = true;
-        } else if (tweenBack) {
-          this.tweens.add({ targets: btn, x, y: btnY, alpha, angle: ang, duration: 240, ease: 'Cubic.easeOut' });
+        // Show/hide and enable/disable interactivity based on selection
+        if (isSelected) {
+          btn.setAlpha(1);
+          if (btn._bg) btn._bg.setInteractive({ cursor: 'pointer' }); // Enable interaction on bg
         } else {
-          // Smooth interpolation during drag
-          const lerp = 0.25;
-          btn.x += (x - btn.x) * lerp;
-          btn.y += (btnY - btn.y) * lerp;
-          btn.alpha += (alpha - btn.alpha) * lerp;
-          btn.angle += (ang - btn.angle) * lerp;
+          btn.setAlpha(0);
+          if (btn._bg) btn._bg.disableInteractive(); // Disable interaction on bg
         }
       }
     });
+
+    // Update static button positions and visibility
+    this.updateStaticButtons();
+  }
+
+  updateStaticButtons() {
+    const W = this.scale.width, H = this.scale.height;
+    const cx = W / 2;
+    const isMobile = W < 768;
+
+    // Fixed position - more gap from cards
+    const cardHeight = Math.min(320, Math.floor(H * 0.45));
+    const cardsY = H * 0.54;
+    const btnY = cardsY + cardHeight / 2 + 45; // Increased gap for better spacing
+
+    const btnWidth = Math.min(200, Math.floor(W * 0.4));
+    const arrowWidth = isMobile ? 60 : 80; // Match arrow button width
+    const arrowGap = 15;
+
+    // Position all START buttons (selected at center, others off-screen)
+    if (this.startButtons) {
+      this.startButtons.forEach((btn, i) => {
+        if (i === this.selected) {
+          btn.setPosition(cx, btnY);
+        } else {
+          btn.setPosition(-10000, -10000); // Move off-screen
+        }
+      });
+    }
+
+    // Position and show/hide arrow buttons based on selection
+    const isFirstCard = (this.selected === 0);
+    const isLastCard = (this.selected === this.cards.length - 1);
+
+    // Left arrow
+    if (this.leftArrow) {
+      const leftX = cx - btnWidth/2 - arrowWidth/2 - arrowGap;
+      this.leftArrow.setPosition(leftX, btnY);
+
+      if (isFirstCard) {
+        this.leftArrow.setAlpha(0);
+        if (this.leftArrow._bg) this.leftArrow._bg.disableInteractive();
+      } else {
+        this.leftArrow.setAlpha(1);
+        if (this.leftArrow._bg) this.leftArrow._bg.setInteractive({ cursor: 'pointer' });
+      }
+    }
+
+    // Right arrow
+    if (this.rightArrow) {
+      const rightX = cx + btnWidth/2 + arrowWidth/2 + arrowGap;
+      this.rightArrow.setPosition(rightX, btnY);
+
+      if (isLastCard) {
+        this.rightArrow.setAlpha(0);
+        if (this.rightArrow._bg) this.rightArrow._bg.disableInteractive();
+      } else {
+        this.rightArrow.setAlpha(1);
+        if (this.rightArrow._bg) this.rightArrow._bg.setInteractive({ cursor: 'pointer' });
+      }
+    }
   }
 
   setSelected(idx){
@@ -2243,22 +2268,10 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(){
-    // keyboard navigation
+    // Keyboard navigation
     const leftPressed = Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.A);
     const rightPressed = Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.D);
     const actionPressed = Phaser.Input.Keyboard.JustDown(this.keys.ENTER) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
-
-    // Cancel nudge animation on any keyboard input
-    if (leftPressed || rightPressed || actionPressed) {
-      this.userHasSwiped = true;
-      if (this.swipeHintTimer) {
-        this.swipeHintTimer.remove();
-        this.swipeHintTimer = null;
-      }
-      if (this.cards && this.cards[this.selected]) {
-        this.tweens.killTweensOf(this.cards[this.selected]);
-      }
-    }
 
     if (leftPressed) { this.selectPrev(); }
     if (rightPressed) { this.selectNext(); }
