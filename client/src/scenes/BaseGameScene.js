@@ -29,7 +29,7 @@ import GameUI from '../controllers/GameUI.js';
 import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
 import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
 import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed } from '../utils/desktopSidebars.js';
-import { fetchRecentActivity } from '../utils/activityFeed.js';
+import { fetchRecentActivity, logRunnerExtract, logPlugStop, logRunnerEliminated, logBunkPickup, logPersonalBest } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 
 function makeRng(seed){
@@ -1656,6 +1656,12 @@ export class BaseGameScene extends Phaser.Scene {
           if (this.progressionManager?.repTracker && this.role === 'runner') {
             this.progressionManager.repTracker.onStashPickup(true); // true = bunk
           }
+
+          // Log activity feed event: Player picked up bunk (only for human player)
+          if (this.role === 'runner') {
+            logBunkPickup(this.pveRound || 1);
+          }
+
           // Play pickup sounds (generic pickup + bunk stash pickup)
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
           try { this.audio?.play('bpickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
@@ -1883,6 +1889,9 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Submit score to daily leaderboard
     submitScore(this.role, currentRound, this.pveSessionStash, this.pveSessionRep);
+
+    // Log activity feed event: Plug stopped runner
+    logPlugStop(currentRound);
 
     this.showFloatingRewards(stashEarned, repEarned, origin);
 

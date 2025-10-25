@@ -10,6 +10,7 @@ import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js'
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
 import { trackGameStart, trackRoundComplete, trackGameOver } from '../utils/analytics.js';
+import { logRunnerExtract, logPlugStop } from '../utils/activityFeed.js';
 
 /**
  * ProgressionManager - Handles round flow, extraction, and session state
@@ -75,6 +76,9 @@ export default class ProgressionManager {
         this.repTracker.onRunnerExtracted();
       }
 
+      // Log activity feed event: AI Runner extracted (plug failed - don't log this, only human successes)
+      // Note: We don't log AI runner extracts to avoid spam in feed
+
       this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, this.scene.pveRound || 1);
       this.scene.gameUI?.showPvEGameOver?.({ reason: 'runner_extracted' }) || this.scene.showPvEGameOver?.({ reason: 'runner_extracted' });
       return;
@@ -129,6 +133,9 @@ export default class ProgressionManager {
 
       // Submit score to daily leaderboard
       submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
+
+      // Log activity feed event: Runner extracted successfully
+      logRunnerExtract(this.scene.pveRound, stashEarned > 0);
 
       // Show floating numbers at extraction point (will stay visible during fade and next round's power modal)
       this.scene.vfx?.showFloatingRewards?.(stashEarned, repEarned);
