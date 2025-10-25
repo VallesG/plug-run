@@ -3,12 +3,12 @@
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount } from '../utils/userManager.js';
-import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore } from '../utils/leaderboardManager.js';
+import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard } from '../utils/desktopSidebars.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -1372,11 +1372,44 @@ export class MenuScene extends Phaser.Scene {
 
     // Right sidebar: Personal stats with random daily leaderboard (runner or plug)
     const randomMode = Math.random() < 0.5 ? 'runner' : 'plug';
+    this.sidebarMode = randomMode; // Store for updates
     this.rightSidebar = createSidebarContainer('right');
     createPersonalStats(this.rightSidebar, randomMode);
 
     // Initialize sidebar with current stats
     this.refreshSidebarStats();
+
+    // Fetch and update live leaderboard
+    this.updateSidebarLeaderboard();
+
+    // Set up periodic leaderboard refresh (every 30 seconds)
+    if (this.sidebarLeaderboardTimer) {
+      this.sidebarLeaderboardTimer.remove();
+    }
+    this.sidebarLeaderboardTimer = this.time.addEvent({
+      delay: 30000,
+      loop: true,
+      callback: () => this.updateSidebarLeaderboard()
+    });
+  }
+
+  async updateSidebarLeaderboard() {
+    if (!this.rightSidebar || !this.sidebarMode) return;
+
+    try {
+      // Fetch top 10 scores for the selected mode (daily leaderboard)
+      const topScores = await getTopScores(this.sidebarMode, 10);
+
+      // Transform data to match updateLeaderboard format
+      const leaderboardData = topScores.map(entry => ({
+        name: entry.username,
+        score: entry.stash || 0
+      }));
+
+      updateLeaderboard(this.rightSidebar, leaderboardData);
+    } catch (err) {
+      console.warn('[MenuScene] Failed to update sidebar leaderboard:', err);
+    }
   }
 
   refreshSidebarStats() {

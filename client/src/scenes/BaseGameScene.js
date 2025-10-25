@@ -15,7 +15,7 @@ import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
-import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
+import { submitScore, submitAllTimeScore, getTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
@@ -28,7 +28,7 @@ import VisualEffects from '../controllers/VisualEffects.js';
 import GameUI from '../controllers/GameUI.js';
 import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
 import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard } from '../utils/desktopSidebars.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 
 function makeRng(seed){
@@ -694,6 +694,38 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Initialize sidebar with current stats
     this.refreshSidebarStats();
+
+    // Fetch and update live leaderboard
+    this.updateSidebarLeaderboard();
+
+    // Set up periodic leaderboard refresh (every 30 seconds)
+    if (this.sidebarLeaderboardTimer) {
+      this.sidebarLeaderboardTimer.remove();
+    }
+    this.sidebarLeaderboardTimer = this.time.addEvent({
+      delay: 30000,
+      loop: true,
+      callback: () => this.updateSidebarLeaderboard()
+    });
+  }
+
+  async updateSidebarLeaderboard() {
+    if (!this.rightSidebar || !this.role) return;
+
+    try {
+      // Fetch top 10 scores for current role (daily leaderboard)
+      const topScores = await getTopScores(this.role, 10);
+
+      // Transform data to match updateLeaderboard format
+      const leaderboardData = topScores.map(entry => ({
+        name: entry.username,
+        score: entry.stash || 0
+      }));
+
+      updateLeaderboard(this.rightSidebar, leaderboardData);
+    } catch (err) {
+      console.warn('[BaseGameScene] Failed to update sidebar leaderboard:', err);
+    }
   }
 
   refreshSidebarStats() {
