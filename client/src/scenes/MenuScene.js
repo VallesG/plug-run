@@ -2,12 +2,13 @@
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
-import { getUsername, getCurrentUser, isGuestAccount } from '../utils/userManager.js';
+import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -190,6 +191,11 @@ export class MenuScene extends Phaser.Scene {
     // Initial layout to selected index
     this.layoutCards(0, false);
 
+    // Initialize desktop sidebars (only on desktop)
+    if (isDesktop()) {
+      this.initDesktopSidebars();
+    }
+
     // Show one-time notice for desktop users that game is mobile-optimized
     this.showDesktopNotice();
 
@@ -243,6 +249,8 @@ export class MenuScene extends Phaser.Scene {
             }
           });
         }
+        // Note: Don't cleanup sidebars here - the next scene will clean them up
+        // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
       } catch {}
     });
 
@@ -1354,6 +1362,37 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
+  initDesktopSidebars() {
+    // Clean up any existing sidebars first
+    cleanupSidebars();
+
+    // Left sidebar: Social feed
+    this.leftSidebar = createSidebarContainer('left');
+    createSocialFeed(this.leftSidebar);
+
+    // Right sidebar: Personal stats with random daily leaderboard (runner or plug)
+    const randomMode = Math.random() < 0.5 ? 'runner' : 'plug';
+    this.rightSidebar = createSidebarContainer('right');
+    createPersonalStats(this.rightSidebar, randomMode);
+
+    // Initialize sidebar with current stats
+    this.refreshSidebarStats();
+  }
+
+  refreshSidebarStats() {
+    // Update sidebar with current user stats
+    const user = getCurrentUserSync();
+    const stats = user.stats || {};
+
+    updateStats({
+      totalRounds: stats.totalRounds || 0,
+      totalStash: stats.totalStash || 0,
+      repEarned: stats.totalRep || 0,
+      bestRunner: stats.bestRunnerRound || 0,
+      bestPlug: stats.bestPlugRound || 0
+    });
+  }
+
   updateProfileChipSync() {
     // Destroy old chip
     if (this.profileChip) {
@@ -1930,6 +1969,115 @@ export class MenuScene extends Phaser.Scene {
     closeBg.on('pointerdown', destroyAll);
     veil.on('pointerdown', destroyAll);
   }
+
+  // Pre-game tips modal (disabled for now - may re-enable with different UX later)
+  /*
+  showPreGameModal(modeKey, onStart) {
+    const W = this.scale.width, H = this.scale.height;
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+    const panelW = Math.min(380, W - 40);
+    const panelH = Math.min(280, H - 80);
+
+    // Tips for each mode
+    const tips = {
+      runner: [
+        'Use corners to break line of sight and lose the plug',
+        'Power-ups spawn randomly - grab them before time runs out',
+        'Speed boost is great for quick escapes in tight spots',
+        'The AI gets smarter each round - stay sharp',
+        'Collect all 5 STASH to complete the round',
+        'Shield protects you from one hit - use it wisely',
+        'Movement is key - keep moving to avoid getting cornered'
+      ],
+      plug: [
+        'Predict runner movement - cut them off at corners',
+        'Don\'t chase blindly - use strategy and positioning',
+        'The AI runner gets faster each round',
+        'Watch for power-up pickups - they change the game',
+        'Corner the runner by controlling key pathways',
+        'One shot is all you need - aim carefully',
+        'Use walls to funnel the runner into your line of fire'
+      ]
+    };
+
+    // Select random tip
+    const modeTips = tips[modeKey] || [];
+    const randomTip = modeTips[Math.floor(Math.random() * modeTips.length)];
+
+    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.7).setDepth(60).setInteractive();
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.98).setDepth(61).setStrokeStyle(3, PALETTE.stroke);
+
+    // Title
+    const modeNames = {
+      runner: 'RUN THE BLOCK',
+      plug: 'DEFEND THE BLOCK'
+    };
+    const title = this.add.text(cx, cy - panelH/2 + 30, modeNames[modeKey], {
+      fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
+      fontSize: '20px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(62);
+
+    // Tip icon
+    const tipIcon = this.add.text(cx, cy - 50, '💡', {
+      fontSize: '32px'
+    }).setOrigin(0.5).setDepth(62);
+
+    // Tip label
+    const tipLabel = this.add.text(cx, cy - 10, 'PRO TIP', {
+      fontSize: '12px',
+      color: '#fbbf24',
+      fontStyle: 'bold',
+      letterSpacing: 1
+    }).setOrigin(0.5).setDepth(62);
+
+    // Tip text
+    const tipText = this.add.text(cx, cy + 20, randomTip, {
+      fontSize: '14px',
+      color: '#cbd1ff',
+      align: 'center',
+      wordWrap: { width: panelW - 60 }
+    }).setOrigin(0.5).setDepth(62);
+
+    // START ROUND button
+    const btnW = 180, btnH = 44;
+    const startBg = this.add.rectangle(cx, cy + panelH/2 - 35, btnW, btnH, 0xfbbf24, 1)
+      .setStrokeStyle(3, 0xfde047)
+      .setDepth(62)
+      .setInteractive({ cursor: 'pointer' });
+
+    const startText = this.add.text(cx, cy + panelH/2 - 35, 'START ROUND', {
+      fontSize: '16px',
+      color: '#000000',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(63);
+
+    // Hover effect
+    startBg.on('pointerover', () => {
+      startBg.setFillStyle(0xfde047, 1);
+    });
+    startBg.on('pointerout', () => {
+      startBg.setFillStyle(0xfbbf24, 1);
+    });
+
+    // Start button action
+    const destroyAll = () => {
+      [veil, panel, title, tipIcon, tipLabel, tipText, startBg, startText].forEach(o => o?.destroy());
+    };
+
+    startBg.on('pointerdown', () => {
+      destroyAll();
+      if (onStart) onStart();
+    });
+
+    // Allow clicking outside to cancel
+    veil.on('pointerdown', destroyAll);
+  }
+  */
 
   async openProfileModal(){
     const W = this.scale.width, H = this.scale.height;

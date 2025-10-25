@@ -16,7 +16,7 @@ import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
-import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
+import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { createBottomLeftButtons } from '../utils/authUI.js';
@@ -28,6 +28,7 @@ import VisualEffects from '../controllers/VisualEffects.js';
 import GameUI from '../controllers/GameUI.js';
 import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
 import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 
 function makeRng(seed){
@@ -677,8 +678,49 @@ export class BaseGameScene extends Phaser.Scene {
     }
   }
 
+  initDesktopSidebars() {
+    console.log('[BaseGameScene] Initializing desktop sidebars, role:', this.role);
+    // Clean up any existing sidebars first
+    cleanupSidebars();
+
+    // Left sidebar: Street Scanner (always)
+    this.leftSidebar = createSidebarContainer('left');
+    createSocialFeed(this.leftSidebar);
+
+    // Right sidebar: Your Stats with live leaderboard (mode-specific)
+    this.rightSidebar = createSidebarContainer('right');
+    createPersonalStats(this.rightSidebar, this.role);
+    console.log('[BaseGameScene] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
+
+    // Initialize sidebar with current stats
+    this.refreshSidebarStats();
+  }
+
+  refreshSidebarStats() {
+    // Update sidebar with current user stats
+    const user = getCurrentUserSync();
+    const stats = user.stats || {};
+
+    updateStats({
+      totalRounds: stats.totalRounds || 0,
+      totalStash: stats.totalStash || 0,
+      repEarned: stats.totalRep || 0,
+      bestRunner: stats.bestRunnerRound || 0,
+      bestPlug: stats.bestPlugRound || 0
+    });
+  }
+
   startMatch(role){
     this.role = role;
+
+    // Initialize desktop sidebars (only on desktop) - do this early so they appear immediately
+    console.log('[BaseGameScene] startMatch, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop(), 'role:', role);
+    if (isDesktop()) {
+      console.log('[BaseGameScene] isDesktop() returned true, calling initDesktopSidebars()');
+      this.initDesktopSidebars();
+    } else {
+      console.log('[BaseGameScene] isDesktop() returned false, skipping sidebars');
+    }
     this.roundOver = false;
     this.roundPausedForMenu = false;
     this.removeCarryPackage();
@@ -758,8 +800,16 @@ export class BaseGameScene extends Phaser.Scene {
       this.input.keyboard.off('keydown-SPACE', this._spaceHandler);
       this._spaceBound = false;
     };
-    this.events.once('shutdown', this.unbindSpace);
-    this.events.once('destroy', this.unbindSpace);
+    this.events.once('shutdown', () => {
+      this.unbindSpace();
+      // Note: Don't cleanup sidebars here - the next scene will clean them up
+      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
+    });
+    this.events.once('destroy', () => {
+      this.unbindSpace();
+      // Note: Don't cleanup sidebars here - the next scene will clean them up
+      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
+    });
     this.bindSpaceForPlug();
 
     // Initialize human auto-drift: desktop drifts right initially; mobile random.

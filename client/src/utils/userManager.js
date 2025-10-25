@@ -71,6 +71,7 @@ export async function getCurrentUser() {
                   totalStash: profile.total_stash || 0,
                   totalRep: profile.total_rep || 0,
                   gamesPlayed: profile.games_played || 0,
+                  totalRounds: profile.games_played || 0, // Alias for sidebar compatibility
                   bestPlugRound: profile.best_plug_round || 0,
                   bestRunnerRound: profile.best_runner_round || 0
                 }
@@ -88,6 +89,7 @@ export async function getCurrentUser() {
               localUser.stats.totalStash = profile.total_stash || 0;
               localUser.stats.totalRep = profile.total_rep || 0;
               localUser.stats.gamesPlayed = profile.games_played || 0;
+              localUser.stats.totalRounds = profile.games_played || 0; // Alias for sidebar compatibility
               localUser.stats.bestPlugRound = profile.best_plug_round || 0;
               localUser.stats.bestRunnerRound = profile.best_runner_round || 0;
               saveUser(localUser);
@@ -155,6 +157,7 @@ export function createGuestAccount() {
       totalStash: 0,
       totalRep: 0,
       gamesPlayed: 0,
+      totalRounds: 0, // Alias for sidebar compatibility
       bestPlugRound: 0,
       bestRunnerRound: 0
     }
@@ -227,6 +230,14 @@ export function saveUser(user) {
 export async function updateUserStats(updates) {
   const user = getCurrentUserSync(); // Use sync version to avoid async issues
   user.stats = { ...user.stats, ...updates };
+
+  // Keep totalRounds and gamesPlayed in sync for backward compatibility
+  if (updates.totalRounds !== undefined && updates.gamesPlayed === undefined) {
+    user.stats.gamesPlayed = updates.totalRounds;
+  } else if (updates.gamesPlayed !== undefined && updates.totalRounds === undefined) {
+    user.stats.totalRounds = updates.gamesPlayed;
+  }
+
   saveUser(user);
 
   // Sync to Supabase if online
@@ -254,7 +265,9 @@ async function syncStatsToSupabase(user, updates) {
     const supabaseUpdates = {};
     if (updates.totalStash !== undefined) supabaseUpdates.total_stash = updates.totalStash;
     if (updates.totalRep !== undefined) supabaseUpdates.total_rep = updates.totalRep;
-    if (updates.gamesPlayed !== undefined) supabaseUpdates.games_played = updates.gamesPlayed;
+    // Handle both totalRounds (new sidebar name) and gamesPlayed (old name) for backward compatibility
+    if (updates.totalRounds !== undefined) supabaseUpdates.games_played = updates.totalRounds;
+    else if (updates.gamesPlayed !== undefined) supabaseUpdates.games_played = updates.gamesPlayed;
     if (updates.bestPlugRound !== undefined) supabaseUpdates.best_plug_round = updates.bestPlugRound;
     if (updates.bestRunnerRound !== undefined) supabaseUpdates.best_runner_round = updates.bestRunnerRound;
 

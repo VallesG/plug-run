@@ -1,7 +1,11 @@
-﻿// Tutorial scene built on PvP movement and controls
+// Tutorial scene built on PvP movement and controls
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
 import { trackTutorial } from '../utils/analytics.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
+import ProgressionManager from '../controllers/ProgressionManager.js';
+import RepTracker from '../utils/repTracker.js';
+import { getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 
 const STAGE_SEEDS = {
   S1_MOVEMENT: 0x71C1A5E1,
@@ -431,6 +435,7 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   create(){
+    console.log('[Tutorial] create() called, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop());
     // Reset modal pause state on scene create/restart
     this.pausedForModal = false;
     this.userTookOver = false;
@@ -441,9 +446,181 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.audio.ensureUnlocked(this);
     } catch {}
 
+    // Force high-contrast bullets ON (matches main game)
+    this.fxBulletHighContrast = true;
+
+    // Initialize progression manager to track tutorial stats
+    this.progressionManager = new ProgressionManager(this);
+
+    // Initialize desktop sidebars
+    console.log('[Tutorial] About to check isDesktop():', isDesktop());
+    if (isDesktop()) {
+      console.log('[Tutorial] isDesktop() returned true, calling initDesktopSidebars()');
+      this.initDesktopSidebars();
+    } else {
+      console.log('[Tutorial] isDesktop() returned false, skipping sidebars');
+    }
+
     this.ensureResizeListener();
     this.startStage(this.stageIdx);
   }
+
+  initDesktopSidebars() {
+    console.log('[Tutorial] Initializing desktop sidebars');
+    // Clean up any existing sidebars first
+    cleanupSidebars();
+
+    // Left sidebar: Social feed
+    this.leftSidebar = createSidebarContainer('left');
+    createSocialFeed(this.leftSidebar);
+
+    // Right sidebar: Personal stats with random daily leaderboard (runner or plug)
+    const randomMode = Math.random() < 0.5 ? 'runner' : 'plug';
+    this.rightSidebar = createSidebarContainer('right');
+    createPersonalStats(this.rightSidebar, randomMode);
+    console.log('[Tutorial] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
+
+    // Initialize sidebar with current stats
+    this.refreshSidebarStats();
+  }
+
+  refreshSidebarStats() {
+    // Update sidebar with current user stats
+    const user = getCurrentUserSync();
+    const stats = user.stats || {};
+
+    const statsToShow = {
+      totalRounds: stats.totalRounds || 0,
+      totalStash: stats.totalStash || 0,
+      repEarned: stats.totalRep || 0,
+      bestRunner: stats.bestRunnerRound || 0,
+      bestPlug: stats.bestPlugRound || 0
+    };
+
+    console.log('[Tutorial] refreshSidebarStats called with:', statsToShow);
+    console.log('[Tutorial] User stats object:', stats);
+
+    updateStats(statsToShow);
+  }
+
+  clearTutorialStats() {
+    // Reset tutorial-specific stats to 0 (tutorial uses local storage for practice)
+    // Real game modes will use Supabase stats tracking
+    console.log('[Tutorial] Clearing tutorial stats from local storage');
+    updateUserStats({
+      totalRounds: 0,
+      totalStash: 0,
+      totalRep: 0
+    });
+  }
+
+  showFloatingRewards(stashEarned, repEarned, origin) {
+    // Use provided origin or fall back to car/runner location
+    const originX = origin?.x ?? this.car?.x ?? this.runner?.x ?? (this.scale.width / 2);
+    const originY = origin?.y ?? this.car?.y ?? this.runner?.y ?? (this.scale.height / 2);
+
+    // Convert world position to screen position
+    const cam = this.cameras.main;
+    const screenX = (originX - cam.scrollX) * cam.zoom + cam.x;
+    const screenY = (originY - cam.scrollY) * cam.zoom + cam.y;
+
+    // Calculate direction towards screen center
+    const centerX = this.cameras.main.centerX;
+    const centerY = this.cameras.main.centerY;
+
+    // Vector from extraction point to center
+    const dx = centerX - screenX;
+    const dy = centerY - screenY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Normalize and scale to float distance (60% of the way to center)
+    const floatDistance = Math.min(120, distance * 0.6);
+    const normalizedDx = distance > 0 ? (dx / distance) * floatDistance : 0;
+    const normalizedDy = distance > 0 ? (dy / distance) * floatDistance : -80;
+
+    // Add some perpendicular offset to space them out
+    const perpX = -normalizedDy;
+    const perpY = normalizedDx;
+
+    // Determine end positions
+    let stashEndX, stashEndY, repEndX, repEndY;
+
+    if (distance < 150) {
+      // Near center: use fixed vertical separation
+      const verticalOffset = 55;
+      stashEndX = screenX + normalizedDx;
+      stashEndY = screenY + normalizedDy - verticalOffset;
+      repEndX = screenX + normalizedDx;
+      repEndY = screenY + normalizedDy + verticalOffset;
+    } else {
+      // Far from center: use perpendicular offset
+      const perpScale = 0.44;
+      stashEndX = screenX + normalizedDx + perpX * perpScale;
+      stashEndY = screenY + normalizedDy + perpY * perpScale;
+      repEndX = screenX + normalizedDx - perpX * perpScale;
+      repEndY = screenY + normalizedDy - perpY * perpScale;
+    }
+
+    // Create floating stash text (only if stash was earned)
+    if (stashEarned > 0) {
+      const stashText = this.add.text(screenX, screenY, `+${stashEarned} STASH`, {
+        color: '#86efac',
+        fontSize: '28px',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(20001).setScrollFactor(0);
+
+      // Animate stash: float towards center and fade out
+      stashText.setAlpha(0);
+      this.tweens.add({
+        targets: stashText,
+        alpha: 1,
+        x: stashEndX,
+        y: stashEndY,
+        duration: 2000,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: stashText,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => stashText.destroy()
+          });
+        }
+      });
+    }
+
+    // Create floating REP text
+    const repText = this.add.text(screenX, screenY, `+${repEarned} REP`, {
+      color: '#ffd166',
+      fontSize: '22px',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(20001).setScrollFactor(0);
+
+    // Animate REP: float towards center and fade out
+    repText.setAlpha(0);
+    this.tweens.add({
+      targets: repText,
+      alpha: 1,
+      x: repEndX,
+      y: repEndY,
+      duration: 2000,
+      delay: 100, // slight delay after stash
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: repText,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => repText.destroy()
+        });
+      }
+    });
+  }
+
   ensureResizeListener(){
     if (this._onResizeCb) return;
     this._onResizeCb = () => {
@@ -471,6 +648,8 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.input.off('gameout', this._pointerUpHandler);
         this._pointerUpHandler = null;
       }
+      // Note: Don't cleanup sidebars here - the next scene will clean them up
+      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       if (this._onResizeCb){
@@ -492,6 +671,8 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.input.off('gameout', this._pointerUpHandler);
         this._pointerUpHandler = null;
       }
+      // Note: Don't cleanup sidebars here - the next scene will clean them up
+      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
     });
   }
   computeLayout(){
@@ -523,6 +704,20 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
     this.children.removeAll();
     this.stageIdx = idx;
+
+    // Initialize RepTracker for this stage with correct role
+    // Stages 1-4: player is runner, Stage 5: player is plug
+    const role = (idx === 5) ? 'plug' : 'runner';
+    if (this.progressionManager) {
+      // Create new RepTracker for this stage if it doesn't exist
+      if (!this.progressionManager.repTracker) {
+        this.progressionManager.repTracker = new RepTracker(role, this);
+      } else {
+        this.progressionManager.repTracker.role = role;
+      }
+      this.progressionManager.repTracker.startRound(idx);
+      console.log(`[Tutorial] Stage ${idx} started - role: ${role}, REP starts at 10.0`);
+    }
 
     // Stop any running engine from previous stage
     try { this.audio?.stopEngineLoop(); } catch {}
@@ -1470,7 +1665,7 @@ export class TutorialMiniScene extends Phaser.Scene {
 
     buttons.push(mainBg, mainText);
   }
-  toast(msg, hold = 1000, color = '#cbd1ff'){
+  toast(msg, hold = 1000, color = '#cbd1ff', fontStyle = 'normal'){
     if (this.tipTween){
       this.tweens.remove(this.tipTween);
       this.tipTween = null;
@@ -1480,10 +1675,11 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.scale.width / 2,
         18,
         msg,
-        { color, fontSize: Math.max(14, Math.floor(this.scale.height * 0.026)) + 'px' }
+        { color, fontSize: Math.max(14, Math.floor(this.scale.height * 0.026)) + 'px', fontStyle }
       ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10000);
     } else {
       this.tipObj.setText(msg);
+      this.tipObj.setFontStyle(fontStyle);
     }
     this.tipObj.setColor(color);
     this.tipObj.setAlpha(0);
@@ -1869,6 +2065,41 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Prevent multiple triggers
     if (this._carDeparting) return;
     this._carDeparting = true;
+
+    // Track extraction using RepTracker system (calculates REP based on performance)
+    if (this.progressionManager?.repTracker) {
+      this.progressionManager.repTracker.onRoundComplete();
+      const repResult = this.progressionManager.repTracker.calculateFinalRep(1.0);
+      const finalRep = Math.round(repResult.finalRep);
+
+      // Update stats: +1 round, calculated REP, +1 STASH if extracted with package
+      const user = getCurrentUserSync();
+      const newRounds = (user.stats?.totalRounds || 0) + 1;
+      const newRep = (user.stats?.totalRep || 0) + finalRep;
+      const newStash = (user.stats?.totalStash || 0) + (this.hasPackage ? 1 : 0);
+
+      console.log('[Tutorial] Before update - Rounds:', user.stats?.totalRounds, 'REP:', user.stats?.totalRep, 'STASH:', user.stats?.totalStash);
+      console.log('[Tutorial] Extraction - +REP:', finalRep, '+STASH:', this.hasPackage ? 1 : 0);
+      console.log('[Tutorial] After calculation - Rounds:', newRounds, 'REP:', newRep, 'STASH:', newStash);
+
+      updateUserStats({
+        totalRounds: newRounds,
+        totalRep: newRep,
+        totalStash: newStash
+      });
+
+      // Show floating reward popups (stash only if package collected)
+      const stashToShow = this.hasPackage ? 1 : 0;
+      this.showFloatingRewards(stashToShow, finalRep, { x: this.car?.x || this.runner?.x, y: this.car?.y || this.runner?.y });
+
+      // Small delay to ensure stats are saved before refreshing sidebar
+      this.time.delayedCall(50, () => {
+        this.refreshSidebarStats();
+        const verifyUser = getCurrentUserSync();
+        console.log('[Tutorial] After refresh - Rounds:', verifyUser.stats?.totalRounds, 'REP:', verifyUser.stats?.totalRep, 'STASH:', verifyUser.stats?.totalStash);
+      });
+    }
+
     // Compute outward direction based on the egress side
     let dx = 0, dy = 0;
     const side = this.egress?.side;
@@ -1936,6 +2167,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     } else {
       // Tutorial complete - pause game and show completion modal
       this.pausedForModal = true;
+
+      // Wipe tutorial stats (tutorial uses separate local storage tracking)
+      this.clearTutorialStats();
 
       // Stop AI movement and bullets
       if (this.aiRunner) {
@@ -2439,30 +2673,93 @@ export class TutorialMiniScene extends Phaser.Scene {
     const baseAngle = Math.atan2(ay / len, ax / len);
     const pellets = stats?.spreadAngles?.length ? stats.spreadAngles : [0];
 
-    // High-contrast bullets: choose palette + blend based on floor brightness
+    // Muzzle flash: cyan ring + directional streak
+    const flashColor = 0x60a5fa; // electric blue for high contrast
+    const flashR = Math.max(4, Math.floor(this.cell * 0.14));
+    const deg = (baseAngle * 180) / Math.PI;
+
+    // Ring flash
+    const flashRing = this.add.graphics().setDepth(11);
+    flashRing.lineStyle(Math.max(1, Math.floor(this.cell * 0.07)), flashColor, 1);
+    flashRing.strokeCircle(0, 0, Math.floor(flashR * 0.9));
+    flashRing.setBlendMode(Phaser.BlendModes.ADD);
+    flashRing.setPosition(origin.x, origin.y);
+    this.tweens.add({
+      targets: flashRing,
+      alpha: 0,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      duration: 80,
+      ease: 'Cubic.easeOut',
+      onComplete: () => flashRing.destroy()
+    });
+
+    // Directional streak
+    const streakLen = Math.max(6, Math.floor(this.cell * 0.40));
+    const streakThk = Math.max(2, Math.floor(this.cell * 0.06));
+    const streak = this.add.rectangle(
+      origin.x + Math.cos(baseAngle) * flashR,
+      origin.y + Math.sin(baseAngle) * flashR,
+      streakLen,
+      streakThk,
+      flashColor,
+      0.95
+    )
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(11)
+      .setAngle(deg);
+    this.tweens.add({
+      targets: streak,
+      alpha: 0,
+      duration: 80,
+      ease: 'Cubic.easeOut',
+      onComplete: () => streak.destroy()
+    });
+
+    // Pick high-contrast bullet palette based on floor appearance
     const isLightFloor = (() => {
-      if (Array.isArray(this.theme?.checkerColors) && this.theme.checkerColors.length >= 2){
-        const lum = (hex) => { const r=(hex>>16)&255,g=(hex>>8)&255,b=hex&255; return (0.2126*r+0.7152*g+0.0722*b)/255; };
-        const avg = this.theme.checkerColors.reduce((s,c)=> s + lum(c), 0) / this.theme.checkerColors.length;
+      if (Array.isArray(this.theme?.checkerColors) && this.theme.checkerColors.length >= 2) {
+        const lum = (hex) => {
+          const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
+          return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+        };
+        const avg = this.theme.checkerColors.reduce((s, c) => s + lum(c), 0) / this.theme.checkerColors.length;
         return avg > 0.7;
       }
-      if (typeof this.theme?.floorTint === 'number'){
-        const r=(this.theme.floorTint>>16)&255,g=(this.theme.floorTint>>8)&255,b=this.theme.floorTint&255;
-        const L=(0.2126*r+0.7152*g+0.0722*b)/255; return L > 0.7;
+      if (this.theme?.floorSet === 'wood') return false;
+      if (typeof this.theme?.floorTint === 'number') {
+        const r = (this.theme.floorTint >> 16) & 255;
+        const g = (this.theme.floorTint >> 8) & 255;
+        const b = this.theme.floorTint & 255;
+        const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+        return L > 0.7;
       }
       return false;
     })();
-    const fillColor = isLightFloor ? 0xef4444 : 0xffffff;
-    const useNormalBlend = isLightFloor; // avoid washout on white floors
+
+    const palette = (() => {
+      if (!this.fxBulletHighContrast) {
+        // default behavior: theme-aware but softer
+        const base = 0xef4444; // tutorial is always PvE-style
+        const rim = isLightFloor ? 0xffffff : 0xef4444;
+        return { fill: base, rim };
+      }
+      // High contrast: strong red on light floors, pure white on dark floors
+      return isLightFloor ? { fill: 0xef4444, rim: 0xffffff } : { fill: 0xffffff, rim: 0xef4444 };
+    })();
+
+    const useNormalBlend = !!(this.fxBulletHighContrast && isLightFloor);
 
     pellets.forEach((offset) => {
       const ang = baseAngle + Phaser.Math.DegToRad(offset);
       const dx = Math.cos(ang);
       const dy = Math.sin(ang);
       const speed = stats?.speed ?? 300;
+      const color = palette.fill;
+      const radius = Math.max(3, Math.floor(this.cell * 0.13));
 
-      const bullet = this.add.circle(origin.x, origin.y, Math.max(3, Math.floor(this.cell*0.12)), fillColor, 1)
-        .setDepth(9)
+      const bullet = this.add.circle(origin.x, origin.y, radius, color, 1)
+        .setDepth(10)
         .setBlendMode(useNormalBlend ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD);
 
       bullet.vx = dx * speed;
@@ -2785,9 +3082,13 @@ export class TutorialMiniScene extends Phaser.Scene {
             this.hitTarget(this.runner);
             this._playerHP = (this._playerHP || 2) - 1;
 
+            // Track bullet hit for REP calculation (penalty for getting hit)
+            if (this.progressionManager?.repTracker) {
+              this.progressionManager.repTracker.onBulletHitPlayer();
+            }
+
             // Player loses after HP reaches 0
             if (this._playerHP <= 0){
-              this.toast('You were eliminated!', 1500, '#f87171');
               this.time.delayedCall(1600, () => this.startStage(4));
               return;
             }
@@ -2819,8 +3120,38 @@ export class TutorialMiniScene extends Phaser.Scene {
               this._aiRunnerVX = 0;
               this._aiRunnerVY = 0;
 
-              this.toast('Defender wins!', 800, '#86efac');
-              // Short delay for toast to be visible, then immediately show modal
+              // Award stats for successfully defending (eliminating the runner)
+              if (this.progressionManager?.repTracker) {
+                this.progressionManager.repTracker.onRunnerEliminated();
+                const repResult = this.progressionManager.repTracker.calculateFinalRep(1.0);
+                const finalRep = Math.round(repResult.finalRep);
+
+                const user5Win = getCurrentUserSync();
+                const newRounds = (user5Win.stats?.totalRounds || 0) + 1;
+                const newRep = (user5Win.stats?.totalRep || 0) + finalRep;
+                const newStash = (user5Win.stats?.totalStash || 0) + 1; // Plug gets +1 STASH for defending
+
+                console.log('[Tutorial Stage 5] Before update - Rounds:', user5Win.stats?.totalRounds, 'REP:', user5Win.stats?.totalRep, 'STASH:', user5Win.stats?.totalStash);
+                console.log('[Tutorial Stage 5] Plug wins - +REP:', finalRep, '+STASH: 1');
+
+                updateUserStats({
+                  totalRounds: newRounds,
+                  totalRep: newRep,
+                  totalStash: newStash // Plug gets +1 STASH for successfully defending
+                });
+
+                // Show floating reward popups (+1 STASH for defending, +REP)
+                this.showFloatingRewards(1, finalRep, { x: this.runner?.x, y: this.runner?.y });
+
+                // Small delay to ensure stats are saved before refreshing sidebar
+                this.time.delayedCall(50, () => {
+                  this.refreshSidebarStats();
+                  const verifyUser = getCurrentUserSync();
+                  console.log('[Tutorial Stage 5] After refresh - Rounds:', verifyUser.stats?.totalRounds, 'REP:', verifyUser.stats?.totalRep);
+                });
+              }
+
+              // Short delay then show modal
               this.time.delayedCall(300, () => this.goNext());
               return;
             }
@@ -2834,14 +3165,21 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.addAIRunnerCarry();
         this.stash?.setVisible(false);
         if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+        // Track stash pickup for plug mode (penalty to REP)
+        if (this.progressionManager?.repTracker) {
+          this.progressionManager.repTracker.onStashPickup(false); // Tracks RUNNER_GOT_STASH penalty
+        }
         // Start engine sounds when AI runner gets stash
         try { this.audio?.startEngineLoop(); } catch {}
-        this.toast('Runner got the stash!', 1200, '#ffd166');
       }
 
-      // Check if AI runner extracted (player loses)
+      // Check if AI runner extracted (player loses - no stats awarded)
       if (this.aiRunner.hasStash && this.overlaps(this.aiRunner, this.extractPad)){
-        this.toast('Runner extracted! You lose.', 1500, '#f87171');
+        // Track extraction for plug mode (big REP penalty, but don't save stats since player lost)
+        if (this.progressionManager?.repTracker) {
+          this.progressionManager.repTracker.onRunnerExtracted();
+          console.log('[Tutorial Stage 5] Plug lost - runner extracted, no stats awarded');
+        }
         this.time.delayedCall(1600, () => this.startStage(5));
         return;
       }
@@ -2984,11 +3322,12 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
           // Clear stash halo graphics
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          // Track stash pickup event (REP/STASH awarded at extraction, not here)
+          // No manual stats update - RepTracker handles penalties/bonuses
           // Play pickup sounds and start engine
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
           try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
           try { this.audio?.startEngineLoop(); } catch {}
-          this.toast('Nice. Get to the car.');
           this.showCarBeacon();
           // Turn on car lights once package is collected
           this.setCarLights(true);
@@ -3018,6 +3357,8 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this.bunkStash) { this.bunkStash.destroy(); this.bunkStash = null; }
           // Clear stash halo graphics
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          // Track stash pickup event (REP/STASH awarded at extraction, not here)
+          // No manual stats update - RepTracker handles penalties/bonuses
           // Play pickup sounds
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
           try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
@@ -3025,7 +3366,7 @@ export class TutorialMiniScene extends Phaser.Scene {
           if (this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1]) {
             try { this.audio?.startEngineLoop(); } catch {}
           }
-          this.toast('Nice. Get to the car.');
+          // No toast in Stage 3 - powers tutorial
           this.showCarBeacon();
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)) {
           // Play bunk pickup sound
@@ -3055,11 +3396,12 @@ export class TutorialMiniScene extends Phaser.Scene {
           this.stash?.setVisible(false);
           if (this.bunkStash){ this.bunkStash.destroy(); this.bunkStash = null; }
           if (this._stashHaloG) { this._stashHaloG.clear(); this._stashHaloG = null; }
+          // Track stash pickup event (REP/STASH awarded at extraction, not here)
+          // RepTracker will track if bullets hit us, reducing REP
           // Play pickup sounds and start engine
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
           try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
           try { this.audio?.startEngineLoop(); } catch {}
-          this.toast('Got the stash! Get to the car.');
           this.showCarBeacon();
           // Turn on car lights once package is collected
           this.setCarLights(true);

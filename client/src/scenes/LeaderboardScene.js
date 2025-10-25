@@ -5,9 +5,10 @@ import {
   formatNumber
 } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
-import { getUsername, getUserID, getCurrentUser } from '../utils/userManager.js';
+import { getUsername, getUserID, getCurrentUser, getCurrentUserSync } from '../utils/userManager.js';
 import { trackLeaderboardView } from '../utils/analytics.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
 
 export default class LeaderboardScene extends Phaser.Scene {
   constructor() {
@@ -15,6 +16,7 @@ export default class LeaderboardScene extends Phaser.Scene {
   }
 
   create() {
+    console.log('[Leaderboard] create() called, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop());
     const W = this.scale.width;
     const H = this.scale.height;
     const cx = W / 2;
@@ -66,6 +68,53 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     this.backBtn = backBtn;
     this.backText = backText;
+
+    // Initialize desktop sidebars
+    console.log('[Leaderboard] About to check isDesktop():', isDesktop());
+    if (isDesktop()) {
+      console.log('[Leaderboard] isDesktop() returned true, calling initDesktopSidebars()');
+      this.initDesktopSidebars();
+    } else {
+      console.log('[Leaderboard] isDesktop() returned false, skipping sidebars');
+    }
+
+    // Cleanup sidebars when leaving scene
+    this.events.once('shutdown', () => {
+      // Note: Don't cleanup sidebars here - the next scene will clean them up
+      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
+    });
+  }
+
+  initDesktopSidebars() {
+    console.log('[Leaderboard] Initializing desktop sidebars');
+    // Clean up any existing sidebars first
+    cleanupSidebars();
+
+    // Left sidebar: Social feed
+    this.leftSidebar = createSidebarContainer('left');
+    createSocialFeed(this.leftSidebar);
+
+    // Right sidebar: Personal stats only (no leaderboard section since main scene shows full leaderboard)
+    this.rightSidebar = createSidebarContainer('right');
+    createPersonalStats(this.rightSidebar, null);
+    console.log('[Leaderboard] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
+
+    // Initialize sidebar with current stats
+    this.refreshSidebarStats();
+  }
+
+  refreshSidebarStats() {
+    // Update sidebar with current user stats
+    const user = getCurrentUserSync();
+    const stats = user.stats || {};
+
+    updateStats({
+      totalRounds: stats.totalRounds || 0,
+      totalStash: stats.totalStash || 0,
+      repEarned: stats.totalRep || 0,
+      bestRunner: stats.bestRunnerRound || 0,
+      bestPlug: stats.bestPlugRound || 0
+    });
   }
 
   createTabButtons(cx, y) {
