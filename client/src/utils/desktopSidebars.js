@@ -104,8 +104,7 @@ export function createSocialFeed(container) {
     <div id="feed-entries" style="
       padding: 0 15px;
       max-height: 600px;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: hidden;
     "></div>
   `;
 

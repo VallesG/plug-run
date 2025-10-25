@@ -250,8 +250,20 @@ export class MenuScene extends Phaser.Scene {
             }
           });
         }
-        // Note: Don't cleanup sidebars here - the next scene will clean them up
-        // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
+
+        // Clean up sidebars when leaving MenuScene
+        console.log('[MenuScene] Scene shutdown - cleaning up sidebars');
+        cleanupSidebars();
+
+        // Stop sidebar update timers
+        if (this.sidebarLeaderboardTimer) {
+          this.sidebarLeaderboardTimer.remove();
+          this.sidebarLeaderboardTimer = null;
+        }
+        if (this.sidebarActivityTimer) {
+          this.sidebarActivityTimer.remove();
+          this.sidebarActivityTimer = null;
+        }
       } catch {}
     });
 

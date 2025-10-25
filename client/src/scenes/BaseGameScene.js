@@ -680,8 +680,18 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   initDesktopSidebars() {
-    console.log('[BaseGameScene] Initializing desktop sidebars, role:', this.role);
-    // Clean up any existing sidebars first
+    // Only create sidebars once - persist across rounds for live scanner feel
+    if (this.sidebarsInitialized) {
+      console.log('[BaseGameScene] Sidebars already exist, skipping recreation');
+      // Just refresh the data, don't recreate DOM
+      this.refreshSidebarStats();
+      this.updateSidebarLeaderboard();
+      return;
+    }
+
+    console.log('[BaseGameScene] Initializing desktop sidebars (first time), role:', this.role);
+
+    // Clean up any existing sidebars from other scenes
     cleanupSidebars();
 
     // Left sidebar: Street Scanner (always)
@@ -692,6 +702,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.rightSidebar = createSidebarContainer('right');
     createPersonalStats(this.rightSidebar, this.role);
     console.log('[BaseGameScene] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
+
+    // Mark as initialized
+    this.sidebarsInitialized = true;
 
     // Initialize sidebar with current stats
     this.refreshSidebarStats();
@@ -2194,6 +2207,23 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.off('pointerdown', this._mouseFireHandler);
     this._pointerMoveHandler = this._pointerDownHandler = this._pointerUpHandler = this._mouseFireHandler = null;
     this.scale.off('resize', this._onResizeCb);
+
+    // Clean up sidebars when truly leaving the scene (not just restarting round)
+    console.log('[BaseGameScene] Scene shutdown - cleaning up sidebars');
+    cleanupSidebars();
+    this.sidebarsInitialized = false;
+    this.leftSidebar = null;
+    this.rightSidebar = null;
+
+    // Stop sidebar update timers
+    if (this.sidebarLeaderboardTimer) {
+      this.sidebarLeaderboardTimer.remove();
+      this.sidebarLeaderboardTimer = null;
+    }
+    if (this.sidebarActivityTimer) {
+      this.sidebarActivityTimer.remove();
+      this.sidebarActivityTimer = null;
+    }
   }
 
   destroy(){
