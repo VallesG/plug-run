@@ -28,7 +28,7 @@ import VisualEffects from '../controllers/VisualEffects.js';
 import GameUI from '../controllers/GameUI.js';
 import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
 import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
-import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed } from '../utils/desktopSidebars.js';
+import { isDesktop, areSidebarsActive, getExistingSidebars, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setCurrentMode } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity, logRunnerExtract, logPlugStop, logRunnerEliminated, logBunkPickup, logPersonalBest } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 
@@ -680,10 +680,19 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   initDesktopSidebars() {
-    // If sidebars already exist from MenuScene, just refresh data
+    // If sidebars already exist from MenuScene, grab references and update for current mode
     if (areSidebarsActive()) {
-      console.log('[BaseGameScene] Sidebars already active from menu, just refreshing');
-      // Just refresh the data, don't recreate DOM
+      console.log('[BaseGameScene] Sidebars already active from menu, grabbing references');
+      const existing = getExistingSidebars();
+      this.leftSidebar = existing.left;
+      this.rightSidebar = existing.right;
+
+      // Recreate right sidebar with correct mode leaderboard (runner or plug)
+      console.log('[BaseGameScene] Recreating right sidebar for mode:', this.role);
+      setCurrentMode(this.role); // Update global mode
+      createPersonalStats(this.rightSidebar, this.role);
+
+      // Refresh the data for this mode
       this.refreshSidebarStats();
       this.updateSidebarLeaderboard();
       return;

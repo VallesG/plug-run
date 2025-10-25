@@ -8,7 +8,7 @@ import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
-import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setGlobalTimers } from '../utils/desktopSidebars.js';
+import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setGlobalTimers, setCurrentMode, getCurrentMode, getExistingSidebars } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
 
 // Palette constants so we can theme later
@@ -1385,7 +1385,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Right sidebar: Personal stats with random daily leaderboard (runner or plug)
     const randomMode = Math.random() < 0.5 ? 'runner' : 'plug';
-    this.sidebarMode = randomMode; // Store for updates
+    setCurrentMode(randomMode); // Store globally for updates
     this.rightSidebar = createSidebarContainer('right');
     createPersonalStats(this.rightSidebar, randomMode);
 
@@ -1398,40 +1398,61 @@ export class MenuScene extends Phaser.Scene {
     // Fetch and update activity feed
     this.updateSidebarActivity();
 
-    // Set up periodic updates (only once)
-    const leaderboardTimer = this.time.addEvent({
-      delay: 30000,
-      loop: true,
-      callback: () => this.updateSidebarLeaderboard()
-    });
+    // Set up periodic updates (only once) - use global callbacks
+    const leaderboardCallback = async () => {
+      const sidebars = getExistingSidebars();
+      if (!sidebars.right) return;
 
-    const activityTimer = this.time.addEvent({
-      delay: 12000,
-      loop: true,
-      callback: () => this.updateSidebarActivity()
-    });
+      try {
+        // Use the globally stored current mode
+        const currentMode = getCurrentMode();
+        const topScores = await getTopScores(currentMode, 10);
+        const leaderboardData = topScores.map(entry => ({
+          name: entry.username,
+          score: entry.stash || 0
+        }));
+        updateLeaderboard(sidebars.right, leaderboardData);
+      } catch (err) {
+        console.warn('[Sidebar] Failed to update leaderboard:', err);
+      }
+    };
 
-    // Store timers globally so they persist across scenes
-    setGlobalTimers(leaderboardTimer, activityTimer);
+    const activityCallback = async () => {
+      const sidebars = getExistingSidebars();
+      if (!sidebars.left) return;
+
+      try {
+        const activities = await fetchRecentActivity(15);
+        updateSocialFeed(sidebars.left, activities);
+      } catch (err) {
+        console.warn('[Sidebar] Failed to update activity:', err);
+      }
+    };
+
+    // Store global timers that persist across scenes
+    setGlobalTimers(leaderboardCallback, activityCallback);
   }
 
   async updateSidebarActivity() {
-    if (!this.leftSidebar) return;
+    const sidebars = getExistingSidebars();
+    if (!sidebars.left) return;
 
     try {
       const activities = await fetchRecentActivity(15);
-      updateSocialFeed(this.leftSidebar, activities);
+      updateSocialFeed(sidebars.left, activities);
     } catch (err) {
       console.warn('[MenuScene] Failed to update activity feed:', err);
     }
   }
 
   async updateSidebarLeaderboard() {
-    if (!this.rightSidebar || !this.sidebarMode) return;
+    const sidebars = getExistingSidebars();
+    if (!sidebars.right) return;
 
     try {
-      // Fetch top 10 scores for the selected mode (daily leaderboard)
-      const topScores = await getTopScores(this.sidebarMode, 10);
+      // Fetch top 10 scores for the current mode (daily leaderboard)
+      const currentMode = getCurrentMode();
+      const topScores = await getTopScores(currentMode, 10);
 
       // Transform data to match updateLeaderboard format
       const leaderboardData = topScores.map(entry => ({
@@ -1439,7 +1460,7 @@ export class MenuScene extends Phaser.Scene {
         score: entry.stash || 0
       }));
 
-      updateLeaderboard(this.rightSidebar, leaderboardData);
+      updateLeaderboard(sidebars.right, leaderboardData);
     } catch (err) {
       console.warn('[MenuScene] Failed to update sidebar leaderboard:', err);
     }

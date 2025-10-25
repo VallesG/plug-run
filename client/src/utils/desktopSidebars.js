@@ -4,6 +4,7 @@
 // Global sidebar state (persists across scenes)
 let globalSidebarsActive = false;
 let globalUpdateTimers = { leaderboard: null, activity: null };
+let globalCurrentMode = 'runner'; // Track current leaderboard mode
 
 export function isDesktop() {
   return window.innerWidth >= 768;
@@ -13,20 +14,51 @@ export function areSidebarsActive() {
   return globalSidebarsActive;
 }
 
-export function setGlobalTimers(leaderboardTimer, activityTimer) {
-  globalUpdateTimers.leaderboard = leaderboardTimer;
-  globalUpdateTimers.activity = activityTimer;
+export function setGlobalTimers(leaderboardCallback, activityCallback) {
+  // Use native setInterval instead of Phaser timers so they persist across scenes
+  clearGlobalTimers(); // Clear any existing timers first
+
+  // Leaderboard: every 30 seconds
+  globalUpdateTimers.leaderboard = setInterval(leaderboardCallback, 30000);
+
+  // Activity feed: every 12 seconds
+  globalUpdateTimers.activity = setInterval(activityCallback, 12000);
+
+  console.log('[Sidebar] Global update timers started');
 }
 
 export function clearGlobalTimers() {
   if (globalUpdateTimers.leaderboard) {
-    globalUpdateTimers.leaderboard.remove();
+    clearInterval(globalUpdateTimers.leaderboard);
     globalUpdateTimers.leaderboard = null;
   }
   if (globalUpdateTimers.activity) {
-    globalUpdateTimers.activity.remove();
+    clearInterval(globalUpdateTimers.activity);
     globalUpdateTimers.activity = null;
   }
+  console.log('[Sidebar] Global update timers cleared');
+}
+
+// Get existing sidebar containers from DOM
+export function getExistingSidebars() {
+  const sidebars = document.querySelectorAll('.desktop-sidebar');
+  if (sidebars.length >= 2) {
+    // Assume first is left, second is right (order they were created)
+    return {
+      left: sidebars[0],
+      right: sidebars[1]
+    };
+  }
+  return { left: null, right: null };
+}
+
+export function setCurrentMode(mode) {
+  globalCurrentMode = mode;
+  console.log('[Sidebar] Current mode set to:', mode);
+}
+
+export function getCurrentMode() {
+  return globalCurrentMode;
 }
 
 // Clean up any existing sidebars
