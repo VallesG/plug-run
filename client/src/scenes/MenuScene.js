@@ -197,9 +197,6 @@ export class MenuScene extends Phaser.Scene {
       this.initDesktopSidebars();
     }
 
-    // Show one-time notice for desktop users that game is mobile-optimized
-    this.showDesktopNotice();
-
     // Keep menu silent; stop any residual gameplay music when returning
     try {
       const audio = AudioManager.get(this);

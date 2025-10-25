@@ -684,12 +684,12 @@ export class TutorialMiniScene extends Phaser.Scene {
         localStorage.setItem('pr_user', JSON.stringify(user));
       }
 
-      // Clean up sidebars and timers
+      // Clean up timers (but keep sidebars - MenuScene will refresh them)
       if (this.sidebarActivityTimer) {
         this.time.removeEvent(this.sidebarActivityTimer);
         this.sidebarActivityTimer = null;
       }
-      cleanupSidebars();
+      // Note: Don't cleanup sidebars - they persist when returning to MenuScene
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       if (this._onResizeCb){
@@ -722,12 +722,12 @@ export class TutorialMiniScene extends Phaser.Scene {
         localStorage.setItem('pr_user', JSON.stringify(user));
       }
 
-      // Clean up sidebars
+      // Clean up timers (but keep sidebars - MenuScene will refresh them)
       if (this.sidebarActivityTimer) {
         this.time.removeEvent(this.sidebarActivityTimer);
         this.sidebarActivityTimer = null;
       }
-      cleanupSidebars();
+      // Note: Don't cleanup sidebars - they persist when returning to MenuScene
     });
   }
   computeLayout(){
