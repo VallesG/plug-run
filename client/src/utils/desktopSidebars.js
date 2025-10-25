@@ -101,30 +101,135 @@ export function createSocialFeed(container) {
         letter-spacing: 2px;
       ">LIVE ACTIVITY</div>
     </div>
-    <div id="feed-entries" style="padding: 0 15px;"></div>
+    <div id="feed-entries" style="
+      padding: 0 15px;
+      max-height: 600px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    "></div>
   `;
-
-  const feedContainer = container.querySelector('#feed-entries');
-
-  // Placeholder entry
-  const entry = document.createElement('div');
-  entry.style.cssText = `
-    display: flex;
-    padding: 15px 0;
-    border-bottom: 1px solid #2f3650;
-  `;
-
-  entry.innerHTML = `
-    <span style="font-size: 20px; margin-right: 10px;">👤</span>
-    <div style="flex: 1;">
-      <div style="color: #cbd1ff; font-size: 12px; margin-bottom: 5px;">Waiting for activity...</div>
-      <div style="color: #64748b; font-size: 10px;">just now</div>
-    </div>
-  `;
-
-  feedContainer.appendChild(entry);
 
   return container;
+}
+
+// Get event styling (emoji, color) based on event type
+function getEventStyle(eventType) {
+  const styles = {
+    runner_extract: { emoji: '🟢', color: '#86efac' },      // Green - success
+    plug_stop: { emoji: '🔴', color: '#f87171' },           // Red - defensive win
+    runner_eliminated: { emoji: '💀', color: '#fb923c' },   // Orange - danger
+    personal_best: { emoji: '⭐', color: '#fbbf24' },       // Gold - achievement
+    leaderboard_climb: { emoji: '🏆', color: '#60a5fa' },   // Blue - competitive
+    bunk_pickup: { emoji: '🎭', color: '#a78bfa' },         // Purple - comedic
+    account_claimed: { emoji: '🆕', color: '#38bdf8' },     // Cyan - new user
+    win_streak: { emoji: '🔥', color: '#fb923c' }           // Orange - hot streak
+  };
+  return styles[eventType] || { emoji: '📍', color: '#cbd1ff' };
+}
+
+// Format event message based on type and metadata
+function formatEventMessage(eventType, username, metadata) {
+  switch (eventType) {
+    case 'runner_extract':
+      return `${username} escaped with +${metadata.stash || 1} STASH`;
+    case 'plug_stop':
+      return `${username} stopped the runner!`;
+    case 'runner_eliminated':
+      return `${username} got caught${metadata.had_stash ? ' with STASH' : ''}`;
+    case 'personal_best':
+      return `${username} hit best: Round ${metadata.round}!`;
+    case 'leaderboard_climb':
+      return `${username} jumped to #${metadata.rank}!`;
+    case 'bunk_pickup':
+      return `${username} got BUNK'd 💩`;
+    case 'account_claimed':
+      return `${metadata.old_username} → '${username}'`;
+    case 'win_streak':
+      return `${username}: ${metadata.streak} in a row!`;
+    default:
+      return `${username} - ${eventType}`;
+  }
+}
+
+// Format timestamp as relative time
+function formatTimeAgo(timestamp) {
+  const now = new Date();
+  const then = new Date(timestamp);
+  const seconds = Math.floor((now - then) / 1000);
+
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  return `${Math.floor(seconds / 3600)}h ago`;
+}
+
+// Update social feed with new activities (staggered scanner effect)
+export function updateSocialFeed(container, activities) {
+  if (!container) return;
+
+  const feedContainer = container.querySelector('#feed-entries');
+  if (!feedContainer) return;
+
+  // Store current event IDs to avoid duplicates
+  const existingIds = new Set(
+    Array.from(feedContainer.children).map(el => el.dataset.eventId)
+  );
+
+  // Filter out events we already have
+  const newActivities = activities.filter(activity => !existingIds.has(activity.id));
+
+  if (newActivities.length === 0) return;
+
+  console.log(`[SocialFeed] Adding ${newActivities.length} new activities with stagger effect`);
+
+  // Add new activities with staggered animation (scanner-like feel)
+  newActivities.forEach((activity, index) => {
+    setTimeout(() => {
+      const style = getEventStyle(activity.event_type);
+      const message = formatEventMessage(activity.event_type, activity.username, activity.metadata || {});
+      const timeAgo = formatTimeAgo(activity.created_at);
+
+      const entry = document.createElement('div');
+      entry.dataset.eventId = activity.id;
+      entry.style.cssText = `
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #2f3650;
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+      `;
+
+      entry.innerHTML = `
+        <span style="font-size: 18px; margin-right: 10px; flex-shrink: 0;">${style.emoji}</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="
+            color: ${style.color};
+            font-size: 12px;
+            margin-bottom: 4px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          ">${message}</div>
+          <div style="color: #64748b; font-size: 10px;">${timeAgo}</div>
+        </div>
+      `;
+
+      // Insert at top of feed
+      feedContainer.insertBefore(entry, feedContainer.firstChild);
+
+      // Trigger animation after insertion
+      requestAnimationFrame(() => {
+        entry.style.opacity = '1';
+        entry.style.transform = 'translateX(0)';
+      });
+
+      // Limit feed to 15 entries max
+      while (feedContainer.children.length > 15) {
+        feedContainer.removeChild(feedContainer.lastChild);
+      }
+    }, index * 150); // Stagger each entry by 150ms for scanner effect
+  });
 }
 
 // Create personal stats sidebar (green street sign style)
@@ -292,8 +397,3 @@ export function updateStats(stats) {
   }
 }
 
-export function addSocialFeedEvent(container, event) {
-  if (!container) return;
-
-  // TODO: Implement scrolling feed
-}

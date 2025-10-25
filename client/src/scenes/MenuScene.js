@@ -8,7 +8,8 @@ import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard } from '../utils/desktopSidebars.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed } from '../utils/desktopSidebars.js';
+import { fetchRecentActivity } from '../utils/activityFeed.js';
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -1382,15 +1383,41 @@ export class MenuScene extends Phaser.Scene {
     // Fetch and update live leaderboard
     this.updateSidebarLeaderboard();
 
-    // Set up periodic leaderboard refresh (every 30 seconds)
+    // Fetch and update activity feed
+    this.updateSidebarActivity();
+
+    // Set up periodic updates
     if (this.sidebarLeaderboardTimer) {
       this.sidebarLeaderboardTimer.remove();
     }
+    if (this.sidebarActivityTimer) {
+      this.sidebarActivityTimer.remove();
+    }
+
+    // Leaderboard: every 30 seconds
     this.sidebarLeaderboardTimer = this.time.addEvent({
       delay: 30000,
       loop: true,
       callback: () => this.updateSidebarLeaderboard()
     });
+
+    // Activity feed: every 12 seconds (faster for lively feel)
+    this.sidebarActivityTimer = this.time.addEvent({
+      delay: 12000,
+      loop: true,
+      callback: () => this.updateSidebarActivity()
+    });
+  }
+
+  async updateSidebarActivity() {
+    if (!this.leftSidebar) return;
+
+    try {
+      const activities = await fetchRecentActivity(15);
+      updateSocialFeed(this.leftSidebar, activities);
+    } catch (err) {
+      console.warn('[MenuScene] Failed to update activity feed:', err);
+    }
   }
 
   async updateSidebarLeaderboard() {
