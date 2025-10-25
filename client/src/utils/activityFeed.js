@@ -10,16 +10,34 @@ import { getCurrentUserSync } from './userManager.js';
  * @param {object} metadata - Event-specific data
  */
 export async function submitActivityEvent(eventType, metadata = {}) {
-  if (!isOnline()) return;
+  console.log(`[ActivityFeed] Attempting to submit ${eventType}:`, metadata);
+
+  if (!isOnline()) {
+    console.warn('[ActivityFeed] Offline, skipping event submission');
+    return;
+  }
 
   try {
     const user = getCurrentUserSync();
+    console.log('[ActivityFeed] Current user:', {
+      username: user?.username,
+      hasSupabaseId: !!user?.supabaseId,
+      isGuest: user?.isGuest
+    });
+
     if (!user || !user.supabaseId) {
-      console.log('[ActivityFeed] User not synced to Supabase, skipping event submission');
+      console.warn('[ActivityFeed] User not synced to Supabase yet. User:', user);
+      console.warn('[ActivityFeed] Events will be tracked once user syncs to Supabase (happens automatically for guests)');
       return;
     }
 
     // Call the helper function in Supabase
+    console.log('[ActivityFeed] Calling log_activity RPC with:', {
+      user_id: user.supabaseId,
+      username: user.username,
+      event_type: eventType
+    });
+
     const { data, error } = await supabase.rpc('log_activity', {
       p_user_id: user.supabaseId,
       p_username: user.username,
@@ -28,11 +46,11 @@ export async function submitActivityEvent(eventType, metadata = {}) {
     });
 
     if (error) {
-      console.warn('[ActivityFeed] Failed to submit event:', error);
+      console.error('[ActivityFeed] RPC error:', error);
       return;
     }
 
-    console.log(`[ActivityFeed] Submitted ${eventType}:`, metadata);
+    console.log(`[ActivityFeed] ✅ Successfully submitted ${eventType}`, data);
   } catch (err) {
     console.warn('[ActivityFeed] Error submitting activity:', err);
   }
@@ -44,9 +62,13 @@ export async function submitActivityEvent(eventType, metadata = {}) {
  * @returns {Array} Array of activity events
  */
 export async function fetchRecentActivity(limit = 15) {
-  if (!isOnline()) return [];
+  if (!isOnline()) {
+    console.log('[ActivityFeed] Offline, skipping fetch');
+    return [];
+  }
 
   try {
+    console.log('[ActivityFeed] Fetching recent activity (limit:', limit, ')');
     const { data, error } = await supabase
       .from('activity_feed')
       .select('*')
@@ -54,13 +76,14 @@ export async function fetchRecentActivity(limit = 15) {
       .limit(limit);
 
     if (error) {
-      console.warn('[ActivityFeed] Failed to fetch activity:', error);
+      console.error('[ActivityFeed] Failed to fetch activity:', error);
       return [];
     }
 
+    console.log(`[ActivityFeed] ✅ Fetched ${data?.length || 0} activities`);
     return data || [];
   } catch (err) {
-    console.warn('[ActivityFeed] Error fetching activity:', err);
+    console.error('[ActivityFeed] Error fetching activity:', err);
     return [];
   }
 }
