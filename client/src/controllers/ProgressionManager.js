@@ -4,7 +4,9 @@ import {
   updateRouteProgress,
   recordRoundCompletion,
   saveSessionState,
-  clearSessionState
+  clearSessionState,
+  hasUsedSpawnSwap,
+  markSpawnSwapUsed
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
@@ -347,15 +349,20 @@ export default class ProgressionManager {
     const routeID = this.scene.currentRouteID ?? getCurrentRouteID();
     const continueSeed = getRouteSeed(routeID, roundNumber, this.scene.role);
     const restartSeed = getRouteSeed(routeID, 1, this.scene.role);
+    const role = isPlug ? 'plug' : 'runner';
+
+    // Check if spawn swap has been used
+    const swapUsed = hasUsedSpawnSwap(role);
 
     const buttons = [
       {
         label: `Continue from Round ${roundNumber}`,
-        bg: 0x2a1a38,
-        color: '#fbbf24',
+        bg: 0x16a34a, // Green
+        stroke: 0x22c55e,
+        color: '#ffffff',
         onClick: () => this.scene.scene.restart({
           mode: 'pve',
-          role: isPlug ? 'plug' : 'runner',
+          role,
           pveRound: roundNumber, // Same round
           pveSessionStash: this.scene.pveSessionStash,
           pveSessionRep: this.scene.pveSessionRep,
@@ -364,13 +371,35 @@ export default class ProgressionManager {
         })
       },
       {
+        label: swapUsed ? `Swap Spawns (Already Used)` : `Continue & Swap Spawns`,
+        bg: swapUsed ? 0x1a1a2e : 0x6b21a8, // Gray if used, purple otherwise
+        stroke: swapUsed ? 0x2f3660 : 0x9333ea,
+        color: swapUsed ? '#64748b' : '#e9d5ff',
+        disabled: swapUsed,
+        onClick: () => {
+          if (swapUsed) return; // Don't allow if already used
+          markSpawnSwapUsed(role); // Mark as used
+          this.scene.scene.restart({
+            mode: 'pve',
+            role,
+            pveRound: roundNumber, // Same round
+            pveSessionStash: this.scene.pveSessionStash,
+            pveSessionRep: this.scene.pveSessionRep,
+            pveBestRound: this.scene.pveBestRound,
+            seed: continueSeed,
+            swapSpawns: true // Flag to swap runner and plug positions
+          });
+        }
+      },
+      {
         label: isPlug ? 'Defend Again (Round 1)' : 'Run Again (Round 1)',
-        bg: 0x1a2038,
-        color: '#86efac',
+        bg: 0x374151, // Gray
+        stroke: 0x4b5563,
+        color: '#d1d5db',
         onClick: () => {
           this.scene.scene.restart({
             mode: 'pve',
-            role: isPlug ? 'plug' : 'runner',
+            role,
             pveRound: 1,
             pveSessionStash: 0,
             pveSessionRep: 0,
@@ -381,8 +410,9 @@ export default class ProgressionManager {
       },
       {
         label: 'Exit',
-        bg: 0x1a2038,
-        color: '#cbd1ff',
+        bg: 0x991b1b, // Red
+        stroke: 0xdc2626,
+        color: '#fecaca',
         onClick: () => this.scene.scene.start('MENU')
       }
     ];

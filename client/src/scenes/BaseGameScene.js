@@ -168,7 +168,8 @@ export class BaseGameScene extends Phaser.Scene {
       this.pveSessionStash = initData?.pveSessionStash ?? initData?.savedSession?.pveSessionStash ?? 0;
       this.pveSessionRep = initData?.pveSessionRep ?? initData?.savedSession?.pveSessionRep ?? 0;
       this.pveBestRound = initData?.pveBestRound ?? initData?.savedSession?.pveBestRound ?? 0;
-      console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep);
+      this.swapSpawns = initData?.swapSpawns ?? false; // One-time spawn swap feature
+      console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep, 'SwapSpawns:', this.swapSpawns);
 
       // Use deterministic route seed for PvE (same daily route for all players globally, resets 12am PST)
       // Runner and plug modes get different seeds for balanced gameplay
@@ -401,6 +402,15 @@ export class BaseGameScene extends Phaser.Scene {
     this.extractCell = arena.objectives.extract;
     this.egress      = arena.egress;
     this.notchCells  = null; // disable notch visual bay entirely
+
+    // Swap spawns if requested (one-time per route feature for difficult spawns)
+    if (this.swapSpawns) {
+      console.log('[SwapSpawns] Swapping runner and plug starting positions');
+      const temp = { ...arena.spawns.runner };
+      arena.spawns.runner = { ...arena.spawns.plug };
+      arena.spawns.plug = temp;
+    }
+
     this.drawNeonArena();
     this.makeObjectives(this.stashCell, this.extractCell);
     this.placeGetawayCar();

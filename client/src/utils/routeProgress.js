@@ -25,6 +25,10 @@ export function getCurrentRouteProgress() {
           runner: {}, // { 1: 3, 2: 1 } = round 1 completed 3 times, round 2 once
           plug: {}
         },
+        spawnSwapUsed: {
+          runner: false, // one spawn swap per route per role
+          plug: false
+        },
         timestamp: Date.now()
       };
     }
@@ -36,6 +40,7 @@ export function getCurrentRouteProgress() {
       runnerHighestRound: data.runnerHighestRound || 0,
       completedRounds: data.completedRounds || { runner: [], plug: [] },
       completionCounts: data.completionCounts || { runner: {}, plug: {} },
+      spawnSwapUsed: data.spawnSwapUsed || { runner: false, plug: false },
       timestamp: data.timestamp || Date.now()
     };
   } catch (e) {
@@ -46,6 +51,7 @@ export function getCurrentRouteProgress() {
       runnerHighestRound: 0,
       completedRounds: { runner: [], plug: [] },
       completionCounts: { runner: {}, plug: {} },
+      spawnSwapUsed: { runner: false, plug: false },
       timestamp: Date.now()
     };
   }
@@ -323,6 +329,37 @@ export function clearSessionState(role) {
     return true;
   } catch (e) {
     console.warn('[RouteProgress] Failed to clear session state:', e);
+    return false;
+  }
+}
+
+// ============ SPAWN SWAP TRACKING (One per route per role) ============
+
+// Check if user has already used their spawn swap for this route
+export function hasUsedSpawnSwap(role) {
+  const progress = getCurrentRouteProgress();
+  return progress.spawnSwapUsed?.[role] || false;
+}
+
+// Mark spawn swap as used for current route and role
+export function markSpawnSwapUsed(role) {
+  const routeID = getCurrentRouteID();
+  const key = STORAGE_KEY_PREFIX + routeID;
+  const progress = getCurrentRouteProgress();
+
+  if (!progress.spawnSwapUsed) {
+    progress.spawnSwapUsed = { runner: false, plug: false };
+  }
+
+  progress.spawnSwapUsed[role] = true;
+  progress.timestamp = Date.now();
+
+  try {
+    localStorage.setItem(key, JSON.stringify(progress));
+    console.log(`[RouteProgress] Marked spawn swap as used for ${role}`);
+    return true;
+  } catch (e) {
+    console.warn('[RouteProgress] Failed to mark spawn swap:', e);
     return false;
   }
 }

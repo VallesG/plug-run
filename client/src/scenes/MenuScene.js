@@ -426,8 +426,18 @@ export class MenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    container.add([bg, text]);
+    // Add a subtle hint text below button to guide users
+    const isTouchDevice = this.sys.game.device.input.touch;
+    const hintMessage = isTouchDevice ? 'Tap to play' : 'Click to play';
+    const hintText = this.add.text(0, btnHeight / 2 + 20, hintMessage, {
+      fontSize: '12px',
+      color: '#94a3b8',
+      fontStyle: 'italic'
+    }).setOrigin(0.5).setAlpha(0.8);
+
+    container.add([bg, text, hintText]);
     container._bg = bg; // Store reference for hover effect
+    container._hintText = hintText; // Store hint reference
 
     // Background rectangle handles the interaction
     bg.on('pointerdown', (pointer, localX, localY, event) => {
@@ -505,6 +515,16 @@ export class MenuScene extends Phaser.Scene {
     }
 
     container.add(arrow);
+
+    // Add label under arrow button (match hint text styling)
+    const labelText = direction === 'left' ? 'Prev' : 'Next';
+    const label = this.add.text(0, btnHeight / 2 + 20, labelText, {
+      fontSize: '12px',
+      color: '#94a3b8',
+      fontStyle: 'italic'
+    }).setOrigin(0.5).setAlpha(0.8);
+
+    container.add(label);
 
     // Background rectangle handles the interaction
     bg.on('pointerdown', (pointer, localX, localY, event) => {
@@ -1678,9 +1698,29 @@ export class MenuScene extends Phaser.Scene {
         if (isSelected) {
           btn.setAlpha(1);
           if (btn._bg) btn._bg.setInteractive({ cursor: 'pointer' }); // Enable interaction on bg
+
+          // Add pulsing animation to hint text only (button stays stationary)
+          if (!btn._hintPulse && btn._hintText) {
+            btn._hintPulse = this.tweens.add({
+              targets: btn._hintText,
+              scaleX: 1.15,
+              scaleY: 1.15,
+              duration: 1200,
+              yoyo: true,
+              repeat: -1,
+              ease: 'Sine.easeInOut'
+            });
+          }
         } else {
           btn.setAlpha(0);
           if (btn._bg) btn._bg.disableInteractive(); // Disable interaction on bg
+
+          // Stop hint pulse animation when not selected
+          if (btn._hintPulse) {
+            btn._hintPulse.remove();
+            btn._hintPulse = null;
+            if (btn._hintText) btn._hintText.setScale(1, 1); // Reset to default scale
+          }
         }
       }
     });

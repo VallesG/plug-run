@@ -65,12 +65,16 @@ export default class GameUI {
 
     for (const b of buttons) {
       const bg = this.scene.add.rectangle(bx, by, btnW, btnH, b.bg ?? 0x1a2038, 1)
-        .setStrokeStyle(1, b.stroke ?? 0x2f3660).setScrollFactor(0).setDepth(Z)
-        .setInteractive({ useHandCursor: true });
+        .setStrokeStyle(2, b.stroke ?? 0x2f3660).setScrollFactor(0).setDepth(Z);
+
+      // Only make interactive if not disabled
+      if (!b.disabled) {
+        bg.setInteractive({ useHandCursor: true });
+        bg.on('pointerdown', () => { destroy(); b.onClick && b.onClick(); });
+      }
+
       const t = this.scene.add.text(bx, by, b.label, { color: b.color ?? '#cbd1ff', fontSize: '14px' })
         .setOrigin(0.5).setDepth(Z).setScrollFactor(0);
-
-      bg.on('pointerdown', () => { destroy(); b.onClick && b.onClick(); });
 
       btnObjs.push(bg, t);
       btnCenters.push({ x: bx, y: by });
