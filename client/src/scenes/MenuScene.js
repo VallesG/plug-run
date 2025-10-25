@@ -8,7 +8,7 @@ import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed } from '../utils/desktopSidebars.js';
+import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setGlobalTimers } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
 
 // Palette constants so we can theme later
@@ -251,19 +251,8 @@ export class MenuScene extends Phaser.Scene {
           });
         }
 
-        // Clean up sidebars when leaving MenuScene
-        console.log('[MenuScene] Scene shutdown - cleaning up sidebars');
-        cleanupSidebars();
-
-        // Stop sidebar update timers
-        if (this.sidebarLeaderboardTimer) {
-          this.sidebarLeaderboardTimer.remove();
-          this.sidebarLeaderboardTimer = null;
-        }
-        if (this.sidebarActivityTimer) {
-          this.sidebarActivityTimer.remove();
-          this.sidebarActivityTimer = null;
-        }
+        // Note: Don't cleanup sidebars - they persist between Menu ↔ Game transitions
+        // Only cleaned up when truly exiting to a non-game scene
       } catch {}
     });
 
@@ -1376,7 +1365,18 @@ export class MenuScene extends Phaser.Scene {
   }
 
   initDesktopSidebars() {
-    // Clean up any existing sidebars first
+    // Only create sidebars once - they persist across menu ↔ game transitions
+    if (areSidebarsActive()) {
+      console.log('[MenuScene] Sidebars already active, skipping initialization');
+      // Just refresh the data
+      this.refreshSidebarStats();
+      this.updateSidebarLeaderboard();
+      return;
+    }
+
+    console.log('[MenuScene] Creating sidebars for the first time');
+
+    // Clean up any stale sidebars
     cleanupSidebars();
 
     // Left sidebar: Social feed
@@ -1398,27 +1398,21 @@ export class MenuScene extends Phaser.Scene {
     // Fetch and update activity feed
     this.updateSidebarActivity();
 
-    // Set up periodic updates
-    if (this.sidebarLeaderboardTimer) {
-      this.sidebarLeaderboardTimer.remove();
-    }
-    if (this.sidebarActivityTimer) {
-      this.sidebarActivityTimer.remove();
-    }
-
-    // Leaderboard: every 30 seconds
-    this.sidebarLeaderboardTimer = this.time.addEvent({
+    // Set up periodic updates (only once)
+    const leaderboardTimer = this.time.addEvent({
       delay: 30000,
       loop: true,
       callback: () => this.updateSidebarLeaderboard()
     });
 
-    // Activity feed: every 12 seconds (faster for lively feel)
-    this.sidebarActivityTimer = this.time.addEvent({
+    const activityTimer = this.time.addEvent({
       delay: 12000,
       loop: true,
       callback: () => this.updateSidebarActivity()
     });
+
+    // Store timers globally so they persist across scenes
+    setGlobalTimers(leaderboardTimer, activityTimer);
   }
 
   async updateSidebarActivity() {

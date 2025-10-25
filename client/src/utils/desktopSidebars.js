@@ -1,8 +1,32 @@
 // Desktop Sidebar System using DOM elements
 // Provides live leaderboard and social feed for desktop players
 
+// Global sidebar state (persists across scenes)
+let globalSidebarsActive = false;
+let globalUpdateTimers = { leaderboard: null, activity: null };
+
 export function isDesktop() {
   return window.innerWidth >= 768;
+}
+
+export function areSidebarsActive() {
+  return globalSidebarsActive;
+}
+
+export function setGlobalTimers(leaderboardTimer, activityTimer) {
+  globalUpdateTimers.leaderboard = leaderboardTimer;
+  globalUpdateTimers.activity = activityTimer;
+}
+
+export function clearGlobalTimers() {
+  if (globalUpdateTimers.leaderboard) {
+    globalUpdateTimers.leaderboard.remove();
+    globalUpdateTimers.leaderboard = null;
+  }
+  if (globalUpdateTimers.activity) {
+    globalUpdateTimers.activity.remove();
+    globalUpdateTimers.activity = null;
+  }
 }
 
 // Clean up any existing sidebars
@@ -13,6 +37,8 @@ export function cleanupSidebars() {
     console.trace('[Sidebar] Cleanup called from:');
   }
   existing.forEach(el => el.remove());
+  globalSidebarsActive = false;
+  clearGlobalTimers();
 }
 
 // Create a DOM sidebar container
@@ -61,6 +87,7 @@ export function createSidebarContainer(side) {
 
   document.body.appendChild(sidebar);
   console.log(`[Sidebar] Created ${side} sidebar at position ${leftPosition}px`);
+  globalSidebarsActive = true;
   return sidebar;
 }
 

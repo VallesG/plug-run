@@ -2,7 +2,8 @@
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
 import { trackTutorial } from '../utils/analytics.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
+import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateSocialFeed } from '../utils/desktopSidebars.js';
+import { fetchRecentActivity } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 import RepTracker from '../utils/repTracker.js';
 import { getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
@@ -470,18 +471,41 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Clean up any existing sidebars first
     cleanupSidebars();
 
-    // Left sidebar: Social feed
+    // Left sidebar: Social feed (show real activity from other players!)
     this.leftSidebar = createSidebarContainer('left');
     createSocialFeed(this.leftSidebar);
 
-    // Right sidebar: Personal stats with random daily leaderboard (runner or plug)
-    const randomMode = Math.random() < 0.5 ? 'runner' : 'plug';
+    // Right sidebar: Tutorial practice stats (no leaderboard for tutorial)
     this.rightSidebar = createSidebarContainer('right');
-    createPersonalStats(this.rightSidebar, randomMode);
+    createPersonalStats(this.rightSidebar, null); // null = no leaderboard section
     console.log('[Tutorial] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
 
     // Initialize sidebar with current stats
     this.refreshSidebarStats();
+
+    // Fetch and show live activity feed (so tutorial users see other players' activity)
+    this.updateSidebarActivity();
+
+    // Set up periodic activity feed updates
+    if (this.sidebarActivityTimer) {
+      this.time.removeEvent(this.sidebarActivityTimer);
+    }
+    this.sidebarActivityTimer = this.time.addEvent({
+      delay: 12000,
+      loop: true,
+      callback: () => this.updateSidebarActivity()
+    });
+  }
+
+  async updateSidebarActivity() {
+    if (!this.leftSidebar) return;
+
+    try {
+      const activities = await fetchRecentActivity(15);
+      updateSocialFeed(this.leftSidebar, activities);
+    } catch (err) {
+      console.warn('[Tutorial] Failed to update activity feed:', err);
+    }
   }
 
   refreshSidebarStats() {
@@ -648,8 +672,24 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.input.off('gameout', this._pointerUpHandler);
         this._pointerUpHandler = null;
       }
-      // Note: Don't cleanup sidebars here - the next scene will clean them up
-      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
+
+      // Clear tutorial practice stats when leaving tutorial (don't persist across refreshes)
+      console.log('[Tutorial] Clearing tutorial practice stats from localStorage');
+      const user = getCurrentUserSync();
+      if (user) {
+        // Reset tutorial-specific stats back to zero
+        user.stats.totalRounds = 0;
+        user.stats.totalStash = 0;
+        user.stats.totalRep = 0;
+        localStorage.setItem('pr_user', JSON.stringify(user));
+      }
+
+      // Clean up sidebars and timers
+      if (this.sidebarActivityTimer) {
+        this.time.removeEvent(this.sidebarActivityTimer);
+        this.sidebarActivityTimer = null;
+      }
+      cleanupSidebars();
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       if (this._onResizeCb){
@@ -671,8 +711,23 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.input.off('gameout', this._pointerUpHandler);
         this._pointerUpHandler = null;
       }
-      // Note: Don't cleanup sidebars here - the next scene will clean them up
-      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
+
+      // Clear tutorial practice stats on destroy too
+      console.log('[Tutorial] Clearing tutorial practice stats on destroy');
+      const user = getCurrentUserSync();
+      if (user) {
+        user.stats.totalRounds = 0;
+        user.stats.totalStash = 0;
+        user.stats.totalRep = 0;
+        localStorage.setItem('pr_user', JSON.stringify(user));
+      }
+
+      // Clean up sidebars
+      if (this.sidebarActivityTimer) {
+        this.time.removeEvent(this.sidebarActivityTimer);
+        this.sidebarActivityTimer = null;
+      }
+      cleanupSidebars();
     });
   }
   computeLayout(){

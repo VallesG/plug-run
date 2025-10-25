@@ -28,7 +28,7 @@ import VisualEffects from '../controllers/VisualEffects.js';
 import GameUI from '../controllers/GameUI.js';
 import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
 import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed } from '../utils/desktopSidebars.js';
+import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity, logRunnerExtract, logPlugStop, logRunnerEliminated, logBunkPickup, logPersonalBest } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
 
@@ -680,62 +680,17 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   initDesktopSidebars() {
-    // Only create sidebars once - persist across rounds for live scanner feel
-    if (this.sidebarsInitialized) {
-      console.log('[BaseGameScene] Sidebars already exist, skipping recreation');
+    // If sidebars already exist from MenuScene, just refresh data
+    if (areSidebarsActive()) {
+      console.log('[BaseGameScene] Sidebars already active from menu, just refreshing');
       // Just refresh the data, don't recreate DOM
       this.refreshSidebarStats();
       this.updateSidebarLeaderboard();
       return;
     }
 
-    console.log('[BaseGameScene] Initializing desktop sidebars (first time), role:', this.role);
-
-    // Clean up any existing sidebars from other scenes
-    cleanupSidebars();
-
-    // Left sidebar: Street Scanner (always)
-    this.leftSidebar = createSidebarContainer('left');
-    createSocialFeed(this.leftSidebar);
-
-    // Right sidebar: Your Stats with live leaderboard (mode-specific)
-    this.rightSidebar = createSidebarContainer('right');
-    createPersonalStats(this.rightSidebar, this.role);
-    console.log('[BaseGameScene] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
-
-    // Mark as initialized
-    this.sidebarsInitialized = true;
-
-    // Initialize sidebar with current stats
-    this.refreshSidebarStats();
-
-    // Fetch and update live leaderboard
-    this.updateSidebarLeaderboard();
-
-    // Fetch and update activity feed
-    this.updateSidebarActivity();
-
-    // Set up periodic updates
-    if (this.sidebarLeaderboardTimer) {
-      this.sidebarLeaderboardTimer.remove();
-    }
-    if (this.sidebarActivityTimer) {
-      this.sidebarActivityTimer.remove();
-    }
-
-    // Leaderboard: every 30 seconds
-    this.sidebarLeaderboardTimer = this.time.addEvent({
-      delay: 30000,
-      loop: true,
-      callback: () => this.updateSidebarLeaderboard()
-    });
-
-    // Activity feed: every 12 seconds (faster for lively feel)
-    this.sidebarActivityTimer = this.time.addEvent({
-      delay: 12000,
-      loop: true,
-      callback: () => this.updateSidebarActivity()
-    });
+    console.log('[BaseGameScene] No sidebars active, skipping (should be created by MenuScene)');
+    // Sidebars are created by MenuScene and persist, BaseGameScene just uses them
   }
 
   async updateSidebarActivity() {
@@ -2208,22 +2163,8 @@ export class BaseGameScene extends Phaser.Scene {
     this._pointerMoveHandler = this._pointerDownHandler = this._pointerUpHandler = this._mouseFireHandler = null;
     this.scale.off('resize', this._onResizeCb);
 
-    // Clean up sidebars when truly leaving the scene (not just restarting round)
-    console.log('[BaseGameScene] Scene shutdown - cleaning up sidebars');
-    cleanupSidebars();
-    this.sidebarsInitialized = false;
-    this.leftSidebar = null;
-    this.rightSidebar = null;
-
-    // Stop sidebar update timers
-    if (this.sidebarLeaderboardTimer) {
-      this.sidebarLeaderboardTimer.remove();
-      this.sidebarLeaderboardTimer = null;
-    }
-    if (this.sidebarActivityTimer) {
-      this.sidebarActivityTimer.remove();
-      this.sidebarActivityTimer = null;
-    }
+    // Note: Don't cleanup sidebars - they persist between Menu ↔ Game transitions
+    // Sidebars are cleaned up by MenuScene or when truly exiting
   }
 
   destroy(){
