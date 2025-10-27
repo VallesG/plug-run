@@ -2,6 +2,7 @@
 // Stores highest round reached per role during current route
 
 import { getCurrentRouteID } from './seededRandom.js';
+import { getUserID } from './userManager.js';
 
 const STORAGE_KEY_PREFIX = 'pr_route_';
 
@@ -263,10 +264,12 @@ const SESSION_KEY_PREFIX = 'pr_session_';
 // Save session state for a role (for continue feature)
 export function saveSessionState(role, sessionData) {
   const routeID = getCurrentRouteID();
-  const key = `${SESSION_KEY_PREFIX}${routeID}_${role}`;
+  const userId = getUserID();
+  const key = `${SESSION_KEY_PREFIX}${userId}_${routeID}_${role}`;
 
   try {
     const stateToSave = {
+      userId,
       routeID,
       role,
       pveRound: sessionData.pveRound,
@@ -277,7 +280,7 @@ export function saveSessionState(role, sessionData) {
     };
 
     localStorage.setItem(key, JSON.stringify(stateToSave));
-    console.log(`[RouteProgress] Saved session for ${role} at round ${sessionData.pveRound}`);
+    console.log(`[RouteProgress] Saved session for user ${userId}, ${role} at round ${sessionData.pveRound}`);
     return true;
   } catch (e) {
     console.warn('[RouteProgress] Failed to save session state:', e);
@@ -288,7 +291,8 @@ export function saveSessionState(role, sessionData) {
 // Get saved session state for a role
 export function getSessionState(role) {
   const routeID = getCurrentRouteID();
-  const key = `${SESSION_KEY_PREFIX}${routeID}_${role}`;
+  const userId = getUserID();
+  const key = `${SESSION_KEY_PREFIX}${userId}_${routeID}_${role}`;
 
   try {
     const stored = localStorage.getItem(key);
@@ -298,9 +302,9 @@ export function getSessionState(role) {
 
     const data = JSON.parse(stored);
 
-    // Verify it's for the current route
-    if (data.routeID !== routeID) {
-      console.log(`[RouteProgress] Session expired (old route), clearing`);
+    // Verify it's for the current route AND current user
+    if (data.routeID !== routeID || data.userId !== userId) {
+      console.log(`[RouteProgress] Session expired (old route or different user), clearing`);
       clearSessionState(role);
       return null;
     }
@@ -321,11 +325,12 @@ export function getSessionState(role) {
 // Clear session state for a role (when starting fresh)
 export function clearSessionState(role) {
   const routeID = getCurrentRouteID();
-  const key = `${SESSION_KEY_PREFIX}${routeID}_${role}`;
+  const userId = getUserID();
+  const key = `${SESSION_KEY_PREFIX}${userId}_${routeID}_${role}`;
 
   try {
     localStorage.removeItem(key);
-    console.log(`[RouteProgress] Cleared session for ${role}`);
+    console.log(`[RouteProgress] Cleared session for user ${userId}, ${role}`);
     return true;
   } catch (e) {
     console.warn('[RouteProgress] Failed to clear session state:', e);
