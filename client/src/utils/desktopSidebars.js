@@ -18,11 +18,11 @@ export function setGlobalTimers(leaderboardCallback, activityCallback) {
   // Use native setInterval instead of Phaser timers so they persist across scenes
   clearGlobalTimers(); // Clear any existing timers first
 
-  // Leaderboard: every 15 seconds
-  globalUpdateTimers.leaderboard = setInterval(leaderboardCallback, 15000);
+  // Leaderboard: every 5 seconds for near real-time updates
+  globalUpdateTimers.leaderboard = setInterval(leaderboardCallback, 5000);
 
-  // Activity feed: every 12 seconds
-  globalUpdateTimers.activity = setInterval(activityCallback, 12000);
+  // Activity feed: every 8 seconds
+  globalUpdateTimers.activity = setInterval(activityCallback, 8000);
 
   console.log('[Sidebar] Global update timers started');
 }
