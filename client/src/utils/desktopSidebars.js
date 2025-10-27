@@ -18,8 +18,8 @@ export function setGlobalTimers(leaderboardCallback, activityCallback) {
   // Use native setInterval instead of Phaser timers so they persist across scenes
   clearGlobalTimers(); // Clear any existing timers first
 
-  // Leaderboard: every 30 seconds
-  globalUpdateTimers.leaderboard = setInterval(leaderboardCallback, 30000);
+  // Leaderboard: every 15 seconds
+  globalUpdateTimers.leaderboard = setInterval(leaderboardCallback, 15000);
 
   // Activity feed: every 12 seconds
   globalUpdateTimers.activity = setInterval(activityCallback, 12000);
@@ -426,23 +426,35 @@ export function updateLeaderboard(container, leaderboardData, type = 'alltime', 
 
   // Update leaderboard entries
   const entries = container.querySelectorAll('#live-leaderboard-entries > div');
-  leaderboardData.forEach((entry, i) => {
-    if (i >= entries.length) return;
 
-    const entryDiv = entries[i];
+  // Update all entries (including clearing ones without data)
+  entries.forEach((entryDiv, i) => {
     const spans = entryDiv.querySelectorAll('span');
     if (spans.length >= 3) {
-      spans[1].textContent = entry.name || '---';
-      spans[2].textContent = entry.score !== undefined ? entry.score.toString() : '---';
+      const entry = leaderboardData[i];
 
-      // Highlight current user's entry
-      const isCurrentUser = currentUserId && entry.userId === currentUserId;
-      if (isCurrentUser) {
-        entryDiv.style.backgroundColor = 'rgba(251, 191, 36, 0.15)'; // Gold highlight
-        entryDiv.style.borderLeft = '3px solid #fbbf24'; // Gold border
-        spans[1].style.color = '#fbbf24'; // Gold username
-        spans[1].style.fontWeight = 'bold';
+      if (entry) {
+        // Entry has data - update it
+        spans[1].textContent = entry.name || '---';
+        spans[2].textContent = entry.score !== undefined ? entry.score.toString() : '---';
+
+        // Highlight current user's entry with white/subtle styling
+        const isCurrentUser = currentUserId && entry.userId === currentUserId;
+        if (isCurrentUser) {
+          entryDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; // Subtle white highlight
+          entryDiv.style.borderLeft = '3px solid #ffffff'; // White border
+          spans[1].style.color = '#ffffff'; // White username
+          spans[1].style.fontWeight = 'bold';
+        } else {
+          entryDiv.style.backgroundColor = 'transparent';
+          entryDiv.style.borderLeft = 'none';
+          spans[1].style.color = '#cbd1ff';
+          spans[1].style.fontWeight = 'normal';
+        }
       } else {
+        // No data for this entry - clear it
+        spans[1].textContent = '---';
+        spans[2].textContent = '---';
         entryDiv.style.backgroundColor = 'transparent';
         entryDiv.style.borderLeft = 'none';
         spans[1].style.color = '#cbd1ff';
