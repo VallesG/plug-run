@@ -142,8 +142,10 @@ export default class ProgressionManager {
         pveBestRound: this.scene.pveBestRound
       });
 
-      // Submit score to daily leaderboard
-      submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
+      // Submit score to daily leaderboard IMMEDIATELY (await to ensure it completes)
+      console.log(`[ProgressionManager] 🚀 SUBMITTING SCORE NOW - Round ${this.scene.pveRound}, Stash: ${this.scene.pveSessionStash}, Rep: ${this.scene.pveSessionRep}`);
+      await submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
+      console.log('[ProgressionManager] ✅ Score submitted successfully to Supabase!');
 
       // Log activity feed event: Runner extracted successfully
       logRunnerExtract(this.scene.pveRound, stashEarned > 0);
@@ -351,11 +353,13 @@ export default class ProgressionManager {
     // Track route progress for leaderboard
     updateRouteProgress(this.scene.role, roundNumber);
 
-    // Submit score to daily leaderboard
-    submitScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep);
-
-    // Submit to all-time leaderboard
-    submitAllTimeScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep);
+    // Submit score to daily and all-time leaderboards (await to ensure completion)
+    console.log(`[ProgressionManager] 🚀 GAME OVER - Submitting final scores - Round ${roundNumber}, Stash: ${this.scene.pveSessionStash}, Rep: ${this.scene.pveSessionRep}`);
+    await Promise.all([
+      submitScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep),
+      submitAllTimeScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep)
+    ]);
+    console.log('[ProgressionManager] ✅ Final scores submitted to Supabase!');
 
     // Build buttons array
     const routeID = this.scene.currentRouteID ?? getCurrentRouteID();

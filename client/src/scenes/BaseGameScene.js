@@ -2214,7 +2214,7 @@ export class BaseGameScene extends Phaser.Scene {
     }
   }
 
-  handlePlugRunnerDefeated(origin){
+  async handlePlugRunnerDefeated(origin){
     console.log('[handlePlugRunnerDefeated] ===== RUNNER DEFEATED =====');
     console.log('[handlePlugRunnerDefeated] Origin:', origin);
     console.log('[handlePlugRunnerDefeated] Time since startMatch:', performance.now() - (this._startMatchTime || 0), 'ms');
@@ -2290,8 +2290,10 @@ export class BaseGameScene extends Phaser.Scene {
     // Track route progress for leaderboard
     updateRouteProgress(this.role, currentRound);
 
-    // Submit score to daily leaderboard
-    submitScore(this.role, currentRound, this.pveSessionStash, this.pveSessionRep);
+    // Submit score to daily leaderboard IMMEDIATELY (await to ensure it completes)
+    console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE NOW - Round ${currentRound}, Stash: ${this.pveSessionStash}, Rep: ${this.pveSessionRep}`);
+    await submitScore(this.role, currentRound, this.pveSessionStash, this.pveSessionRep);
+    console.log('[BaseGameScene] ✅ Score submitted successfully to Supabase!');
 
     // Log activity feed event: Plug stopped runner
     logPlugStop(currentRound);
