@@ -283,6 +283,17 @@ export default class CombatSystem {
           this.hit(this.scene.attacker);
         }
       }
+      // Dual AI: Check collision with second attacker
+      if (this.scene.attacker2 && this.scene.attacker2.active && rectsOverlap(b, this.scene.attacker2)) {
+        if (phasing) return; // TODO: Check if attacker2 is also phasing
+        this.scene._spawnBulletImpact?.(b.x, b.y, b._color || 0xffffff);
+        b._glow?.destroy?.();
+        b._rim?.destroy?.();
+        b.destroy();
+        if (this.scene.canDamage(this.scene.attacker2)) {
+          this.hit(this.scene.attacker2);
+        }
+      }
     });
 
     this.scene.bulletsA.getChildren().forEach(b => {
@@ -292,6 +303,14 @@ export default class CombatSystem {
         b._rim?.destroy?.();
         b.destroy();
         this.hit(this.scene.defender);
+      }
+      // Dual AI: Check collision with second defender
+      if (this.scene.defender2 && this.scene.defender2.active && rectsOverlap(b, this.scene.defender2)) {
+        this.scene._spawnBulletImpact?.(b.x, b.y, b._color || 0xffffff);
+        b._glow?.destroy?.();
+        b._rim?.destroy?.();
+        b.destroy();
+        this.hit(this.scene.defender2);
       }
     });
   }
@@ -326,9 +345,108 @@ export default class CombatSystem {
     });
 
     if (who.hp <= 0) {
-      if (who === this.scene.attacker) {
+      if (who === this.scene.attacker || who === this.scene.attacker2) {
         if (this.scene.mode === 'pve' && this.scene.role === 'plug') {
-          this.scene.handlePlugRunnerDefeated({ x: who.x, y: who.y });
+          // Dual AI: Check if BOTH attackers are dead before ending round
+          const attacker1Dead = !this.scene.attacker || !this.scene.attacker.active || this.scene.attacker.hp <= 0;
+          const attacker2Dead = !this.scene.attacker2 || !this.scene.attacker2.active || this.scene.attacker2.hp <= 0;
+
+          console.log('[DualAI] Death check - attacker1Dead:', attacker1Dead, 'attacker2Dead:', attacker2Dead);
+          console.log('[DualAI] Killed attacker:', who === this.scene.attacker ? 'attacker' : who === this.scene.attacker2 ? 'attacker2' : 'unknown');
+
+          if (attacker1Dead && attacker2Dead) {
+            // Both attackers defeated - round over
+            console.log('[DualAI] Both attackers dead - ending round');
+            this.scene.handlePlugRunnerDefeated({ x: who.x, y: who.y });
+          } else {
+            // One attacker still alive
+            console.log('[DualAI] One attacker defeated, stashCarrier:', this.scene.stashCarrier);
+
+            // Hide the dead attacker FIRST before any other operations
+            who.setVisible(false);
+            who.setActive(false);
+
+            // Check if THIS killed runner was carrying stash
+            if (this.scene.hasStash && who === this.scene.stashCarrier) {
+              try {
+                console.log('[DualAI] Stash carrier defeated, attempting to drop stash');
+
+                // Remove carry package FIRST (while we can still access the container)
+                if (this.scene.carrySprite) {
+                  console.log('[DualAI] Destroying carry sprite');
+                  this.scene.carrySprite.destroy();
+                  this.scene.carrySprite = null;
+                  this.scene.stashCarrier = null;
+                }
+
+                console.log('[DualAI] Positioning dropped stash at:', who.x, who.y);
+                // Position stash at death location
+                const dropX = who.x;
+                const dropY = who.y;
+                this.scene.stash.setPosition(dropX, dropY);
+                this.scene.stash.setVisible(true);
+                this.scene.stash.setActive(true);
+
+                console.log('[DualAI] Restoring stash halo');
+                // Restore stash halo visibility and drawing function
+                if (this.scene.stashHalo) {
+                  this.scene.stashHalo.setVisible(true);
+
+                  // Restore the halo drawing function (was set to null on pickup)
+                  this.scene._drawStashHalo = () => {
+                    if (!this.scene.stashHalo) return;
+                    this.scene.stashHalo.clear();
+                    const t = (performance.now() % 1200) / 1200;
+                    const r = this.scene.cell * (0.65 + 0.15 * Math.sin(t * 2 * Math.PI));
+                    const drawAt = (obj) => {
+                      if (!obj || !obj.active || obj.visible === false) return;
+                      const a = Math.max(0.0, Math.min(1.0, obj.alpha ?? 1));
+                      this.scene.stashHalo.lineStyle(3, 0x86efac, 0.9 * a);
+                      this.scene.stashHalo.strokeCircle(obj.x, obj.y, r);
+                    };
+                    drawAt(this.scene.stash);
+                  };
+                }
+
+                console.log('[DualAI] Hiding car beacon and stopping sounds');
+                // Hide beacon and reset hasStash
+                this.scene.hideCarBeacon?.();
+                this.scene.hasStash = false;
+
+                // Stop engine sounds
+                try { this.scene.audio?.stopEngineLoop(); } catch {}
+
+                console.log('[DualAI] Stash drop complete');
+              } catch (e) {
+                console.error('[DualAI] Error dropping stash:', e);
+                console.error('[DualAI] Stack trace:', e.stack);
+                // Ensure hasStash is reset even if drop fails
+                this.scene.hasStash = false;
+              }
+            }
+
+            console.log('[DualAI] One attacker defeated, one still active - continuing round');
+
+            // Immediately clean up dead attacker references to prevent stale references
+            if (who === this.scene.attacker && this.scene.attacker2 && this.scene.attacker2.active && this.scene.attacker2.hp > 0) {
+              // Primary attacker died, promote attacker2
+              console.log('[DualAI Death] Primary attacker died, promoting attacker2 to primary');
+              this.scene.attacker = this.scene.attacker2;
+              this.scene.aiRunnerPowersSelected = this.scene.aiRunnerPowersSelected2;
+              this.scene.aiRunnerPowersConsumed = this.scene.aiRunnerPowersConsumed2;
+              this.scene.attacker2 = null;
+              this.scene.aiController2 = null;
+              this.scene.aiRunnerPowersSelected2 = null;
+              this.scene.aiRunnerPowersConsumed2 = null;
+            } else if (who === this.scene.attacker2) {
+              // Secondary attacker died, clean it up
+              console.log('[DualAI Death] Secondary attacker died, cleaning up attacker2 references');
+              this.scene.attacker2 = null;
+              this.scene.aiController2 = null;
+              this.scene.aiRunnerPowersSelected2 = null;
+              this.scene.aiRunnerPowersConsumed2 = null;
+            }
+          }
         } else {
           this.scene.endRound('defender');
         }

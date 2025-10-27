@@ -142,6 +142,7 @@ export class BaseGameScene extends Phaser.Scene {
     // Initialize all controllers
     this.playerController = new PlayerController(this);
     this.aiController = new AIController(this);
+    this.aiController2 = null; // Second AI controller (created if dual AI mode active)
     this.combatSystem = new CombatSystem(this);
     this.vfx = new VisualEffects(this);
     this.gameUI = new GameUI(this);
@@ -246,6 +247,8 @@ export class BaseGameScene extends Phaser.Scene {
   canMoveTo(sprite, nx, ny){
     // Allow the runner to pass through walls while phasing
     if (sprite === this.attacker && this.runnerIsPhasing && this.runnerIsPhasing()) return true;
+    // Dual AI: Allow second attacker to pass through walls while phasing
+    if (sprite === this.attacker2 && performance.now() < (this.phaseActiveUntil2 || 0)) return true;
     // Smaller hitbox for better navigation in tight spaces, especially corridors
     const r = (sprite?.hbRadius != null) ? sprite.hbRadius : (this.hitboxRadius || (this.cell * 0.18));
     const pts = [
@@ -358,7 +361,59 @@ export class BaseGameScene extends Phaser.Scene {
     createPortraitOverlay(this);
 
     this.roundPausedForMenu = false;
+
+    // CRITICAL: Clean up any orphaned carry sprites from previous scene instances
+    // Since shutdown() is NOT called by scene.restart(), we need to manually clean up here
+    console.log('[create] Cleaning up any orphaned sprites from previous scene...');
+
+    // Destroy our reference if it exists
+    if (this.carrySprite) {
+      console.log('[create] WARNING: carrySprite reference still exists! Destroying it.');
+      try {
+        this.carrySprite.destroy();
+      } catch (e) {
+        console.warn('[create] Error destroying carrySprite:', e);
+      }
+    }
+
+    // Search the display list for any orphaned carry package containers
+    // These might persist even though our reference is null
+    // The carry package is a Container with Graphics/Ellipse children, positioned at negative Y offset
+    const displayList = this.children.list || [];
+    const orphanedCarryContainers = displayList.filter(obj => {
+      // Look for small containers positioned at negative Y (above character)
+      // that contain graphics (the duffel bag visual)
+      if (obj.type !== 'Container') return false;
+      if (!obj.active) return false;
+
+      // Carry package is always positioned at negative Y offset (above character)
+      // and contains 3 children: aura (ellipse), sensor (rectangle), graphics
+      const hasCarryStructure = obj.list?.length === 3 &&
+                                obj.list.some(child => child.type === 'Graphics');
+
+      return hasCarryStructure;
+    });
+
+    if (orphanedCarryContainers.length > 0) {
+      console.log('[create] Found', orphanedCarryContainers.length, 'orphaned carry containers, destroying them...');
+      orphanedCarryContainers.forEach(container => {
+        try {
+          container.destroy();
+          console.log('[create] Destroyed orphaned carry container');
+        } catch (e) {
+          console.warn('[create] Error destroying orphaned container:', e);
+        }
+      });
+    }
+
+    // Reset carry state
     this.carrySprite = null;
+    this.stashCarrier = null;
+    this.hasStash = false;
+
+    console.log('[create] ===== SCENE CREATED =====');
+    console.log('[create] Round:', this.pveRound);
+    console.log('[create] hasStash:', this.hasStash, 'carrySprite:', this.carrySprite, 'stashCarrier:', this.stashCarrier);
 
     // Choose visual theme deterministically per seed, but guarantee change from last match
     const themeRng = makeRng((this.seed ^ 0x9E3779B9) | 0);
@@ -421,6 +476,62 @@ export class BaseGameScene extends Phaser.Scene {
     this.plugSpawnCell = { ...d };
     this.attacker = makeRunnerSprite(this, this.toWorldX(a.x), this.toWorldY(a.y), this.cell).setVisible(false);
     this.defender = makePlugSprite(this,   this.toWorldX(d.x), this.toWorldY(d.y), this.cell).setVisible(false);
+
+    console.log('[create] Round', this.pveRound, '- Created attacker, children count:', this.attacker.list.length);
+
+    // Dual AI: Spawn second opponent at round 13+ (PvE mode only)
+    this.attacker2 = null;
+    this.defender2 = null;
+    if (this.mode === 'pve' && this.pveRound >= 13) {
+      // Only spawn second AI opponent, not second player
+      if (this.role === 'plug') {
+        // Player is defender, spawn second runner (attacker)
+        const altRunnerSpawn = this.findAlternateSpawn(a, 'runner');
+        this.attacker2 = makeRunnerSprite(this, this.toWorldX(altRunnerSpawn.x), this.toWorldY(altRunnerSpawn.y), this.cell).setVisible(false);
+        this.attacker2.hp = 2;
+        if (this.wallMask) this.attacker2.setMask(this.wallMask);
+        console.log('[DualAI] Round', this.pveRound, 'Plug Mode - Spawning second runner, children count:', this.attacker2.list.length);
+      } else if (this.role === 'runner') {
+        // Player is attacker, spawn second plug (defender)
+        const altPlugSpawn = this.findAlternateSpawn(d, 'plug');
+        this.defender2 = makePlugSprite(this, this.toWorldX(altPlugSpawn.x), this.toWorldY(altPlugSpawn.y), this.cell).setVisible(false);
+        this.defender2.hp = 3;
+        if (this.wallMask) this.defender2.setMask(this.wallMask);
+        console.log('[DualAI] Round', this.pveRound, 'Runner Mode - Spawning second plug');
+      }
+
+      // Create second AI controller for second AI
+      this.aiController2 = new AIController(this);
+    }
+
+    // CRITICAL: Clean up orphaned carry sprites from attacker containers
+    // These can persist as nested children even after scene restart
+    const cleanCarryFromContainer = (container, name) => {
+      if (!container || !container.list) return;
+      const orphanedCarry = container.list.filter(child => {
+        // Carry sprite is a Container with 3 children (aura, sensor, graphics)
+        return child.type === 'Container' &&
+               child.list?.length === 3 &&
+               child.list.some(c => c.type === 'Graphics');
+      });
+      if (orphanedCarry.length > 0) {
+        console.log('[create] Found', orphanedCarry.length, 'orphaned carry sprites in', name, '- removing...');
+        orphanedCarry.forEach(carry => {
+          try {
+            container.remove(carry, true); // Remove and destroy
+            console.log('[create] Removed orphaned carry from', name);
+          } catch (e) {
+            console.warn('[create] Error removing orphaned carry:', e);
+          }
+        });
+      }
+    };
+
+    cleanCarryFromContainer(this.attacker, 'attacker');
+    if (this.attacker2) cleanCarryFromContainer(this.attacker2, 'attacker2');
+    if (this.defender) cleanCarryFromContainer(this.defender, 'defender');
+    if (this.defender2) cleanCarryFromContainer(this.defender2, 'defender2');
+
     // Apply floor mask so avatars never render over wall cells
     if (this.wallMask){ this.attacker.setMask(this.wallMask); this.defender.setMask(this.wallMask); }
     this.attacker.hp = 2; this.defender.hp = 3;
@@ -487,6 +598,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.playerMoveDir = { x:1, y:0 }; // Actual movement direction (straight line)
     this.playerIntendedDir = { x:1, y:0 }; // Direction player swiped/chose (never forced to change)
     this.aiAim        = { x:1, y:0 };
+    this.aiAim2       = { x:1, y:0 }; // Dual AI: Separate aim for second plug
 
     // desktop keyboard quick-aim (player) and persistent drift like "snake"
     const setDir = (x, y) => {
@@ -582,6 +694,8 @@ export class BaseGameScene extends Phaser.Scene {
     this.runnerPower = null;
     this.runnerPowerReadyAt = 0;
     this.phaseActiveUntil = 0;
+    // Dual AI: Separate phase timer for second runner
+    this.phaseActiveUntil2 = 0;
     this.decoySprite = null;
     this.decoyExpiresAt = 0;
     this.decoyVelocity = { x: 0, y: 0 };
@@ -632,6 +746,7 @@ export class BaseGameScene extends Phaser.Scene {
     this._aiVX = 0; this._aiVY = 0;
     this._aiCruiseDir = { x:1, y:0 };
     this._aiLastMoveDir = { x:0, y:0 };
+    this._aiLastMoveDir2 = { x:0, y:0 }; // Dual AI: Separate move dir for second runner
     this._aiFlipGuardUntil = 0;
 
     // recompute speed scalars now that aiPlug exists
@@ -767,13 +882,27 @@ export class BaseGameScene extends Phaser.Scene {
     } else {
       console.log('[BaseGameScene] isDesktop() returned false, skipping sidebars');
     }
+    console.log('[startMatch] ===== STARTING MATCH =====');
+    console.log('[startMatch] BEFORE reset - hasStash:', this.hasStash, 'stashCarrier:', this.stashCarrier ? 'EXISTS' : 'null', 'carrySprite:', this.carrySprite ? 'EXISTS' : 'null');
+
+    // Track when match started for timing analysis
+    this._startMatchTime = performance.now();
+
     this.roundOver = false;
     this.roundPausedForMenu = false;
+    // Remove carry package BEFORE resetting stashCarrier (so it knows who to remove from)
     this.removeCarryPackage();
+    // Reset stash state for new round (do this AFTER removeCarryPackage)
+    this.hasStash = false;
+    this.stashCarrier = null;
+
+    console.log('[startMatch] AFTER reset - hasStash:', this.hasStash, 'stashCarrier:', this.stashCarrier ? 'EXISTS' : 'null', 'carrySprite:', this.carrySprite ? 'EXISTS' : 'null');
     this.destroyRunnerAbilityUI();
     this.destroyDecoySprite();
     this.phaseActiveUntil = 0;
+    this.phaseActiveUntil2 = 0; // Dual AI: Reset second attacker's phase timer
     this.attacker?.setAlpha?.(1);
+    this.attacker2?.setAlpha?.(1); // Dual AI: Reset second attacker's alpha
     if (this.mode === 'pve') {
       applyPlugProgression(this);
       applyRunnerProgression(this);
@@ -784,6 +913,10 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.attacker.setVisible(true);
     this.defender.setVisible(true);
+
+    // Dual AI: Make second AI visible if it exists
+    if (this.attacker2) this.attacker2.setVisible(true);
+    if (this.defender2) this.defender2.setVisible(true);
 
     // Reset AI reaction timer so it doesn't accumulate during menus/delays
     this._aiFirstSeenAt = performance.now();
@@ -922,6 +1055,14 @@ export class BaseGameScene extends Phaser.Scene {
       const shuffled = Phaser.Utils.Array.Shuffle([...choices]);
       this.aiRunnerPowersSelected = shuffled.slice(0, 2);
       this.aiRunnerPowersConsumed = [false, false];
+
+      // Dual AI: Second runner gets independent random powers
+      if (this.attacker2) {
+        const shuffled2 = Phaser.Utils.Array.Shuffle([...choices]);
+        this.aiRunnerPowersSelected2 = shuffled2.slice(0, 2);
+        this.aiRunnerPowersConsumed2 = [false, false];
+      }
+
       this.promptPlugWeaponSelection(startTimer);
     } else {
       // Runner: enforce select-two menu for power order
@@ -1216,8 +1357,16 @@ export class BaseGameScene extends Phaser.Scene {
 
   addCarryPackage(){
     if (!this.attacker) return;
+    console.log('[addCarryPackage] ===== CALLED =====');
+    console.log('[addCarryPackage] Round', this.pveRound);
+    console.log('[addCarryPackage] Stack trace:', new Error().stack);
+    console.log('[addCarryPackage] Current hasStash:', this.hasStash);
+    console.log('[addCarryPackage] Current attacker:', this.attacker === this.attacker2 ? 'attacker2' : 'attacker');
     this.removeCarryPackage();
     this.destroyRunnerAbilityUI();
+
+    // Track which attacker is carrying the stash (for dual AI stash drops)
+    this.stashCarrier = this.attacker;
     // REAL / BUNK STASH PATCH: reuse the duffel visual at a smaller scale, add a faint glow
     const makeCarryDuffel = () => {
       const w = this.cell * 0.45;
@@ -1251,8 +1400,57 @@ export class BaseGameScene extends Phaser.Scene {
 
   removeCarryPackage(){
     if (!this.carrySprite) return;
-    this.attacker.remove(this.carrySprite, true);
+
+    console.log('[removeCarryPackage] Round', this.pveRound, '- Removing carry sprite, carrier:', this.stashCarrier === this.attacker ? 'attacker' : this.stashCarrier === this.attacker2 ? 'attacker2' : 'unknown');
+
+    // Try to remove from whichever container has it, and ALWAYS destroy it
+    let removed = false;
+
+    // Try removing from known carrier first
+    if (this.stashCarrier) {
+      const carrier = this.stashCarrier;
+      if (carrier && carrier.active) {
+        try {
+          carrier.remove(this.carrySprite, false); // Don't auto-destroy, we'll do it manually
+          removed = true;
+          console.log('[removeCarryPackage] Removed from known carrier');
+        } catch (e) {
+          console.warn('[removeCarryPackage] Failed to remove from known carrier:', e);
+        }
+      }
+    }
+
+    // If not removed, try both attackers
+    if (!removed && this.attacker) {
+      try {
+        this.attacker.remove(this.carrySprite, false);
+        removed = true;
+        console.log('[removeCarryPackage] Removed from attacker');
+      } catch (e) {
+        // Not on this attacker
+      }
+    }
+
+    if (!removed && this.attacker2) {
+      try {
+        this.attacker2.remove(this.carrySprite, false);
+        removed = true;
+        console.log('[removeCarryPackage] Removed from attacker2');
+      } catch (e) {
+        // Not on this attacker either
+      }
+    }
+
+    // ALWAYS destroy the carry sprite, regardless of whether we removed it from a container
+    try {
+      this.carrySprite.destroy();
+      console.log('[removeCarryPackage] Carry sprite destroyed');
+    } catch (e) {
+      console.warn('[removeCarryPackage] Failed to destroy carry sprite:', e);
+    }
+
     this.carrySprite = null;
+    this.stashCarrier = null;
   }
 
   refreshAmmoForLoadout(){
@@ -1353,7 +1551,13 @@ export class BaseGameScene extends Phaser.Scene {
       } catch {}
       // No dash: only set intangibility window and visual fade
       this.attacker.setAlpha(stats.fadeAlpha ?? 0.45);
-      this.phaseActiveUntil = now + (stats.duration || 600);
+
+      // Dual AI: Use separate phase timer for second attacker
+      if (this.attacker === this.attacker2) {
+        this.phaseActiveUntil2 = now + (stats.duration || 600);
+      } else {
+        this.phaseActiveUntil = now + (stats.duration || 600);
+      }
     } else if (power === 'dash'){
       // Play dash sound effect (quieter and much faster to match instant teleport)
       try {
@@ -1504,12 +1708,20 @@ export class BaseGameScene extends Phaser.Scene {
 
   update(_, delta){
     // Update visual effects (delegated to VFX controller)
-    this.vfx.update(delta / 1000);
+    try {
+      this.vfx.update(delta / 1000);
+    } catch (e) {
+      console.error('[Update] Error in VFX update:', e);
+    }
 
     // Draw helper visuals each frame if enabled
-    this._drawStashHalo?.();
-    this._drawExtractHalo?.(); // kept for compatibility if re-enabled elsewhere
-    this._drawCarBeacon?.();
+    try {
+      this._drawStashHalo?.();
+      this._drawExtractHalo?.(); // kept for compatibility if re-enabled elsewhere
+      this._drawCarBeacon?.();
+    } catch (e) {
+      console.error('[Update] Error drawing visual helpers:', e);
+    }
 
     if (!this.attacker || !this.defender) return; // scene still initializing / lazy-load path
     if (!this.attacker.visible || this.roundOver) return;
@@ -1519,7 +1731,29 @@ export class BaseGameScene extends Phaser.Scene {
     const dt = delta / 1000;
 
     if (this.role !== 'runner') {
-      this.aiController.considerAIRunnerPower(now);
+      // Consider powers for first runner if alive
+      if (this.attacker && this.attacker.active && this.attacker.hp > 0) {
+        this.aiController.considerAIRunnerPower(now);
+      }
+
+      // Dual AI: Consider powers for second runner if alive
+      if (this.aiController2 && this.attacker2 && this.attacker2.active && this.attacker2.hp > 0) {
+        // Temporarily swap attacker and power arrays
+        const temp = this.attacker;
+        const tempPowers = this.aiRunnerPowersSelected;
+        const tempConsumed = this.aiRunnerPowersConsumed;
+
+        this.attacker = this.attacker2;
+        this.aiRunnerPowersSelected = this.aiRunnerPowersSelected2;
+        this.aiRunnerPowersConsumed = this.aiRunnerPowersConsumed2;
+
+        this.aiController2.considerAIRunnerPower(now);
+
+        this.attacker = temp;
+        this.aiRunnerPowersSelected = tempPowers;
+        this.aiRunnerPowersConsumed = tempConsumed;
+      }
+
       // Street Wars: Apply human-like power usage
       considerStreetWarsPowerUse(this);
     } else {
@@ -1528,6 +1762,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     if (this.isDesktop && this._mouseDown) this.combatSystem.tryMouseFire();
 
+    // Handle phase alpha for first attacker
     const phasing = this.runnerIsPhasing();
     if (phasing){
       const stats = this.runnerPowerStats?.[this.runnerPower];
@@ -1535,6 +1770,18 @@ export class BaseGameScene extends Phaser.Scene {
       if (this.attacker.alpha !== fade) this.attacker.setAlpha(fade);
     } else if (this.attacker.alpha !== 1){
       this.attacker.setAlpha(1);
+    }
+
+    // Dual AI: Handle phase alpha for second attacker
+    if (this.attacker2) {
+      const phasing2 = now < (this.phaseActiveUntil2 || 0);
+      if (phasing2) {
+        const stats = this.runnerPowerStats?.phase;
+        const fade = stats?.fadeAlpha ?? 0.45;
+        if (this.attacker2.alpha !== fade) this.attacker2.setAlpha(fade);
+      } else if (this.attacker2.alpha !== 1) {
+        this.attacker2.setAlpha(1);
+      }
     }
 
     if (this.decoySprite){
@@ -1564,8 +1811,88 @@ export class BaseGameScene extends Phaser.Scene {
     // Update AI based on role
     if (this.role==='runner'){
       this.aiController.updatePlug(dt);
+      // Dual AI: Update second plug if it exists
+      if (this.aiController2 && this.defender2 && this.defender2.active) {
+        // Temporarily swap defender reference so AI module operates on defender2
+        const temp = this.defender;
+        this.defender = this.defender2;
+        this.aiController2.updatePlug(dt);
+        // Save the aim direction for defender2 before swapping back
+        if (this.aiAim) {
+          this.aiAim2 = { ...this.aiAim };
+        }
+        this.defender = temp;
+      }
     } else {
-      this.aiController.updateRunner(delta);
+      // Dual AI: Clean up dead attackers
+      // If attacker is dead but attacker2 is alive, promote attacker2 to be primary
+      if (this.attacker2) {
+        if (!this.attacker || !this.attacker.active || this.attacker.hp <= 0) {
+          if (this.attacker2.active && this.attacker2.hp > 0) {
+            console.log('[Update] Primary attacker dead, promoting attacker2 to primary');
+            this.attacker = this.attacker2;
+            // Promote attacker2's power arrays to primary
+            this.aiRunnerPowersSelected = this.aiRunnerPowersSelected2;
+            this.aiRunnerPowersConsumed = this.aiRunnerPowersConsumed2;
+            // Clear secondary references
+            this.attacker2 = null;
+            this.aiController2 = null;
+            this.aiRunnerPowersSelected2 = null;
+            this.aiRunnerPowersConsumed2 = null;
+          }
+        } else if (!this.attacker2.active || this.attacker2.hp <= 0) {
+          // attacker2 is dead, clean it up
+          console.log('[Update] Secondary attacker (attacker2) dead, cleaning up dual AI');
+          this.attacker2 = null;
+          this.aiController2 = null;
+          this.aiRunnerPowersSelected2 = null;
+          this.aiRunnerPowersConsumed2 = null;
+        }
+      }
+
+      // Update first runner if alive
+      if (this.attacker && this.attacker.active && this.attacker.hp > 0) {
+        try {
+          this.aiController.updateRunner(delta);
+        } catch (e) {
+          console.error('[Update] Error updating attacker:', e);
+          console.error('[Update] attacker state:', this.attacker?.hp, this.attacker?.active);
+        }
+      }
+
+      // Dual AI: Update second runner if exists and alive
+      if (this.aiController2 && this.attacker2 && this.attacker2.active && this.attacker2.hp > 0) {
+        try {
+          // Temporarily swap attacker reference and power arrays so AI module operates on attacker2
+          const temp = this.attacker;
+          const tempPowers = this.aiRunnerPowersSelected;
+          const tempConsumed = this.aiRunnerPowersConsumed;
+
+          this.attacker = this.attacker2;
+          this.aiRunnerPowersSelected = this.aiRunnerPowersSelected2;
+          this.aiRunnerPowersConsumed = this.aiRunnerPowersConsumed2;
+
+          this.aiController2.updateRunner(delta);
+
+          // Save the move direction for attacker2 before swapping back
+          if (this._aiLastMoveDir) {
+            this._aiLastMoveDir2 = { ...this._aiLastMoveDir };
+          }
+
+          this.attacker = temp;
+          this.aiRunnerPowersSelected = tempPowers;
+          this.aiRunnerPowersConsumed = tempConsumed;
+        } catch (e) {
+          console.error('[Update] Error updating attacker2:', e);
+          console.error('[Update] attacker2 state:', this.attacker2?.hp, this.attacker2?.active);
+          // Restore attacker reference even if error occurred
+          if (this.attacker === this.attacker2) {
+            this.attacker = temp;
+            this.aiRunnerPowersSelected = tempPowers;
+            this.aiRunnerPowersConsumed = tempConsumed;
+          }
+        }
+      }
     }
 
     // Update combat system (bullets and hit detection)
@@ -1604,10 +1931,46 @@ export class BaseGameScene extends Phaser.Scene {
 
     // REAL / BUNK STASH PATCH: handle pickups for both packages
     if (!this.hasStash && now >= this.stashUnlockAt){
-      const gotReal = rectsOverlap(this.attacker, this.stash);
-      const gotBunk = this.bunkStash && rectsOverlap(this.attacker, this.bunkStash);
+      // Dual AI: Check both attackers for pickup (only check alive attackers)
+      const attacker1Alive = this.attacker && this.attacker.active && this.attacker.hp > 0;
+      const attacker2Alive = this.attacker2 && this.attacker2.active && this.attacker2.hp > 0;
+
+      const gotReal = (attacker1Alive && rectsOverlap(this.attacker, this.stash)) || (attacker2Alive && rectsOverlap(this.attacker2, this.stash));
+      const gotBunk = this.bunkStash && ((attacker1Alive && rectsOverlap(this.attacker, this.bunkStash)) || (attacker2Alive && rectsOverlap(this.attacker2, this.bunkStash)));
+
+      // Log if pickup condition is met within first 500ms (suspiciously fast)
+      const timeSinceStart = now - (this._startMatchTime || 0);
+      if ((gotReal || gotBunk) && timeSinceStart < 500) {
+        console.warn('[SUSPICIOUS PICKUP] Pickup triggered within 500ms of startMatch!');
+        console.warn('[SUSPICIOUS PICKUP] Time since start:', timeSinceStart, 'ms');
+        console.warn('[SUSPICIOUS PICKUP] gotReal:', gotReal, 'gotBunk:', gotBunk);
+        console.warn('[SUSPICIOUS PICKUP] Stash visible:', this.stash?.visible, 'Stash position:', this.stash?.x, this.stash?.y);
+        console.warn('[SUSPICIOUS PICKUP] Attacker1:', this.attacker?.x, this.attacker?.y);
+        console.warn('[SUSPICIOUS PICKUP] Attacker2:', this.attacker2?.x, this.attacker2?.y);
+      }
+
+      // Determine which attacker picked it up
+      let pickupAttacker = this.attacker;
+      if (attacker2Alive && (rectsOverlap(this.attacker2, this.stash) || (this.bunkStash && rectsOverlap(this.attacker2, this.bunkStash)))) {
+        pickupAttacker = this.attacker2;
+      }
+
       if (gotReal){
+        console.log('[STASH PICKUP] ===== REAL STASH PICKED UP =====');
+        console.log('[STASH PICKUP] Round:', this.pveRound);
+        console.log('[STASH PICKUP] Pickup attacker:', pickupAttacker === this.attacker ? 'attacker' : pickupAttacker === this.attacker2 ? 'attacker2' : 'unknown');
+        console.log('[STASH PICKUP] Pickup attacker HP:', pickupAttacker.hp);
+        console.log('[STASH PICKUP] attacker1 HP:', this.attacker?.hp, 'attacker2 HP:', this.attacker2?.hp);
+        console.log('[STASH PICKUP] Time since startMatch:', performance.now() - (this._startMatchTime || 0), 'ms');
+
+        // Temporarily swap attacker so addCarryPackage() attaches to the right one
+        const temp = this.attacker;
+        console.log('[STASH PICKUP] BEFORE swap - this.attacker:', this.attacker === this.attacker2 ? 'attacker2' : 'attacker', 'HP:', this.attacker.hp);
+        this.attacker = pickupAttacker;
+        console.log('[STASH PICKUP] AFTER swap - this.attacker:', this.attacker === this.attacker2 ? 'attacker2' : 'attacker', 'HP:', this.attacker.hp);
         this.hasStash = true;
+        console.log('[STASH PICKUP] Set hasStash = true');
+
         this.aiRunnerTargetsBunkFirst = false;
         // Track real stash pickup for REP (runner got it right)
         if (this.progressionManager?.repTracker && this.role === 'runner') {
@@ -1633,6 +1996,17 @@ export class BaseGameScene extends Phaser.Scene {
         // Start engine sounds (start plays once, idle loops until extraction)
         try { this.audio?.startEngineLoop(); } catch {}
         this.addCarryPackage();
+
+        // Restore original attacker reference ONLY if it's still alive
+        // If the original attacker is dead, keep pointing to the alive one
+        if (temp && temp.active && temp.hp > 0) {
+          console.log('[STASH PICKUP] Restoring attacker reference back to:', temp === this.attacker2 ? 'attacker2' : 'attacker', 'HP:', temp.hp);
+          this.attacker = temp;
+        } else {
+          console.log('[STASH PICKUP] Original attacker is DEAD, keeping this.attacker pointing to alive runner');
+        }
+        console.log('[STASH PICKUP] After restore - this.attacker:', this.attacker === this.attacker2 ? 'attacker2' : 'attacker', 'HP:', this.attacker.hp);
+        console.log('[STASH PICKUP] stashCarrier:', this.stashCarrier === this.attacker ? 'attacker' : this.stashCarrier === this.attacker2 ? 'attacker2' : 'unknown');
       } else if (gotBunk){
         // Bunk pickup: fade the decoy and show a quick "BUNK!" toast
         const decoy = this.bunkStash;
@@ -1668,14 +2042,43 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     // extract win (using precise overlaps instead of rectsOverlap for fairer extraction)
-    if (!this.roundOver && this.hasStash && overlaps(this.attacker, this.extract)) return this.startExtractionSequence();
+    // Dual AI: Only the stash carrier needs to reach extraction to win
+    if (!this.roundOver && this.hasStash) {
+      if (this.attacker2) {
+        // Dual AI mode: Only the STASH CARRIER needs to extract
+        // The other runner can wait at the car but doesn't need to be there
+        const carrier = this.stashCarrier;
+        if (carrier && carrier.active && carrier.hp > 0 && overlaps(carrier, this.extract)) {
+          return this.startExtractionSequence();
+        }
+      } else {
+        // Single AI mode: Just one runner needs to extract
+        if (overlaps(this.attacker, this.extract)) {
+          return this.startExtractionSequence();
+        }
+      }
+    }
 
-    // Unstuck runner if inside wall and not phasing
-    if (!this.runnerIsPhasing?.() && this.isWallAtWorld?.(this.attacker.x, this.attacker.y)) this.ensureUnstuck(this.attacker);
+    // Unstuck runner if inside wall and not phasing (only check alive attackers)
+    try {
+      if (this.attacker && this.attacker.active && this.attacker.hp > 0) {
+        if (!this.runnerIsPhasing?.() && this.isWallAtWorld?.(this.attacker.x, this.attacker.y)) this.ensureUnstuck(this.attacker);
+      }
+      if (this.attacker2 && this.attacker2.active && this.attacker2.hp > 0) {
+        if (this.isWallAtWorld?.(this.attacker2.x, this.attacker2.y)) this.ensureUnstuck(this.attacker2);
+      }
+    } catch (e) {
+      console.error('[Update] Error in unstuck check:', e);
+    }
 
-    // melee tag (runner i-frames respected)
-    if (this.meleeEnabled && !phasing && rectsOverlap(this.defender, this.attacker) && this.canDamage(this.attacker)) {
-      this.combatSystem.hit(this.attacker);
+    // melee tag (runner i-frames respected) - only check alive attackers
+    if (this.meleeEnabled && !phasing) {
+      if (this.attacker && this.attacker.active && this.attacker.hp > 0 && rectsOverlap(this.defender, this.attacker) && this.canDamage(this.attacker)) {
+        this.combatSystem.hit(this.attacker);
+      }
+      if (this.attacker2 && this.attacker2.active && this.attacker2.hp > 0 && rectsOverlap(this.defender, this.attacker2) && this.canDamage(this.attacker2)) {
+        this.combatSystem.hit(this.attacker2);
+      }
     }
   }
 
@@ -1805,6 +2208,12 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   handlePlugRunnerDefeated(origin){
+    console.log('[handlePlugRunnerDefeated] ===== RUNNER DEFEATED =====');
+    console.log('[handlePlugRunnerDefeated] Origin:', origin);
+    console.log('[handlePlugRunnerDefeated] Time since startMatch:', performance.now() - (this._startMatchTime || 0), 'ms');
+    console.log('[handlePlugRunnerDefeated] hasStash:', this.hasStash);
+    console.log('[handlePlugRunnerDefeated] Stack trace:', new Error().stack);
+
     if (this.roundOver) return;
 
     this.roundOver = true;
@@ -2171,8 +2580,88 @@ export class BaseGameScene extends Phaser.Scene {
     return this.progressionManager.showPvEGameOver(context);
   }
 
+  /* -------------- Dual AI Helper -------------- */
+  findAlternateSpawn(originalSpawn, role) {
+    // DETERMINISTIC: Return cell in the opposite quadrant (consistent between retries)
+    const oppositeX = this.cols - 1 - originalSpawn.x;
+    const oppositeY = this.rows - 1 - originalSpawn.y;
+
+    // Helper: check if cell is far enough from objectives
+    const isSafeSpawn = (cx, cy) => {
+      if (!this.isWalkableCell(cx, cy)) return false;
+
+      // Don't spawn within 3 cells of stash
+      const distToStash = Math.abs(cx - this.stashCell.x) + Math.abs(cy - this.stashCell.y);
+      if (distToStash < 3) return false;
+
+      // Don't spawn within 2 cells of extract/car
+      const distToExtract = Math.abs(cx - this.extractCell.x) + Math.abs(cy - this.extractCell.y);
+      if (distToExtract < 2) return false;
+
+      return true;
+    };
+
+    // Find nearest safe walkable cell to opposite corner (always same result for same map)
+    for (let radius = 0; radius < Math.max(this.cols, this.rows); radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const cx = oppositeX + dx;
+          const cy = oppositeY + dy;
+          if (isSafeSpawn(cx, cy)) {
+            console.log('[findAlternateSpawn] Spawning second', role, 'at', cx, cy, '(dist to stash:', Math.abs(cx - this.stashCell.x) + Math.abs(cy - this.stashCell.y), ')');
+            return { x: cx, y: cy };
+          }
+        }
+      }
+    }
+
+    // Last resort: return original spawn (will stack on top, but won't crash)
+    console.warn('[findAlternateSpawn] Could not find safe spawn, using original');
+    return { ...originalSpawn };
+  }
+
   /* -------------- Scene lifecycle cleanup -------------- */
   shutdown(){
+    console.log('[shutdown] Round', this.pveRound, '- Shutting down scene');
+
+    // CRITICAL: Clean up carry sprite FIRST, before any containers are destroyed
+    this.removeCarryPackage?.();
+
+    // Explicitly destroy attacker containers to ensure carry sprites don't persist
+    if (this.attacker) {
+      console.log('[shutdown] Destroying attacker, children count:', this.attacker.list?.length);
+      try {
+        this.attacker.destroy();
+      } catch (e) {
+        console.warn('[shutdown] Error destroying attacker:', e);
+      }
+      this.attacker = null;
+    }
+
+    if (this.attacker2) {
+      console.log('[shutdown] Destroying attacker2, children count:', this.attacker2.list?.length);
+      try {
+        this.attacker2.destroy();
+      } catch (e) {
+        console.warn('[shutdown] Error destroying attacker2:', e);
+      }
+      this.attacker2 = null;
+    }
+
+    if (this.defender) {
+      try {
+        this.defender.destroy();
+      } catch (e) {}
+      this.defender = null;
+    }
+
+    if (this.defender2) {
+      try {
+        this.defender2.destroy();
+      } catch (e) {}
+      this.defender2 = null;
+    }
+
     this.destroyTouchUI?.();
     this.unbindSpace?.();
     this.input.off('pointermove', this._pointerMoveHandler);

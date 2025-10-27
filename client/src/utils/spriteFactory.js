@@ -95,15 +95,24 @@ export function updateAvatarVisuals(scene, dt) {
         // For player-controlled plug, use gun aim (which is set by swipes)
         aimDir = scene.playerGunAim || scene.playerDrift || scene.playerMoveDir || { x: 1, y: 0 };
       } else {
-        // For AI plug
-        aimDir = scene.aiAim || { x: 1, y: 0 };
+        // For AI plug - use aiAim2 for second defender
+        if (who === scene.defender2) {
+          aimDir = scene.aiAim2 || { x: 1, y: 0 };
+        } else {
+          aimDir = scene.aiAim || { x: 1, y: 0 };
+        }
       }
     } else {
       // For runner
       if (isPlayer) {
         aimDir = scene._runnerInputDir || scene._runnerLastAim || scene.playerMoveDir || { x: 1, y: 0 };
       } else {
-        aimDir = scene._aiLastMoveDir || { x: 1, y: 0 };
+        // For AI runner - use _aiLastMoveDir2 for second attacker
+        if (who === scene.attacker2) {
+          aimDir = scene._aiLastMoveDir2 || { x: 1, y: 0 };
+        } else {
+          aimDir = scene._aiLastMoveDir || { x: 1, y: 0 };
+        }
       }
     }
 
@@ -168,4 +177,7 @@ export function updateAvatarVisuals(scene, dt) {
 
   if (scene.attacker) step(scene.attacker, '_prevAttPos');
   if (scene.defender) step(scene.defender, '_prevDefPos');
+  // Dual AI: Update second AI visuals if they exist
+  if (scene.attacker2) step(scene.attacker2, '_prevAtt2Pos');
+  if (scene.defender2) step(scene.defender2, '_prevDef2Pos');
 }

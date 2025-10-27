@@ -14,28 +14,26 @@ import {
 /**
  * Get base stats for the AI runner (Round 1 values)
  *
- * These are the STARTING values for Round 1 (very easy).
- * The progression system scales these up to human-level by Round 20.
+ * These are the STARTING values for Round 1 - now more aggressive to match AI Plug intensity.
+ * The progression system scales these up quickly for challenging gameplay.
  */
 export function getRunnerBaseStats() {
   return {
-    // Movement & pathfinding (starts harder)
-    planEvery: 180,           // Faster planning (was 200)
+    // Movement & pathfinding (balanced for smooth gameplay)
+    planEvery: 150,           // Replan frequently enough for smart paths, not too much for flip-flopping
     jukeDist: 0,
-    sprintDist: 6,            // Sprints further (was 5)
-    sprintMul: 1.15,          // Faster sprint (was 1.05)
-    centerBias: 16,           // Better centering (was 14)
-    keepDirMs: 280,           // Slightly less persistent (was 300)
+    centerBias: 10,           // Smooth centering (fixed - navigation constant)
+    keepDirMs: 350,           // Commit to direction long enough for smooth corridors
     slideNudge: 0.11,         // Wall-sliding (fixed at 0.11 - smooth navigation without exploits)
 
-    // Human-like behavior (starts harder)
-    orientationDelay: 1.5,    // Faster start (was 2.5 seconds)
-    wanderChance: 0.25,       // Less wandering (was 0.4)
-    hesitationChance: 0.2,    // Less hesitation (was 0.3)
-    overcommitChance: 0.35,   // Better prioritization (was 0.5)
-    panicThreshold: 5,        // Panics sooner (was 6 cells)
-    panicMultiplier: 4.0,     // Less panic mistakes (was 5.0)
-    powerSkill: 0.35          // Better power usage (was 0.2)
+    // Human-like behavior (nearly perfect from start)
+    orientationDelay: 0.05,   // Basically instant start
+    wanderChance: 0.0,        // Never wanders - always optimal path
+    hesitationChance: 0.0,    // Never hesitates
+    overcommitChance: 0.0,    // Perfect prioritization - always goes for objective
+    panicThreshold: 5,        // Distance when AI starts panicking (more mistakes)
+    panicMultiplier: 1.5,     // How much panic affects mistake chance (not speed!)
+    powerSkill: 0.75          // Excellent power usage from start
   };
 }
 
@@ -58,10 +56,10 @@ export function applyRunnerProgression(scene) {
 
   const round = Math.max(1, scene.pveRound || 1);
 
-  // SPEED: Reduced progression (starts higher, scales slower)
-  // Formula: 70 + (round - 1) * 1.5 (was 60 + 1.95)
-  // Round 1: 70 | Round 10: 83.5 | Round 20: 98.5 | Round 40: 128.5
-  scene.runnerSpeed = 70 + (round - 1) * 1.5;
+  // SPEED: Moderate start, scales up progressively
+  // Formula: 85 + (round - 1) * 3.5
+  // Round 1: 85 | Round 5: 99 | Round 10: 116.5 | Round 15: 134 | Round 20: 151.5
+  scene.runnerSpeed = 85 + (round - 1) * 3.5;
 
   // Keep dependent stats (e.g., decoy) in sync with new speed
   if (scene.runnerPowerStats?.decoy) {
@@ -73,53 +71,34 @@ export function applyRunnerProgression(scene) {
 
   if (!scene.aiRunner) return;
 
-  // Reduced early-round penalty
-  const planningPenalty = round <= 2 ? 50 : 0; // +50ms penalty only for rounds 1-2 (was +100ms for rounds 1-3)
-  scene.aiRunner.planEvery = Math.max(90, 200 + planningPenalty - (round - 1) * 3.0); // Slower scaling (was 240 - 3.75)
-  scene.aiRunner.sprintMul = 1.15 + Math.min(0.30, (round - 1) * 0.0075); // Slower scaling (was 1.05 + 0.01), max +30%
-  scene.aiRunner.sprintDist = 6 + Math.min(3, (round - 1) * 0.075); // Slower scaling (was 5 + 0.1), max +3 cells
-  scene.aiRunner.centerBias = 16 + Math.min(10, (round - 1) * 0.25); // Slower scaling (was 12 + 0.35), max +10
+  // Pathfinding timing: Fixed values balancing smooth corridors with smart pathfinding
+  scene.aiRunner.planEvery = 150;   // Fixed - replanning frequency (6.6x/sec - balance between smart paths and stability)
+  scene.aiRunner.centerBias = 10;   // Fixed - centerBias is a navigation constant
+  scene.aiRunner.keepDirMs = 350;   // Fixed - direction commitment (balance between smoothness and reactivity)
 
   // SLIDE NUDGE: Fixed at 0.11 (doesn't scale - it's a physics constant, not skill)
   // This provides smooth corridor navigation without exploitative wall-hugging
   // No progression needed - works the same at all speeds
 
-  scene.aiRunner.keepDirMs = Math.max(160, 280 - (round - 1) * 3.0); // Slower scaling (was 300 - 3.5)
+  // ORIENTATION DELAY: Instant from round 1
+  scene.aiRunner.orientationDelay = 0.05; // Fixed - always instant
 
-  // ORIENTATION DELAY: Reduced progression (starts faster, scales slower)
-  // Formula: 1.5 - (round - 1) * 0.07 (was 2.5 - 0.1123)
-  // Round 1: 1.5s | Round 10: 0.87s | Round 20: 0.17s | Round 40: 0.1s (capped)
-  scene.aiRunner.orientationDelay = Math.max(0.1, 1.5 - (round - 1) * 0.07);
+  // WANDER/HESITATION/OVERCOMMIT: Always 0 (perfect pathfinding)
+  scene.aiRunner.wanderChance = 0.0;      // Never wanders
+  scene.aiRunner.hesitationChance = 0.0;  // Never hesitates
+  scene.aiRunner.overcommitChance = 0.0;  // Always prioritizes objective
 
-  // WANDER CHANCE: Reduced progression (starts lower, scales slower)
-  // Formula: 0.25 - (round - 1) * 0.03 (was 0.4 - 0.05)
-  // Round 1: 0.25 (25%) | Round 8: 0.04 (4%) | Round 9: 0.01 (1% capped)
-  scene.aiRunner.wanderChance = Math.max(0.01, 0.25 - (round - 1) * 0.03);
+  // PANIC THRESHOLD: Aggressive panic activation
+  // Round 1: 5 cells | Round 10: 4.1 | Round 20: 3.1 | Round 31: 2.0 (capped)
+  scene.aiRunner.panicThreshold = Math.max(2, 5 - (round - 1) * 0.10);
 
-  // HESITATION CHANCE: Reduced progression (starts lower, scales slower)
-  // Formula: 0.2 - (round - 1) * 0.025 (was 0.3 - 0.0375)
-  // Round 1: 0.20 (20%) | Round 8: 0.025 (2.5%) | Round 9: 0.0 (0% capped)
-  scene.aiRunner.hesitationChance = Math.max(0.0, 0.2 - (round - 1) * 0.025);
+  // PANIC MULTIPLIER: Low mistakes even when panicking
+  // Round 1: 1.5x | Round 10: 1.5x (stays at 1.5x)
+  scene.aiRunner.panicMultiplier = 1.5; // Fixed - always calm under pressure
 
-  // OVERCOMMIT CHANCE: Reduced progression (starts lower, scales slower)
-  // Formula: 0.35 - (round - 1) * 0.04 (was 0.5 - 0.06)
-  // Round 1: 0.35 (35%) | Round 8: 0.07 (7%) | Round 9: 0.02 (2% capped)
-  scene.aiRunner.overcommitChance = Math.max(0.02, 0.35 - (round - 1) * 0.04);
-
-  // PANIC THRESHOLD: Reduced progression (starts lower, scales slower)
-  // Formula: 5 - (round - 1) * 0.075 (was 6 - 0.102)
-  // Round 1: 5 cells | Round 10: 4.3 | Round 20: 3.6 | Round 40: 2.0 (capped)
-  scene.aiRunner.panicThreshold = Math.max(2, 5 - (round - 1) * 0.075);
-
-  // PANIC MULTIPLIER: Reduced progression (starts lower, scales slower)
-  // Formula: 4.0 - (round - 1) * 0.075 (was 5.0 - 0.102)
-  // Round 1: 4.0x | Round 10: 3.3x | Round 20: 2.6x | Round 40: 1.5x (capped)
-  scene.aiRunner.panicMultiplier = Math.max(1.5, 4.0 - (round - 1) * 0.075);
-
-  // POWER SKILL: Reduced progression (starts higher, scales slower)
-  // Formula: 0.35 + (round - 1) * 0.045 (was 0.2 + 0.0625)
-  // Round 4: 0.49 (49%) | Round 10: 0.76 (76%) | Round 14: 0.94 (94%) | Round 15: 0.95 (capped)
-  scene.aiRunner.powerSkill = Math.min(0.95, 0.35 + (round - 1) * 0.045);
+  // POWER SKILL: Excellent from start, perfect quickly
+  // Round 1: 0.75 (75%) | Round 3: 0.89 (89%) | Round 4: 0.95 (95% capped)
+  scene.aiRunner.powerSkill = Math.min(0.95, 0.75 + (round - 1) * 0.07);
 }
 
 /**
@@ -164,7 +143,12 @@ export function updateRunnerBehavior(scene, aiController, delta) {
 
     // Determine objective target
     let objectiveTarget;
+
+    // Dual AI: Check if THIS runner is the stash carrier
+    const thisRunnerHasStash = scene.stashCarrier === scene.attacker;
+
     if (!scene.hasStash) {
+      // No one has stash yet - go pick it up
       if (scene.role === 'plug' && scene.mode === 'pve') {
         const bunkVisible = scene.bunkStash && scene.bunkStash.active && scene.bunkStash.visible;
         if (scene.aiRunnerTargetsBunkFirst && bunkVisible) {
@@ -176,7 +160,11 @@ export function updateRunnerBehavior(scene, aiController, delta) {
       } else {
         objectiveTarget = scene.toCell(scene.stash.x, scene.stash.y);
       }
+    } else if (thisRunnerHasStash) {
+      // THIS runner has the stash - go to extraction ASAP
+      objectiveTarget = scene.toCell(scene.extract.x, scene.extract.y);
     } else {
+      // Someone else has stash (dual AI mode) - go to extraction and wait
       objectiveTarget = scene.toCell(scene.extract.x, scene.extract.y);
     }
 
@@ -207,8 +195,7 @@ export function updateRunnerBehavior(scene, aiController, delta) {
     }
 
     let dir = { x: Math.sign(nextCell.x - attackerCell.x), y: Math.sign(nextCell.y - attackerCell.y) };
-    const close = toroDist(attackerCell, plugCell, scene.cols, scene.rows) <= scene.aiRunner.sprintDist;
-    const speed = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1) * (close ? scene.aiRunner.sprintMul : 1);
+    const speed = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1); // No sprint boost - players can't sprint
 
     const opp = (a, b) => (a.x === -b.x && a.y === -b.y);
     if (aiController._aiLastMoveDir && opp(dir, aiController._aiLastMoveDir) && performance.now() < aiController._aiFlipGuardUntil) {
@@ -290,11 +277,11 @@ export function updateRunnerBehavior(scene, aiController, delta) {
   }
 
   const moved = Math.hypot(scene.attacker.x - (aiController._aiLastPos?.x || 0), scene.attacker.y - (aiController._aiLastPos?.y || 0));
-  if (moved < 0.4 && (performance.now() - (aiController._aiStuckAt || 0)) > 350) {
+  if (moved < 0.3 && (performance.now() - (aiController._aiStuckAt || 0)) > 600) {
     aiRunnerCruise(scene, aiController);
     aiController._aiLastPos = { x: scene.attacker.x, y: scene.attacker.y };
     aiController._aiStuckAt = performance.now();
-  } else if (moved >= 0.4) {
+  } else if (moved >= 0.3) {
     aiController._aiLastPos = { x: scene.attacker.x, y: scene.attacker.y };
     aiController._aiStuckAt = performance.now();
   }
@@ -341,12 +328,7 @@ function aiRunnerCruise(scene, aiController) {
 export function considerRunnerPowerUse(scene, aiController, now) {
   if (scene.role === 'runner') return;
 
-  // Don't allow power-ups until round 4
   const round = scene.pveRound || 1;
-  if (round < 4) {
-    console.log('[RunnerAI] Powers locked until round 4 (current:', round, ')');
-    return;
-  }
 
   // AI uses consumable powers (2 random powers, each used once)
   const sel = scene.aiRunnerPowersSelected || [];
@@ -374,16 +356,18 @@ export function considerRunnerPowerUse(scene, aiController, now) {
 
   // Helper function to check if phasing through walls would create a tactical advantage
   const shouldPhaseForTactics = () => {
-    // Only smart AIs (high powerSkill) use tactical phasing
-    if (scene.aiRunner.powerSkill < 0.6) return false; // Round 20+
+    // AI uses tactical phasing from round 1 for offensive plays
+    if (scene.aiRunner.powerSkill < 0.4) return false; // Very low skill rounds only
 
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
 
-    // Determine current objective
+    // Determine current objective (dual AI: use stashCarrier check)
     let objectiveCell;
+    const thisRunnerHasStash = scene.stashCarrier === scene.attacker;
     if (!scene.hasStash) {
       objectiveCell = scene.toCell(scene.stash.x, scene.stash.y);
     } else {
+      // Go to extraction regardless of who has stash
       objectiveCell = scene.toCell(scene.extract.x, scene.extract.y);
     }
 
@@ -401,9 +385,10 @@ export function considerRunnerPowerUse(scene, aiController, now) {
     const wallBlocking = scene.inBoundsCell(nextCell.x, nextCell.y) &&
                          !scene.isWalkableCell(nextCell.x, nextCell.y);
 
-    // Tactical shortcut: Phase if wall blocks direct path and objective is close
-    if (wallBlocking && directDist <= 8) {
-      console.log('[RunnerAI] 🧠 TACTICAL PHASE: Cutting through wall to reach objective (distance:', directDist.toFixed(1), 'cells)');
+    // Tactical shortcut: Phase if wall blocks direct path and objective is within range
+    // More aggressive range for offensive play
+    if (wallBlocking && directDist <= 15) {
+      console.log('[RunnerAI] 🧠 OFFENSIVE PHASE: Cutting through wall to reach objective (distance:', directDist.toFixed(1), 'cells)');
       return true; // Cut through walls to reach objective faster
     }
 
@@ -431,21 +416,42 @@ export function considerRunnerPowerUse(scene, aiController, now) {
 
   // Helper function to check if a power should be used at this distance
   const shouldUsePower = (power) => {
+    const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
+
+    // Calculate distance to current objective (dual AI: use stashCarrier check)
+    let objectiveCell;
+    const thisRunnerHasStash = scene.stashCarrier === scene.attacker;
+    if (!scene.hasStash) {
+      objectiveCell = scene.toCell(scene.stash.x, scene.stash.y);
+    } else {
+      // Go to extraction regardless of who has stash
+      objectiveCell = scene.toCell(scene.extract.x, scene.extract.y);
+    }
+    const distToObjective = Math.hypot(
+      objectiveCell.x - attackerCell.x,
+      objectiveCell.y - attackerCell.y
+    );
+
     switch (power) {
       case 'phase':
         // Defensive: Use when defender is very close (last resort panic escape)
         const defensiveUse = dist <= scene.cell * 5;
 
-        // Tactical: Use to cut through walls for shortcuts or evasive maneuvers (high skill only)
-        const tacticalUse = shouldPhaseForTactics();
+        // Offensive: Use to cut through walls for shortcuts or evasive maneuvers
+        const offensiveUse = shouldPhaseForTactics();
 
-        return defensiveUse || tacticalUse;
+        return defensiveUse || offensiveUse;
       case 'decoy':
         // Use decoy when defender is within sight range and no decoy exists (strategic distraction)
         return !scene.decoySprite && dist <= scene.cell * 18;
       case 'dash':
-        // Use dash when defender is approaching (create separation)
-        return dist <= scene.cell * 15 && dist >= scene.cell * 4;
+        // OFFENSIVE: Dash to grab stash quickly or reach extraction quickly
+        const offensiveDash = distToObjective <= 8 && distToObjective >= 3;
+
+        // DEFENSIVE: Dash when defender is approaching (create separation)
+        const defensiveDash = dist <= scene.cell * 15 && dist >= scene.cell * 4;
+
+        return offensiveDash || defensiveDash;
       default:
         return false;
     }

@@ -71,7 +71,16 @@ export default class ProgressionManager {
       this.scene.input.keyboard.enabled = false;
       this.scene._mouseDown = false;
       cleanupArena();
-      this.scene.attacker?.setVisible(false);
+
+      // Dual AI: Hide the runner who extracted (carrier), not just attacker
+      const carrier = this.scene.stashCarrier || this.scene.attacker;
+      carrier?.setVisible(false);
+      // Also hide the other attacker if it exists
+      if (this.scene.attacker2 && carrier !== this.scene.attacker2) {
+        this.scene.attacker2.setVisible(false);
+      } else if (carrier !== this.scene.attacker) {
+        this.scene.attacker?.setVisible(false);
+      }
 
       // Track runner extraction for REP calculation (plug failed)
       if (this.repTracker) {
@@ -214,13 +223,16 @@ export default class ProgressionManager {
       }
     };
 
-    if (this.scene.attacker && this.scene.car) {
+    // Dual AI: Animate the CARRIER (who has the stash), not just attacker
+    const carrier = this.scene.stashCarrier || this.scene.attacker;
+
+    if (carrier && carrier.active && this.scene.car) {
       const noseX = this.scene.car.x + (this.scene.carOutDir?.x || 0) * (this.scene.cell * 0.8);
       const noseY = this.scene.car.y + (this.scene.carOutDir?.y || 0) * (this.scene.cell * 0.8);
       // "Sucked into vehicle" effect matching tutorial animation
       // Keep carry package attached so it shrinks with runner (looks more natural)
       this.scene.tweens.add({
-        targets: this.scene.attacker,
+        targets: carrier,
         x: noseX,
         y: noseY,
         scaleX: 0.1,
@@ -229,7 +241,7 @@ export default class ProgressionManager {
         duration: 400,
         ease: 'Sine.easeIn',
         onComplete: () => {
-          this.scene.attacker.setVisible(false);
+          carrier.setVisible(false);
           // Remove carry package after animation completes
           try {
             this.scene.removeCarryPackage?.();
@@ -371,14 +383,14 @@ export default class ProgressionManager {
         })
       },
       {
-        label: swapUsed ? `Swap Spawns (Already Used)` : `Continue & Swap Spawns`,
-        bg: swapUsed ? 0x1a1a2e : 0x6b21a8, // Gray if used, purple otherwise
-        stroke: swapUsed ? 0x2f3660 : 0x9333ea,
-        color: swapUsed ? '#64748b' : '#e9d5ff',
-        disabled: swapUsed,
+        // TEMP: Removed daily limit for testing
+        label: `Continue & Swap Spawns`,
+        bg: 0x6b21a8, // Purple
+        stroke: 0x9333ea,
+        color: '#e9d5ff',
+        disabled: false, // Always enabled for testing
         onClick: () => {
-          if (swapUsed) return; // Don't allow if already used
-          markSpawnSwapUsed(role); // Mark as used
+          // markSpawnSwapUsed(role); // TEMP: Don't mark as used
           this.scene.scene.restart({
             mode: 'pve',
             role,
@@ -441,6 +453,10 @@ export default class ProgressionManager {
    */
   checkExtractionProgress() {
     if (this.scene.hasStash && overlaps(this.scene.attacker, this.scene.extract)) {
+      console.log('[EXTRACTION] ===== EXTRACTION TRIGGERED =====');
+      console.log('[EXTRACTION] Round:', this.scene.pveRound);
+      console.log('[EXTRACTION] Attacker:', this.scene.attacker === this.scene.attacker2 ? 'attacker2' : 'attacker');
+      console.log('[EXTRACTION] Time since startMatch:', performance.now() - (this.scene._startMatchTime || 0), 'ms');
       return this.startExtractionSequence();
     }
   }

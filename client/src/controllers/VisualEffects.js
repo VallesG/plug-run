@@ -14,6 +14,12 @@ export default class VisualEffects {
     this._defenderTrailTimer = 0;
     this._defenderLastTrailPos = null;
 
+    // Dual AI trail state
+    this._runner2TrailTimer = 0;
+    this._runner2LastTrailPos = null;
+    this._defender2TrailTimer = 0;
+    this._defender2LastTrailPos = null;
+
     // Stash halo state
     this._drawStashHalo = null;
     this.stashHalo = null;
@@ -36,6 +42,14 @@ export default class VisualEffects {
     // Update character trails
     this.updateRunnerTrail(dt);
     this.updateDefenderTrail(dt);
+
+    // Dual AI: Update second AI trails if they exist and are alive
+    if (this.scene.attacker2 && this.scene.attacker2.visible && this.scene.attacker2.active && this.scene.attacker2.hp > 0) {
+      this.updateRunner2Trail(dt);
+    }
+    if (this.scene.defender2 && this.scene.defender2.visible && this.scene.defender2.active && this.scene.defender2.hp > 0) {
+      this.updateDefender2Trail(dt);
+    }
   }
 
   /**
@@ -150,6 +164,114 @@ export default class VisualEffects {
         ).setDepth(1);
 
         // Fade and shrink
+        this.scene.tweens.add({
+          targets: trail,
+          alpha: 0,
+          scale: 0.2,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => trail.destroy()
+        });
+      }
+    }
+  }
+
+  /**
+   * Update second runner character flame trail effect (Dual AI)
+   */
+  updateRunner2Trail(dt) {
+    if (!this.scene.attacker2 || !this.scene.attacker2.visible) return;
+
+    // Initialize trail tracking
+    if (!this._runner2LastTrailPos) {
+      this._runner2LastTrailPos = { x: this.scene.attacker2.x, y: this.scene.attacker2.y };
+    }
+
+    this._runner2TrailTimer += dt * 1000;
+
+    const dx = this.scene.attacker2.x - this._runner2LastTrailPos.x;
+    const dy = this.scene.attacker2.y - this._runner2LastTrailPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1 && this._runner2TrailTimer >= 40) {
+      this._runner2TrailTimer = 0;
+
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+      const baseX = this._runner2LastTrailPos.x;
+      const baseY = this._runner2LastTrailPos.y;
+
+      this._runner2LastTrailPos = { x: this.scene.attacker2.x, y: this.scene.attacker2.y };
+
+      for (let i = 0; i < 2; i++) {
+        const perpX = -dirY * (Math.random() - 0.5) * this.scene.cell * 0.3;
+        const perpY = dirX * (Math.random() - 0.5) * this.scene.cell * 0.3;
+
+        const colors = [0x60a5fa, 0x3b82f6, 0x2563eb];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const trail = this.scene.add.circle(
+          baseX + perpX,
+          baseY + perpY,
+          this.scene.cell * 0.35,
+          color,
+          0.7
+        ).setDepth(1);
+
+        this.scene.tweens.add({
+          targets: trail,
+          alpha: 0,
+          scale: 0.2,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => trail.destroy()
+        });
+      }
+    }
+  }
+
+  /**
+   * Update second defender character flame trail effect (Dual AI)
+   */
+  updateDefender2Trail(dt) {
+    if (!this.scene.defender2 || !this.scene.defender2.visible) return;
+
+    // Initialize trail tracking
+    if (!this._defender2LastTrailPos) {
+      this._defender2LastTrailPos = { x: this.scene.defender2.x, y: this.scene.defender2.y };
+    }
+
+    this._defender2TrailTimer += dt * 1000;
+
+    const dx = this.scene.defender2.x - this._defender2LastTrailPos.x;
+    const dy = this.scene.defender2.y - this._defender2LastTrailPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1 && this._defender2TrailTimer >= 40) {
+      this._defender2TrailTimer = 0;
+
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+      const baseX = this._defender2LastTrailPos.x;
+      const baseY = this._defender2LastTrailPos.y;
+
+      this._defender2LastTrailPos = { x: this.scene.defender2.x, y: this.scene.defender2.y };
+
+      for (let i = 0; i < 2; i++) {
+        const perpX = -dirY * (Math.random() - 0.5) * this.scene.cell * 0.3;
+        const perpY = dirX * (Math.random() - 0.5) * this.scene.cell * 0.3;
+
+        const colors = [0xef4444, 0xdc2626, 0xb91c1c];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const trail = this.scene.add.circle(
+          baseX + perpX,
+          baseY + perpY,
+          this.scene.cell * 0.35,
+          color,
+          0.7
+        ).setDepth(1);
+
         this.scene.tweens.add({
           targets: trail,
           alpha: 0,
