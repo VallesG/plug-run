@@ -102,7 +102,14 @@ export class AudioManager {
   setMusicMute(on) {
     this.musicMuted = !!on;
     try { localStorage.setItem('pr_music_mute', this.musicMuted ? '1' : '0'); } catch {}
-    if (this.musicMuted) this.stopMusic(150);
+    if (this.musicMuted) {
+      this.stopMusic(150);
+    } else {
+      // Unmuting - restart the music if we know which track was playing
+      if (this._lastMusicKey) {
+        this.playMusic(this._lastMusicKey, this._lastMusicOpts || { volume: 0.3, loop: true, fade: 300 });
+      }
+    }
   }
   isMusicMuted() { return this.musicMuted; }
 
@@ -179,6 +186,11 @@ export class AudioManager {
   // Background music with crossfade (respects master, music bus, ducking)
   playMusic(key, { volume = 0.5, loop = true, fade = 300 } = {}) {
     if (!this.scene || !this.sound) return;
+
+    // Store the last music track and options for resuming after unmute
+    this._lastMusicKey = key;
+    this._lastMusicOpts = { volume, loop, fade };
+
     if (this.isMuted() || this.musicMuted) return;
     // Base (pre-duck) target
     const baseTarget = Math.max(0, Math.min(1, volume)) * this.masterVolume * (this.muted ? 0 : 1) * this._volMusic;

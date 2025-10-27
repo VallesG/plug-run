@@ -3,6 +3,7 @@
 
 import { claimAccount, isGuestAccount, getCurrentUserSync } from './userManager.js';
 import { signInWithEmail, signOut, isUsernameAvailable } from './supabaseClient.js';
+import AudioManager from '../audio/AudioManager.js';
 
 // Color palette (matching game's visual style)
 const COLORS = {
@@ -924,14 +925,8 @@ function showInGameSettings(scene, Z = 25000) {
 
   const elements = [veil, panel, title];
 
-  // Get AudioManager if available
-  let audio = null;
-  try {
-    const AudioManager = require('../audio/AudioManager.js').default;
-    audio = AudioManager.get(scene);
-  } catch (e) {
-    console.warn('[AuthUI] AudioManager not available');
-  }
+  // Get AudioManager
+  const audio = AudioManager.get(scene);
 
   const btnW = 84, btnH = 28;
   const labelX = cx - panelW/2 + 16;
@@ -978,12 +973,7 @@ function showInGameSettings(scene, Z = 25000) {
     .setScrollFactor(0)
     .setInteractive({ useHandCursor: true });
 
-  let soundsOn = true;
-  try {
-    const saved = localStorage.getItem('soundsMuted');
-    if (saved !== null) soundsOn = saved === 'false';
-  } catch {}
-
+  let soundsOn = audio ? !audio.isMuted() : true;
   const soundsText = scene.add.text(soundsBg.x, soundsBg.y, soundsOn ? 'ON' : 'OFF', {
     color: soundsOn ? '#86efac' : '#cbd1ff',
     fontSize: '13px'
@@ -992,17 +982,9 @@ function showInGameSettings(scene, Z = 25000) {
   soundsBg.on('pointerdown', () => {
     soundsOn = !soundsOn;
     soundsText.setText(soundsOn ? 'ON' : 'OFF').setColor(soundsOn ? '#86efac' : '#cbd1ff');
-
-    // Mute/unmute SFX
-    scene.sound.sounds.forEach(sound => {
-      if (sound.key !== 'bg_main' && sound.key !== 'bg_plug' && sound.key !== 'bg_learn') {
-        sound.setMute(!soundsOn);
-      }
-    });
-
-    try {
-      localStorage.setItem('soundsMuted', String(!soundsOn));
-    } catch {}
+    if (audio) {
+      audio.setMute(!soundsOn);
+    }
   });
 
   elements.push(soundsLabel, soundsBg, soundsText);

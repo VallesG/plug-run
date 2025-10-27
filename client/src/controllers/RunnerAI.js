@@ -206,8 +206,15 @@ export function updateRunnerBehavior(scene, aiController, delta) {
       aiRunnerCruise(scene, aiController);
     } else {
       aiController._aiCruiseDir = dir;
-      aiController._aiVX = dir.x * speed;
-      aiController._aiVY = dir.y * speed;
+
+      // Normalize direction vector to prevent faster diagonal movement
+      const magnitude = Math.sqrt(dir.x * dir.x + dir.y * dir.y);
+      const normalizedDir = magnitude > 0
+        ? { x: dir.x / magnitude, y: dir.y / magnitude }
+        : dir;
+
+      aiController._aiVX = normalizedDir.x * speed;
+      aiController._aiVY = normalizedDir.y * speed;
       aiController._aiLastMoveDir = { x: Math.sign(dir.x), y: Math.sign(dir.y) };
       aiController._aiFlipGuardUntil = performance.now() + scene.aiRunner.keepDirMs;
     }
@@ -313,8 +320,15 @@ function aiRunnerCruise(scene, aiController) {
     if (scene.isWalkableCell(n.x, n.y)) {
       aiController._aiCruiseDir = d;
       const speed = speedBase;
-      aiController._aiVX = d.x * speed;
-      aiController._aiVY = d.y * speed;
+
+      // Normalize direction vector to prevent faster diagonal movement
+      const magnitude = Math.sqrt(d.x * d.x + d.y * d.y);
+      const normalizedDir = magnitude > 0
+        ? { x: d.x / magnitude, y: d.y / magnitude }
+        : d;
+
+      aiController._aiVX = normalizedDir.x * speed;
+      aiController._aiVY = normalizedDir.y * speed;
       return;
     }
   }

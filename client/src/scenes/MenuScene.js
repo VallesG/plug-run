@@ -3,7 +3,7 @@
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount } from '../utils/userManager.js';
-import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores } from '../utils/leaderboardManager.js';
+import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { showClaimAccountModal, showSignOutModal } from '../utils/authUI.js';
@@ -140,34 +140,24 @@ export class MenuScene extends Phaser.Scene {
     this.signBg = signBg;
     this.signShadow = signShadow;
 
-    // Cards data
+    // Cards data - only show the two main game modes
     const modes = [
-      { key:'learn',  title:'Learn the Streets',  sub:'Quick tutorial. Zero pressure.' },
-      { key:'runner', title:'Run the Block',      sub:'Play as the runner. Evade the plug.', showTimer: true },
-      { key:'plug',   title:'Defend the Block',   sub:'Play as the plug. Stop the runner.', showTimer: true },
-      { key:'leaderboard', title:'Leaderboard',   sub:'Top players on today\'s block.' },
-      { key:'pvp',    title:'Street Wars',        sub:'1v1 PVP. Coming soon.' }
+      { key:'runner', title:'Run the Block',      sub:'1179 ST - Play as the runner. Evade the plug.', showTimer: true },
+      { key:'plug',   title:'Defend the Block',   sub:'42 ST - Play as the plug. Stop the runner.', showTimer: true }
     ];
 
     // Carousel root container to keep z-order tidy
     this.carousel = this.add.container(0, 0).setDepth(3);
 
-    // Store start buttons separately (outside cards)
-    this.startButtons = [];
-
     modes.forEach((m, idx)=>{
-      const card = this.makeCard(m.title, m.sub, m.key, m.showTimer); // rexUI-based card
+      const card = this.makeCard(m.title, m.sub, m.key, m.showTimer); // rexUI-based card with START button inside
       card.modeKey = m.key;
       card.index = idx;
       this.carousel.add(card);
       this.cards.push(card);
-
-      // Create start button for this card (outside the card container)
-      const startBtn = this.makeStartButton(card, idx);
-      this.startButtons.push(startBtn);
     });
 
-    // Create navigation arrows (positioned next to START button)
+    // Create navigation arrows (hidden in new layout)
     this.leftArrow = this.makeArrowButton('left');
     this.rightArrow = this.makeArrowButton('right');
 
@@ -176,6 +166,12 @@ export class MenuScene extends Phaser.Scene {
 
     // Bottom-right settings button
     this.settingsBtn = this.makeIconButton('⚙', () => this.openSettings());
+
+    // Leaderboard button for mobile (trophy icon - only visible on mobile)
+    this.leaderboardBtn = this.makeIconButton('🏆', () => this.scene.start('LEADERBOARD'));
+
+    // Tutorial button (large yellow button like in mockup)
+    this.tutorialBtn = this.makeTutorialButton();
 
     // User profile chip (clickable to show user's leaderboard position)
     this.profileChip = this.makeUserProfileChip();
@@ -297,8 +293,13 @@ export class MenuScene extends Phaser.Scene {
   // Simple card with background and text overlay
   makeCard(title, sub, modeKey, showTimer = false){
     const W = this.scale.width, H = this.scale.height;
-    const cw = Math.min(520, Math.floor(W * 0.82));
-    const ch = Math.min(320, Math.floor(H * 0.45));
+    const cw = Math.min(480, Math.floor(W * 0.82));
+
+    // Intelligently scale cards based on available vertical space
+    // Mobile/smaller screens: 34% | Desktop/larger screens: up to 38%
+    const baseHeight = H * 0.34;
+    const maxHeight = H * 0.38;
+    const ch = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
 
     // Create container first
     const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
@@ -309,12 +310,12 @@ export class MenuScene extends Phaser.Scene {
     bg.setStrokeStyle(2, PALETTE.stroke, 1);
     cont.add(bg);
 
-    // Add animated sprite visuals
+    // Add animated sprite visuals (single line of sprites)
     this.addCardVisuals(cont, modeKey, cw, ch);
 
     // Title at TOP (LA street sign font with blue background bar)
     const titleText = String(title).toUpperCase();
-    const titleSize = Math.max(14, Math.floor(ch * 0.085)); // Smaller for street number/suffix
+    const titleSize = Math.max(12, Math.floor(ch * 0.12)); // Proportional to smaller card height
 
     // Static street numbers for each mode (consistent each time)
     const streetAddresses = {
@@ -365,8 +366,9 @@ export class MenuScene extends Phaser.Scene {
     // Timer (if enabled) - positioned right below title bar in black space
     let timerTxt = null;
     if (showTimer) {
-      const timerSize = Math.max(9, Math.floor(ch * 0.055)); // Smaller font
-      const timerY = -ch * 0.5 + titleBgHeight + 18; // Just below title bar
+      const timerSizeRatio = H > 900 ? 0.06 : 0.08; // Smaller on desktop to prevent overflow
+      const timerSize = Math.max(8, Math.floor(ch * timerSizeRatio));
+      const timerY = -ch * 0.5 + titleBgHeight + 12; // Just below title bar
       timerTxt = this.add.text(0, timerY, '', {
         color: '#86efac', // STASH green color
         fontSize: timerSize + 'px',
@@ -389,19 +391,46 @@ export class MenuScene extends Phaser.Scene {
       cont._timerUpdate = updateTimer;
     }
 
-    // Subtitle at BOTTOM (moved lower if timer is shown)
-    const subSize = Math.max(10, Math.floor(ch * 0.07)); // Smaller to avoid border overlap
-    const subY = ch * 0.35; // Raised slightly to make room for button below
-    const subTxt = this.add.text(0, subY, sub, {
-      color: '#cbd5e1',
-      fontSize: subSize + 'px',
-      align: 'center',
-      wordWrap: { width: Math.floor(cw * 0.85) }
-    }).setOrigin(0.5, 0.5);
-    cont.add(subTxt);
+    // START button at BOTTOM (flush with bottom edge of card)
+    const btnWidth = Math.min(280, Math.floor(cw * 0.65));
+    const btnHeight = Math.max(38, Math.floor(ch * 0.18));
+    const btnY = (ch / 2) - (btnHeight / 2) - 8; // Position at bottom edge with small padding
 
-    // Cards are not clickable - only START button launches modes
-    cont._bg = bg; cont._sub = subTxt;
+    const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 6, 0xfbbf24, 1)
+      .setStrokeStyle(3, 0xf59e0b)
+      .setInteractive({ cursor: 'pointer' });
+
+    const startText = this.add.text(0, btnY, 'START', {
+      fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
+      fontSize: Math.max(16, Math.floor(btnHeight * 0.42)) + 'px',
+      color: '#1e293b',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    cont.add(startBg);
+    cont.add(startText);
+
+    // Store references
+    cont._bg = bg;
+    cont._startBg = startBg;
+    cont._startText = startText;
+    cont.modeKey = modeKey; // Store mode key for click handling
+
+    // Handle START button click
+    startBg.on('pointerup', () => {
+      this.launchCard(cont);
+    });
+
+    // Hover effects
+    startBg.on('pointerover', () => {
+      startBg.setFillStyle(0xfcd34d); // Lighter yellow
+      startBg.setStrokeStyle(3, 0xfbbf24);
+    });
+    startBg.on('pointerout', () => {
+      startBg.setFillStyle(0xfbbf24); // Original yellow
+      startBg.setStrokeStyle(3, 0xf59e0b);
+    });
+
     return cont;
   }
 
@@ -652,12 +681,12 @@ export class MenuScene extends Phaser.Scene {
 
     } else if (modeKey === 'runner'){
       // RUN THE BLOCK: Runner runs to car, car drives off!
-      const runner = this.add.sprite(-cw * 0.4, ch * 0.15, 'td_runner')
+      const runner = this.add.sprite(-cw * 0.42, ch * 0.05, 'td_runner')
         .setScale(scale)
         .setAlpha(alpha);
 
-      // Getaway car sprite - flipped to face left
-      const car = this.add.sprite(cw * 0.3, ch * 0.15, 'car_blue')
+      // Getaway car sprite - flipped to face left (spread out more to the right)
+      const car = this.add.sprite(cw * 0.38, ch * 0.05, 'car_blue')
         .setScale(scale * 1.2)
         .setAlpha(alpha)
         .setAngle(90); // Facing left
@@ -672,10 +701,10 @@ export class MenuScene extends Phaser.Scene {
 
       // Animation sequence using chained tweens
       const runSequence = () => {
-        // 1. Runner runs to car
+        // 1. Runner runs to car (adjust target to match new car position)
         this.tweens.add({
           targets: runner,
-          x: cw * 0.25,
+          x: cw * 0.32,
           duration: 2000,
           ease: 'Linear',
           onUpdate: (tween) => {
@@ -780,8 +809,8 @@ export class MenuScene extends Phaser.Scene {
                   },
                   onComplete: () => {
                     // 4. Reset and loop
-                    runner.setPosition(-cw * 0.4, ch * 0.15).setAlpha(alpha).setVisible(true);
-                    car.setPosition(cw * 0.3, ch * 0.15).setAlpha(alpha);
+                    runner.setPosition(-cw * 0.42, ch * 0.05).setAlpha(alpha).setVisible(true);
+                    car.setPosition(cw * 0.38, ch * 0.05).setAlpha(alpha);
                     runnerLastTrailPos = { x: runner.x, y: runner.y };
                     runnerTrailTimer = 0;
                     this.time.delayedCall(500, runSequence);
@@ -1297,11 +1326,13 @@ export class MenuScene extends Phaser.Scene {
   }
 
   makeIconButton(label, onClick){
-    const r = Math.max(22, Math.floor(this.scale.height * 0.034));
+    const H = this.scale.height;
+    const rRatio = H > 900 ? 0.030 : 0.024; // Smaller on mobile to prevent overlap
+    const r = Math.max(18, Math.floor(H * rRatio));
     const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, 0.92)
       .setStrokeStyle(2, PALETTE.stroke)
       .setInteractive({ cursor: 'pointer' });
-    const t = this.add.text(0, 0, label, { fontSize: Math.max(14, Math.floor(r*1.1)) + 'px', color: PALETTE.title }).setOrigin(0.5);
+    const t = this.add.text(0, 0, label, { fontSize: Math.max(12, Math.floor(r*0.95)) + 'px', color: PALETTE.title }).setOrigin(0.5);
     const btn = this.add.container(0, 0, [bg, t]).setSize(r*2, r*2).setDepth(6);
 
     // Background handles interaction
@@ -1313,6 +1344,64 @@ export class MenuScene extends Phaser.Scene {
     });
     bg.on('pointerout', () => {
       bg.setStrokeStyle(2, PALETTE.stroke);
+    });
+
+    return btn;
+  }
+
+  makeTutorialButton(){
+    // Match START button width for consistency
+    const W = this.scale.width;
+    const cw = Math.min(480, Math.floor(W * 0.82)); // Card width
+    const btnWidth = Math.min(280, Math.floor(cw * 0.65)); // Same as START button
+    const btnHeight = Math.max(36, Math.floor(this.scale.height * 0.045)); // Reduced height
+
+    const bg = this.rexUI.add.roundRectangle(0, 0, btnWidth, btnHeight, 8, 0xfbbf24, 1)
+      .setStrokeStyle(3, 0xf59e0b)
+      .setInteractive({ cursor: 'pointer' });
+
+    const t = this.add.text(0, 0, 'TUTORIAL', {
+      fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
+      fontSize: Math.max(16, Math.floor(btnHeight * 0.44)) + 'px',
+      color: '#1e293b',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const btn = this.add.container(0, 0, [bg, t]).setSize(btnWidth, btnHeight).setDepth(6);
+
+    // Store references for hover effects
+    btn._bg = bg;
+    btn._text = t;
+
+    // Launch tutorial on click
+    bg.on('pointerup', () => {
+      // Fade out street sounds
+      this.fadeOutStreetSounds();
+
+      // Start tutorial music
+      try {
+        const audio = AudioManager.get(this);
+        audio.ensureUnlocked(this);
+        audio.playMusic('bg_learn', { volume: 0.3, loop: true, fade: 0 });
+        audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
+      } catch {}
+
+      // Fade out and transition to tutorial
+      const cam = this.cameras.main;
+      cam.fadeOut(250, 0, 0, 0);
+      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
+      });
+    });
+
+    // Hover effects
+    bg.on('pointerover', () => {
+      bg.setFillStyle(0xfcd34d); // Lighter yellow on hover
+      bg.setStrokeStyle(3, 0xfbbf24);
+    });
+    bg.on('pointerout', () => {
+      bg.setFillStyle(0xfbbf24); // Original yellow
+      bg.setStrokeStyle(3, 0xf59e0b);
     });
 
     return btn;
@@ -1423,7 +1512,7 @@ export class MenuScene extends Phaser.Scene {
       try {
         // Use the globally stored current mode
         const currentMode = getCurrentMode();
-        const topScores = await getTopScores(currentMode, 10);
+        const topScores = await getAllTimeTopScores(currentMode, 10);
         const leaderboardData = topScores.map(entry => ({
           name: entry.username,
           score: entry.stash || 0
@@ -1467,9 +1556,9 @@ export class MenuScene extends Phaser.Scene {
     if (!sidebars.right) return;
 
     try {
-      // Fetch top 10 scores for the current mode (daily leaderboard)
+      // Fetch top 10 scores for the current mode (all-time leaderboard)
       const currentMode = getCurrentMode();
-      const topScores = await getTopScores(currentMode, 10);
+      const topScores = await getAllTimeTopScores(currentMode, 10);
 
       // Transform data to match updateLeaderboard format
       const leaderboardData = topScores.map(entry => ({
@@ -1634,20 +1723,24 @@ export class MenuScene extends Phaser.Scene {
   cardSpacing(){ return Math.min(520, Math.floor(this.scale.width * 0.82)) + Math.max(28, Math.floor(this.scale.width * 0.06)); }
 
   layoutCards(shift = 0, tweenBack = false){
-    // Simple layout: only show selected card, hide others
-    const cx = this.scale.width / 2;
-    const cy = this.scale.height * 0.54;
+    // New layout: Show both cards stacked vertically (no carousel)
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const cx = W / 2;
 
-    const focusIdx = this.selected + shift;
+    // Calculate card spacing with intelligent sizing for desktop
+    const baseHeight = H * 0.34;
+    const maxHeight = H * 0.38;
+    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const gap = 8; // Gap between cards
+    const topOffset = H * 0.34; // Start lower to avoid overlap with PLUG RUN header
+
     this.cards.forEach((card, i)=>{
-      const isSelected = (i === Math.round(focusIdx));
-
-      // All cards at same center position
+      // Stack cards vertically
       const x = cx;
-      const y = cy;
+      const y = topOffset + (i * (cardHeight + gap));
 
       if (tweenBack){
-        // Smooth transition when changing cards (slower for better visibility)
         this.tweens.add({
           targets: card,
           x,
@@ -1655,135 +1748,56 @@ export class MenuScene extends Phaser.Scene {
           scaleX: 1,
           scaleY: 1,
           angle: 0,
-          alpha: isSelected ? 1 : 0,
+          alpha: 1, // Always visible
           duration: 400,
           ease: 'Cubic.easeOut'
         });
       } else {
-        // Check if this is first layout (card hasn't been positioned yet)
         const isFirstLayout = !card._positioned;
-
         if (isFirstLayout) {
-          // First layout: set immediately
-          card.setPosition(x, y).setScale(1).setAngle(0).setAlpha(isSelected ? 1 : 0);
+          card.setPosition(x, y).setScale(1).setAngle(0).setAlpha(1);
           card._positioned = true;
         } else {
-          // Just update alpha for show/hide
-          card.setPosition(x, y).setScale(1).setAngle(0);
-          card.alpha = isSelected ? 1 : 0;
+          card.setPosition(x, y).setScale(1).setAngle(0).setAlpha(1);
         }
       }
 
-      // Update border for selected card
+      // All cards have same border style (no selection highlighting)
       if (card._bg) {
-        card._bg.setStrokeStyle(isSelected ? 3 : 2, isSelected ? 0x60a5fa : 0x2f3650, 1);
+        card._bg.setStrokeStyle(2, 0x2f3650, 1);
       }
 
-      // Performance optimization: Only run animations on selected card
-      const shouldAnimate = (i === Math.round(focusIdx));
-      if (shouldAnimate && !card._animationActive && card._startAnimation) {
+      // Run animations on all cards
+      if (!card._animationActive && card._startAnimation) {
         card._animationActive = true;
         card._startAnimation();
-      } else if (!shouldAnimate && card._animationActive && card._animationCleanup) {
-        card._animationActive = false;
-        card._animationCleanup();
-      }
-
-      // Only show the START button for the selected card
-      if (this.startButtons && this.startButtons[i]) {
-        const btn = this.startButtons[i];
-        const isSelected = (i === Math.round(focusIdx));
-
-        // Show/hide and enable/disable interactivity based on selection
-        if (isSelected) {
-          btn.setAlpha(1);
-          if (btn._bg) btn._bg.setInteractive({ cursor: 'pointer' }); // Enable interaction on bg
-
-          // Add pulsing animation to hint text only (button stays stationary)
-          if (!btn._hintPulse && btn._hintText) {
-            btn._hintPulse = this.tweens.add({
-              targets: btn._hintText,
-              scaleX: 1.15,
-              scaleY: 1.15,
-              duration: 1200,
-              yoyo: true,
-              repeat: -1,
-              ease: 'Sine.easeInOut'
-            });
-          }
-        } else {
-          btn.setAlpha(0);
-          if (btn._bg) btn._bg.disableInteractive(); // Disable interaction on bg
-
-          // Stop hint pulse animation when not selected
-          if (btn._hintPulse) {
-            btn._hintPulse.remove();
-            btn._hintPulse = null;
-            if (btn._hintText) btn._hintText.setScale(1, 1); // Reset to default scale
-          }
-        }
       }
     });
 
-    // Update static button positions and visibility
+    // Update static button positions (tutorial, leaderboard, etc.)
     this.updateStaticButtons();
   }
 
   updateStaticButtons() {
     const W = this.scale.width, H = this.scale.height;
     const cx = W / 2;
-    const isMobile = W < 768;
 
-    // Fixed position - more gap from cards
-    const cardHeight = Math.min(320, Math.floor(H * 0.45));
-    const cardsY = H * 0.54;
-    const btnY = cardsY + cardHeight / 2 + 45; // Increased gap for better spacing
+    // Calculate card positions (same as layoutCards) with intelligent sizing
+    const baseHeight = H * 0.34;
+    const maxHeight = H * 0.38;
+    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const gap = 8;
+    const topOffset = H * 0.34; // Start lower to avoid overlap with PLUG RUN header
 
-    const btnWidth = Math.min(200, Math.floor(W * 0.4));
-    const arrowWidth = isMobile ? 60 : 80; // Match arrow button width
-    const arrowGap = 15;
-
-    // Position all START buttons (selected at center, others off-screen)
-    if (this.startButtons) {
-      this.startButtons.forEach((btn, i) => {
-        if (i === this.selected) {
-          btn.setPosition(cx, btnY);
-        } else {
-          btn.setPosition(-10000, -10000); // Move off-screen
-        }
-      });
-    }
-
-    // Position and show/hide arrow buttons based on selection
-    const isFirstCard = (this.selected === 0);
-    const isLastCard = (this.selected === this.cards.length - 1);
-
-    // Left arrow
+    // Hide arrow buttons (no longer needed without carousel)
     if (this.leftArrow) {
-      const leftX = cx - btnWidth/2 - arrowWidth/2 - arrowGap;
-      this.leftArrow.setPosition(leftX, btnY);
-
-      if (isFirstCard) {
-        this.leftArrow.setAlpha(0);
-        if (this.leftArrow._bg) this.leftArrow._bg.disableInteractive();
-      } else {
-        this.leftArrow.setAlpha(1);
-        if (this.leftArrow._bg) this.leftArrow._bg.setInteractive({ cursor: 'pointer' });
-      }
+      this.leftArrow.setAlpha(0);
+      if (this.leftArrow._bg) this.leftArrow._bg.disableInteractive();
     }
 
-    // Right arrow
     if (this.rightArrow) {
-      const rightX = cx + btnWidth/2 + arrowWidth/2 + arrowGap;
-      this.rightArrow.setPosition(rightX, btnY);
-
-      if (isLastCard) {
-        this.rightArrow.setAlpha(0);
-        if (this.rightArrow._bg) this.rightArrow._bg.disableInteractive();
-      } else {
-        this.rightArrow.setAlpha(1);
-        if (this.rightArrow._bg) this.rightArrow._bg.setInteractive({ cursor: 'pointer' });
-      }
+      this.rightArrow.setAlpha(0);
+      if (this.rightArrow._bg) this.rightArrow._bg.disableInteractive();
     }
   }
 
@@ -2540,16 +2554,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(){
-    // Keyboard navigation
-    const leftPressed = Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.keys.A);
-    const rightPressed = Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.keys.D);
-    const actionPressed = Phaser.Input.Keyboard.JustDown(this.keys.ENTER) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
-
-    if (leftPressed) { this.selectPrev(); }
-    if (rightPressed) { this.selectNext(); }
-    if (actionPressed) {
-      this.launchCard(this.cards[this.selected]);
-    }
+    // Carousel navigation disabled - both cards always visible
+    // Users click START buttons directly instead of using keyboard navigation
   }
 
   reposition(){
@@ -2575,15 +2581,61 @@ export class MenuScene extends Phaser.Scene {
     // Bottom elements
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
 
+    // Tutorial button positioned with gaps from both card above and widgets below
+    const baseHeight = H * 0.34;
+    const maxHeight = H * 0.38;
+    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const gap = 8;
+    const topOffset = H * 0.34;
+    const bottomCardY = topOffset + (1 * (cardHeight + gap)); // Second card position
+    const bottomOfCard = bottomCardY + cardHeight/2; // Bottom edge of second card
+
+    const tutorialBtnHeight = Math.max(36, Math.floor(H * 0.045));
+    const widgetY = H - pad - 18; // Widget center position (lowered to create more space)
+    const widgetHeight = 48; // Approximate widget height
+    const topOfWidgets = widgetY - widgetHeight/2; // Top edge of widgets
+
+    const minGapFromCard = 8; // Minimum gap from card above
+    const minGapFromWidgets = 8; // Minimum gap from widgets below
+
+    // Calculate available space and center the button if there's room
+    const availableSpace = topOfWidgets - bottomOfCard;
+    const minNeededSpace = minGapFromCard + tutorialBtnHeight + minGapFromWidgets;
+
+    let tutorialY;
+    if (availableSpace > minNeededSpace + 20) {
+      // Plenty of space (desktop) - center the button in available space
+      tutorialY = bottomOfCard + availableSpace / 2;
+    } else {
+      // Tight space (mobile) - maintain minimum gaps, prioritize card gap
+      tutorialY = bottomOfCard + minGapFromCard + tutorialBtnHeight/2;
+    }
+    this.tutorialBtn?.setPosition(W / 2, tutorialY);
+
+    // Bottom widgets - positioned lower to make room for tutorial button
+    const widgetBottomY = H - pad - 18; // Lowered from -24 to create more space
+
+    // Leaderboard button next to settings (only on mobile - desktop has sidebar)
+    const isMobile = W < 768;
+    if (this.leaderboardBtn) {
+      if (isMobile) {
+        this.leaderboardBtn.setPosition(W - pad - 50 - 60, widgetBottomY); // Left of settings
+        this.leaderboardBtn.setAlpha(1);
+      } else {
+        this.leaderboardBtn.setAlpha(0); // Hide on desktop
+      }
+    }
+
     // Settings button in bottom-right (moved away from corner for easier clicking)
-    this.settingsBtn?.setPosition(W - pad - 50, H - pad - 24);
+    this.settingsBtn?.setPosition(W - pad - 50, widgetBottomY);
 
-    // Profile chip in bottom-center
-    this.profileChip?.setPosition(W / 2, H - pad - 24);
+    // Profile chip in bottom-left (moved left to avoid overlap with trophy on mobile)
+    this.profileChip?.setPosition(W / 2 - 80, widgetBottomY);
 
-    // Daily bonus button in bottom-left (only if not claimed)
+    // Daily bonus button hidden (removed from menu)
     if (this.dailyBonusBtn) {
-      this.dailyBonusBtn.setPosition(pad + 50, H - pad - 24);
+      this.dailyBonusBtn.setAlpha(0);
+      this.dailyBonusBtn.setPosition(-1000, -1000); // Move off-screen
     }
 
     // Refresh layout

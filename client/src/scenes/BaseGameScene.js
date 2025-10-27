@@ -1547,7 +1547,7 @@ export class BaseGameScene extends Phaser.Scene {
     if (power === 'phase'){
       // Play phase sound effect (louder)
       try {
-        this.sound.play('phase', { volume: 0.7 });
+        this.audio.play('phase', { volume: 0.7 });
       } catch {}
       // No dash: only set intangibility window and visual fade
       this.attacker.setAlpha(stats.fadeAlpha ?? 0.45);
@@ -1561,7 +1561,7 @@ export class BaseGameScene extends Phaser.Scene {
     } else if (power === 'dash'){
       // Play dash sound effect (quieter and much faster to match instant teleport)
       try {
-        this.sound.play('dash', { volume: 0.2, rate: 2.5 });
+        this.audio.play('dash', { volume: 0.2, rate: 2.5 });
       } catch {}
       // Jump forward a few tiles along current facing, blocked by walls
       const moveDir = this._runnerInputDir || this._runnerMoveDir || this._runnerLastAim || null;
@@ -1580,7 +1580,7 @@ export class BaseGameScene extends Phaser.Scene {
     } else if (power === 'decoy'){
       // Play decoy sound effect
       try {
-        this.sound.play('decoy', { volume: 0.4 });
+        this.audio.play('decoy', { volume: 0.4 });
       } catch {}
       this.destroyDecoySprite();
       const decoy = makeRunnerSprite(this, this.attacker.x, this.attacker.y, this.cell)

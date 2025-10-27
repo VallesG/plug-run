@@ -298,12 +298,12 @@ export function createPersonalStats(container, mode = null) {
   const signHeight = 100; // Match main PLUG RUN sign height
   const logoSize = 26; // Match main logo font size
 
-  // Determine leaderboard title based on mode
-  let leaderboardTitle = 'LIVE TOP 10';
+  // Determine leaderboard title based on mode (ALL-TIME)
+  let leaderboardTitle = 'ALL-TIME TOP 10';
   if (mode === 'runner') {
-    leaderboardTitle = 'TOP 10 - RUN THE BLOCK';
+    leaderboardTitle = 'ALL-TIME - RUN THE BLOCK';
   } else if (mode === 'plug') {
-    leaderboardTitle = 'TOP 10 - DEFEND THE BLOCK';
+    leaderboardTitle = 'ALL-TIME - DEFEND THE BLOCK';
   }
 
   // Build leaderboard section HTML (only if mode is specified)

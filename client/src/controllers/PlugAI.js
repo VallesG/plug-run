@@ -129,10 +129,14 @@ export function updatePlugBehavior(scene, dt) {
   // During orientation delay: AI drifts passively, doesn't actively pursue
   // After delay: AI locks onto target and pursues
   if (!isOrienting) {
-    // Direct movement toward runner
+    // Direct movement toward runner - normalize to prevent faster diagonal movement
     const dirX = Math.sign(vx), dirY = Math.sign(vy);
-    const nx = d.x + dirX * speed * dt;
-    const ny = d.y + dirY * speed * dt;
+    const magnitude = Math.sqrt(dirX * dirX + dirY * dirY);
+    const normalizedDirX = magnitude > 0 ? dirX / magnitude : dirX;
+    const normalizedDirY = magnitude > 0 ? dirY / magnitude : dirY;
+
+    const nx = d.x + normalizedDirX * speed * dt;
+    const ny = d.y + normalizedDirY * speed * dt;
     if (scene.canMoveTo(d, nx, d.y)) d.x = nx;
     if (scene.canMoveTo(d, d.x, ny)) d.y = ny;
 
