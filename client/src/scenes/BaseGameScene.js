@@ -15,7 +15,7 @@ import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
-import { submitScore, submitAllTimeScore, getTopScores } from '../utils/leaderboardManager.js';
+import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
@@ -839,19 +839,26 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   async updateSidebarLeaderboard() {
+    // Note: Global timer from MenuScene handles alternating daily/all-time updates
+    // This method is kept for backwards compatibility but isn't actively used
     if (!this.rightSidebar || !this.role) return;
 
     try {
-      // Fetch top 10 scores for current role (daily leaderboard)
-      const topScores = await getTopScores(this.role, 10);
+      // Default to all-time on manual update (global timer handles alternating)
+      const topScores = await getAllTimeTopScores(this.role, 10);
 
       // Transform data to match updateLeaderboard format
       const leaderboardData = topScores.map(entry => ({
+        userId: entry.userId,
         name: entry.username,
         score: entry.stash || 0
       }));
 
-      updateLeaderboard(this.rightSidebar, leaderboardData);
+      // Get current user ID for highlighting
+      const currentUser = getCurrentUserSync();
+      const currentUserId = currentUser?.id;
+
+      updateLeaderboard(this.rightSidebar, leaderboardData, 'alltime', currentUserId);
     } catch (err) {
       console.warn('[BaseGameScene] Failed to update sidebar leaderboard:', err);
     }

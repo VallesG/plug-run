@@ -298,7 +298,7 @@ export function createPersonalStats(container, mode = null) {
   const signHeight = 100; // Match main PLUG RUN sign height
   const logoSize = 26; // Match main logo font size
 
-  // Determine leaderboard title based on mode (ALL-TIME)
+  // Determine leaderboard title based on mode (default ALL-TIME)
   let leaderboardTitle = 'ALL-TIME TOP 10';
   if (mode === 'runner') {
     leaderboardTitle = 'ALL-TIME - RUN THE BLOCK';
@@ -310,7 +310,7 @@ export function createPersonalStats(container, mode = null) {
   let leaderboardSection = '';
   if (mode !== null) {
     leaderboardSection = `
-      <div style="
+      <div id="leaderboard-title" style="
         text-align: center;
         margin: 30px 0 20px 0;
         font-size: 14px;
@@ -406,17 +406,48 @@ function createStatRow(label, value, color, id) {
   `;
 }
 
-export function updateLeaderboard(container, leaderboardData) {
+export function updateLeaderboard(container, leaderboardData, type = 'alltime', currentUserId = null) {
   if (!container) return;
 
+  // Update title based on type
+  const titleElement = container.querySelector('#leaderboard-title');
+  if (titleElement) {
+    const mode = getCurrentMode();
+    let title = type === 'daily' ? 'DAILY TOP 10' : 'ALL-TIME TOP 10';
+
+    if (mode === 'runner') {
+      title = type === 'daily' ? 'DAILY - RUN THE BLOCK' : 'ALL-TIME - RUN THE BLOCK';
+    } else if (mode === 'plug') {
+      title = type === 'daily' ? 'DAILY - DEFEND THE BLOCK' : 'ALL-TIME - DEFEND THE BLOCK';
+    }
+
+    titleElement.textContent = title;
+  }
+
+  // Update leaderboard entries
   const entries = container.querySelectorAll('#live-leaderboard-entries > div');
   leaderboardData.forEach((entry, i) => {
     if (i >= entries.length) return;
 
-    const spans = entries[i].querySelectorAll('span');
+    const entryDiv = entries[i];
+    const spans = entryDiv.querySelectorAll('span');
     if (spans.length >= 3) {
       spans[1].textContent = entry.name || '---';
       spans[2].textContent = entry.score !== undefined ? entry.score.toString() : '---';
+
+      // Highlight current user's entry
+      const isCurrentUser = currentUserId && entry.userId === currentUserId;
+      if (isCurrentUser) {
+        entryDiv.style.backgroundColor = 'rgba(251, 191, 36, 0.15)'; // Gold highlight
+        entryDiv.style.borderLeft = '3px solid #fbbf24'; // Gold border
+        spans[1].style.color = '#fbbf24'; // Gold username
+        spans[1].style.fontWeight = 'bold';
+      } else {
+        entryDiv.style.backgroundColor = 'transparent';
+        entryDiv.style.borderLeft = 'none';
+        spans[1].style.color = '#cbd1ff';
+        spans[1].style.fontWeight = 'normal';
+      }
     }
   });
 }

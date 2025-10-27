@@ -1505,6 +1505,8 @@ export class MenuScene extends Phaser.Scene {
     this.updateSidebarActivity();
 
     // Set up periodic updates (only once) - use global callbacks
+    // Alternate between daily and all-time leaderboards
+    let showingDaily = false;
     const leaderboardCallback = async () => {
       const sidebars = getExistingSidebars();
       if (!sidebars.right) return;
@@ -1512,12 +1514,26 @@ export class MenuScene extends Phaser.Scene {
       try {
         // Use the globally stored current mode
         const currentMode = getCurrentMode();
-        const topScores = await getAllTimeTopScores(currentMode, 10);
+
+        // Alternate between daily and all-time every 15 seconds
+        const topScores = showingDaily
+          ? await getTopScores(currentMode, 10)
+          : await getAllTimeTopScores(currentMode, 10);
+
         const leaderboardData = topScores.map(entry => ({
+          userId: entry.userId,
           name: entry.username,
           score: entry.stash || 0
         }));
-        updateLeaderboard(sidebars.right, leaderboardData);
+
+        // Get current user ID for highlighting
+        const currentUser = getCurrentUserSync();
+        const currentUserId = currentUser?.id;
+
+        updateLeaderboard(sidebars.right, leaderboardData, showingDaily ? 'daily' : 'alltime', currentUserId);
+
+        // Toggle for next update
+        showingDaily = !showingDaily;
       } catch (err) {
         console.warn('[Sidebar] Failed to update leaderboard:', err);
       }
@@ -1556,17 +1572,22 @@ export class MenuScene extends Phaser.Scene {
     if (!sidebars.right) return;
 
     try {
-      // Fetch top 10 scores for the current mode (all-time leaderboard)
+      // Fetch top 10 scores for the current mode (start with all-time)
       const currentMode = getCurrentMode();
       const topScores = await getAllTimeTopScores(currentMode, 10);
 
       // Transform data to match updateLeaderboard format
       const leaderboardData = topScores.map(entry => ({
+        userId: entry.userId,
         name: entry.username,
         score: entry.stash || 0
       }));
 
-      updateLeaderboard(sidebars.right, leaderboardData);
+      // Get current user ID for highlighting
+      const currentUser = getCurrentUserSync();
+      const currentUserId = currentUser?.id;
+
+      updateLeaderboard(sidebars.right, leaderboardData, 'alltime', currentUserId);
     } catch (err) {
       console.warn('[MenuScene] Failed to update sidebar leaderboard:', err);
     }
