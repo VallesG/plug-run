@@ -633,14 +633,19 @@ export default class GameUI {
     if (this.scene.pveRound && this.scene.pveRound > 1) {
       const tips = [
         "💡 PRO TIP: Two AI opponents appear starting after round 12",
-        "💡 PRO TIP: Phase makes you intangible - bullets pass right through you",
-        "💡 PRO TIP: Dash teleports you forward instantly, even through walls",
+        "💡 PRO TIP: Phase makes you intangible, pass through walls. Make bullets miss",
+        "💡 PRO TIP: Dash teleports you quickly a few steps in the direction you were going",
         "💡 PRO TIP: Decoy creates a fake runner to confuse and distract the plug",
-        "💡 PRO TIP: Higher rounds mean smarter AI and tougher challenges",
+        "💡 PRO TIP: AI plug gets 2 pixels/second faster each round",
+        "💡 PRO TIP: AI plug shoots 0.04 seconds faster each round",
+        "💡 PRO TIP: AI plug accuracy improves by 2.5% per round",
+        "💡 PRO TIP: AI plug vision range extends by 4 pixels each round",
         "💡 PRO TIP: Your best round unlocks as a Continue option for quick restarts",
+        "💡 PRO TIP: Grab the stash and reach the extraction car to win the round",
+        "💡 PRO TIP: Round ends when runner extracts or gets eliminated",
         "💡 PRO TIP: REP multiplier decreases when replaying rounds you've already beaten",
         "💡 PRO TIP: Stash is only awarded on first-time round completions",
-        "💡 PRO TIP: Power-ups can be combined creatively for amazing escapes",
+        "💡 PRO TIP: You can use the same power up twice in one round",
         "💡 PRO TIP: The plug learns your patterns - stay unpredictable to survive",
         "💡 PRO TIP: Corner camping makes you an easy target for the plug",
         "💡 PRO TIP: Moving targets are much harder to hit than stationary ones"
