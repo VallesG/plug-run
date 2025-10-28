@@ -44,7 +44,7 @@ export default class ProgressionManager {
   /**
    * Handle successful extraction sequence (runner reached car with stash)
    */
-  startExtractionSequence() {
+  async startExtractionSequence() {
     if (this.scene.roundOver) return;
 
     const cleanupArena = () => {
@@ -319,7 +319,7 @@ export default class ProgressionManager {
   /**
    * Show PvE game over modal
    */
-  showPvEGameOver(context = {}) {
+  async showPvEGameOver(context = {}) {
     const roundNumber = this.scene.pveRound || 1;
     const isPlug = this.scene.role === 'plug';
     const reason = context.reason || (isPlug ? 'runner_eliminated' : 'runner_eliminated');
