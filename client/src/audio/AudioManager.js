@@ -252,8 +252,23 @@ export class AudioManager {
 
     if (prev) {
       const stopPrev = () => { try { prev.stop(); prev.destroy(); } catch {} };
-      if (fade > 0) {
-        this.scene.tweens.add({ targets: prev, volume: 0, duration: fade, ease: 'Sine.easeIn', onComplete: stopPrev });
+      if (fade > 0 && this.scene?.tweens) {
+        // Use a volume state object to avoid directly setting properties on the sound
+        const volState = { vol: prev.volume };
+        this.scene.tweens.add({
+          targets: volState,
+          vol: 0,
+          duration: fade,
+          ease: 'Sine.easeIn',
+          onUpdate: () => {
+            try {
+              if (prev && prev.game && !prev.pendingRemove) {
+                prev.setVolume(volState.vol);
+              }
+            } catch {}
+          },
+          onComplete: stopPrev
+        });
       } else {
         stopPrev();
       }
@@ -271,8 +286,23 @@ export class AudioManager {
       // Clean up filter
       this._musicFilter = null;
     };
-    if (fade > 0) {
-      this.scene?.tweens?.add({ targets: prev, volume: 0, duration: fade, ease: 'Sine.easeIn', onComplete: stopPrev });
+    if (fade > 0 && this.scene?.tweens) {
+      // Use a volume state object to avoid directly setting properties on the sound
+      const volState = { vol: prev.volume || 0 };
+      this.scene.tweens.add({
+        targets: volState,
+        vol: 0,
+        duration: fade,
+        ease: 'Sine.easeIn',
+        onUpdate: () => {
+          try {
+            if (prev && prev.game && !prev.pendingRemove) {
+              prev.setVolume(volState.vol);
+            }
+          } catch {}
+        },
+        onComplete: stopPrev
+      });
     } else {
       stopPrev();
     }
@@ -335,6 +365,14 @@ export class AudioManager {
   _applyMusicVolume() {
     const s = this.music?.sound;
     if (!s) return;
+
+    // Check if sound is still valid (not destroyed)
+    try {
+      if (!s.game || s.pendingRemove) return;
+    } catch {
+      return; // Sound is in invalid state
+    }
+
     const duck = this._duck?.mult ?? 1;
     const finalVol = Math.max(0, Math.min(1, (this._musicVolState.base || 0) * duck));
     try { s.setVolume(finalVol); } catch {}
