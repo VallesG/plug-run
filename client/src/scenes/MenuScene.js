@@ -400,7 +400,15 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(3, 0xf59e0b)
       .setInteractive({ cursor: 'pointer' });
 
-    const startText = this.add.text(0, btnY, 'START', {
+    // Set button text based on mode
+    let buttonText = 'START';
+    if (modeKey === 'runner') {
+      buttonText = 'PLAY AS RUNNER';
+    } else if (modeKey === 'plug') {
+      buttonText = 'PLAY AS PLUG';
+    }
+
+    const startText = this.add.text(0, btnY, buttonText, {
       fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
       fontSize: Math.max(16, Math.floor(btnHeight * 0.42)) + 'px',
       color: '#1e293b',
@@ -1360,7 +1368,7 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(3, 0xf59e0b)
       .setInteractive({ cursor: 'pointer' });
 
-    const t = this.add.text(0, 0, 'TUTORIAL', {
+    const t = this.add.text(0, 0, 'START TUTORIAL', {
       fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
       fontSize: Math.max(16, Math.floor(btnHeight * 0.44)) + 'px',
       color: '#1e293b',

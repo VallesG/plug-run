@@ -5,6 +5,7 @@
 let globalSidebarsActive = false;
 let globalUpdateTimers = { leaderboard: null, activity: null };
 let globalCurrentMode = 'runner'; // Track current leaderboard mode
+let globalResizeHandler = null; // Track resize handler for cleanup
 
 export function isDesktop() {
   return window.innerWidth >= 768;
@@ -71,34 +72,69 @@ export function cleanupSidebars() {
   existing.forEach(el => el.remove());
   globalSidebarsActive = false;
   clearGlobalTimers();
+
+  // Remove resize handler
+  if (globalResizeHandler) {
+    window.removeEventListener('resize', globalResizeHandler);
+    globalResizeHandler = null;
+  }
+}
+
+// Reposition sidebars based on current canvas position
+function repositionSidebars() {
+  const canvas = document.querySelector('canvas');
+  if (!canvas) return;
+
+  const sidebars = document.querySelectorAll('.desktop-sidebar');
+  if (sidebars.length < 2) return;
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const sidebarWidth = 500;
+  const gap = 15;
+  const mainSignOffset = 36;
+
+  // Update left sidebar
+  const leftSidebar = sidebars[0];
+  const leftPosition = canvasRect.left - gap - sidebarWidth;
+  const topOffset = canvasRect.top + mainSignOffset;
+  leftSidebar.style.left = `${leftPosition}px`;
+  leftSidebar.style.top = `${topOffset}px`;
+  leftSidebar.style.height = `${canvasRect.height}px`;
+
+  // Update right sidebar
+  const rightSidebar = sidebars[1];
+  const rightPosition = canvasRect.right + gap;
+  rightSidebar.style.left = `${rightPosition}px`;
+  rightSidebar.style.top = `${topOffset}px`;
+  rightSidebar.style.height = `${canvasRect.height}px`;
 }
 
 // Create a DOM sidebar container
 export function createSidebarContainer(side) {
   if (!isDesktop()) return null;
 
-  const gameWidth = 500; // Fixed game viewport width
-  const gameHeight = Math.min(938, window.innerHeight); // Match game canvas height
-  const sidebarWidth = 500; // Match game viewport width
+  // Get actual Phaser canvas position and size (works at any zoom level)
+  const canvas = document.querySelector('canvas');
+  if (!canvas) return null;
 
-  // Calculate game canvas position (centered horizontally)
-  const gameCanvasLeft = (window.innerWidth - gameWidth) / 2;
-  const gameCanvasRight = gameCanvasLeft + gameWidth;
-
-  // Position sidebars next to game canvas with small gap
+  const canvasRect = canvas.getBoundingClientRect();
+  const sidebarWidth = 500; // Fixed width in visual pixels
   const gap = 15;
-  let leftPosition;
 
+  // Position sidebar relative to actual canvas position
+  let leftPosition;
   if (side === 'left') {
-    leftPosition = gameCanvasLeft - gap - sidebarWidth;
+    leftPosition = canvasRect.left - gap - sidebarWidth;
   } else {
-    leftPosition = gameCanvasRight + gap;
+    leftPosition = canvasRect.right + gap;
   }
 
-  // Align with main PLUG RUN sign (starts at 36px from top of game canvas)
-  const gameCanvasTopOffset = (window.innerHeight - gameHeight) / 2;
-  const mainSignOffset = 36; // logoY from MenuScene
-  const topOffset = gameCanvasTopOffset + mainSignOffset;
+  // Align with top of canvas plus offset for main sign
+  const mainSignOffset = 36;
+  const topOffset = canvasRect.top + mainSignOffset;
+
+  // Use canvas height for sidebar height
+  const sidebarHeight = canvasRect.height;
 
   const sidebar = document.createElement('div');
   sidebar.className = 'desktop-sidebar';
@@ -107,7 +143,7 @@ export function createSidebarContainer(side) {
     top: ${topOffset}px;
     left: ${leftPosition}px;
     width: ${sidebarWidth}px;
-    height: ${gameHeight}px;
+    height: ${sidebarHeight}px;
     background: rgba(10, 15, 26, 0.95);
     border: 2px solid #2f3650;
     border-radius: 4px;
@@ -120,6 +156,16 @@ export function createSidebarContainer(side) {
   document.body.appendChild(sidebar);
   console.log(`[Sidebar] Created ${side} sidebar at position ${leftPosition}px`);
   globalSidebarsActive = true;
+
+  // Set up resize listener when both sidebars exist (only once)
+  if (!globalResizeHandler && document.querySelectorAll('.desktop-sidebar').length === 2) {
+    globalResizeHandler = () => {
+      repositionSidebars();
+    };
+    window.addEventListener('resize', globalResizeHandler);
+    console.log('[Sidebar] Resize handler installed for zoom/resize handling');
+  }
+
   return sidebar;
 }
 
