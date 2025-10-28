@@ -454,9 +454,17 @@ export class AudioManager {
 
     // If idle already playing, just ensure it's audible
     if (this._engineIdle && this._engineIdle.sound) {
+      // Kill existing tween before creating new one
+      if (this._engineIdle.tween) {
+        try { this._engineIdle.tween.remove(); } catch {}
+      }
+      if (this.scene?.tweens) {
+        try { this.scene.tweens.killTweensOf(this._engineIdle.sound); } catch {}
+      }
+
       const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
       try {
-        this.scene?.tweens?.add({ targets: this._engineIdle.sound, volume: finalTarget, duration: 250, ease: 'Sine.easeOut' });
+        this._engineIdle.tween = this.scene?.tweens?.add({ targets: this._engineIdle.sound, volume: finalTarget, duration: 250, ease: 'Sine.easeOut' });
       } catch {}
       return;
     }
@@ -468,16 +476,26 @@ export class AudioManager {
       idle.play();
     } catch { idle = null; }
     if (!idle) return;
-    this._engineIdle = { sound: idle };
+    this._engineIdle = { sound: idle, tween: null };
     const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
     try {
-      this.scene?.tweens?.add({ targets: idle, volume: finalTarget, duration: 350, ease: 'Sine.easeOut' });
+      this._engineIdle.tween = this.scene?.tweens?.add({ targets: idle, volume: finalTarget, duration: 350, ease: 'Sine.easeOut' });
     } catch {}
   }
 
   stopEngineLoop() {
     const idle = this._engineIdle?.sound;
     if (!idle) return;
+
+    // Kill any running tweens on this sound to prevent "Cannot set properties of null" error
+    if (this._engineIdle?.tween) {
+      try { this._engineIdle.tween.remove(); } catch {}
+      this._engineIdle.tween = null;
+    }
+    if (this.scene?.tweens) {
+      try { this.scene.tweens.killTweensOf(idle); } catch {}
+    }
+
     const stopIdle = () => { try { idle.stop(); idle.destroy(); } catch {} this._engineIdle = null; };
     try {
       this.scene?.tweens?.add({ targets: idle, volume: 0, duration: 250, ease: 'Sine.easeIn', onComplete: stopIdle });

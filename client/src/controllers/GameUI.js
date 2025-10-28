@@ -137,7 +137,8 @@ export default class GameUI {
     const gridGapX = 130; // Gap between button centers (weapon width + spacing)
     const totalW = (cols - 1) * gridGapX;
     const startX = cx - totalW / 2;
-    const firstRowY = cy + (rows > 1 ? -10 : 0); // Moved up
+    // Move up for rounds 2+ to use empty space (round 1 has Continue button in that space)
+    const firstRowY = (this.scene.pveRound && this.scene.pveRound > 1) ? cy - 50 : cy + (rows > 1 ? -10 : 0);
     const rowGapY = 50; // Tighter spacing
 
     let selectedWeapon = null;
@@ -320,6 +321,45 @@ export default class GameUI {
 
     registerExtra(menuBg, menuText);
 
+    // Add game tip below Main Menu button (rounds 2+)
+    if (this.scene.pveRound && this.scene.pveRound > 1) {
+      const tips = [
+        "💡 PRO TIP: Two AI runners appear starting after round 12",
+        "💡 PRO TIP: Pistol is balanced with less range but more ammo",
+        "💡 PRO TIP: Triple Barrel spreads wide",
+        "💡 PRO TIP: Rifle shoots far but has less ammo",
+        "💡 PRO TIP: Corner the runner to limit their escape routes",
+        "💡 PRO TIP: Predict movement patterns instead of just chasing",
+        "💡 PRO TIP: AI runners get 2 pixels/second faster each round",
+        "💡 PRO TIP: AI reaction time improves by 15ms per round",
+        "💡 PRO TIP: AI vision range extends by 4 pixels each round",
+        "💡 PRO TIP: Your best round unlocks as a Continue option",
+        "💡 PRO TIP: Each missed shot decreases REP score by 0.03",
+        "💡 PRO TIP: Quick kills under 20 seconds earn +2.0 bonus REP",
+        "💡 PRO TIP: 80%+ accuracy earns +1.5 bonus REP",
+        "💡 PRO TIP: Eliminating runner before stash pickup earns +1.0 REP",
+        "💡 PRO TIP: Stash is only awarded on first-time round completions",
+        "💡 PRO TIP: AI learns to avoid your shooting patterns over time",
+        "💡 PRO TIP: Lead your shots - aim where they're going, not where they are",
+        "💡 PRO TIP: Get closer to shoot",
+        "💡 PRO TIP: Out of ammo? Ram into the runner for a melee attack"
+      ];
+
+      const randomTip = tips[Math.floor(Math.random() * tips.length)];
+      const tipY = menuBtnY + menuBtnH / 2 + 20; // Below Main Menu button
+      const maxWidth = panelW - 40; // Use full panel width with padding
+
+      // Pro tip text in gold with word wrapping
+      const tipText = this.scene.add.text(cx, tipY, randomTip, {
+        color: '#fbbf24',
+        fontSize: '12px',
+        align: 'center',
+        wordWrap: { width: maxWidth }
+      }).setOrigin(0.5, 0).setDepth(20005);
+
+      registerExtra(tipText);
+    }
+
     // Add Claim/Settings buttons inside panel at top-left (all rounds)
     const actualPanelW = panel?.width ?? panelW;
     const actualPanelH = panel?.height ?? panelW; // Use actual panel height from modal
@@ -362,7 +402,8 @@ export default class GameUI {
     const btnHeight = 70;
     const gap = 105;
     const startX = cx - gap * (powers.length - 1) / 2;
-    let y = cy + 10; // Moved up from cy + 40
+    // Move up for rounds 2+ to use empty space (round 1 has Continue button in that space)
+    let y = (this.scene.pveRound && this.scene.pveRound > 1) ? cy - 50 : cy + 10;
 
     // Add Continue button ABOVE powers (Round 1 only)
     if (this.scene.pveRound === 1) {
@@ -390,7 +431,7 @@ export default class GameUI {
       }
 
       if (continueData && continueLabel) {
-        const continueY = cy - 50; // Above power buttons
+        const continueY = cy - 90; // Above power buttons
         const continueW = Math.min(280, panel?.width - 80 || 200);
         const continueH = 36;
 
@@ -416,7 +457,7 @@ export default class GameUI {
         });
 
         registerExtra(continueBg, continueText);
-        y = cy + 20; // Push power buttons down slightly if Continue button is shown
+        y = cy - 30; // Push power buttons down slightly if Continue button is shown
       }
     }
 
@@ -587,6 +628,38 @@ export default class GameUI {
     });
 
     registerExtra(menuBg, menuText);
+
+    // Add game tip below Main Menu button (rounds 2+)
+    if (this.scene.pveRound && this.scene.pveRound > 1) {
+      const tips = [
+        "💡 PRO TIP: Two AI opponents appear starting after round 12",
+        "💡 PRO TIP: Phase makes you intangible - bullets pass right through you",
+        "💡 PRO TIP: Dash teleports you forward instantly, even through walls",
+        "💡 PRO TIP: Decoy creates a fake runner to confuse and distract the plug",
+        "💡 PRO TIP: Higher rounds mean smarter AI and tougher challenges",
+        "💡 PRO TIP: Your best round unlocks as a Continue option for quick restarts",
+        "💡 PRO TIP: REP multiplier decreases when replaying rounds you've already beaten",
+        "💡 PRO TIP: Stash is only awarded on first-time round completions",
+        "💡 PRO TIP: Power-ups can be combined creatively for amazing escapes",
+        "💡 PRO TIP: The plug learns your patterns - stay unpredictable to survive",
+        "💡 PRO TIP: Corner camping makes you an easy target for the plug",
+        "💡 PRO TIP: Moving targets are much harder to hit than stationary ones"
+      ];
+
+      const randomTip = tips[Math.floor(Math.random() * tips.length)];
+      const tipY = menuBtnY + menuBtnH / 2 + 20; // Below Main Menu button
+      const maxWidth = Math.min(440, this.scene.scale.width - 80); // Use full width with padding
+
+      // Pro tip text in gold with word wrapping
+      const tipText = this.scene.add.text(cx, tipY, randomTip, {
+        color: '#fbbf24',
+        fontSize: '12px',
+        align: 'center',
+        wordWrap: { width: maxWidth }
+      }).setOrigin(0.5, 0).setDepth(20005);
+
+      registerExtra(tipText);
+    }
 
     // Add Claim/Settings buttons inside panel at top-left (all rounds)
     const actualPanelW = panel?.width ?? Math.min(480, this.scene.scale.width - 40);

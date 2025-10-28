@@ -640,10 +640,10 @@ export class BaseGameScene extends Phaser.Scene {
 
     // guns
     this.weaponStats = {
-      pistol:       { clip: 12, speed: 320, color: 0xffd166, spreadAngles: [0] },
+      pistol:       { clip: 16, speed: 320, color: 0xffd166, spreadAngles: [0] },
       doublebarrel: { clip: 10, speed: 280, color: 0xff5a7a, spreadAngles: [-12, 0, 12] },
       laser:        { clip: 5,  speed: 460, color: 0x86e3ff, spreadAngles: [0] },
-      rifle:        { clip: 16, speed: 360, color: 0xb4f0ff, spreadAngles: [0] }
+      rifle:        { clip: 12, speed: 360, color: 0xb4f0ff, spreadAngles: [0] }
     };
     const DEFAULT_GUNS = Object.keys(this.weaponStats);
     const owns = {
