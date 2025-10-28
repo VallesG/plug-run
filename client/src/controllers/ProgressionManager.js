@@ -47,6 +47,9 @@ export default class ProgressionManager {
   async startExtractionSequence() {
     if (this.scene.roundOver) return;
 
+    // Set roundOver immediately to prevent multiple calls from update loop
+    this.scene.roundOver = true;
+
     const cleanupArena = () => {
       this.scene.destroyDecoySprite?.();
       const destroyGroup = (group) => {
