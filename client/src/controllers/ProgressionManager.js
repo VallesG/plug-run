@@ -59,7 +59,7 @@ export default class ProgressionManager {
       destroyGroup(this.scene.bulletsA);
       destroyGroup(this.scene.bulletsD);
       this.scene.vfx?.hideCarBeacon?.();
-      this.scene.removeCarryPackage?.();
+      // DON'T remove carry package here - let it animate with runner (removed in animation onComplete)
       // Stop engine idle loop (extraction complete)
       try {
         this.scene.audio?.stopEngineLoop();
@@ -74,6 +74,9 @@ export default class ProgressionManager {
       this.scene.input.keyboard.enabled = false;
       this.scene._mouseDown = false;
       cleanupArena();
+
+      // Remove carry package (no animation in plug mode - runner just extracted)
+      this.scene.removeCarryPackage?.();
 
       // Dual AI: Hide the runner who extracted (carrier), not just attacker
       const carrier = this.scene.stashCarrier || this.scene.attacker;
@@ -255,6 +258,8 @@ export default class ProgressionManager {
         }
       });
     } else {
+      // No animation, just cleanup and proceed
+      this.scene.removeCarryPackage?.();
       boardThenDrive();
     }
   }
