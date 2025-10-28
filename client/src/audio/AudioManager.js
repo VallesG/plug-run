@@ -42,6 +42,7 @@ export class AudioManager {
     // Music state for ducking/crossfades
     this._duck = { token: 0, priority: -1, endAt: 0, mult: 1, timeline: null };
     this._musicVolState = { base: 0 }; // base target before ducking
+    this._musicVolTween = null; // track music volume tween to kill it when needed
     this._musicFilter = null; // low-pass filter for adaptive music
     this._filterCutoff = 20000; // current filter cutoff frequency (20kHz = no filtering)
 
@@ -198,8 +199,17 @@ export class AudioManager {
     if (this.music && this.music.key === key) {
       // Just adjust base volume target (preserves duck multiplier)
       if (this.music.sound) {
+        // Kill existing volume tween before creating new one
+        if (this._musicVolTween) {
+          try { this._musicVolTween.remove(); } catch {}
+          this._musicVolTween = null;
+        }
+        if (this.scene?.tweens) {
+          try { this.scene.tweens.killTweensOf(this._musicVolState); } catch {}
+        }
+
         if (fade > 0) {
-          this.scene.tweens.add({
+          this._musicVolTween = this.scene.tweens.add({
             targets: this._musicVolState,
             base: baseTarget,
             duration: fade,
@@ -229,12 +239,27 @@ export class AudioManager {
     }
 
     const prev = this.music?.sound || null;
+
+    // Kill any existing volume tweens before starting new music
+    if (this._musicVolTween) {
+      try { this._musicVolTween.remove(); } catch {}
+      this._musicVolTween = null;
+    }
+    if (this.scene?.tweens) {
+      try { this.scene.tweens.killTweensOf(this._musicVolState); } catch {}
+    }
+    // Kill duck timeline if active
+    if (this._duck?.timeline) {
+      try { this._duck.timeline.destroy(); } catch {}
+      this._duck.timeline = null;
+    }
+
     if (next) {
       this.music = { key, sound: next };
       // Initialize base target to 0 and tween up to target (duck applied via _applyMusicVolume)
       this._musicVolState.base = 0;
       if (fade > 0 && this.scene?.tweens) {
-        this.scene.tweens.add({
+        this._musicVolTween = this.scene.tweens.add({
           targets: this._musicVolState,
           base: baseTarget,
           duration: fade,
@@ -278,6 +303,21 @@ export class AudioManager {
   stopMusic(fade = 200) {
     const prev = this.music?.sound;
     if (!prev) return;
+
+    // Kill any active volume tweens that call _applyMusicVolume
+    if (this._musicVolTween) {
+      try { this._musicVolTween.remove(); } catch {}
+      this._musicVolTween = null;
+    }
+    if (this.scene?.tweens) {
+      try { this.scene.tweens.killTweensOf(this._musicVolState); } catch {}
+    }
+    // Kill duck timeline if active
+    if (this._duck?.timeline) {
+      try { this._duck.timeline.destroy(); } catch {}
+      this._duck.timeline = null;
+    }
+
     const stopPrev = () => {
       try {
         prev.stop();
@@ -458,13 +498,29 @@ export class AudioManager {
       if (this._engineIdle.tween) {
         try { this._engineIdle.tween.remove(); } catch {}
       }
-      if (this.scene?.tweens) {
-        try { this.scene.tweens.killTweensOf(this._engineIdle.sound); } catch {}
+      if (this._engineIdle.volState && this.scene?.tweens) {
+        try { this.scene.tweens.killTweensOf(this._engineIdle.volState); } catch {}
       }
 
       const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
+      const idle = this._engineIdle.sound;
+      if (!this._engineIdle.volState) {
+        this._engineIdle.volState = { vol: idle.volume || 0 };
+      }
       try {
-        this._engineIdle.tween = this.scene?.tweens?.add({ targets: this._engineIdle.sound, volume: finalTarget, duration: 250, ease: 'Sine.easeOut' });
+        this._engineIdle.tween = this.scene?.tweens?.add({
+          targets: this._engineIdle.volState,
+          vol: finalTarget,
+          duration: 250,
+          ease: 'Sine.easeOut',
+          onUpdate: () => {
+            try {
+              if (idle && idle.game && !idle.pendingRemove) {
+                idle.setVolume(this._engineIdle.volState.vol);
+              }
+            } catch {}
+          }
+        });
       } catch {}
       return;
     }
@@ -476,10 +532,24 @@ export class AudioManager {
       idle.play();
     } catch { idle = null; }
     if (!idle) return;
-    this._engineIdle = { sound: idle, tween: null };
+
     const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
+    const volState = { vol: 0 };
+    this._engineIdle = { sound: idle, tween: null, volState };
     try {
-      this._engineIdle.tween = this.scene?.tweens?.add({ targets: idle, volume: finalTarget, duration: 350, ease: 'Sine.easeOut' });
+      this._engineIdle.tween = this.scene?.tweens?.add({
+        targets: volState,
+        vol: finalTarget,
+        duration: 350,
+        ease: 'Sine.easeOut',
+        onUpdate: () => {
+          try {
+            if (idle && idle.game && !idle.pendingRemove) {
+              idle.setVolume(volState.vol);
+            }
+          } catch {}
+        }
+      });
     } catch {}
   }
 
@@ -487,19 +557,40 @@ export class AudioManager {
     const idle = this._engineIdle?.sound;
     if (!idle) return;
 
-    // Kill any running tweens on this sound to prevent "Cannot set properties of null" error
+    // Kill any running tweens on volume state to prevent "Cannot set properties of null" error
     if (this._engineIdle?.tween) {
       try { this._engineIdle.tween.remove(); } catch {}
       this._engineIdle.tween = null;
     }
-    if (this.scene?.tweens) {
-      try { this.scene.tweens.killTweensOf(idle); } catch {}
+    if (this._engineIdle?.volState && this.scene?.tweens) {
+      try { this.scene.tweens.killTweensOf(this._engineIdle.volState); } catch {}
     }
 
     const stopIdle = () => { try { idle.stop(); idle.destroy(); } catch {} this._engineIdle = null; };
-    try {
-      this.scene?.tweens?.add({ targets: idle, volume: 0, duration: 250, ease: 'Sine.easeIn', onComplete: stopIdle });
-    } catch { stopIdle(); }
+
+    // Use volume state object to safely fade out
+    if (this._engineIdle?.volState) {
+      const volState = this._engineIdle.volState;
+      volState.vol = idle.volume || 0;
+      try {
+        this.scene?.tweens?.add({
+          targets: volState,
+          vol: 0,
+          duration: 250,
+          ease: 'Sine.easeIn',
+          onUpdate: () => {
+            try {
+              if (idle && idle.game && !idle.pendingRemove) {
+                idle.setVolume(volState.vol);
+              }
+            } catch {}
+          },
+          onComplete: stopIdle
+        });
+      } catch { stopIdle(); }
+    } else {
+      stopIdle();
+    }
   }
 }
 
