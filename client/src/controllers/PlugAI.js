@@ -18,7 +18,7 @@
  */
 export function getPlugBaseStats() {
   return {
-    speed: 60,              // Movement speed in pixels/sec (faster at start - was 50)
+    speed: 75,              // Movement speed in pixels/sec (faster at start - was 60)
     shootEvery: 1.5,        // Fire rate in seconds (faster shooting at start - was 1.8)
     maxRange: 280,          // Vision range in pixels (better vision at start - was 250)
     inaccuracy: 0.85,       // Shot spread 0-1 (better aim at start - was 1.0)
@@ -49,10 +49,10 @@ export function applyPlugProgression(scene) {
 
   const round = scene.pveRound || 1;
 
-  // SPEED: Reduced progression (starts higher, scales slower)
-  // Formula: 60 + (round - 1) * 2.0 (was 50 + 2.5)
-  // Round 1: 60 | Round 10: 78 | Round 20: 98 | Round 40: 138
-  scene.aiPlug.speed = 60 + (round - 1) * 2.0;
+  // SPEED: Faster progression for more challenging early game
+  // Formula: 75 + (round - 1) * 2.5 (was 60 + 2.0)
+  // Round 1: 75 | Round 10: 97.5 | Round 20: 122.5 | Round 40: 172.5
+  scene.aiPlug.speed = 75 + (round - 1) * 2.5;
 
   // FIRE RATE: Reduced progression (starts faster, scales slower)
   // Formula: 1.5 - (round - 1) * 0.04 (was 1.8 - 0.0535)
@@ -129,18 +129,63 @@ export function updatePlugBehavior(scene, dt) {
   // During orientation delay: AI drifts passively, doesn't actively pursue
   // After delay: AI locks onto target and pursues
   if (!isOrienting) {
-    // Direct movement toward runner - normalize to prevent faster diagonal movement
-    const dirX = Math.sign(vx), dirY = Math.sign(vy);
-    const magnitude = Math.sqrt(dirX * dirX + dirY * dirY);
-    const normalizedDirX = magnitude > 0 ? dirX / magnitude : dirX;
-    const normalizedDirY = magnitude > 0 ? dirY / magnitude : dirY;
+    // Pathfinding: recalculate path every 0.5 seconds or if no path exists
+    if (!scene._aiPathfindTimer) scene._aiPathfindTimer = 0;
+    scene._aiPathfindTimer += dt;
 
-    const nx = d.x + normalizedDirX * speed * dt;
-    const ny = d.y + normalizedDirY * speed * dt;
-    if (scene.canMoveTo(d, nx, d.y)) d.x = nx;
-    if (scene.canMoveTo(d, d.x, ny)) d.y = ny;
+    if (!scene._aiPath || scene._aiPathfindTimer >= 0.5) {
+      scene._aiPathfindTimer = 0;
+      scene._aiPath = scene.findPath?.(d.x, d.y, ax, ay);
+      scene._aiPathIndex = 0; // Reset to start of path
+    }
 
-    // Update AI aim direction for sprite orientation (normalized vector toward runner)
+    // Follow the path if one exists
+    if (scene._aiPath && scene._aiPath.length > 0) {
+      // Get current waypoint
+      const waypoint = scene._aiPath[scene._aiPathIndex];
+
+      if (waypoint) {
+        const wpDist = Math.hypot(waypoint.x - d.x, waypoint.y - d.y);
+
+        // Close enough to waypoint? Move to next one
+        if (wpDist < scene.cell * 0.5) {
+          scene._aiPathIndex++;
+
+          // Reached end of path? Clear it to recalculate
+          if (scene._aiPathIndex >= scene._aiPath.length) {
+            scene._aiPath = null;
+          }
+        } else {
+          // Move toward current waypoint
+          const wpVx = waypoint.x - d.x;
+          const wpVy = waypoint.y - d.y;
+          const wpDir = Math.hypot(wpVx, wpVy);
+
+          if (wpDir > 0) {
+            const dirX = wpVx / wpDir;
+            const dirY = wpVy / wpDir;
+
+            const nx = d.x + dirX * speed * dt;
+            const ny = d.y + dirY * speed * dt;
+            if (scene.canMoveTo(d, nx, d.y)) d.x = nx;
+            if (scene.canMoveTo(d, d.x, ny)) d.y = ny;
+          }
+        }
+      }
+    } else {
+      // No path found - fall back to direct movement
+      const dirX = Math.sign(vx), dirY = Math.sign(vy);
+      const magnitude = Math.sqrt(dirX * dirX + dirY * dirY);
+      const normalizedDirX = magnitude > 0 ? dirX / magnitude : dirX;
+      const normalizedDirY = magnitude > 0 ? dirY / magnitude : dirY;
+
+      const nx = d.x + normalizedDirX * speed * dt;
+      const ny = d.y + normalizedDirY * speed * dt;
+      if (scene.canMoveTo(d, nx, d.y)) d.x = nx;
+      if (scene.canMoveTo(d, d.x, ny)) d.y = ny;
+    }
+
+    // Update AI aim direction for sprite orientation (always aim at runner, not waypoint)
     if (dist > 0) {
       scene.aiAim = { x: vx / dist, y: vy / dist };
     }
@@ -159,8 +204,9 @@ export function updatePlugBehavior(scene, dt) {
     if (scene._shootTicker >= scene.aiPlug.shootEvery) {
       scene._shootTicker = 0;
 
-      // Shoot if within range
-      if (dist <= scene.aiPlug.maxRange && dist > 0) {
+      // Only shoot if within range AND has clear line of sight (no walls blocking)
+      const hasClearShot = scene.hasLineOfSight?.(d.x, d.y, ax, ay);
+      if (dist <= scene.aiPlug.maxRange && dist > 0 && hasClearShot) {
         const inaccuracy = scene.aiPlug.inaccuracy;
         const rx = vx / dist + (Math.random() - 0.5) * inaccuracy;
         const ry = vy / dist + (Math.random() - 0.5) * inaccuracy;

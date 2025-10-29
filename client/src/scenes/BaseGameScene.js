@@ -272,18 +272,124 @@ export class BaseGameScene extends Phaser.Scene {
   ensureUnstuck(sprite){
     if (!this.isWallAtWorld?.(sprite.x, sprite.y)) return;
     const start = this.toCell(sprite.x, sprite.y);
-    const maxR = 4; // search radius in tiles
+    const maxR = 6; // Increased search radius for deeper corners
+
+    // Find all walkable tiles within radius, prioritizing those further from walls
+    let bestTile = null;
+    let bestScore = -1;
+
     for (let r=1; r<=maxR; r++){
       for (let dy=-r; dy<=r; dy++){
         for (let dx=-r; dx<=r; dx++){
           const cx = start.x + dx, cy = start.y + dy;
           if (!this.isWalkableCell?.(cx, cy)) continue;
-          sprite.x = this.toWorldX(cx);
-          sprite.y = this.toWorldY(cy);
-          return;
+
+          // Score this tile based on distance from walls (safer = higher score)
+          let safetyScore = 0;
+          // Check 8 surrounding cells - more walkable neighbors = safer
+          for (let ny=-1; ny<=1; ny++){
+            for (let nx=-1; nx<=1; nx++){
+              if (nx === 0 && ny === 0) continue;
+              if (this.isWalkableCell?.(cx + nx, cy + ny)) safetyScore++;
+            }
+          }
+          // Add distance from original position as tiebreaker
+          safetyScore += Math.sqrt(dx*dx + dy*dy) * 0.1;
+
+          if (safetyScore > bestScore){
+            bestScore = safetyScore;
+            bestTile = { x: cx, y: cy };
+          }
         }
       }
+      // If we found a reasonably safe tile at this radius, use it
+      if (bestScore >= 4) break; // At least 4 walkable neighbors = safe enough
     }
+
+    if (bestTile){
+      sprite.x = this.toWorldX(bestTile.x);
+      sprite.y = this.toWorldY(bestTile.y);
+    }
+  }
+
+  // Check if there's a clear line of sight between two points (no walls blocking)
+  hasLineOfSight(x1, y1, x2, y2){
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist === 0) return true;
+
+    // Step along the line in small increments (half a cell size for precision)
+    const steps = Math.ceil(dist / (this.cell * 0.5));
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+
+    for (let i = 1; i < steps; i++){
+      const checkX = x1 + stepX * i;
+      const checkY = y1 + stepY * i;
+
+      if (this.isWallAtWorld(checkX, checkY)){
+        return false; // Wall blocking
+      }
+    }
+
+    return true; // Clear line of sight
+  }
+
+  // Find path from start to goal using BFS (returns array of {x,y} waypoints in world coords)
+  findPath(startX, startY, goalX, goalY){
+    const startCell = this.toCell(startX, startY);
+    const goalCell = this.toCell(goalX, goalY);
+
+    // If start or goal is in a wall, bail
+    if (!this.isWalkableCell(startCell.x, startCell.y)) return null;
+    if (!this.isWalkableCell(goalCell.x, goalCell.y)) return null;
+
+    // BFS setup
+    const queue = [{ x: startCell.x, y: startCell.y, path: [] }];
+    const visited = new Set();
+    visited.add(`${startCell.x},${startCell.y}`);
+
+    const maxSteps = 100; // Limit search to prevent infinite loops
+    let steps = 0;
+
+    while (queue.length > 0 && steps < maxSteps) {
+      steps++;
+      const current = queue.shift();
+
+      // Reached goal?
+      if (current.x === goalCell.x && current.y === goalCell.y) {
+        // Convert path to world coordinates
+        return current.path.map(cell => ({
+          x: this.toWorldX(cell.x),
+          y: this.toWorldY(cell.y)
+        }));
+      }
+
+      // Check 4 cardinal directions
+      const neighbors = [
+        { x: current.x + 1, y: current.y },
+        { x: current.x - 1, y: current.y },
+        { x: current.x, y: current.y + 1 },
+        { x: current.x, y: current.y - 1 }
+      ];
+
+      for (const neighbor of neighbors) {
+        const key = `${neighbor.x},${neighbor.y}`;
+        if (visited.has(key)) continue;
+        if (!this.isWalkableCell(neighbor.x, neighbor.y)) continue;
+
+        visited.add(key);
+        queue.push({
+          x: neighbor.x,
+          y: neighbor.y,
+          path: [...current.path, { x: neighbor.x, y: neighbor.y }]
+        });
+      }
+    }
+
+    return null; // No path found
   }
 
   /* ------------- responsive layout ------------- */
