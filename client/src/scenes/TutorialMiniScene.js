@@ -521,11 +521,17 @@ export class TutorialMiniScene extends Phaser.Scene {
       ]);
 
       // Calculate today's totals
-      const dailyRounds = (runnerScore ? 1 : 0) + (plugScore ? 1 : 0);
-      const dailyStash = (runnerScore?.stash || 0) + (plugScore?.stash || 0);
-      const dailyRep = (runnerScore?.rep || 0) + (plugScore?.rep || 0);
       const bestRunner = runnerScore?.round || 0;
       const bestPlug = plugScore?.round || 0;
+
+      // Rounds Today = total rounds played across both modes
+      const dailyRounds = bestRunner + bestPlug;
+
+      // STASH Today = highest runner round (you earn 1 stash per runner round)
+      const dailyStash = bestRunner;
+
+      // REP Today = total rep from both modes
+      const dailyRep = (runnerScore?.rep || 0) + (plugScore?.rep || 0);
 
       const statsToShow = {
         totalRounds: dailyRounds,
