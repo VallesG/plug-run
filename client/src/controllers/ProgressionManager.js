@@ -149,8 +149,10 @@ export default class ProgressionManager {
       });
 
       // Submit score to daily leaderboard IMMEDIATELY (await to ensure it completes)
-      console.log(`[ProgressionManager] 🚀 SUBMITTING SCORE NOW - Round ${this.scene.pveRound}, Stash: ${this.scene.pveSessionStash}, Rep: ${this.scene.pveSessionRep}`);
-      await submitScore(this.scene.role, this.scene.pveRound, this.scene.pveSessionStash, this.scene.pveSessionRep);
+      // Stash = current round for both modes (you just completed this round successfully)
+      const stashToSubmit = this.scene.pveRound;
+      console.log(`[ProgressionManager] 🚀 SUBMITTING SCORE NOW - Round ${this.scene.pveRound}, Stash: ${stashToSubmit}, Rep: ${this.scene.pveSessionRep}`);
+      await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, this.scene.pveSessionRep);
       console.log('[ProgressionManager] ✅ Score submitted successfully to Supabase!');
 
       // Log activity feed event: Runner extracted successfully
@@ -362,10 +364,13 @@ export default class ProgressionManager {
     updateRouteProgress(this.scene.role, roundNumber);
 
     // Submit score to daily and all-time leaderboards (await to ensure completion)
-    console.log(`[ProgressionManager] 🚀 GAME OVER - Submitting final scores - Round ${roundNumber}, Stash: ${this.scene.pveSessionStash}, Rep: ${this.scene.pveSessionRep}`);
+    // Game over means you failed current round, so stash = last completed round (current - 1)
+    // Example: Died on round 7 = completed round 6 = 6 stash
+    const stashToSubmit = Math.max(0, roundNumber - 1);
+    console.log(`[ProgressionManager] 🚀 GAME OVER - Submitting final scores - Round ${roundNumber}, Stash: ${stashToSubmit}, Rep: ${this.scene.pveSessionRep}`);
     await Promise.all([
-      submitScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep),
-      submitAllTimeScore(this.scene.role, roundNumber, this.scene.pveSessionStash, this.scene.pveSessionRep)
+      submitScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep),
+      submitAllTimeScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep)
     ]);
     console.log('[ProgressionManager] ✅ Final scores submitted to Supabase!');
 

@@ -2427,8 +2427,10 @@ export class BaseGameScene extends Phaser.Scene {
     updateRouteProgress(this.role, currentRound);
 
     // Submit score to daily leaderboard IMMEDIATELY (await to ensure it completes)
-    console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE NOW - Round ${currentRound}, Stash: ${this.pveSessionStash}, Rep: ${this.pveSessionRep}`);
-    await submitScore(this.role, currentRound, this.pveSessionStash, this.pveSessionRep);
+    // Stash = current round (plugs earn stash by eliminating runners)
+    const stashToSubmit = currentRound;
+    console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE NOW - Round ${currentRound}, Stash: ${stashToSubmit}, Rep: ${this.pveSessionRep}`);
+    await submitScore(this.role, currentRound, stashToSubmit, this.pveSessionRep);
     console.log('[BaseGameScene] ✅ Score submitted successfully to Supabase!');
 
     // Log activity feed event: Plug stopped runner
