@@ -508,23 +508,45 @@ export class TutorialMiniScene extends Phaser.Scene {
     }
   }
 
-  refreshSidebarStats() {
-    // Update sidebar with current user stats
-    const user = getCurrentUserSync();
-    const stats = user.stats || {};
+  async refreshSidebarStats() {
+    // Update sidebar with TODAY's stats (from current route)
+    try {
+      // Import getUserScore dynamically
+      const { getUserScore } = await import('../utils/leaderboardManager.js');
 
-    const statsToShow = {
-      totalRounds: stats.totalRounds || 0,
-      totalStash: stats.totalStash || 0,
-      repEarned: stats.totalRep || 0,
-      bestRunner: stats.bestRunnerRound || 0,
-      bestPlug: stats.bestPlugRound || 0
-    };
+      // Fetch daily scores for both roles
+      const [runnerScore, plugScore] = await Promise.all([
+        getUserScore('runner'),
+        getUserScore('plug')
+      ]);
 
-    console.log('[Tutorial] refreshSidebarStats called with:', statsToShow);
-    console.log('[Tutorial] User stats object:', stats);
+      // Calculate today's totals
+      const dailyRounds = (runnerScore ? 1 : 0) + (plugScore ? 1 : 0);
+      const dailyStash = (runnerScore?.stash || 0) + (plugScore?.stash || 0);
+      const dailyRep = (runnerScore?.rep || 0) + (plugScore?.rep || 0);
+      const bestRunner = runnerScore?.round || 0;
+      const bestPlug = plugScore?.round || 0;
 
-    updateStats(statsToShow);
+      const statsToShow = {
+        totalRounds: dailyRounds,
+        totalStash: dailyStash,
+        repEarned: Math.round(dailyRep),
+        bestRunner,
+        bestPlug
+      };
+
+      console.log('[Tutorial] refreshSidebarStats called with:', statsToShow);
+      updateStats(statsToShow);
+    } catch (err) {
+      console.warn('[TutorialMiniScene] Failed to refresh sidebar stats:', err);
+      updateStats({
+        totalRounds: 0,
+        totalStash: 0,
+        repEarned: 0,
+        bestRunner: 0,
+        bestPlug: 0
+      });
+    }
   }
 
   clearTutorialStats() {

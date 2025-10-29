@@ -397,12 +397,12 @@ export function createPersonalStats(container, mode = null) {
         font-family: 'Highway Gothic', 'Arial Narrow', sans-serif;
         text-shadow: 1.5px 1.5px #000000;
         letter-spacing: 2px;
-      ">PROGRESS TRACKER</div>
+      ">TODAY'S RUN</div>
     </div>
     <div style="padding: 0 15px;">
-      ${createStatRow('Total Rounds', '0', '#fbbf24', 'stat-total-rounds')}
-      ${createStatRow('Total STASH', '0', '#86efac', 'stat-total-stash')}
-      ${createStatRow('REP Earned', '0', '#ffd166', 'stat-rep-earned')}
+      ${createStatRow('Rounds Today', '0', '#fbbf24', 'stat-total-rounds')}
+      ${createStatRow('STASH Today', '0', '#86efac', 'stat-total-stash')}
+      ${createStatRow('REP Today', '0', '#ffd166', 'stat-rep-earned')}
       ${createStatRow('Best Runner', '0', '#60a5fa', 'stat-best-runner')}
       ${createStatRow('Best Plug', '0', '#f87171', 'stat-best-plug')}
 
