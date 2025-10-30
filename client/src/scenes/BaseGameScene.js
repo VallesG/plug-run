@@ -98,11 +98,10 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('decoy',        ['/audio/decoy.ogg',        '/audio/decoy.mp3']);
       this.load.audio('phase',        ['/audio/phase.ogg',        '/audio/phase.mp3']);
 
-      // Background music
-      this.load.audio('main_beat',    ['/audio/main_beat.ogg',    '/audio/main_beat.mp3']);
-      this.load.audio('learn_beat',   ['/audio/learn_beat.ogg',   '/audio/learn_beat.mp3']);
-      this.load.audio('plug_beat',    ['/audio/plug_beat.ogg',    '/audio/plug_beat.mp3']);
-      this.load.audio('plug_beat2',   ['/audio/plug_beat2.ogg',   '/audio/plug_beat2.mp3']);
+      // Background music (keys must match what AudioManager.playMusic expects)
+      this.load.audio('bg_main',  ['/audio/main_beat.ogg',  '/audio/main_beat.mp3']);
+      this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
+      this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
     } catch {}
   }
 
@@ -1049,6 +1048,8 @@ export class BaseGameScene extends Phaser.Scene {
     if (this.mode === 'pve') {
       applyPlugProgression(this);
       applyRunnerProgression(this);
+
+      // Start/adjust background music (handles round-based volume ramping)
       this.applyMusicRamp();
     }
 
@@ -2619,42 +2620,49 @@ export class BaseGameScene extends Phaser.Scene {
 
   applyMusicRamp(){
     if (!this.pveRound) return;
-    if (!this.audio?.music?.sound) return;
 
     const round = this.pveRound;
-    const musicKey = this.audio.music.key;
 
-    // Define base/max volumes per track (matches MenuScene initial volumes)
+    // Determine which music track to play
+    const musicKey = this.role === 'plug' ? 'bg_plug' : (this.mode === 'tutorial' ? 'bg_learn' : 'bg_main');
+
+    // Define base/max volumes per track
     let baseVol = 0.20;  // starting volume (round 1)
     let maxVol = 0.50;   // max volume at high rounds
 
     if (musicKey === 'bg_plug') {
-      baseVol = 0.28;  // matches MenuScene.js:1354
+      baseVol = 0.28;
       maxVol = 0.50;
     } else if (musicKey === 'bg_main') {
-      baseVol = 0.20;  // matches MenuScene.js:1336
+      baseVol = 0.20;
       maxVol = 0.45;
     } else if (musicKey === 'bg_learn') {
-      baseVol = 0.30;  // matches MenuScene.js:1323
+      baseVol = 0.30;
       maxVol = 0.40;
     }
 
     // VOLUME RAMP: Gradual increase from round 1 → round 30
-    // Round 1: baseVol, Round 30+: maxVol
     const rampEnd = 30;
     const volumeBoost = Math.min(1.0, (round - 1) / (rampEnd - 1));
     const targetVolume = baseVol + (maxVol - baseVol) * volumeBoost;
 
     // FILTER SWEEP: Low-pass filter opens up from muffled → clear
-    // Round 1: 600 Hz (muffled/distant), Round 30+: 20000 Hz (full clarity)
     const minCutoff = 600;   // very muffled at start
     const maxCutoff = 20000; // full frequency range (no filtering)
     const targetCutoff = minCutoff + (maxCutoff - minCutoff) * volumeBoost;
 
-    // Apply volume and filter changes with smooth transitions
+    // START music if not already playing, otherwise just adjust volume
     try {
-      this.audio.playMusic(musicKey, { volume: targetVolume, loop: true, fade: 800 });
-      this.audio.setMusicFilterCutoff(targetCutoff, 800);
+      if (!this.audio?.music?.sound || this.audio.music.key !== musicKey) {
+        // Music not playing or wrong track - start it
+        this.audio.playMusic(musicKey, { volume: targetVolume, loop: true, fade: 800 });
+        this.audio.setMusicFilterCutoff(targetCutoff, 0); // Start muffled
+      } else {
+        // Music already playing - just adjust volume and filter (don't call playMusic again!)
+        this.audio._musicVolState.base = targetVolume * this.audio.masterVolume * (this.audio.muted ? 0 : 1) * this.audio._volMusic;
+        this.audio._applyMusicVolume();
+        this.audio.setMusicFilterCutoff(targetCutoff, 800);
+      }
     } catch {}
   }
 

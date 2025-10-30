@@ -427,11 +427,11 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.autoDrift = true;
     this._runnerInputDir = { x: 1, y: 0 };
 
-    // Weapon stats for stage 5 (matching PvpScene)
+    // Weapon stats for stage 5 (matching BaseGameScene plug mode)
     this.weaponStats = {
-      pistol:   { clip: 12, speed: 320, color: 0xff4444, spreadAngles: [0] },
-      shotgun:  { clip: 8,  speed: 280, color: 0xff4444, spreadAngles: [-12, 0, 12] },
-      rifle:    { clip: 10, speed: 360, color: 0xff4444, spreadAngles: [0] }
+      pistol:   { clip: 16, speed: 320, color: 0xff4444, spreadAngles: [0] },
+      shotgun:  { clip: 10, speed: 280, color: 0xff4444, spreadAngles: [-12, 0, 12] },
+      rifle:    { clip: 12, speed: 360, color: 0xff4444, spreadAngles: [0] }
     };
   }
 
@@ -441,10 +441,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.pausedForModal = false;
     this.userTookOver = false;
 
-    // Initialize audio (music already started in MenuScene)
+    // Initialize audio and start tutorial music
     try {
       this.audio = AudioManager.get(this);
       this.audio.ensureUnlocked(this);
+      this.audio.playMusic('bg_learn', { volume: 0.3, loop: true, fade: 800 });
+      this.audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
     } catch {}
 
     // Force high-contrast bullets ON (matches main game)
@@ -1268,6 +1270,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.showCarBeacon = () => {
       if (!this.car) return;
       this.hideCarBeacon();
+
+      // Start engine idle loop when extraction becomes available
+      try {
+        this.audio?.startEngineLoop?.();
+      } catch {}
+
       const noseX = this.car.x + dx * (this.cell * 0.8);
       const noseY = this.car.y + dy * (this.cell * 0.8);
       const c = this.add.container(noseX, noseY).setDepth(1300);
@@ -1283,8 +1291,11 @@ export class TutorialMiniScene extends Phaser.Scene {
       if (this.carBeacon){ this.carBeacon.destroy(); this.carBeacon = null; }
     };
 
-    // Show beacon in all stages for visibility
-    this.showCarBeacon();
+    // Beacon/engine controlled by each stage's logic:
+    // Stage 1: showCarBeacon called when user clicks Start (resumeFromModal)
+    // Stage 2: showCarBeacon called when user picks up real stash
+    // Stage 3: showCarBeacon called when both powers used AND real stash picked up
+    // Stage 4 & 5: showCarBeacon called when runner picks up real stash (normal game logic)
 
     // Extract pad for collision - slightly larger than PvP for mobile-friendly extraction
     this.extractPad = this.add.rectangle(cx, cy, this.cell*2.8, this.cell*2.8, 0x0ea5e9, 0)
@@ -1611,9 +1622,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     cam.setZoom(1);
     this.pointer = null;
 
-    // Stage 1: extraction is available from start, so start engine and lights when stage begins
+    // Stage 1: extraction is available when user clicks Start
     if (this.stageIdx === 1) {
-      try { this.audio?.startEngineLoop(); } catch {}
+      this.showCarBeacon(); // This starts engine and shows beacon
       this.setCarLights(true);
     }
   }
@@ -2001,9 +2012,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     ).setOrigin(0.5).setDepth(20002);
     // Gun options
     const guns = [
-      { key:'pistol', label:'PISTOL', ammo: 12 },
-      { key:'shotgun', label:'SHOTGUN', ammo: 8 },
-      { key:'rifle', label:'RIFLE', ammo: 10 }
+      { key:'pistol', label:'PISTOL', ammo: 16 },
+      { key:'shotgun', label:'SHOTGUN', ammo: 10 },
+      { key:'rifle', label:'RIFLE', ammo: 12 }
     ];
     const btnW = (panelW - 40) / guns.length;
     const btnH = 70;
@@ -2334,9 +2345,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.runner.x = this.toWorldX(cx);
     this.runner.y = this.toWorldY(cy);
     this._didDash = true;
-    // In stage 3, start engine if both power slots consumed AND stash picked up
+    // In stage 3, start engine and show beacon if both power slots consumed AND stash picked up
     if (this.stageIdx === 3 && this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
       try { this.audio?.startEngineLoop(); } catch {}
+      this.showCarBeacon();
     }
   }
 
@@ -2355,9 +2367,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     const power = this.runnerPowersSelected[idx];
     this.performRunnerPower(power);
     this.runnerPowersConsumed[idx] = true;
-    // In stage 3, start engine if both power slots now consumed AND stash picked up
+    // In stage 3, start engine and show beacon if both power slots now consumed AND stash picked up
     if (this.stageIdx === 3 && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
       try { this.audio?.startEngineLoop(); } catch {}
+      this.showCarBeacon();
     }
   }
 
@@ -2415,9 +2428,10 @@ export class TutorialMiniScene extends Phaser.Scene {
       this._didPhase = true;
       this._phaseActive = true;
       if (this.runner?.sprite) this.runner.sprite.setAlpha(0.35);
-      // In stage 3, start engine if both power slots consumed AND stash picked up
+      // In stage 3, start engine and show beacon if both power slots consumed AND stash picked up
       if (this.stageIdx === 3 && this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
         try { this.audio?.startEngineLoop(); } catch {}
+        this.showCarBeacon();
       }
     } else if (power === 'dash'){
       // Play dash sound effect (quieter and much faster to match instant teleport)
@@ -2443,9 +2457,10 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.decoyExpiresAt = now + 5500; // 5.5 seconds
       const speed = this.cell * 7.0 * 0.9; // Slightly slower than runner
       this.decoyVelocity = { x: dir.x * speed, y: dir.y * speed };
-      // In stage 3, start engine if both power slots consumed AND stash picked up
+      // In stage 3, start engine and show beacon if both power slots consumed AND stash picked up
       if (this.stageIdx === 3 && this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1] && this.hasPackage) {
         try { this.audio?.startEngineLoop(); } catch {}
+        this.showCarBeacon();
       }
     }
   }
@@ -3252,8 +3267,9 @@ export class TutorialMiniScene extends Phaser.Scene {
         if (this.progressionManager?.repTracker) {
           this.progressionManager.repTracker.onStashPickup(false); // Tracks RUNNER_GOT_STASH penalty
         }
-        // Start engine sounds when AI runner gets stash
+        // Start engine and show beacon when AI runner gets stash
         try { this.audio?.startEngineLoop(); } catch {}
+        this.showCarBeacon();
       }
 
       // Check if AI runner extracted (player loses - no stats awarded)
@@ -3445,12 +3461,12 @@ export class TutorialMiniScene extends Phaser.Scene {
           // Play pickup sounds
           try { this.audio?.play('pickup', { volume: 0.9, rateRand: 0.04 }); } catch {}
           try { this.audio?.play('spickup', { volume: 0.85, rateRand: 0.03 }); } catch {}
-          // Only start engine if both power slots have been consumed
+          // Only start engine and show beacon if both power slots have been consumed
           if (this.runnerPowersConsumed && this.runnerPowersConsumed[0] && this.runnerPowersConsumed[1]) {
             try { this.audio?.startEngineLoop(); } catch {}
+            this.showCarBeacon();
           }
           // No toast in Stage 3 - powers tutorial
-          this.showCarBeacon();
         } else if (this.bunkStash && this.overlaps(this.runner, this.bunkStash)) {
           // Play bunk pickup sound
           try { this.audio?.play('bpickup', { volume: 0.85, rateRand: 0.03 }); } catch {}

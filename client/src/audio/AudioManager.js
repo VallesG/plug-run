@@ -6,11 +6,22 @@ export class AudioManager {
 
   static get(scene) {
     if (!AudioManager._instance) {
+      console.log('[AudioManager] Creating NEW instance');
+      console.log('[AudioManager] scene:', scene);
+      console.log('[AudioManager] scene.sys:', scene?.sys);
+      console.log('[AudioManager] scene.sys.config:', scene?.sys?.config);
+      console.log('[AudioManager] scene.sys.config.key:', scene?.sys?.config?.key);
       AudioManager._instance = new AudioManager(scene);
     } else if (scene) {
+      console.log('[AudioManager] Updating existing instance');
+      console.log('[AudioManager] NEW scene param:', scene);
+      console.log('[AudioManager] NEW scene.sys:', scene?.sys);
+      console.log('[AudioManager] NEW scene.sys.config.key:', scene?.sys?.config?.key);
+      console.log('[AudioManager] BEFORE update - this.scene:', AudioManager._instance.scene);
       // Always adopt the latest active scene so tweens run reliably across transitions
       AudioManager._instance.scene = scene;
       AudioManager._instance.sound = scene.sound;
+      console.log('[AudioManager] AFTER update - this.scene:', AudioManager._instance.scene);
       // Keep context reference fresh (some platforms swap implementations)
       AudioManager._instance._ctx = AudioManager._instance.sound?.context || AudioManager._instance._ctx || null;
     }
@@ -186,19 +197,43 @@ export class AudioManager {
 
   // Background music with crossfade (respects master, music bus, ducking)
   playMusic(key, { volume = 0.5, loop = true, fade = 300 } = {}) {
-    if (!this.scene || !this.sound) return;
+    console.log('[AudioManager] playMusic called - key:', key, 'volume:', volume, 'scene:', this.scene?.sys?.config?.key);
+
+    if (!this.scene || !this.sound) {
+      console.log('[AudioManager] NO SCENE OR SOUND!');
+      return;
+    }
+
+    // Check if audio exists in cache
+    const audioExists = this.scene?.cache?.audio?.exists?.(key);
+    console.log('[AudioManager] Audio in cache?', key, '=', audioExists);
+    if (!audioExists) {
+      console.error('[AudioManager] Audio key NOT in cache:', key);
+      console.log('[AudioManager] Available audio keys:', this.scene?.cache?.audio?.entries?.keys ? Array.from(this.scene.cache.audio.entries.keys()) : 'N/A');
+      return;
+    }
 
     // Store the last music track and options for resuming after unmute
     this._lastMusicKey = key;
     this._lastMusicOpts = { volume, loop, fade };
 
-    if (this.isMuted() || this.musicMuted) return;
+    if (this.musicMuted) {
+      console.log('[AudioManager] Music is muted, not playing');
+      return;
+    }
     // Base (pre-duck) target
     const baseTarget = Math.max(0, Math.min(1, volume)) * this.masterVolume * (this.muted ? 0 : 1) * this._volMusic;
 
     if (this.music && this.music.key === key) {
       // Just adjust base volume target (preserves duck multiplier)
       if (this.music.sound) {
+        // Make sure it's actually playing
+        if (!this.music.sound.isPlaying) {
+          try {
+            this.music.sound.play();
+          } catch (e) {}
+        }
+
         // Kill existing volume tween before creating new one
         if (this._musicVolTween) {
           try { this._musicVolTween.remove(); } catch {}
@@ -224,17 +259,19 @@ export class AudioManager {
       return;
     }
 
-    // Prepare new sound (attempt regardless of exists() to avoid cache edge cases)
+    // Prepare new sound - start with target volume to avoid tween race conditions
     let next = null;
     try {
-      next = this.sound.add(key, { loop: !!loop, volume: 0 });
+      next = this.sound.add(key, { loop: !!loop, volume: baseTarget });
+      console.log('[AudioManager] Created sound with volume:', baseTarget);
       next.play();
+      console.log('[AudioManager] Sound playing, isPlaying:', next.isPlaying);
 
       // Set up low-pass filter for adaptive music (Web Audio API)
       this._setupMusicFilter(next);
     } catch (e) {
       next = null;
-      // eslint-disable-next-line no-console
+      console.error('[AudioManager] ERROR creating sound:', e);
       try { console.info('[Audio] Could not start music for key:', key, e?.message || e); } catch {}
     }
 
@@ -256,21 +293,9 @@ export class AudioManager {
 
     if (next) {
       this.music = { key, sound: next };
-      // Initialize base target to 0 and tween up to target (duck applied via _applyMusicVolume)
-      this._musicVolState.base = 0;
-      if (fade > 0 && this.scene?.tweens) {
-        this._musicVolTween = this.scene.tweens.add({
-          targets: this._musicVolState,
-          base: baseTarget,
-          duration: fade,
-          ease: 'Sine.easeOut',
-          onUpdate: () => this._applyMusicVolume(),
-          onComplete: () => this._applyMusicVolume()
-        });
-      } else {
-        this._musicVolState.base = baseTarget;
-        this._applyMusicVolume();
-      }
+      // Set base volume state to match what we just set
+      this._musicVolState.base = baseTarget;
+      console.log('[AudioManager] Music started at volume:', baseTarget);
     } else {
       this.music = { key: null, sound: null };
     }
@@ -403,19 +428,31 @@ export class AudioManager {
 
   // Internal: recompute and apply final music volume
   _applyMusicVolume() {
+    console.log('[AudioManager] _applyMusicVolume CALLED');
     const s = this.music?.sound;
-    if (!s) return;
+    if (!s) {
+      console.log('[AudioManager] No sound, returning');
+      return;
+    }
 
     // Check if sound is still valid (not destroyed)
     try {
-      if (!s.game || s.pendingRemove) return;
-    } catch {
+      console.log('[AudioManager] Sound state - game:', !!s.game, 'pendingRemove:', s.pendingRemove, 'isPlaying:', s.isPlaying, 'key:', s.key);
+      if (!s.game || s.pendingRemove) {
+        console.log('[AudioManager] Sound invalid or pending remove, returning');
+        return;
+      }
+    } catch (e) {
+      console.log('[AudioManager] Exception checking sound validity:', e);
       return; // Sound is in invalid state
     }
 
     const duck = this._duck?.mult ?? 1;
-    const finalVol = Math.max(0, Math.min(1, (this._musicVolState.base || 0) * duck));
+    const base = this._musicVolState.base || 0;
+    const finalVol = Math.max(0, Math.min(1, base * duck));
+    console.log('[AudioManager] Setting volume - base:', base, 'duck:', duck, 'final:', finalVol);
     try { s.setVolume(finalVol); } catch {}
+    console.log('[AudioManager] Volume set to:', s.volume);
   }
 
   // Music ducking API (WebAudio present only)
@@ -494,63 +531,27 @@ export class AudioManager {
 
     // If idle already playing, just ensure it's audible
     if (this._engineIdle && this._engineIdle.sound) {
-      // Kill existing tween before creating new one
-      if (this._engineIdle.tween) {
-        try { this._engineIdle.tween.remove(); } catch {}
-      }
-      if (this._engineIdle.volState && this.scene?.tweens) {
-        try { this.scene.tweens.killTweensOf(this._engineIdle.volState); } catch {}
-      }
-
       const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
       const idle = this._engineIdle.sound;
-      if (!this._engineIdle.volState) {
-        this._engineIdle.volState = { vol: idle.volume || 0 };
-      }
       try {
-        this._engineIdle.tween = this.scene?.tweens?.add({
-          targets: this._engineIdle.volState,
-          vol: finalTarget,
-          duration: 250,
-          ease: 'Sine.easeOut',
-          onUpdate: () => {
-            try {
-              if (idle && idle.game && !idle.pendingRemove) {
-                idle.setVolume(this._engineIdle.volState.vol);
-              }
-            } catch {}
-          }
-        });
+        idle.setVolume(finalTarget);
+        console.log('[AudioManager] Engine idle already running, volume set to:', finalTarget);
       } catch {}
       return;
     }
 
-    // Start idle loop (even if not cached; will no-op safely)
+    // Start idle loop with target volume (avoid tween race conditions)
     let idle = null;
     try {
-      idle = this.sound.add('engine_idle', { loop: true, volume: 0 });
+      const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
+      idle = this.sound.add('engine_idle', { loop: true, volume: finalTarget });
       idle.play();
+      console.log('[AudioManager] Engine idle loop started at volume:', finalTarget);
     } catch { idle = null; }
     if (!idle) return;
 
-    const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
-    const volState = { vol: 0 };
+    const volState = { vol: idle.volume };
     this._engineIdle = { sound: idle, tween: null, volState };
-    try {
-      this._engineIdle.tween = this.scene?.tweens?.add({
-        targets: volState,
-        vol: finalTarget,
-        duration: 350,
-        ease: 'Sine.easeOut',
-        onUpdate: () => {
-          try {
-            if (idle && idle.game && !idle.pendingRemove) {
-              idle.setVolume(volState.vol);
-            }
-          } catch {}
-        }
-      });
-    } catch {}
   }
 
   stopEngineLoop() {

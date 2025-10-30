@@ -1878,13 +1878,7 @@ export class MenuScene extends Phaser.Scene {
     if (k === 'learn'){
       // Fade out street sounds
       this.fadeOutStreetSounds();
-      // Launch tutorial - start music immediately
-      try {
-        const audio = AudioManager.get(this);
-        audio.ensureUnlocked(this);
-        audio.playMusic('bg_learn', { volume: 0.3, loop: true, fade: 0 });
-        audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
-      } catch {}
+      // Music will be started in TutorialMiniScene (sounds must be created in the scene that uses them)
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
         trackNavigation('tutorial');
@@ -1893,13 +1887,7 @@ export class MenuScene extends Phaser.Scene {
     } else if (k === 'runner'){
       // Fade out street sounds
       this.fadeOutStreetSounds();
-      // Run the Block - start music immediately
-      try {
-        const audio = AudioManager.get(this);
-        audio.ensureUnlocked(this);
-        audio.playMusic('bg_main', { volume: 0.2, loop: true, fade: 0 });
-        audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
-      } catch {}
+      // Music will be started in BaseGameScene (sounds must be created in the scene that uses them)
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
         trackNavigation('runner_mode');
@@ -1913,13 +1901,7 @@ export class MenuScene extends Phaser.Scene {
     } else if (k === 'plug'){
       // Fade out street sounds
       this.fadeOutStreetSounds();
-      // Defend the Stash - start music immediately
-      try {
-        const audio = AudioManager.get(this);
-        audio.ensureUnlocked(this);
-        audio.playMusic('bg_plug', { volume: 0.28, loop: true, fade: 0 });
-        audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
-      } catch {}
+      // Music will be started in BaseGameScene (sounds must be created in the scene that uses them)
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
         trackNavigation('plug_mode');

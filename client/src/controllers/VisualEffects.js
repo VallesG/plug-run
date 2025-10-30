@@ -450,6 +450,11 @@ export default class VisualEffects {
     if (!this.scene.car) return;
     this.hideCarBeacon();
 
+    // Start engine idle loop when extraction becomes available
+    try {
+      this.scene.audio?.startEngineLoop?.();
+    } catch {}
+
     const noseX = this.scene.car.x + (this.scene.carOutDir?.x || 0) * (this.scene.cell * 0.8);
     const noseY = this.scene.car.y + (this.scene.carOutDir?.y || 0) * (this.scene.cell * 0.8);
     const c = this.scene.add.container(noseX, noseY).setDepth(1300);
