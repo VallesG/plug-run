@@ -2427,12 +2427,21 @@ export class BaseGameScene extends Phaser.Scene {
     // Track route progress for leaderboard
     updateRouteProgress(this.role, currentRound);
 
-    // Submit score to daily leaderboard IMMEDIATELY (await to ensure it completes)
+    // Submit score to daily leaderboard with cumulative rep (existing + session)
     // Stash = current round (plugs earn stash by eliminating runners)
     const stashToSubmit = currentRound;
-    console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE NOW - Round ${currentRound}, Stash: ${stashToSubmit}, Rep: ${this.pveSessionRep}`);
-    await submitScore(this.role, currentRound, stashToSubmit, this.pveSessionRep);
-    console.log('[BaseGameScene] ✅ Score submitted successfully to Supabase!');
+
+    // Fetch existing cumulative rep and add session rep for true total
+    try {
+      const { getUserScore } = await import('../utils/leaderboardManager.js');
+      const existingScore = await getUserScore(this.role);
+      const cumulativeRep = (existingScore?.rep || 0) + this.pveSessionRep;
+      console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE - Round ${currentRound}, Stash: ${stashToSubmit}, Session Rep: ${this.pveSessionRep}, Existing Rep: ${existingScore?.rep || 0}, Cumulative Rep: ${cumulativeRep}`);
+      await submitScore(this.role, currentRound, stashToSubmit, cumulativeRep);
+      console.log('[BaseGameScene] ✅ Score submitted successfully to Supabase!');
+    } catch (err) {
+      console.error('[BaseGameScene] ❌ Score submission failed:', err);
+    }
 
     // Log activity feed event: Plug stopped runner
     logPlugStop(currentRound);

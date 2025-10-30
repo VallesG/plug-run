@@ -148,12 +148,28 @@ export default class ProgressionManager {
         pveBestRound: this.scene.pveBestRound
       });
 
-      // Submit score to daily leaderboard IMMEDIATELY (await to ensure it completes)
+      // Submit score to daily leaderboard (don't await - let it happen in background for smooth animation)
       // Stash = current round for both modes (you just completed this round successfully)
       const stashToSubmit = this.scene.pveRound;
-      console.log(`[ProgressionManager] 🚀 SUBMITTING SCORE NOW - Round ${this.scene.pveRound}, Stash: ${stashToSubmit}, Rep: ${this.scene.pveSessionRep}`);
-      await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, this.scene.pveSessionRep);
-      console.log('[ProgressionManager] ✅ Score submitted successfully to Supabase!');
+
+      // Fetch existing cumulative rep from Supabase and add session rep to get true total
+      (async () => {
+        try {
+          const { getUserScore } = await import('../utils/leaderboardManager.js');
+          const existingScore = await getUserScore(this.scene.role);
+          const cumulativeRep = (existingScore?.rep || 0) + this.scene.pveSessionRep;
+          console.log(`[ProgressionManager] 🚀 SUBMITTING DAILY SCORE - Round ${this.scene.pveRound}, Stash: ${stashToSubmit}, Session Rep: ${this.scene.pveSessionRep}, Existing Rep: ${existingScore?.rep || 0}, Cumulative Rep: ${cumulativeRep}`);
+          await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, cumulativeRep);
+          console.log('[ProgressionManager] ✅ Daily score submitted successfully!');
+
+          // Also submit to all-time leaderboard (successful extraction = earned stash)
+          console.log(`[ProgressionManager] 🚀 SUBMITTING ALL-TIME - Stash earned: ${stashEarned}, Session Rep: ${this.scene.pveSessionRep}`);
+          await submitAllTimeScore(this.scene.role, this.scene.pveRound, stashEarned, this.scene.pveSessionRep);
+          console.log('[ProgressionManager] ✅ All-time score submitted successfully!');
+        } catch (err) {
+          console.error('[ProgressionManager] ❌ Score submission failed:', err);
+        }
+      })();
 
       // Log activity feed event: Runner extracted successfully
       logRunnerExtract(this.scene.pveRound, stashEarned > 0);
