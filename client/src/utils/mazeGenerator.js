@@ -52,6 +52,80 @@ const THEMES = [
     furnTint: 0xfff4e0,
     carTint: 0x60a5fa,
     floorSet: 'wood'
+  },
+  {
+    key: 'cyan_tech',
+    bg: 0x0a0e14,
+    floorTint: 0xa8b2c0,
+    wallFillTint: 0x1a2129,
+    wallEdgeTint: 0x22d3ee,
+    furnTint: 0xd1dce5,
+    carTint: 0x67e8f9,
+    floorSet: 'checker',
+    checkerColors: [0xd1d5db, 0xe5e7eb]
+  },
+  {
+    key: 'purple_noir',
+    bg: 0x0d0a12,
+    floorTint: 0xb8a8c8,
+    wallFillTint: 0x1f1a28,
+    wallEdgeTint: 0xa855f7,
+    furnTint: 0xe8dcf5,
+    carTint: 0xc084fc,
+    floorSet: 'wood'
+  },
+  {
+    key: 'sunset_coral',
+    bg: 0x120a0d,
+    floorTint: 0xf5d5c8,
+    wallFillTint: 0x2a1a1f,
+    wallEdgeTint: 0xfb7185,
+    furnTint: 0xffeee8,
+    carTint: 0xfda4af,
+    floorSet: 'wood'
+  },
+  {
+    key: 'teal_modern',
+    bg: 0x0a1214,
+    floorTint: 0xd8e8e8,
+    wallFillTint: 0x1a2528,
+    wallEdgeTint: 0x14b8a6,
+    furnTint: 0xeef8f8,
+    carTint: 0x5eead4,
+    floorSet: 'checker',
+    checkerColors: [0xe0f2f1, 0xf3f8f8]
+  },
+  {
+    key: 'amber_lounge',
+    bg: 0x100e0a,
+    floorTint: 0xf0d5a0,
+    wallFillTint: 0x252218,
+    wallEdgeTint: 0xfbbf24,
+    furnTint: 0xfff5e0,
+    carTint: 0xfcd34d,
+    floorSet: 'wood'
+  },
+  {
+    key: 'magenta_electric',
+    bg: 0x140a12,
+    floorTint: 0xe8c8e0,
+    wallFillTint: 0x2d1a28,
+    wallEdgeTint: 0xe879f9,
+    furnTint: 0xfde8f8,
+    carTint: 0xf0abfc,
+    floorSet: 'checker',
+    checkerColors: [0xf5d0fe, 0xfae8ff]
+  },
+  {
+    key: 'navy_industrial',
+    bg: 0x080b12,
+    floorTint: 0x9aa8c0,
+    wallFillTint: 0x1a1f2d,
+    wallEdgeTint: 0x3b82f6,
+    furnTint: 0xc8d4e8,
+    carTint: 0x60a5fa,
+    floorSet: 'checker',
+    checkerColors: [0xbfdbfe, 0xdbeafe]
   }
 ];
 
