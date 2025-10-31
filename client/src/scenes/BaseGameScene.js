@@ -522,7 +522,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Choose visual theme deterministically per seed, but guarantee change from last match
     const themeRng = makeRng((this.seed ^ 0x9E3779B9) | 0);
-    const baseIdx = (((themeRng()*1000000)|0) % THEMES.length);
+    const baseIdx = Math.floor(themeRng() * THEMES.length);
     const prevIdx = parseInt((typeof localStorage!== 'undefined' ? localStorage.getItem('pr_lastThemeIdx') : '-1') || '-1', 10);
     let idx = baseIdx;
     if (THEMES.length > 1 && idx === prevIdx){
