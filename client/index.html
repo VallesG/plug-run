@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Plug Run LA</title>
+
+    <!-- Mobile-first: lock scale, prevent zoom -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/favicon-192x192.png">
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M68K7J4ZZ2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-M68K7J4ZZ2', {
+        'anonymize_ip': true,
+        'cookie_flags': 'SameSite=None;Secure'
+      });
+    </script>
+
+
+    <style>
+      /* Fill screen, dark theme, no scrollbars */
+      html, body, #app {
+        margin: 0;
+        height: 100%;
+        background: #0b0b12;
+        color: #fff;
+        overflow: hidden; /* no scrolling on mobile */
+      }
+
+      /* Let Phaser handle all touch gestures (no double-tap zoom, no pull-to-refresh) */
+      canvas {
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        display: block; /* remove tiny gaps on some browsers */
+      }
+
+      /* Zoom warning banner */
+      #zoom-warning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #fbbf24;
+        color: #000;
+        padding: 12px 16px;
+        text-align: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      }
+
+      #zoom-warning.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="zoom-warning">
+      ⚠️ For best experience, set browser zoom to 100% and refresh the page.
+    </div>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
