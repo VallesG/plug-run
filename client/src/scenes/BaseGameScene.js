@@ -605,23 +605,26 @@ export class BaseGameScene extends Phaser.Scene {
 
     console.log('[create] Round', this.pveRound, '- Created attacker, children count:', this.attacker.list.length);
 
-    // Dual AI: Spawn second opponent at round 13+ (PvE mode only)
+    // Dual AI: Spawn second opponent at round 8+ (PvE mode only).
+    // Rounds 8-12 the second AI spawns with reduced HP as a ramp;
+    // full HP from round 13 (the old dual-AI threshold).
     this.attacker2 = null;
     this.defender2 = null;
-    if (this.mode === 'pve' && this.pveRound >= 13) {
+    if (this.mode === 'pve' && this.pveRound >= 8) {
+      const fullStrength = this.pveRound >= 13;
       // Only spawn second AI opponent, not second player
       if (this.role === 'plug') {
         // Player is defender, spawn second runner (attacker)
         const altRunnerSpawn = this.findAlternateSpawn(a, 'runner');
         this.attacker2 = makeRunnerSprite(this, this.toWorldX(altRunnerSpawn.x), this.toWorldY(altRunnerSpawn.y), this.cell).setVisible(false);
-        this.attacker2.hp = 2;
+        this.attacker2.hp = fullStrength ? 2 : 1;
         if (this.wallMask) this.attacker2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Plug Mode - Spawning second runner, children count:', this.attacker2.list.length);
       } else if (this.role === 'runner') {
         // Player is attacker, spawn second plug (defender)
         const altPlugSpawn = this.findAlternateSpawn(d, 'plug');
         this.defender2 = makePlugSprite(this, this.toWorldX(altPlugSpawn.x), this.toWorldY(altPlugSpawn.y), this.cell).setVisible(false);
-        this.defender2.hp = 3;
+        this.defender2.hp = fullStrength ? 3 : 2;
         if (this.wallMask) this.defender2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Runner Mode - Spawning second plug');
       }
@@ -1351,17 +1354,27 @@ export class BaseGameScene extends Phaser.Scene {
       if (gapSide === 'E') return x >= cols && y >= gapLoY && y <= gapHiY;
       return false;
     };
+    // Theme-independent "street reflector" dashes over the margin fill.
+    // (Some themes' wall tint happens to reveal texture flecks that look
+    // like this — this makes the effect deliberate and visible on ALL
+    // themes, including dark/black ones.)
+    const marks = this.add.graphics().setDepth(4);
+    marks.fillStyle(0xf5c542, 0.55);
+    const mw = Math.max(3, Math.floor(cell * 0.16));
+    const mh = Math.max(2, Math.floor(cell * 0.08));
     for (let y = -ringsY; y < rows + ringsY; y++){
       for (let x = -ringsX; x < cols + ringsX; x++){
-        // skip the maze interior — only paint outside the grid
         if (x >= 0 && x < cols && y >= 0 && y < rows) continue;
         if (inDrivewayCorridor(x, y)) continue;
         const wx = pad.x + x*cell + cell/2;
         const wy = pad.y + y*cell + cell/2;
         const base = this.add.image(wx, wy, 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
         base.setDisplaySize(cell, cell); this.walls.add(base);
+        // one dash per tile, offset toward top-left like a reflector stud
+        marks.fillRect(wx - cell*0.28, wy - cell*0.22, mw, mh);
       }
     }
+    this.walls.add(marks);
   }
 
   placeGetawayCar(){
@@ -2881,5 +2894,3 @@ export class BaseGameScene extends Phaser.Scene {
  * near the top of your existing update() function (already done in your snippet).
  */
 ;
-   
-

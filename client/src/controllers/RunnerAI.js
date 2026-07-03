@@ -92,6 +92,15 @@ export function applyRunnerProgression(scene) {
   // Round 1: 5 cells | Round 10: 4.1 | Round 20: 3.1 | Round 31: 2.0 (capped)
   scene.aiRunner.panicThreshold = Math.max(2, 5 - (round - 1) * 0.10);
 
+  // JUKE DISTANCE (was hardcoded 0 = never dodges): from round 5 the
+  // runner starts side-stepping around a close plug instead of running
+  // straight into the gun. Round 5: 1 cell | Round 9: 2 | Round 13+: 3.
+  scene.aiRunner.jukeDist = round < 5 ? 0 : Math.min(3, 1 + (round - 5) * 0.25);
+
+  // BULLET DODGE SKILL: from round 6 the runner reacts to incoming fire
+  // with perpendicular dodges. Round 6: 8% | Round 12: 56% | Round 15+: 80%.
+  scene.aiRunner.dodgeSkill = round < 6 ? 0 : Math.min(0.8, (round - 5) * 0.08);
+
   // PANIC MULTIPLIER: Low mistakes even when panicking
   // Round 1: 1.5x | Round 10: 1.5x (stays at 1.5x)
   scene.aiRunner.panicMultiplier = 1.5; // Fixed - always calm under pressure
@@ -106,6 +115,8 @@ export function applyRunnerProgression(scene) {
  */
 export function resetRunnerOrientation(scene) {
   scene._aiRunnerOrientationTimer = 0;
+  // New round = new route: clear the detour waypoint so it re-rolls
+  scene._aiDetourCell = undefined;
 }
 
 /**
@@ -168,6 +179,27 @@ export function updateRunnerBehavior(scene, aiController, delta) {
       objectiveTarget = scene.toCell(scene.extract.x, scene.extract.y);
     }
 
+    // ROUTE VARIETY (round 3+): half the time, take a detour waypoint on
+    // the way to the stash so the approach path isn't the same beeline
+    // every round (campable). Cleared once reached or once stash is taken.
+    if (scene._aiDetourCell === undefined) {
+      scene._aiDetourCell = null;
+      if ((scene.pveRound || 1) >= 3 && Math.random() < 0.5) {
+        for (let tries = 0; tries < 20; tries++) {
+          const cx = 2 + ((Math.random() * (scene.cols - 4)) | 0);
+          const cy = 2 + ((Math.random() * (scene.rows - 4)) | 0);
+          if (scene.isWalkableCell?.(cx, cy)) { scene._aiDetourCell = { x: cx, y: cy }; break; }
+        }
+      }
+    }
+    if (scene._aiDetourCell && !scene.hasStash) {
+      if (toroDist(attackerCell, scene._aiDetourCell, scene.cols, scene.rows) <= 2) {
+        scene._aiDetourCell = null; // reached — continue to the real objective
+      } else {
+        objectiveTarget = scene._aiDetourCell;
+      }
+    }
+
     // Overcommit: Sometimes chase plug instead of going to objective (poor prioritization)
     const shouldOvercommit = Math.random() < overcommitChance;
     let targetCell = shouldOvercommit ? plugCell : objectiveTarget;
@@ -195,6 +227,36 @@ export function updateRunnerBehavior(scene, aiController, delta) {
     }
 
     let dir = { x: Math.sign(nextCell.x - attackerCell.x), y: Math.sign(nextCell.y - attackerCell.y) };
+
+    // BULLET DODGE (round 6+): if an incoming bullet will pass close to the
+    // runner soon, sidestep perpendicular to it (skill-gated per plan tick).
+    const dodgeSkill = scene.aiRunner.dodgeSkill || 0;
+    if (dodgeSkill > 0 && scene.bulletsD && Math.random() < dodgeSkill) {
+      const kids = scene.bulletsD.getChildren ? scene.bulletsD.getChildren() : [];
+      const a = scene.attacker;
+      const danger = Math.max(scene.cell * 0.9, 20);
+      for (let i = 0; i < kids.length && i < 12; i++) {
+        const b = kids[i];
+        if (!b || !b.active) continue;
+        const bvx = b.vx || 0, bvy = b.vy || 0;
+        const bs = Math.hypot(bvx, bvy);
+        if (bs < 1) continue;
+        // closest approach of bullet ray to runner within ~0.5s
+        const relX = a.x - b.x, relY = a.y - b.y;
+        const t = (relX * bvx + relY * bvy) / (bs * bs);
+        if (t < 0 || t > 0.5) continue; // moving away or too far out
+        const cxp = b.x + bvx * t, cyp = b.y + bvy * t;
+        if (Math.hypot(a.x - cxp, a.y - cyp) < danger) {
+          // dodge perpendicular to bullet travel, pick the walkable side
+          const pxd = { x: Math.sign(-bvy) || 0, y: Math.sign(bvx) || 0 };
+          const nxd = { x: -pxd.x, y: -pxd.y };
+          if (isWalkableDirFrom(scene, a, pxd)) dir = pxd;
+          else if (isWalkableDirFrom(scene, a, nxd)) dir = nxd;
+          break;
+        }
+      }
+    }
+
     const speed = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1); // No sprint boost - players can't sprint
 
     const opp = (a, b) => (a.x === -b.x && a.y === -b.y);

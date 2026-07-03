@@ -115,6 +115,49 @@ export function updatePlugBehavior(scene, dt) {
   const ay = targetY;
   const speed = scene.meleeEnabled ? scene.plugSpeedNoAmmo : scene.aiPlug.speed;
 
+  // ---- Movement target (may differ from aim target) -------------------
+  // ax/ay stay the AIM target (runner or decoy). moveX/moveY is where the
+  // plug PATHS to — smarter plugs predict and intercept instead of
+  // tail-chasing, which is trivially kiteable.
+  let moveX = targetX, moveY = targetY;
+  const targetingDecoy = (targetX !== scene.attacker.x || targetY !== scene.attacker.y);
+  const roundNow = scene.pveRound || 1;
+
+  // Estimate runner velocity (smoothed) for lead prediction
+  if (!scene._plugAIRunnerPrev) scene._plugAIRunnerPrev = { x: scene.attacker.x, y: scene.attacker.y };
+  if (!scene._plugAIRunnerVel) scene._plugAIRunnerVel = { x: 0, y: 0 };
+  if (dt > 0) {
+    const ivx = (scene.attacker.x - scene._plugAIRunnerPrev.x) / dt;
+    const ivy = (scene.attacker.y - scene._plugAIRunnerPrev.y) / dt;
+    scene._plugAIRunnerVel.x += (ivx - scene._plugAIRunnerVel.x) * 0.25;
+    scene._plugAIRunnerVel.y += (ivy - scene._plugAIRunnerVel.y) * 0.25;
+  }
+  scene._plugAIRunnerPrev = { x: scene.attacker.x, y: scene.attacker.y };
+
+  if (!targetingDecoy) {
+    // LEAD PREDICTION (round 4+): path to where the runner is HEADING.
+    // Lead time scales 0.06s (r4) → 0.9s (r18+).
+    if (roundNow >= 4) {
+      const leadTime = Math.min(0.9, (roundNow - 3) * 0.06);
+      const px = scene.attacker.x + scene._plugAIRunnerVel.x * leadTime;
+      const py = scene.attacker.y + scene._plugAIRunnerVel.y * leadTime;
+      const pc = scene.toCell(px, py);
+      if (scene.isWalkableCell?.(pc.x, pc.y)) { moveX = px; moveY = py; }
+    }
+
+    // GETAWAY INTERCEPTION (round 5+): if the runner has the stash and the
+    // plug can reach the extraction first, cut them off at the car instead
+    // of chasing the tail. Creates "he's guarding the exit" standoffs.
+    if (roundNow >= 5 && scene.hasStash && scene.extract) {
+      const plugToExit   = Math.hypot(scene.extract.x - d.x, scene.extract.y - d.y);
+      const runnerToExit = Math.hypot(scene.extract.x - scene.attacker.x, scene.extract.y - scene.attacker.y);
+      if (plugToExit < runnerToExit * 0.9) {
+        moveX = scene.extract.x;
+        moveY = scene.extract.y;
+      }
+    }
+  }
+
   // Track orientation delay timer (time since AI became active)
   if (!scene._aiOrientationTimer) scene._aiOrientationTimer = 0;
   scene._aiOrientationTimer += dt;
@@ -135,7 +178,7 @@ export function updatePlugBehavior(scene, dt) {
 
     if (!scene._aiPath || scene._aiPathfindTimer >= 0.5) {
       scene._aiPathfindTimer = 0;
-      scene._aiPath = scene.findPath?.(d.x, d.y, ax, ay);
+      scene._aiPath = scene.findPath?.(d.x, d.y, moveX, moveY);
       scene._aiPathIndex = 0; // Reset to start of path
     }
 
@@ -173,8 +216,9 @@ export function updatePlugBehavior(scene, dt) {
         }
       }
     } else {
-      // No path found - fall back to direct movement
-      const dirX = Math.sign(vx), dirY = Math.sign(vy);
+      // No path found - fall back to direct movement toward move target
+      const mvx = moveX - d.x, mvy = moveY - d.y;
+      const dirX = Math.sign(mvx), dirY = Math.sign(mvy);
       const magnitude = Math.sqrt(dirX * dirX + dirY * dirY);
       const normalizedDirX = magnitude > 0 ? dirX / magnitude : dirX;
       const normalizedDirY = magnitude > 0 ? dirY / magnitude : dirY;

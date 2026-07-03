@@ -2,8 +2,8 @@
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
-import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount } from '../utils/userManager.js';
-import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
+import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID } from '../utils/userManager.js';
+import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores, getLeaderboard, getAllTimeLeaderboard, formatNumber } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
@@ -59,29 +59,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(){
-    // Background: subtle moving parallax bands
     const W = this.scale.width, H = this.scale.height;
-    const bg = this.add.rectangle(W/2, H/2, W, H, PALETTE.bg, 1).setDepth(0);
-    // moving bands
-    const bands = this.add.group();
-    const makeBand = (y, w, alpha)=>{
-      const g = this.add.graphics().setDepth(0);
-      g.fillStyle(0x0e1624, alpha).fillRect(0, 0, w, 18);
-      const c = this.add.container(-w/2, y, [g]);
-      c.w = w; return c;
-    };
-    for (let i=0;i<6;i++){
-      const y = (H/6) * (i + 0.5);
-      const w = W * (1.2 + 0.6 * Math.random());
-      const a = 0.08 + 0.06 * Math.random();
-      bands.add(makeBand(y, w, a));
-    }
-    this.time.addEvent({ loop:true, delay: 16, callback:()=>{
-      bands.getChildren().forEach((b, idx)=>{
-        b.x += (0.25 + 0.15*idx);
-        if (b.x > W + b.w/2) b.x = -b.w/2;
-      });
-    }});
+    // Night street background: asphalt road, curbs, scrolling lane dashes
+    this.drawStreetBackground();
 
     // Top logo text - styled like a street sign
     const logoY = 36;
@@ -141,8 +121,8 @@ export class MenuScene extends Phaser.Scene {
 
     // Cards data - only show the two main game modes
     const modes = [
-      { key:'runner', title:'Run the Block',      sub:'1179 ST - Play as the runner. Evade the plug.', showTimer: true },
-      { key:'plug',   title:'Defend the Block',   sub:'42 ST - Play as the plug. Stop the runner.', showTimer: true }
+      { key:'runner', title:'Run the Block',      sub:'1179 ST - Play as the runner. Evade the plug.', showTimer: false },
+      { key:'plug',   title:'Defend the Block',   sub:'42 ST - Play as the plug. Stop the runner.', showTimer: false }
     ];
 
     // Carousel root container to keep z-order tidy
@@ -174,6 +154,13 @@ export class MenuScene extends Phaser.Scene {
 
     // User profile chip (clickable to show user's leaderboard position)
     this.profileChip = this.makeUserProfileChip();
+
+    // Countdown ticker chip (single shared timer under the title sign)
+    this.tickerChip = this.makeTickerChip();
+
+    // Bottom dock bar (sidewalk strip anchoring chip + icon buttons)
+    this.dockBg = this.add.rectangle(0, 0, 10, 10, 0x1a1e28, 0.95).setDepth(5);
+    this.dockEdge = this.add.rectangle(0, 0, 10, 2, 0x343a4a, 1).setDepth(5);
 
     // Daily bonus button (styled like REP reward, hidden if already claimed today)
     this.dailyBonusBtn = this.makeDailyBonusButton();
@@ -251,20 +238,92 @@ export class MenuScene extends Phaser.Scene {
     // Portrait mode enforcement overlay for mobile landscape
     createPortraitOverlay(this);
 
-    // Update card timers every second
+    // Update countdown ticker every second
     this.time.addEvent({
       delay: 1000,
       loop: true,
       callback: () => {
-        if (this.cards) {
-          this.cards.forEach(card => {
-            if (card._timerUpdate) {
-              card._timerUpdate();
-            }
-          });
-        }
+        this.tickerChip?._update?.();
       }
     });
+  }
+
+  // Night street background: full-canvas asphalt with curbs, center
+  // dashes, and speckle noise. Rebuilt on resize.
+  drawStreetBackground(){
+    const W = this.scale.width, H = this.scale.height;
+    if (this._streetBg) { this._streetBg.destroy(true); this._streetBg = null; }
+    const c = this.add.container(0, 0).setDepth(0);
+
+    // Off-road base + asphalt strip
+    c.add(this.add.rectangle(W/2, H/2, W, H, 0x0d1016, 1));
+    const roadW = Math.min(600, Math.floor(W * 0.96));
+    c.add(this.add.rectangle(W/2, H/2, roadW, H, 0x191c22, 1));
+
+    // Curbs
+    const curbX = roadW/2 - 2;
+    c.add(this.add.rectangle(W/2 - curbX, H/2, 3, H, 0x262a33, 1));
+    c.add(this.add.rectangle(W/2 + curbX, H/2, 3, H, 0x262a33, 1));
+
+    // Asphalt speckle noise
+    const speck = this.add.graphics();
+    speck.fillStyle(0x0d0f13, 0.55);
+    for (let i = 0; i < 70; i++){
+      const sx = W/2 - roadW/2 + 6 + Math.random() * (roadW - 12);
+      const sy = Math.random() * H;
+      speck.fillRect(sx, sy, 2, 2);
+    }
+    c.add(speck);
+
+    // Center lane dashes (drawn with wrap margin for seamless scroll)
+    const DASH = 26, GAP = 26, PERIOD = DASH + GAP;
+    const g = this.add.graphics();
+    g.fillStyle(0xd4a017, 0.3);
+    for (let y = -PERIOD; y < H + PERIOD; y += PERIOD){
+      g.fillRect(W/2 - 2, y, 4, DASH);
+    }
+    this._laneDashes = g;
+    this._lanePeriod = PERIOD;
+    c.add(g);
+
+    this._streetBg = c;
+  }
+
+  // LED-style countdown ticker chip under the title sign
+  makeTickerChip(){
+    const c = this.add.container(0, 0).setDepth(6);
+    const h = 24;
+    const bg = this.rexUI.add.roundRectangle(0, 0, 210, h, h/2, 0x0d0f13, 1)
+      .setStrokeStyle(1, 0x2e3442);
+    const t = this.add.text(0, 0, '', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#7ee0a3',
+      letterSpacing: 1
+    }).setOrigin(0.5);
+    c.add([bg, t]);
+    c._bg = bg;
+    c._text = t;
+    c._update = () => {
+      if (!t.active) return;
+      t.setText(`NEW BLOCK IN ${this.getTimeUntilReset()}`);
+      const w = Math.max(190, t.width + 28);
+      bg.setSize(w, h);
+    };
+    c._update();
+    return c;
+  }
+
+  // Read the current user's local scores (works offline via localStorage)
+  getLocalStats(role){
+    try {
+      const uid = getUserID();
+      const daily = getLeaderboard(getCurrentRouteID(), role).find(e => e.userId === uid) || null;
+      const alltime = getAllTimeLeaderboard(role).find(e => e.userId === uid) || null;
+      return { daily, alltime };
+    } catch {
+      return { daily: null, alltime: null };
+    }
   }
 
   // Calculate time until next block reset (1:00 AM UTC)
@@ -304,9 +363,9 @@ export class MenuScene extends Phaser.Scene {
     const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
     // Cards are not interactive - only buttons control navigation
 
-    // Dark background
-    const bg = this.add.rectangle(0, 0, cw, ch, 0x0a0f1a, 0.85);
-    bg.setStrokeStyle(2, PALETTE.stroke, 1);
+    // Dark panel body
+    const bg = this.add.rectangle(0, 0, cw, ch, 0x10131a, 0.92);
+    bg.setStrokeStyle(1, 0x2e3442, 1);
     cont.add(bg);
 
     // Add animated sprite visuals (single line of sprites)
@@ -328,70 +387,83 @@ export class MenuScene extends Phaser.Scene {
     const streetNum = address.num;
     const suffix = address.suffix;
 
-    // Add blue background bar that fills full card width at top edge
-    const titleBgHeight = titleSize * 2.2; // Slightly taller for two lines
-    const titleBg = this.add.rectangle(0, -ch * 0.5 + titleBgHeight/2, cw, titleBgHeight, 0x0047AB, 1)
+    // Mode-colored street sign header (green = runner, red = plug)
+    const SIGN_COLORS = { runner: 0x1a7a3c, plug: 0xa32d2d };
+    const signColor = SIGN_COLORS[modeKey] ?? 0x0047AB;
+
+    // Single-line bar: street name left, address right
+    const titleBgHeight = Math.floor(titleSize * 1.7);
+    const titleBg = this.add.rectangle(0, -ch * 0.5 + titleBgHeight/2, cw, titleBgHeight, signColor, 1)
       .setStrokeStyle(3, 0xffffff)
       .setOrigin(0.5, 0.5);
 
-    // Main title text (street name)
-    const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2 - titleSize * 0.35, titleText, {
+    const titleObj = this.add.text(-cw/2 + 14, -ch * 0.5 + titleBgHeight/2, titleText, {
       color: '#ffffff',
       fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
       fontStyle: 'bold',
       fontSize: titleSize + 'px',
-      align: 'center',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0.5, 0.5);
+    }).setOrigin(0, 0.5);
 
-    // Street number and suffix (smaller, below main title - matching PLUG RUN spacing)
-    const addressSize = Math.max(10, Math.floor(titleSize * 0.65));
-    const addressObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2 + titleSize * 0.45, `${streetNum} ${suffix}`, {
-      color: '#ffffff',
+    const addressSize = Math.max(10, Math.floor(titleSize * 0.6));
+    const addressObj = this.add.text(cw/2 - 14, -ch * 0.5 + titleBgHeight/2, `${streetNum} ${suffix}`, {
+      color: '#e4e9f2',
       fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
       fontStyle: 'bold',
       fontSize: addressSize + 'px',
-      align: 'center',
       stroke: '#000000',
       strokeThickness: 1.5,
       letterSpacing: 2
-    }).setOrigin(0.5, 0.5);
+    }).setOrigin(1, 0.5);
 
     cont.add(titleBg);
     cont.add(titleObj);
     cont.add(addressObj);
 
-    // Timer (if enabled) - positioned right below title bar in black space
+    // Stats panel (right side) — local scores; rank waits for online boards.
+    // Fresh players with no scores see the mode tagline instead.
     let timerTxt = null;
-    if (showTimer) {
-      const timerSizeRatio = H > 900 ? 0.06 : 0.08; // Smaller on desktop to prevent overflow
-      const timerSize = Math.max(8, Math.floor(ch * timerSizeRatio));
-      const timerY = -ch * 0.5 + titleBgHeight + 12; // Just below title bar
-      timerTxt = this.add.text(0, timerY, '', {
-        color: '#86efac', // STASH green color
-        fontSize: timerSize + 'px',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 1.5,
-        align: 'center'
-      }).setOrigin(0.5, 0.5);
-      cont.add(timerTxt);
+    {
+      const stats = this.getLocalStats(modeKey);
+      const hasAny = !!(stats.daily || stats.alltime);
+      const statY0 = -ch * 0.5 + titleBgHeight + 14;
 
-      // Update timer text
-      const updateTimer = () => {
-        if (timerTxt && timerTxt.active) {
-          timerTxt.setText(`Next Block Reset: ${this.getTimeUntilReset()}`);
-        }
-      };
-      updateTimer(); // Initial update
-
-      // Store timer updater on card
-      cont._timerUpdate = updateTimer;
+      if (hasAny) {
+        const panelW = Math.floor(cw * 0.46);
+        const panelX = cw/2 - panelW/2 - 10;
+        const rows = [
+          ["TODAY'S BEST", stats.daily ? formatNumber(stats.daily.stash ?? 0) : '—', '#f0f2f7'],
+          ['BEST ROUND',   stats.daily ? String(stats.daily.round ?? '—') : (stats.alltime ? String(stats.alltime.round ?? '—') : '—'), '#f0f2f7'],
+          ['YOUR RANK',    '—', '#8a93a8']
+        ];
+        const rowH = 20;
+        const backing = this.add.rectangle(panelX, statY0 + (rows.length * rowH)/2 - 4, panelW + 16, rows.length * rowH + 14, 0x0a0d13, 0.72);
+        backing.setStrokeStyle(1, 0x2e3442);
+        cont.add(backing);
+        rows.forEach(([label, value, valColor], i) => {
+          const ry = statY0 + i * rowH + 4;
+          cont.add(this.add.text(panelX - panelW/2, ry, label, {
+            fontFamily: 'monospace', fontSize: '11px', color: '#8a93a8'
+          }).setOrigin(0, 0.5));
+          cont.add(this.add.text(panelX + panelW/2, ry, value, {
+            fontFamily: 'monospace', fontSize: '12px', color: valColor, fontStyle: 'bold'
+          }).setOrigin(1, 0.5));
+        });
+      } else {
+        const taglines = {
+          runner: 'Grab the stash.\nReach the getaway car.',
+          plug:   'Hold the block.\nStop the runner.'
+        };
+        cont.add(this.add.text(0, statY0 + 14, taglines[modeKey] || '', {
+          fontFamily: 'monospace', fontSize: '12px', color: '#8a93a8',
+          align: 'center', lineSpacing: 6
+        }).setOrigin(0.5, 0.5));
+      }
     }
 
-    // START button at BOTTOM (flush with bottom edge of card)
-    const btnWidth = Math.min(280, Math.floor(cw * 0.65));
+    // START button at BOTTOM (near full width like the mockup)
+    const btnWidth = Math.min(400, Math.floor(cw * 0.88));
     const btnHeight = Math.max(38, Math.floor(ch * 0.18));
     const btnY = (ch / 2) - (btnHeight / 2) - 8; // Position at bottom edge with small padding
 
@@ -1357,21 +1429,20 @@ export class MenuScene extends Phaser.Scene {
   }
 
   makeTutorialButton(){
-    // Match START button width for consistency
+    // Ghost/secondary style — the two PLAY buttons are the stars
     const W = this.scale.width;
-    const cw = Math.min(480, Math.floor(W * 0.82)); // Card width
-    const btnWidth = Math.min(280, Math.floor(cw * 0.65)); // Same as START button
-    const btnHeight = Math.max(36, Math.floor(this.scale.height * 0.045)); // Reduced height
+    const btnWidth = 170;
+    const btnHeight = Math.max(32, Math.floor(this.scale.height * 0.04));
 
-    const bg = this.rexUI.add.roundRectangle(0, 0, btnWidth, btnHeight, 8, 0xfbbf24, 1)
-      .setStrokeStyle(3, 0xf59e0b)
+    const bg = this.rexUI.add.roundRectangle(0, 0, btnWidth, btnHeight, 6, 0x10131a, 0.6)
+      .setStrokeStyle(1, 0x3a4155)
       .setInteractive({ cursor: 'pointer' });
 
-    const t = this.add.text(0, 0, 'START TUTORIAL', {
-      fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
-      fontSize: Math.max(16, Math.floor(btnHeight * 0.44)) + 'px',
-      color: '#1e293b',
-      fontStyle: 'bold'
+    const t = this.add.text(0, 0, 'HOW TO PLAY', {
+      fontFamily: 'monospace',
+      fontSize: Math.max(12, Math.floor(btnHeight * 0.38)) + 'px',
+      color: '#aab3c8',
+      letterSpacing: 1
     }).setOrigin(0.5);
 
     const btn = this.add.container(0, 0, [bg, t]).setSize(btnWidth, btnHeight).setDepth(6);
@@ -1403,12 +1474,12 @@ export class MenuScene extends Phaser.Scene {
 
     // Hover effects
     bg.on('pointerover', () => {
-      bg.setFillStyle(0xfcd34d); // Lighter yellow on hover
-      bg.setStrokeStyle(3, 0xfbbf24);
+      bg.setStrokeStyle(1, 0x60a5fa);
+      t.setColor('#dce6fb');
     });
     bg.on('pointerout', () => {
-      bg.setFillStyle(0xfbbf24); // Original yellow
-      bg.setStrokeStyle(3, 0xf59e0b);
+      bg.setStrokeStyle(1, 0x3a4155);
+      t.setColor('#aab3c8');
     });
 
     return btn;
@@ -1427,8 +1498,10 @@ export class MenuScene extends Phaser.Scene {
   makeUserProfileChip(){
     const username = getUsername();
     const c = this.add.container(0, 0).setDepth(6);
-    const w = Math.max(160, Math.floor(this.scale.width * 0.35));
+    // Clamp width: 35% of screen ballooned to 600px+ on desktop monitors
+    const w = Math.min(220, Math.max(160, Math.floor(this.scale.width * 0.35)));
     const h = Math.max(32, Math.floor(this.scale.height * 0.042));
+    c._w = w;
 
     // Background with subtle blue tint - make IT interactive
     const bg = this.rexUI.add.roundRectangle(0, 0, w, h, h/2, 0x1e3a8a, 0.85)
@@ -2528,12 +2601,17 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(){
-    // Carousel navigation disabled - both cards always visible
-    // Users click START buttons directly instead of using keyboard navigation
+    // Slow lane-dash scroll for ambient motion
+    if (this._laneDashes?.active) {
+      this._laneDashes.y += 0.35;
+      if (this._laneDashes.y >= this._lanePeriod) this._laneDashes.y -= this._lanePeriod;
+    }
   }
 
   reposition(){
     const W = this.scale.width, H = this.scale.height;
+    // Rebuild street background at new dimensions
+    this.drawStreetBackground();
     const logoY = Math.max(16, Math.floor(H*0.04));
     const logoSize = Math.max(26, Math.floor(H * 0.05));
     const signH = logoSize * 2.2; // Updated for two-line sign
@@ -2551,6 +2629,22 @@ export class MenuScene extends Phaser.Scene {
 
     this.logo?.setPosition(W/2, logoY + signH/2 - logoSize * 0.35);
     this.logoAddress?.setPosition(W/2, logoY + signH/2 + logoSize * 0.45);
+
+    // Ticker chip: midway between the sign and the first card, clamped so
+    // it never overlaps either (tall desktop windows compressed this gap)
+    {
+      const cardH0 = H > 900 ? Math.min(300, H * 0.38) : Math.min(265, H * 0.34);
+      const firstCardTop = H * 0.34 - cardH0 / 2;
+      const signBottom = logoY + signH;
+      this.tickerChip?.setPosition(W/2, Math.min(signBottom + 18, (signBottom + firstCardTop) / 2));
+    }
+
+    // Bottom dock bar (sidewalk strip)
+    const dockH = 56;
+    this.dockBg?.setPosition(W/2, H - dockH/2);
+    this.dockBg?.setSize(W, dockH);
+    this.dockEdge?.setPosition(W/2, H - dockH);
+    this.dockEdge?.setSize(W, 2);
 
     // Bottom elements
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
@@ -2586,21 +2680,27 @@ export class MenuScene extends Phaser.Scene {
     }
     this.tutorialBtn?.setPosition(W / 2, tutorialY);
 
-    // Bottom widgets - positioned lower to make room for tutorial button
-    const widgetBottomY = H - pad - 18; // Lowered from -24 to create more space
+    // Bottom widgets — anchored to the ROAD STRIP, not the screen edges,
+    // so on wide desktop monitors the chip and buttons stay together
+    // instead of drifting to opposite corners. On mobile the road is
+    // ~full width, so this matches the old layout.
+    const widgetBottomY = H - pad - 18;
+    const rail = Math.min(600, Math.floor(W * 0.96)); // matches road width
+    const railL = W/2 - rail/2, railR = W/2 + rail/2;
 
     // Leaderboard button (trophy icon) — all platforms now that the
     // desktop sidebar leaderboard is removed
     if (this.leaderboardBtn) {
-      this.leaderboardBtn.setPosition(W - pad - 50 - 60, widgetBottomY); // Left of settings
+      this.leaderboardBtn.setPosition(railR - pad - 24 - 56, widgetBottomY); // Left of settings
       this.leaderboardBtn.setAlpha(1);
     }
 
-    // Settings button in bottom-right (moved away from corner for easier clicking)
-    this.settingsBtn?.setPosition(W - pad - 50, widgetBottomY);
+    // Settings button at the road's right edge
+    this.settingsBtn?.setPosition(railR - pad - 24, widgetBottomY);
 
-    // Profile chip in bottom-left (moved left to avoid overlap with trophy on mobile)
-    this.profileChip?.setPosition(W / 2 - 80, widgetBottomY);
+    // Profile chip at the road's left edge
+    const chipW = this.profileChip?._w || 160;
+    this.profileChip?.setPosition(railL + pad + chipW/2, widgetBottomY);
 
     // Daily bonus button hidden (removed from menu)
     if (this.dailyBonusBtn) {
