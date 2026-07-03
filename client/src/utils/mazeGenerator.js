@@ -399,6 +399,62 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random) {
     grid[cy][cx] = TILE_TYPES.FLOOR;
   };
 
+  // GUARANTEE: the driveway mouth must be reachable from the stash.
+  // The extraction sensor sits at egress.entry (see BaseGameScene
+  // makeObjectives), NOT at the extract pocket — so canReach(stash,
+  // extract) alone does not make the round winnable. pickDriveway
+  // carves the border at a random spot and can open into a sealed
+  // pocket. When that happens, carve the shortest corridor from the
+  // entry to the nearest stash-reachable floor cell. Deterministic
+  // (fixed neighbor order, no rng) so all devices generate the same maze.
+  const ensureDrivewayReachable = (from, entry) => {
+    if (!from || !entry) return;
+    if (canReach(from, entry)) return;
+
+    // Flood-fill the floor region reachable from `from`
+    const reach = new Set([`${from.x},${from.y}`]);
+    const fq = [from];
+    while (fq.length) {
+      const c = fq.shift();
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const nx = c.x + dx, ny = c.y + dy, key = `${nx},${ny}`;
+        if (reach.has(key)) continue;
+        if (nx <= 0 || ny <= 0 || nx >= cols - 1 || ny >= rows - 1) continue;
+        if (grid[ny][nx] !== TILE_TYPES.FLOOR) continue;
+        reach.add(key);
+        fq.push({ x: nx, y: ny });
+      }
+    }
+
+    // BFS from the driveway entry THROUGH walls to the nearest reachable cell
+    const prev = new Map();
+    const seen = new Set([`${entry.x},${entry.y}`]);
+    const bq = [entry];
+    let hit = null;
+    while (bq.length && !hit) {
+      const c = bq.shift();
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const nx = c.x + dx, ny = c.y + dy, key = `${nx},${ny}`;
+        if (seen.has(key)) continue;
+        if (nx <= 0 || ny <= 0 || nx >= cols - 1 || ny >= rows - 1) continue;
+        seen.add(key);
+        prev.set(key, c);
+        if (reach.has(key)) { hit = { x: nx, y: ny }; break; }
+        bq.push({ x: nx, y: ny });
+      }
+    }
+    if (!hit) return; // pathological — leave as generated
+
+    // Carve floor along the found corridor back to the entry
+    let cur = hit;
+    while (cur && !(cur.x === entry.x && cur.y === entry.y)) {
+      grid[cur.y][cur.x] = TILE_TYPES.FLOOR;
+      cur = prev.get(`${cur.x},${cur.y}`);
+    }
+    grid[entry.y][entry.x] = TILE_TYPES.FLOOR;
+    console.log('[MazeGen] Driveway was sealed — carved corridor to connect it');
+  };
+
   const runner = pickFar([], Math.floor((cols + rows) / 6));
   const plug = pickFar([runner], Math.floor((cols + rows) / 4));
 
@@ -455,20 +511,24 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random) {
     }
 
     // Place spawns/objectives along the cleared paths
+    const fbStash = { x: centerX, y: centerY - 3 };
+    const fbEgress = pickDriveway(grid, cols, rows, rnd);
+    ensureDrivewayReachable(fbStash, fbEgress.entry);
     return {
       spawns: {
         runner: { x: centerX - 3, y: centerY },
         plug: { x: centerX + 3, y: centerY }
       },
       objectives: {
-        stash: { x: centerX, y: centerY - 3 },
+        stash: fbStash,
         extract: { x: centerX, y: centerY + 3 }
       },
-      egress: pickDriveway(grid, cols, rows, rnd)
+      egress: fbEgress
     };
   }
 
   const egress = pickDriveway(grid, cols, rows, rnd);
+  ensureDrivewayReachable(stash, egress.entry);
 
   return {
     spawns: { runner, plug },
