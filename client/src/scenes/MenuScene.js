@@ -397,30 +397,19 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(3, 0xffffff)
       .setOrigin(0.5, 0.5);
 
-    const titleObj = this.add.text(-cw/2 + 14, -ch * 0.5 + titleBgHeight/2, titleText, {
+    const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2, titleText, {
       color: '#ffffff',
       fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
       fontStyle: 'bold',
       fontSize: titleSize + 'px',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0, 0.5);
+    }).setOrigin(0.5, 0.5);
 
-    const addressSize = Math.max(10, Math.floor(titleSize * 0.6));
-    const addressObj = this.add.text(cw/2 - 14, -ch * 0.5 + titleBgHeight/2, `${streetNum} ${suffix}`, {
-      color: '#e4e9f2',
-      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
-      fontStyle: 'bold',
-      fontSize: addressSize + 'px',
-      stroke: '#000000',
-      strokeThickness: 1.5,
-      letterSpacing: 2
-    }).setOrigin(1, 0.5);
 
     cont.add(titleBg);
     cont.add(titleObj);
-    cont.add(addressObj);
-
+    
     // Stats panel (right side) — local scores; rank waits for online boards.
     // Fresh players with no scores see the mode tagline instead.
     let timerTxt = null;
@@ -1406,8 +1395,8 @@ export class MenuScene extends Phaser.Scene {
 
   makeIconButton(label, onClick){
     const H = this.scale.height;
-    const rRatio = H > 900 ? 0.030 : 0.024; // Smaller on mobile to prevent overlap
-    const r = Math.max(18, Math.floor(H * rRatio));
+    // Clamp: uncapped height-scaling made these balloon on desktop
+    const r = Math.min(21, Math.max(18, Math.floor(H * 0.024)));
     const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, 0.92)
       .setStrokeStyle(2, PALETTE.stroke)
       .setInteractive({ cursor: 'pointer' });
@@ -1500,7 +1489,7 @@ export class MenuScene extends Phaser.Scene {
     const c = this.add.container(0, 0).setDepth(6);
     // Clamp width: 35% of screen ballooned to 600px+ on desktop monitors
     const w = Math.min(220, Math.max(160, Math.floor(this.scale.width * 0.35)));
-    const h = Math.max(32, Math.floor(this.scale.height * 0.042));
+    const h = Math.min(36, Math.max(32, Math.floor(this.scale.height * 0.042)));
     c._w = w;
 
     // Background with subtle blue tint - make IT interactive
