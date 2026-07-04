@@ -144,7 +144,7 @@ const SHAPES = [
   [[0, 0], [1, 0], [2, 0], [2, 1]]
 ];
 
-export function generateSquareMaze(cols, rows, { rng, role } = {}) {
+export function generateSquareMaze(cols, rows, { rng, role, clusterScale = 1 } = {}) {
   const rnd = typeof rng === 'function' ? rng : Math.random;
 
   // For plug mode, enforce minimum path length to reduce easy extractions
@@ -218,7 +218,8 @@ export function generateSquareMaze(cols, rows, { rng, role } = {}) {
       }
     };
 
-    const target = Math.floor((cols * rows) / 36);
+    // clusterScale < 1 = more open maze (early rounds, easier navigation)
+    const target = Math.floor(((cols * rows) / 36) * Math.max(0.3, Math.min(1.5, clusterScale)));
     let placed = 0;
     let tries = 0;
     const maxTries = target * 40;
@@ -238,7 +239,7 @@ export function generateSquareMaze(cols, rows, { rng, role } = {}) {
       }
     }
 
-    const { spawns, objectives, egress } = pickObjectives(grid, cols, rows, rnd);
+    const { spawns, objectives, egress } = pickObjectives(grid, cols, rows, rnd, clusterScale);
 
     // Validate path length for plug mode
     if (isPlugMode && !allowFastMap) {
@@ -261,11 +262,11 @@ export function generateSquareMaze(cols, rows, { rng, role } = {}) {
 
   // Should never reach here, but return the last attempt just in case
   console.warn('[MazeGen] Max attempts reached for plug mode validation');
-  const { spawns, objectives, egress } = pickObjectives(grid, cols, rows, rnd);
+  const { spawns, objectives, egress } = pickObjectives(grid, cols, rows, rnd, clusterScale);
   return { grid, spawns, objectives, egress };
 }
 
-export function pickObjectives(grid, cols, rows, rnd = Math.random) {
+export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale = 1) {
   // Helper: Check if two points are reachable via flood-fill
   const canReach = (from, to) => {
     if (!from || !to) return false;
@@ -395,6 +396,18 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random) {
       const ox = cx + dx * (POCKET_R + 1);
       const oy = cy + dy * (POCKET_R + 1);
       if (inBounds(ox, oy, cols, rows)) grid[oy][ox] = TILE_TYPES.FLOOR;
+      // Early rounds (open mazes): widen the mouth to 2 cells so new
+      // players aren't threading 1-wide gaps while chased. Uses no rnd
+      // draws — full-density rounds stay byte-identical.
+      if (clusterScale < 1) {
+        const px = dy, py = dx; // perpendicular
+        const wx = cx + dx * POCKET_R + px;
+        const wy = cy + dy * POCKET_R + py;
+        if (wx > 0 && wy > 0 && wx < cols - 1 && wy < rows - 1) grid[wy][wx] = TILE_TYPES.FLOOR;
+        const wox = cx + dx * (POCKET_R + 1) + px;
+        const woy = cy + dy * (POCKET_R + 1) + py;
+        if (wox > 0 && woy > 0 && wox < cols - 1 && woy < rows - 1) grid[woy][wox] = TILE_TYPES.FLOOR;
+      }
     }
     grid[cy][cx] = TILE_TYPES.FLOOR;
   };

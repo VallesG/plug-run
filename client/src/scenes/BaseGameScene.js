@@ -577,7 +577,13 @@ export class BaseGameScene extends Phaser.Scene {
     this.scale.on('resize', this._onResizeCb);
 
     // arena
-    const arena = generateSquareMaze(this.cols, this.rows, { rng: makeRng(this.seed), role: this.role });
+    // Early-round openness: fewer wall clusters while new players learn to
+    // navigate. R1: 60% density, R2: 75%, R3: 90%, R4+: full. Deterministic
+    // per round, so all players still share identical mazes.
+    const roundScale = this.mode === 'pve'
+      ? ([0, 0.6, 0.75, 0.9, 0.95][this.pveRound] ?? 1)
+      : 1;
+    const arena = generateSquareMaze(this.cols, this.rows, { rng: makeRng(this.seed), role: this.role, clusterScale: roundScale });
     this.grid = arena.grid;
     this.stashCell   = arena.objectives.stash;
     this.extractCell = arena.objectives.extract;

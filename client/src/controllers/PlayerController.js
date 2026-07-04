@@ -264,14 +264,52 @@ export default class PlayerController {
           break; // blocked on this axis
         }
       }
+      return remaining; // leftover = how much of the intent was blocked
     };
 
     // Store position before movement for stuck detection
     const preX = sprite.x, preY = sprite.y;
 
     // Move on each axis
-    moveAxis(dxTot, 'x');
-    moveAxis(dyTot, 'y');
+    const leftX = moveAxis(dxTot, 'x');
+    const leftY = moveAxis(dyTot, 'y');
+
+    // CORNERING ASSIST (Pac-Man style): if the player is pushing into a
+    // blocked axis but the corridor they're aiming for DOES exist at their
+    // current row/column, they're just misaligned with the lane center —
+    // convert the blocked motion into perpendicular alignment so the turn
+    // "catches" without pixel-perfect input. This is the difference
+    // between corridors feeling tight and feeling like they fight you.
+    const steerToLane = (blockedLeftover, axis) => {
+      const dirSign = Math.sign(blockedLeftover);
+      if (!dirSign) return;
+      const c = this.scene.toCell(sprite.x, sprite.y);
+      if (axis === 'x') {
+        if (!this.scene.isWalkableCell?.(c.x + dirSign, c.y)) return; // no lane there — real wall
+        const laneY = this.scene.toWorldY(c.y);
+        const dy = laneY - sprite.y;
+        if (Math.abs(dy) < 0.5) return;
+        const stepAmt = Math.min(Math.abs(dy), Math.abs(blockedLeftover)) * Math.sign(dy);
+        const ny = sprite.y + stepAmt;
+        if (this.scene.canMoveTo(sprite, sprite.x, ny)) {
+          sprite.y = ny;
+          moveAxis(blockedLeftover * 0.5, 'x'); // retry the turn this frame
+        }
+      } else {
+        if (!this.scene.isWalkableCell?.(c.x, c.y + dirSign)) return;
+        const laneX = this.scene.toWorldX(c.x);
+        const dx = laneX - sprite.x;
+        if (Math.abs(dx) < 0.5) return;
+        const stepAmt = Math.min(Math.abs(dx), Math.abs(blockedLeftover)) * Math.sign(dx);
+        const nx = sprite.x + stepAmt;
+        if (this.scene.canMoveTo(sprite, nx, sprite.y)) {
+          sprite.x = nx;
+          moveAxis(blockedLeftover * 0.5, 'y'); // retry the turn this frame
+        }
+      }
+    };
+    if (Math.abs(leftX) > 0.0001) steerToLane(leftX, 'x');
+    if (Math.abs(leftY) > 0.0001) steerToLane(leftY, 'y');
 
     // Legacy corner unstick logic:
     // If we barely moved (corner caught), softly nudge toward tile center to unstick
