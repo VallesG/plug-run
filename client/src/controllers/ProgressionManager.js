@@ -432,7 +432,9 @@ export default class ProgressionManager {
             pveSessionRep: this.scene.pveSessionRep,
             pveBestRound: this.scene.pveBestRound,
             seed: continueSeed,
-            swapSpawns: true // Flag to swap runner and plug positions
+            // Advance the spawn cycle each press: original -> opponent's
+            // spot -> 2nd opponent's spot (round 8+) -> original again
+            swapSpawnCycle: (this.scene.swapSpawnCycle || 0) + 1
           });
         }
       },

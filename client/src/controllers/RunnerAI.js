@@ -56,10 +56,10 @@ export function applyRunnerProgression(scene) {
 
   const round = Math.max(1, scene.pveRound || 1);
 
-  // SPEED: Moderate start, scales up progressively
-  // Formula: 85 + (round - 1) * 3.5
-  // Round 1: 85 | Round 5: 99 | Round 10: 116.5 | Round 15: 134 | Round 20: 151.5
-  scene.runnerSpeed = 85 + (round - 1) * 3.5;
+  // SPEED: Moderate start, scales up progressively, with an early-round
+  // malus so rounds 1-5 are genuinely beatable by new plugs.
+  // Round 1: 75 | Round 2: 80.5 | Round 3: 86 | Round 4: 91.5 | Round 5: 97 | Round 6+: original curve
+  scene.runnerSpeed = 85 + (round - 1) * 3.5 - Math.max(0, 6 - round) * 2;
 
   // Keep dependent stats (e.g., decoy) in sync with new speed
   if (scene.runnerPowerStats?.decoy) {
@@ -80,12 +80,18 @@ export function applyRunnerProgression(scene) {
   // This provides smooth corridor navigation without exploitative wall-hugging
   // No progression needed - works the same at all speeds
 
-  // ORIENTATION DELAY: Instant from round 1
-  scene.aiRunner.orientationDelay = 0.05; // Fixed - always instant
+  // ORIENTATION DELAY: a beat of "getting its bearings" early, instant by r5
+  // Round 1: 0.6s | Round 3: 0.32s | Round 5+: 0.05s
+  scene.aiRunner.orientationDelay = Math.max(0.05, 0.6 - (round - 1) * 0.14);
 
-  // WANDER/HESITATION/OVERCOMMIT: Always 0 (perfect pathfinding)
-  scene.aiRunner.wanderChance = 0.0;      // Never wanders
-  scene.aiRunner.hesitationChance = 0.0;  // Never hesitates
+  // WANDER/HESITATION: real imperfection in rounds 1-5, decaying to the
+  // old "perfect pathfinding" by round 6. The machinery always existed but
+  // was hard-zeroed — round 1 played like an optimal speedrunner. These
+  // also give the panic multiplier something to actually multiply early:
+  // pressure now visibly causes mistakes.
+  // Round 1: wander 30% / hesitate 25% | Round 3: 18% / 15% | Round 6+: 0
+  scene.aiRunner.wanderChance     = Math.max(0, 0.30 - (round - 1) * 0.06);
+  scene.aiRunner.hesitationChance = Math.max(0, 0.25 - (round - 1) * 0.05);
   scene.aiRunner.overcommitChance = 0.0;  // Always prioritizes objective
 
   // PANIC THRESHOLD: Aggressive panic activation
@@ -308,19 +314,39 @@ export function updateRunnerBehavior(scene, aiController, delta) {
     movedY = true;
   }
 
-  // Wall-sliding skill: Scales with rounds (low = gets stuck, high = smooth movement)
-  // Low rounds get stuck and look clumsy, high rounds navigate smoothly
+  // Wall-sliding: steer toward the LANE CENTERLINE when blocked — that's
+  // the alignment that opens the corridor/pocket mouth being entered.
+  // (The old blind minus-side-first nudge oscillated at 1-wide pocket
+  // mouths: blocked → nudge away from alignment → replan → blocked →
+  // nudge… wedging the runner beside the stash indefinitely.)
   if (!movedX && Math.abs(vx) > 0) {
+    const c = scene.toCell(scene.attacker.x, scene.attacker.y);
+    const laneY = scene.toWorldY(c.y);
+    const dyLane = laneY - scene.attacker.y;
     const dy = scene.cell * scene.aiRunner.slideNudge;
-    if (scene.canMoveTo(scene.attacker, scene.attacker.x, scene.attacker.y - dy)) {
+    if (Math.abs(dyLane) > 0.5) {
+      const step = Math.sign(dyLane) * Math.min(Math.abs(dyLane), dy);
+      if (scene.canMoveTo(scene.attacker, scene.attacker.x, scene.attacker.y + step)) {
+        scene.attacker.y += step;
+      }
+    } else if (scene.canMoveTo(scene.attacker, scene.attacker.x, scene.attacker.y - dy)) {
+      // already centered but still blocked (true wall): old fallback
       scene.attacker.y -= dy;
     } else if (scene.canMoveTo(scene.attacker, scene.attacker.x, scene.attacker.y + dy)) {
       scene.attacker.y += dy;
     }
   }
   if (!movedY && Math.abs(vy) > 0) {
+    const c = scene.toCell(scene.attacker.x, scene.attacker.y);
+    const laneX = scene.toWorldX(c.x);
+    const dxLane = laneX - scene.attacker.x;
     const dx = scene.cell * scene.aiRunner.slideNudge;
-    if (scene.canMoveTo(scene.attacker, scene.attacker.x - dx, scene.attacker.y)) {
+    if (Math.abs(dxLane) > 0.5) {
+      const step = Math.sign(dxLane) * Math.min(Math.abs(dxLane), dx);
+      if (scene.canMoveTo(scene.attacker, scene.attacker.x + step, scene.attacker.y)) {
+        scene.attacker.x += step;
+      }
+    } else if (scene.canMoveTo(scene.attacker, scene.attacker.x - dx, scene.attacker.y)) {
       scene.attacker.x -= dx;
     } else if (scene.canMoveTo(scene.attacker, scene.attacker.x + dx, scene.attacker.y)) {
       scene.attacker.x += dx;
@@ -353,6 +379,33 @@ export function updateRunnerBehavior(scene, aiController, delta) {
   } else if (moved >= 0.3) {
     aiController._aiLastPos = { x: scene.attacker.x, y: scene.attacker.y };
     aiController._aiStuckAt = performance.now();
+  }
+
+  // PROGRESS-based unstick: oscillating at a pocket mouth IS movement, so
+  // the jitter detector above never fires. Track NET displacement over a
+  // 1.5s window; if the runner hasn't actually gone anywhere, snap it to
+  // its cell center (guaranteed mouth alignment) and clear the flip guard.
+  {
+    const tNow = performance.now();
+    if (!aiController._aiProgressAt || tNow - aiController._aiProgressAt > 1500) {
+      if (aiController._aiProgressPos && !isOrienting) {
+        const net = Math.hypot(
+          scene.attacker.x - aiController._aiProgressPos.x,
+          scene.attacker.y - aiController._aiProgressPos.y
+        );
+        if (net < scene.cell * 0.5) {
+          const c = scene.toCell(scene.attacker.x, scene.attacker.y);
+          const cx = scene.toWorldX(c.x), cy = scene.toWorldY(c.y);
+          if (scene.canMoveTo(scene.attacker, cx, cy)) {
+            scene.attacker.x = cx;
+            scene.attacker.y = cy;
+          }
+          aiController._aiFlipGuardUntil = 0;
+        }
+      }
+      aiController._aiProgressPos = { x: scene.attacker.x, y: scene.attacker.y };
+      aiController._aiProgressAt = tNow;
+    }
   }
 
   if (!aiController._aiVX && !aiController._aiVY) aiRunnerCruise(scene, aiController);

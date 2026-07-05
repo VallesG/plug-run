@@ -172,8 +172,11 @@ export class BaseGameScene extends Phaser.Scene {
       this.pveSessionStash = initData?.pveSessionStash ?? initData?.savedSession?.pveSessionStash ?? 0;
       this.pveSessionRep = initData?.pveSessionRep ?? initData?.savedSession?.pveSessionRep ?? 0;
       this.pveBestRound = initData?.pveBestRound ?? initData?.savedSession?.pveBestRound ?? 0;
-      this.swapSpawns = initData?.swapSpawns ?? false; // One-time spawn swap feature
-      console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep, 'SwapSpawns:', this.swapSpawns);
+      // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
+      // opponent's spot, 2 = take the second opponent's spot (round 8+),
+      // then wraps back to original. Boolean swapSpawns kept for compat.
+      this.swapSpawnCycle = initData?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0);
+      console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep, 'SpawnCycle:', this.swapSpawnCycle);
 
       // Use deterministic route seed for PvE (same daily route for all players globally, resets 12am PST)
       // Runner and plug modes get different seeds for balanced gameplay
@@ -203,6 +206,48 @@ export class BaseGameScene extends Phaser.Scene {
 
   // hard barrier rules
   inBoundsCell(cx,cy){ return cx>=0 && cy>=0 && cx<this.cols && cy<this.rows; }
+  /**
+   * Dual-AI coordination: when both plugs are alive and the runner holds
+   * the stash, assign complementary roles instead of letting two copies of
+   * the same brain independently reach the same conclusion (both camping
+   * the getaway car before the runner has even been hit reads as unfair
+   * rather than as pressure).
+   *
+   * - pursuer: nearest plug to the runner — chases with lead prediction
+   * - guard:   the other — holds/intercepts at the extraction
+   * - rounds 15+: 25% of reassignment windows send BOTH as pursuers, a
+   *   deliberate "double team" spike instead of an accidental one
+   *
+   * Roles re-evaluate every 1.5s so the pair adapts as positions change,
+   * but not so often that they flip-flop mid-corridor.
+   */
+  assignPlugRoles(now){
+    const d1 = this.defender, d2 = this.defender2;
+    const bothAlive = d1?.active && d2?.active && (d2.hp === undefined || d2.hp > 0);
+    if (!bothAlive || !this.hasStash){
+      if (d1) d1._plugRole = null;
+      if (d2) d2._plugRole = null;
+      this._plugRolesUntil = 0;
+      return;
+    }
+    if (now < (this._plugRolesUntil || 0)) return;
+    this._plugRolesUntil = now + 1500;
+
+    if ((this.pveRound || 1) >= 15 && Math.random() < 0.25){
+      d1._plugRole = 'pursuer';
+      d2._plugRole = 'pursuer';
+      return;
+    }
+
+    const a = this.attacker;
+    const dist1 = Math.hypot(d1.x - a.x, d1.y - a.y);
+    const dist2 = Math.hypot(d2.x - a.x, d2.y - a.y);
+    const pursuer = dist1 <= dist2 ? d1 : d2;
+    const guard   = pursuer === d1 ? d2 : d1;
+    pursuer._plugRole = 'pursuer';
+    guard._plugRole   = 'guard';
+  }
+
   isWalkableCell(cx,cy){
     if (!this.inBoundsCell(cx,cy)) return false;
     return this.grid[cy][cx] !== T.WALL;
@@ -590,14 +635,34 @@ export class BaseGameScene extends Phaser.Scene {
     this.egress      = arena.egress;
     this.notchCells  = null; // disable notch visual bay entirely
 
-    // Swap spawns if requested (one-time per route feature for difficult spawns)
-    if (this.swapSpawns) {
-      console.log('[SwapSpawns] Swapping runner and plug starting positions');
-      const temp = { ...arena.spawns.runner };
-      arena.spawns.runner = { ...arena.spawns.plug };
-      arena.spawns.plug = temp;
+    // SPAWN CYCLE (Continue & Swap Spawns): each press moves the player one
+    // step through the available spawn spots so a hard spawn is never a
+    // dead end. Cycle: original -> opponent's spot -> second opponent's
+    // spot (round 8+ only) -> back to original.
+    let cycledOpp2Spawn = null; // where the 2nd AI goes when the player took its spot
+    {
+      const playerKey = this.role === 'plug' ? 'plug' : 'runner';
+      const oppKey    = this.role === 'plug' ? 'runner' : 'plug';
+      const hasSecondAI = this.mode === 'pve' && this.pveRound >= 8;
+      const positions = hasSecondAI ? 3 : 2;
+      const cycle = (this.swapSpawnCycle || 0) % positions;
+      if (cycle === 1) {
+        console.log('[SpawnCycle] 1: swapping player and opponent positions');
+        const temp = { ...arena.spawns[playerKey] };
+        arena.spawns[playerKey] = { ...arena.spawns[oppKey] };
+        arena.spawns[oppKey] = temp;
+      } else if (cycle === 2) {
+        // Player takes the SECOND opponent's deterministic alternate spot;
+        // the second AI then spawns at the player's vacated original spot
+        // so nobody stacks. First opponent stays put.
+        const alt = this.findAlternateSpawn(arena.spawns[oppKey], oppKey);
+        console.log('[SpawnCycle] 2: player takes 2nd-opponent spot', alt);
+        cycledOpp2Spawn = { ...arena.spawns[playerKey] };
+        arena.spawns[playerKey] = { ...alt };
+      }
     }
 
+    this.neutralizeWallTextures();
     this.drawNeonArena();
     this.makeObjectives(this.stashCell, this.extractCell);
     this.placeGetawayCar();
@@ -617,20 +682,25 @@ export class BaseGameScene extends Phaser.Scene {
     this.attacker2 = null;
     this.defender2 = null;
     if (this.mode === 'pve' && this.pveRound >= 8) {
-      const fullStrength = this.pveRound >= 13;
       // Only spawn second AI opponent, not second player
       if (this.role === 'plug') {
         // Player is defender, spawn second runner (attacker)
-        const altRunnerSpawn = this.findAlternateSpawn(a, 'runner');
+        const altRunnerSpawn = cycledOpp2Spawn || this.findAlternateSpawn(a, 'runner');
         this.attacker2 = makeRunnerSprite(this, this.toWorldX(altRunnerSpawn.x), this.toWorldY(altRunnerSpawn.y), this.cell).setVisible(false);
-        this.attacker2.hp = fullStrength ? 2 : 1;
+        // Full HP always — 1-HP enemies feel like popcorn, not opponents.
+        // The ramp is SPEED instead: the second runner starts 20% slower
+        // than the main one at round 8 and reaches full speed by round 13.
+        this.attacker2.hp = 2;
+        this.attacker2._speedMul = Math.min(1, 0.8 + (this.pveRound - 8) * 0.04);
         if (this.wallMask) this.attacker2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Plug Mode - Spawning second runner, children count:', this.attacker2.list.length);
       } else if (this.role === 'runner') {
         // Player is attacker, spawn second plug (defender)
-        const altPlugSpawn = this.findAlternateSpawn(d, 'plug');
+        const altPlugSpawn = cycledOpp2Spawn || this.findAlternateSpawn(d, 'plug');
         this.defender2 = makePlugSprite(this, this.toWorldX(altPlugSpawn.x), this.toWorldY(altPlugSpawn.y), this.cell).setVisible(false);
-        this.defender2.hp = fullStrength ? 3 : 2;
+        // Same philosophy for the second plug: full HP, speed ramp instead.
+        this.defender2.hp = 3;
+        this.defender2._speedMul = Math.min(1, 0.8 + (this.pveRound - 8) * 0.04);
         if (this.wallMask) this.defender2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Runner Mode - Spawning second plug');
       }
@@ -781,21 +851,25 @@ export class BaseGameScene extends Phaser.Scene {
       rifle:        { clip: 12, speed: 360, color: 0xb4f0ff, spreadAngles: [0] }
     };
     const DEFAULT_GUNS = Object.keys(this.weaponStats);
+    // Weapon availability is FIXED, not save-gated. The old inv.weapons
+    // gating had no unlock path (unlockWeapon is never called), so devices
+    // with stale localStorage saves from older builds showed fewer weapons
+    // than fresh devices — e.g. rifle permanently missing on one phone and
+    // present on another. Same loadout choice for every player, every device.
+    // (inv still tracks coins/product/ammo — only weapon gating is removed.)
     const owns = {
-      pistol:       !!(inv.weapons?.pistol),
-      doublebarrel: !!((inv.weapons?.doublebarrel) ?? inv.weapons?.shotgun),
-      laser:        !!(inv.weapons?.laser),
-      rifle:        !!(inv.weapons?.rifle)
+      pistol:       true,
+      doublebarrel: true,
+      laser:        false, // removed - it's useless
+      rifle:        true
     };
-    if (!Object.values(owns).some(Boolean)) {
-      DEFAULT_GUNS.forEach((g) => { owns[g] = true; });
-    }
-    // Ensure basic weapons are always available (removed laser - it's useless)
-    ['pistol', 'doublebarrel'].forEach((g) => {
-      if (!owns[g]) owns[g] = true;
-    });
     // Filter out laser from available guns
     this.availableGuns = DEFAULT_GUNS.filter((g) => owns[g] && g !== 'laser');
+    // Round-gated unlocks (per-run, no save state — deliberately avoids the
+    // stale-localStorage bug class). Triple Barrel arrives at round 8, the
+    // same round the second AI runner shows up: crowd control when the
+    // crowd does, and visible progression to work toward before that.
+    this.gunUnlockRound = { doublebarrel: 8 };
     if (!this.availableGuns.length) this.availableGuns = ['pistol'];
 
     this.roundAmmo = Object.fromEntries(DEFAULT_GUNS.map((g) => [g, 0]));
@@ -1249,6 +1323,44 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   /* -- VISUALS: Neon arena ------------------------------------------ */
+  /**
+   * Convert the wall textures to BRIGHT GRAYSCALE once at boot so theme
+   * tints render true. The source art is warm brown (~#614e42 @ 38%
+   * brightness); Phaser tints MULTIPLY, so cool tints hue-shifted into
+   * olive mud and nothing could render brighter than 38% — "neon" edges
+   * were mathematically impossible. Grayscale-bright base fixes both:
+   * full hue fidelity, full brightness, texture detail preserved.
+   */
+  neutralizeWallTextures(){
+    this._wallFillKey = 'wall_fill';
+    this._wallEdgeKey = 'wall_edge';
+    try {
+      for (const [srcKey, outKey] of [['wall_fill', 'wall_fill_neon'], ['wall_edge', 'wall_edge_neon']]){
+        if (!this.textures.exists(srcKey)) continue;
+        if (!this.textures.exists(outKey)){
+          const img = this.textures.get(srcKey).getSourceImage();
+          const cv = document.createElement('canvas');
+          cv.width = img.width; cv.height = img.height;
+          const ctx = cv.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const data = ctx.getImageData(0, 0, cv.width, cv.height);
+          const px = data.data;
+          for (let i = 0; i < px.length; i += 4){
+            const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+            const v = Math.min(255, lum * 2.6); // normalize toward white
+            px[i] = px[i + 1] = px[i + 2] = v;
+          }
+          ctx.putImageData(data, 0, 0);
+          this.textures.addCanvas(outKey, cv);
+        }
+        if (srcKey === 'wall_fill') this._wallFillKey = outKey;
+        else this._wallEdgeKey = outKey;
+      }
+    } catch (e) {
+      console.warn('[Textures] neutralize failed, using originals', e);
+    }
+  }
+
   drawNeonArena(){
     const { cell, cols, rows, pad } = this;
     const W = cols*cell + pad.x*2, H = rows*cell + pad.y*2;
@@ -1322,12 +1434,18 @@ export class BaseGameScene extends Phaser.Scene {
     const drawDefaultCell = (cx,cy)=>{
       const wx = pad.x + cx*cell + cell/2;
       const wy = pad.y + cy*cell + cell/2;
-        const base = this.add.image(wx, wy, 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
+        const base = this.add.image(wx, wy, this._wallFillKey || 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
         base.setDisplaySize(cell, cell);
         this.walls.add(base);
       const n = isWall(cx, cy-1), e = isWall(cx+1,cy), s = isWall(cx,cy+1), w = isWall(cx-1,cy);
       const addEdge = (angle)=>{
-        const edge = this.add.image(wx, wy, 'wall_edge').setDepth(4).setTint(this.theme?.wallEdgeTint ?? 0xffffff);
+        // Brightened edge accent — the playable area should carry the color
+        // pop, not the frame around it.
+        const _et = this.theme?.wallEdgeTint ?? 0xffffff;
+        const _eb = ((((_et >> 16) & 255) + (255 - ((_et >> 16) & 255)) * 0.22) << 16
+                   | (((_et >> 8) & 255) + (255 - ((_et >> 8) & 255)) * 0.22) << 8
+                   | ((_et & 255) + (255 - (_et & 255)) * 0.22)) >>> 0;
+        const edge = this.add.image(wx, wy, this._wallEdgeKey || 'wall_edge').setDepth(4).setTint(_eb);
         edge.setDisplaySize(cell, cell).setAngle(angle);
         this.walls.add(edge);
       };
@@ -1374,13 +1492,106 @@ export class BaseGameScene extends Phaser.Scene {
         if (inDrivewayCorridor(x, y)) continue;
         const wx = pad.x + x*cell + cell/2;
         const wy = pad.y + y*cell + cell/2;
-        const base = this.add.image(wx, wy, 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
+        const base = this.add.image(wx, wy, this._wallFillKey || 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
         base.setDisplaySize(cell, cell); this.walls.add(base);
         // one dash per tile, offset toward top-left like a reflector stud
         marks.fillRect(wx - cell*0.28, wy - cell*0.22, mw, mh);
       }
     }
     this.walls.add(marks);
+    this.drawNeonPerimeter();
+  }
+
+  /**
+   * Arena "plateau" edge: the playable map reads as a raised platform over
+   * the street. Three sturdy terraced bands in distinct theme-matched
+   * colors step outward and slightly darker (descending ledges), with a
+   * bright lip at the playable edge (top rim catching light) and a soft
+   * drop shadow where the platform meets the street below — that shadow is
+   * what sells the elevation. The driveway mouth stays open as the ramp.
+   */
+  drawNeonPerimeter(){
+    const { cols, rows, cell, pad } = this;
+    const lighten = (c, t) => {
+      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+      return ((r + (255 - r) * t) << 16 | (g + (255 - g) * t) << 8 | (b + (255 - b) * t)) >>> 0;
+    };
+    const darken = (c, t) => {
+      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+      return ((r * (1 - t)) << 16 | (g * (1 - t)) << 8 | (b * (1 - t))) >>> 0;
+    };
+    const isGrayish = (c) => {
+      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+      return Math.max(r, g, b) - Math.min(r, g, b) < 40;
+    };
+    // Terrace colors are MIXED toward the theme's ambient bg so the
+    // platform reads as lit structure in the same scene lighting — the
+    // frame must never outshine the playable area.
+    const bg = this.theme?.bg ?? 0x080a10;
+    const mix = (c1, c2, t) => {
+      const r = ((c1 >> 16) & 255) * (1 - t) + ((c2 >> 16) & 255) * t;
+      const gg = ((c1 >> 8) & 255) * (1 - t) + ((c2 >> 8) & 255) * t;
+      const b = (c1 & 255) * (1 - t) + (c2 & 255) * t;
+      return (r << 16 | gg << 8 | b) >>> 0;
+    };
+    const cA = mix(this.theme?.wallEdgeTint ?? 0x00e5ff, bg, 0.45); // top terrace: muted accent
+    const rawB = this.theme?.carTint ?? 0xff4fd8;
+    const cB = mix(isGrayish(rawB) ? 0xff4fd8 : rawB, bg, 0.55);    // mid terrace: muted contrast
+    const cC = 0x333a48;                                            // base terrace: dark concrete (muted gold read as mustard)
+
+    const x0 = pad.x, y0 = pad.y;
+    const x1 = pad.x + cols * cell, y1 = pad.y + rows * cell;
+
+    // Driveway gap span (world coords along the gap side, slightly padded)
+    const side = this.egress?.side;
+    const gw = this.egress?.width || 0;
+    const gPad = cell * 0.4;
+    let gapLo = 0, gapHi = 0;
+    if (side === 'N' || side === 'S') {
+      const c0 = (this.egress?.entry?.x ?? 0) - Math.floor(gw / 2);
+      gapLo = pad.x + c0 * cell - gPad;
+      gapHi = pad.x + (c0 + gw) * cell + gPad;
+    } else if (side === 'W' || side === 'E') {
+      const c0 = (this.egress?.entry?.y ?? 0) - Math.floor(gw / 2);
+      gapLo = pad.y + c0 * cell - gPad;
+      gapHi = pad.y + (c0 + gw) * cell + gPad;
+    }
+
+    const g = this.add.graphics().setDepth(5);
+
+    // Fill one ring band spanning offsets [a, b] outside the map bounds,
+    // as 4 side rects (corners overlap harmlessly), split at the gap.
+    const band = (a, b, color, alpha = 1) => {
+      g.fillStyle(color, alpha);
+      const spans = (lo, hi, isGapSide) => {
+        if (!isGapSide) return [[lo, hi]];
+        const out = [];
+        if (gapLo > lo) out.push([lo, Math.min(gapLo, hi)]);
+        if (gapHi < hi) out.push([Math.max(gapHi, lo), hi]);
+        return out;
+      };
+      // top / bottom (full width incl. corners)
+      for (const [s, e] of spans(x0 - b, x1 + b, side === 'N')) g.fillRect(s, y0 - b, e - s, b - a);
+      for (const [s, e] of spans(x0 - b, x1 + b, side === 'S')) g.fillRect(s, y1 + a, e - s, b - a);
+      // left / right
+      for (const [s, e] of spans(y0 - b, y1 + b, side === 'W')) g.fillRect(x0 - b, s, b - a, e - s);
+      for (const [s, e] of spans(y0 - b, y1 + b, side === 'E')) g.fillRect(x1 + a, s, b - a, e - s);
+    };
+
+    const t = Math.max(8, Math.round(cell * 0.42)); // terrace thickness scales with cell
+
+    band(0, 3, lighten(cA, 0.28));                   // lip at the playable edge (subtle)
+    band(3, 3 + t, cA);                              // terrace 1 (accent)
+    band(3 + t, 3 + t * 2, darken(cB, 0.08));        // terrace 2 (a step lower)
+    band(3 + t * 2, 3 + t * 3, cC);                  // terrace 3 (concrete base)
+    // thin dark seams between terraces read as the ledge edges
+    band(3 + t - 1, 3 + t + 1, 0x000000, 0.35);
+    band(3 + t * 2 - 1, 3 + t * 2 + 1, 0x000000, 0.35);
+    // drop shadow onto the street — the depth-seller
+    band(3 + t * 3, 3 + t * 3 + 7, 0x000000, 0.30);
+    band(3 + t * 3 + 7, 3 + t * 3 + 14, 0x000000, 0.14);
+
+    this._neonPerimeter = g;
   }
 
   placeGetawayCar(){
@@ -1643,8 +1854,14 @@ export class BaseGameScene extends Phaser.Scene {
     this.weapon = armed;
   }
 
+  isGunLocked(weapon){
+    const at = this.gunUnlockRound?.[weapon];
+    return !!at && this.mode === 'pve' && this.role === 'plug' && (this.pveRound || 1) < at;
+  }
+
   selectLoadout(weapon){
     if (!this.availableGuns?.includes?.(weapon)) return false;
+    if (this.isGunLocked(weapon)) return false;
     this.allowedGuns = [weapon];
     this.refreshAmmoForLoadout();
     return true;
@@ -1653,6 +1870,7 @@ export class BaseGameScene extends Phaser.Scene {
   setWeapon(w){
     if (!w) { this.weapon = null; return; }
     if (!this.allowedGuns.includes(w)) return;
+    if (this.isGunLocked(w)) return;
     this.weapon = w;
   }
 
@@ -1985,6 +2203,10 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Update AI based on role
     if (this.role==='runner'){
+      // Dual AI coordination: assign complementary roles (pursuer/guard)
+      // BEFORE either brain runs, so they act as a team instead of two
+      // independent copies reaching the same conclusion.
+      this.assignPlugRoles(performance.now());
       this.aiController.updatePlug(dt);
       // Dual AI: Update second plug if it exists
       if (this.aiController2 && this.defender2 && this.defender2.active) {
@@ -2087,20 +2309,47 @@ export class BaseGameScene extends Phaser.Scene {
 
     updateAvatarVisuals(this, dt);
 
-    // anti-camp (REAL / BUNK STASH PATCH: only consider the REAL stash)
+    // anti-camp — generalized coverage: BOTH defenders (incl. dual-AI
+    // defender2) against BOTH stashes. Previously only defender-vs-real-
+    // stash was checked, so a camping second plug or a bunk-stash camper
+    // was invisible to the mechanic.
+    // Extraction camping is deliberately NOT relocation-based: the car
+    // can't move, camping it is a legitimate tactic (runner keeps an
+    // HP/power buffer to punch through), and the oppressive case — an AI
+    // guard permanently stonewalling — is handled behaviorally by the
+    // guard role's periodic pressure sweeps in PlugAI.
     {
-      const dx = this.defender.x - this.stash.x;
-      const dy = this.defender.y - this.stash.y;
-      const near = Math.hypot(dx, dy) < this.antiCampRadius;
-      this.antiCampTime = near ? (this.antiCampTime + delta) : 0;
-      if (!this.hasStash && this.antiCampTime > this.antiCampThreshold) {
-        this.antiCampTime = 0;
+      const guards = [this.defender, this.defender2]
+        .filter(g => g && g.active && (g.hp === undefined || g.hp > 0));
+      const camped = (obj) => !!obj && obj.visible !== false &&
+        guards.some(g => Math.hypot(g.x - obj.x, g.y - obj.y) < this.antiCampRadius);
+      const relocate = (obj) => {
         const newCell = this.randomFloorCellFarFrom(this.toCell(this.attacker.x, this.attacker.y), 8);
-        this.stash.x = this.toWorldX(newCell.x);
-        this.stash.y = this.toWorldY(newCell.y);
-        this.stash.setVisible(true);
+        obj.x = this.toWorldX(newCell.x);
+        obj.y = this.toWorldY(newCell.y);
+        obj.setVisible(true);
         // No label/halo styling here to keep visuals identical
-        this.stashUnlockAt = performance.now() + 800;
+      };
+
+      if (!this.hasStash) {
+        // real stash
+        this.antiCampTime = camped(this.stash) ? (this.antiCampTime + delta) : 0;
+        if (this.antiCampTime > this.antiCampThreshold) {
+          this.antiCampTime = 0;
+          relocate(this.stash);
+          this.stashUnlockAt = performance.now() + 800;
+        }
+        // bunk stash — same rule, separate timer (a camped decoy is still
+        // a camped objective from the runner's point of view)
+        this.antiCampTimeBunk = (this.bunkStash && camped(this.bunkStash))
+          ? ((this.antiCampTimeBunk || 0) + delta) : 0;
+        if (this.antiCampTimeBunk > this.antiCampThreshold) {
+          this.antiCampTimeBunk = 0;
+          relocate(this.bunkStash);
+        }
+      } else {
+        this.antiCampTime = 0;
+        this.antiCampTimeBunk = 0;
       }
     }
 
@@ -2574,16 +2823,19 @@ export class BaseGameScene extends Phaser.Scene {
     };
     const onTouchStart = (e) => {
       if (!e.changedTouches || !e.changedTouches.length) return;
-      const t = e.changedTouches[0];
-      const { x, y } = normXY(t.clientX, t.clientY);
-      downHandler({ id: t.identifier ?? 0, x, y, isDown: true });
+      // Forward EVERY changed touch — twin-stick plug controls need the
+      // second finger, and the handlers do their own pointer-id matching.
+      for (let i = 0; i < e.changedTouches.length; i++){
+        const t = e.changedTouches[i];
+        const { x, y } = normXY(t.clientX, t.clientY);
+        downHandler({ id: t.identifier ?? 0, x, y, isDown: true });
+      }
       e.preventDefault();
     };
     const onTouchMove = (e) => {
       if (!e.changedTouches || !e.changedTouches.length) return;
       for (let i=0;i<e.changedTouches.length;i++){
         const t = e.changedTouches[i];
-        if (this._swipePid !== null && t.identifier !== this._swipePid) continue;
         const { x, y } = normXY(t.clientX, t.clientY);
         moveHandler({ id: t.identifier ?? 0, x, y, isDown: true });
       }

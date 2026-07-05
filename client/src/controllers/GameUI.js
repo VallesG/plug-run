@@ -252,11 +252,29 @@ export default class GameUI {
       const y = firstRowY_adjusted + r * rowGapY;
       lastRowY = y;
 
+      const locked = this.scene.isGunLocked?.(weapon);
+      const label = friendlyName(weapon);
+
+      if (locked) {
+        // Visible-but-locked: grayed with the unlock round, so players see
+        // what they're working toward (an invisible weapon is just a
+        // missing button). Not selectable.
+        const unlockAt = this.scene.gunUnlockRound?.[weapon];
+        const btn = this.scene.add.rectangle(x, y, weaponBtnW, weaponBtnH, 0x11141d, 1)
+          .setStrokeStyle(1, 0x232a3c)
+          .setDepth(20004);
+        const txt = this.scene.add.text(x, y - 7, label, { color: '#565f75', fontSize: '13px' })
+          .setOrigin(0.5).setDepth(20005);
+        const sub = this.scene.add.text(x, y + 9, `\u{1F512} Round ${unlockAt}`, { color: '#565f75', fontSize: '10px' })
+          .setOrigin(0.5).setDepth(20005);
+        registerExtra(btn, txt, sub);
+        return; // no selection handler, not tracked for restyle
+      }
+
       const btn = this.scene.add.rectangle(x, y, weaponBtnW, weaponBtnH, 0x1a2038, 1)
         .setStrokeStyle(1, 0x2f3660)
         .setDepth(20004)
         .setInteractive({ useHandCursor: true });
-      const label = friendlyName(weapon);
       const txt = this.scene.add.text(x, y, label, { color: '#cbd1ff', fontSize: '14px' })
         .setOrigin(0.5).setDepth(20005);
 

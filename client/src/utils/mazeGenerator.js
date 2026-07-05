@@ -4,72 +4,73 @@ const THEMES = [
   {
     key: 'house_wood',
     bg: 0x080a10,
-    floorTint: 0xffffff,
-    wallFillTint: 0xffffff,
-    wallEdgeTint: 0xf97316,
-    furnTint: 0xffffff,
-    carTint: 0xffffff,
+    floorTint: 0xa8845f,
+    wallFillTint: 0x160f0a,
+    wallEdgeTint: 0xff7a1a,
+    furnTint: 0xffd9a8,
+    carTint: 0x00e5ff,
     floorSet: 'wood'
   },
   {
     key: 'loft_concrete',
     bg: 0x0b0f16,
-    floorTint: 0xb8bec9,
-    wallFillTint: 0x232a33,
-    wallEdgeTint: 0x8a8f98,
+    floorTint: 0xffffff,
+    wallFillTint: 0x11151c,
+    wallEdgeTint: 0x8f7dff,
     furnTint: 0xdde3ea,
-    carTint: 0xcbd1ff,
+    carTint: 0x7df9ff,
     floorSet: 'checker',
-    checkerColors: [0xe5e7eb, 0xf3f4f6]
+    checkerColors: [0x2a303c, 0x363e4d]
   },
   {
     key: 'green_villa',
     bg: 0x0a0d0a,
-    floorTint: 0xcdb697,
-    wallFillTint: 0x1f241a,
-    wallEdgeTint: 0x2faa66,
-    furnTint: 0xf5eedc,
+    floorTint: 0xffffff,
+    wallFillTint: 0x0e1510,
+    wallEdgeTint: 0x2bff8f,
+    furnTint: 0xe8f5dc,
     carTint: 0x2fb3ff,
-    floorSet: 'checker'
+    floorSet: 'checker',
+    checkerColors: [0x22352a, 0x2c4536]
   },
   {
     key: 'studio_white',
     bg: 0x0b0f16,
-    floorTint: 0xf3f4f6,
-    wallFillTint: 0x1f2632,
-    wallEdgeTint: 0x9aa6b2,
-    furnTint: 0xffffff,
+    floorTint: 0xffffff,
+    wallFillTint: 0x12151f,
+    wallEdgeTint: 0xff4fd8,
+    furnTint: 0xf3f4f6,
     carTint: 0x93c5fd,
     floorSet: 'checker',
-    checkerColors: [0xf9fafb, 0xe5e7eb]
+    checkerColors: [0x2b3040, 0x384054]
   },
   {
     key: 'sand_wood',
     bg: 0x0b0f12,
-    floorTint: 0xe9d5b4,
-    wallFillTint: 0x1f201e,
-    wallEdgeTint: 0xc8a97e,
-    furnTint: 0xfff4e0,
+    floorTint: 0xb8956a,
+    wallFillTint: 0x17140e,
+    wallEdgeTint: 0xffc857,
+    furnTint: 0xffe9c4,
     carTint: 0x60a5fa,
     floorSet: 'wood'
   },
   {
     key: 'cyan_tech',
     bg: 0x0a0e14,
-    floorTint: 0xa8b2c0,
-    wallFillTint: 0x1a2129,
-    wallEdgeTint: 0x22d3ee,
+    floorTint: 0xffffff,
+    wallFillTint: 0x0e161d,
+    wallEdgeTint: 0x2ee6ff,
     furnTint: 0xd1dce5,
     carTint: 0x67e8f9,
     floorSet: 'checker',
-    checkerColors: [0xd1d5db, 0xe5e7eb]
+    checkerColors: [0x1f3340, 0x294252]
   },
   {
     key: 'purple_noir',
     bg: 0x0d0a12,
-    floorTint: 0xb8a8c8,
-    wallFillTint: 0x1f1a28,
-    wallEdgeTint: 0xa855f7,
+    floorTint: 0x9683ad,
+    wallFillTint: 0x140f1c,
+    wallEdgeTint: 0xb45cff,
     furnTint: 0xe8dcf5,
     carTint: 0xc084fc,
     floorSet: 'wood'
@@ -77,55 +78,55 @@ const THEMES = [
   {
     key: 'sunset_coral',
     bg: 0x120a0d,
-    floorTint: 0xf5d5c8,
-    wallFillTint: 0x2a1a1f,
-    wallEdgeTint: 0xfb7185,
-    furnTint: 0xffeee8,
+    floorTint: 0xb58275,
+    wallFillTint: 0x1c1013,
+    wallEdgeTint: 0xff5f7a,
+    furnTint: 0xffd9cc,
     carTint: 0xfda4af,
     floorSet: 'wood'
   },
   {
     key: 'teal_modern',
     bg: 0x0a1214,
-    floorTint: 0xd8e8e8,
-    wallFillTint: 0x1a2528,
-    wallEdgeTint: 0x14b8a6,
-    furnTint: 0xeef8f8,
+    floorTint: 0xffffff,
+    wallFillTint: 0x0d1719,
+    wallEdgeTint: 0x14e8cc,
+    furnTint: 0xd9f2ef,
     carTint: 0x5eead4,
     floorSet: 'checker',
-    checkerColors: [0xe0f2f1, 0xf3f8f8]
+    checkerColors: [0x1f3538, 0x294648]
   },
   {
     key: 'amber_lounge',
     bg: 0x100e0a,
-    floorTint: 0xf0d5a0,
-    wallFillTint: 0x252218,
-    wallEdgeTint: 0xfbbf24,
-    furnTint: 0xfff5e0,
+    floorTint: 0xab935e,
+    wallFillTint: 0x191509,
+    wallEdgeTint: 0xffc21e,
+    furnTint: 0xffe9b8,
     carTint: 0xfcd34d,
     floorSet: 'wood'
   },
   {
     key: 'magenta_electric',
     bg: 0x140a12,
-    floorTint: 0xe8c8e0,
-    wallFillTint: 0x2d1a28,
-    wallEdgeTint: 0xe879f9,
-    furnTint: 0xfde8f8,
+    floorTint: 0xffffff,
+    wallFillTint: 0x180d1a,
+    wallEdgeTint: 0xf85cff,
+    furnTint: 0xf5d9ef,
     carTint: 0xf0abfc,
     floorSet: 'checker',
-    checkerColors: [0xf5d0fe, 0xfae8ff]
+    checkerColors: [0x3a2440, 0x4a2f52]
   },
   {
     key: 'navy_industrial',
     bg: 0x080b12,
-    floorTint: 0x9aa8c0,
-    wallFillTint: 0x1a1f2d,
-    wallEdgeTint: 0x3b82f6,
+    floorTint: 0xffffff,
+    wallFillTint: 0x0d1220,
+    wallEdgeTint: 0x3f8cff,
     furnTint: 0xc8d4e8,
     carTint: 0x60a5fa,
     floorSet: 'checker',
-    checkerColors: [0xbfdbfe, 0xdbeafe]
+    checkerColors: [0x25304a, 0x303e5e]
   }
 ];
 

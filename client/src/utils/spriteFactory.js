@@ -5,6 +5,10 @@ export function makeRunnerSprite(scene, x, y, cell) {
   const scale = (cell / 128) * 3.0;
   sprite.setScale(scale).setOrigin(0.5, 0.5);
 
+  const puddle = scene.add
+    .ellipse(0, cell * 0.30, cell * 1.35, cell * 1.0, 0xffffff, 0.12);
+  const puddleCore = scene.add
+    .ellipse(0, cell * 0.30, cell * 0.85, cell * 0.62, 0xffffff, 0.10);
   const shadow = scene.add
     .ellipse(0, cell * 0.48, cell * 0.9, cell * 0.3, 0x000000, 0.34)
     .setScale(1, 0.8);
@@ -27,7 +31,7 @@ export function makeRunnerSprite(scene, x, y, cell) {
     outline.push(o);
   });
 
-  const container = scene.add.container(x, y, [shadow, ...outline, sprite]).setDepth(10);
+  const container = scene.add.container(x, y, [puddle, puddleCore, shadow, ...outline, sprite]).setDepth(10);
 
   container.kind = 'runner';
   container.sprite = sprite;
@@ -44,6 +48,10 @@ export function makePlugSprite(scene, x, y, cell) {
   sprite.setScale(scale).setOrigin(0.5, 0.5);
   sprite.setTint(0xff6b6b);
 
+  const puddle = scene.add
+    .ellipse(0, cell * 0.30, cell * 1.35, cell * 1.0, 0xffffff, 0.12);
+  const puddleCore = scene.add
+    .ellipse(0, cell * 0.30, cell * 0.85, cell * 0.62, 0xffffff, 0.10);
   const shadow = scene.add
     .ellipse(0, cell * 0.48, cell * 0.9, cell * 0.3, 0x000000, 0.34)
     .setScale(1, 0.8);
@@ -66,7 +74,7 @@ export function makePlugSprite(scene, x, y, cell) {
     outline.push(o);
   });
 
-  const container = scene.add.container(x, y, [shadow, ...outline, sprite]).setDepth(10);
+  const container = scene.add.container(x, y, [puddle, puddleCore, shadow, ...outline, sprite]).setDepth(10);
 
   container.kind = 'plug';
   container.sprite = sprite;

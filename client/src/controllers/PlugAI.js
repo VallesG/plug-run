@@ -113,7 +113,7 @@ export function updatePlugBehavior(scene, dt) {
 
   const ax = targetX;
   const ay = targetY;
-  const speed = scene.meleeEnabled ? scene.plugSpeedNoAmmo : scene.aiPlug.speed;
+  const speed = (scene.meleeEnabled ? scene.plugSpeedNoAmmo : scene.aiPlug.speed) * (d._speedMul || 1);
 
   // ---- Movement target (may differ from aim target) -------------------
   // ax/ay stay the AIM target (runner or decoy). moveX/moveY is where the
@@ -145,10 +145,30 @@ export function updatePlugBehavior(scene, dt) {
       if (scene.isWalkableCell?.(pc.x, pc.y)) { moveX = px; moveY = py; }
     }
 
-    // GETAWAY INTERCEPTION (round 5+): if the runner has the stash and the
-    // plug can reach the extraction first, cut them off at the car instead
-    // of chasing the tail. Creates "he's guarding the exit" standoffs.
-    if (roundNow >= 5 && scene.hasStash && scene.extract) {
+    // ROLE-AWARE OBJECTIVE (dual AI): if the scene assigned this plug a
+    // role, honor it instead of the solo interception heuristic.
+    const assignedRole = d._plugRole;
+    if (assignedRole === 'guard' && scene.hasStash && scene.extract) {
+      // Hold the extraction — but sweep toward the runner periodically.
+      // The sweep is deliberate anti-camp leniency: the car can't be
+      // relocated like a stash, so a permanent stonewall is prevented
+      // behaviorally, giving the runner real extraction windows.
+      const tNow = scene.time?.now ?? performance.now();
+      if (!d._guardSweepAt) d._guardSweepAt = tNow + 5000 + Math.random() * 3000;
+      const inSweep = tNow >= d._guardSweepAt && tNow < d._guardSweepAt + 2200;
+      if (inSweep) {
+        // pressure sweep: keep the predicted-chase move target as-is
+      } else {
+        if (tNow >= d._guardSweepAt + 2200) d._guardSweepAt = tNow + 5000 + Math.random() * 3000;
+        moveX = scene.extract.x;
+        moveY = scene.extract.y;
+      }
+    } else if (assignedRole === 'pursuer') {
+      // Always chase (with lead prediction already applied above) — never
+      // peel off to the car; the guard has that covered.
+      d._guardSweepAt = 0;
+    } else if (roundNow >= 5 && scene.hasStash && scene.extract && !targetingDecoy) {
+      // SOLO plug (no role assigned): original interception heuristic.
       const plugToExit   = Math.hypot(scene.extract.x - d.x, scene.extract.y - d.y);
       const runnerToExit = Math.hypot(scene.extract.x - scene.attacker.x, scene.extract.y - scene.attacker.y);
       if (plugToExit < runnerToExit * 0.9) {

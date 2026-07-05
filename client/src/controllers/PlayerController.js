@@ -21,6 +21,7 @@ export default class PlayerController {
     this._aimDragActive = false;
     this._lastTapAt = 0;
 
+
     // Runner-specific state
     this._runnerInputDir = { x: 1, y: 0 };
     this._runnerMoveDir = null;
@@ -339,25 +340,66 @@ export default class PlayerController {
     this._swipePid = pointer.id;
     this._swipeStart = { x: pointer.x, y: pointer.y, t: performance.now() };
     // When defending, treat drag as an aim gesture and slightly slow movement to help aiming
-    if (this.scene.role === 'plug') this._aimDragActive = true;
+    if (this.scene.role === 'plug') {
+      this._aimDragActive = true;
+    }
   }
 
   updateSwipe(pointer) {
     if (pointer.id !== this._swipePid || !pointer.isDown) return;
-    // Continuously update aim towards the current touch position relative to the controlled sprite
-    const who = (this.scene.role === 'plug') ? this.scene.defender : this.scene.attacker;
+
+    if (this.scene.role === 'plug') {
+      // DRAG-RELATIVE AIM: aim vector runs from the gesture's origin to the
+      // finger — a small drag anywhere on screen is full aim control,
+      // independent of where the plug sprite is or how it's moving. (The
+      // old sprite-relative math required positioning your thumb relative
+      // to the plug's on-screen location, which felt heavy, and aim
+      // drifted as the plug auto-ran under a stationary finger.)
+      if (!this._swipeStart) return;
+      let dx = pointer.x - this._swipeStart.x;
+      let dy = pointer.y - this._swipeStart.y;
+      let L = Math.hypot(dx, dy);
+      // Floating re-anchor: past full deflection the origin follows the
+      // finger, so reversing aim mid-drag responds instantly instead of
+      // requiring a return trip across the whole drag distance.
+      const AIM_MAX_PX = 56;
+      if (L > AIM_MAX_PX) {
+        const over = L - AIM_MAX_PX;
+        this._swipeStart.x += (dx / L) * over;
+        this._swipeStart.y += (dy / L) * over;
+        dx = pointer.x - this._swipeStart.x;
+        dy = pointer.y - this._swipeStart.y;
+        L = AIM_MAX_PX;
+      }
+      const AIM_DEAD_PX = 10; // micro-jitter shouldn't spin the gun
+      if (L >= AIM_DEAD_PX) {
+        // 8-WAY SOFT SNAP: if the drag is within ~15° of a 45° direction,
+        // snap to it exactly. Corridors are orthogonal/diagonal, so crisp
+        // diagonals matter far more than arbitrary angles — but aim stays
+        // free outside the snap zones for decoys/open-room shots.
+        const ang = Math.atan2(dy, dx);
+        const step = Math.PI / 4;
+        const nearest = Math.round(ang / step) * step;
+        const SNAP_RAD = 0.26; // ~15° of the 22.5° half-sector
+        if (Math.abs(ang - nearest) < SNAP_RAD) {
+          this.playerGunAim = { x: Math.cos(nearest), y: Math.sin(nearest) };
+        } else {
+          this.playerGunAim = { x: dx / L, y: dy / L };
+        }
+        // DON'T update playerMoveDir during drag - keeps movement straight
+      }
+      return;
+    }
+
+    // Runner: unchanged sprite-relative aim (used for power direction)
+    const who = this.scene.attacker;
     if (!who) return;
     const dx = pointer.x - who.x;
     const dy = pointer.y - who.y;
     const L = Math.hypot(dx, dy);
     if (L >= this.SWIPE_DEAD_PX) {
       const nx = dx / (L || 1), ny = dy / (L || 1);
-
-      // During drag: update gun aim in cardinal direction closest to drag
-      // Update gun aim with smooth 360° direction (no cardinal snapping)
-      // This allows full circular aiming without affecting movement
       this.playerGunAim = { x: nx, y: ny };
-      // DON'T update playerMoveDir during drag - keeps movement straight
     }
   }
 
@@ -417,7 +459,9 @@ export default class PlayerController {
         this.playerIntendedDir = { x: nx, y: ny };
         this.playerDrift = { x: nx, y: ny };  // Legacy-style drift
 
-        // Update gun aim for plug so orientation updates correctly
+        // Steering carries the aim: a quick swipe turns the plug AND points
+        // the gun the same way — you face where you're going. Deliberate
+        // off-axis aim is the slow drag's job.
         if (this.scene.role === 'plug') {
           this.playerGunAim = { x: nx, y: ny };
         }
