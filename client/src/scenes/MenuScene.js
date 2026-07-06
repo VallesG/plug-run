@@ -166,7 +166,28 @@ export class MenuScene extends Phaser.Scene {
     this.dailyBonusBtn = this.makeDailyBonusButton();
 
     this.reposition();
-    this.scale.on('resize', () => this.reposition());
+    // Rebuild the whole menu on real viewport changes (desktop zoom,
+    // window drags, rotation). reposition() alone only MOVES elements —
+    // their sizes were computed at create() and go stale under zoom.
+    // Managed handler: off-before-on + shutdown cleanup so restarts
+    // don't stack listeners on the global scale manager.
+    if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
+    this._lastW = this.scale.gameSize.width;
+    this._lastH = this.scale.gameSize.height;
+    this._onResizeCb = (gameSize) => {
+      if (Math.abs(gameSize.width - this._lastW) < 40 && Math.abs(gameSize.height - this._lastH) < 40) {
+        this.reposition(); // minor jitter: cheap move-only pass
+        return;
+      }
+      clearTimeout(this._resizeTimer);
+      this._resizeTimer = setTimeout(() => this.scene.restart(), 250);
+    };
+    this.scale.on('resize', this._onResizeCb);
+    this.events.once('shutdown', () => {
+      clearTimeout(this._resizeTimer);
+      if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
+      this._onResizeCb = null;
+    });
 
     // Initialize user data from Supabase (async)
     this.initializeUserData();
@@ -410,45 +431,38 @@ export class MenuScene extends Phaser.Scene {
     cont.add(titleBg);
     cont.add(titleObj);
     
-    // Stats panel (right side) — local scores; rank waits for online boards.
-    // Fresh players with no scores see the mode tagline instead.
+    // SCORE TICKER: horizontal strip under the street sign, ESPN
+    // bottom-line style — three stat columns with dividers. ALWAYS shown
+    // (placeholders when empty); the old stats-or-tagline branch keyed on
+    // device-local save data, so different phones showed different menus.
     let timerTxt = null;
     {
       const stats = this.getLocalStats(modeKey);
-      const hasAny = !!(stats.daily || stats.alltime);
-      const statY0 = -ch * 0.5 + titleBgHeight + 14;
+      const tickerH = 30;
+      const tickerY = -ch * 0.5 + titleBgHeight + tickerH / 2 + 2;
 
-      if (hasAny) {
-        const panelW = Math.floor(cw * 0.46);
-        const panelX = cw/2 - panelW/2 - 10;
-        const rows = [
-          ["TODAY'S BEST", stats.daily ? formatNumber(stats.daily.stash ?? 0) : '—', '#f0f2f7'],
-          ['BEST ROUND',   stats.daily ? String(stats.daily.round ?? '—') : (stats.alltime ? String(stats.alltime.round ?? '—') : '—'), '#f0f2f7'],
-          ['YOUR RANK',    '—', '#8a93a8']
-        ];
-        const rowH = 20;
-        const backing = this.add.rectangle(panelX, statY0 + (rows.length * rowH)/2 - 4, panelW + 16, rows.length * rowH + 14, 0x0a0d13, 0.72);
-        backing.setStrokeStyle(1, 0x2e3442);
-        cont.add(backing);
-        rows.forEach(([label, value, valColor], i) => {
-          const ry = statY0 + i * rowH + 4;
-          cont.add(this.add.text(panelX - panelW/2, ry, label, {
-            fontFamily: 'monospace', fontSize: '11px', color: '#8a93a8'
-          }).setOrigin(0, 0.5));
-          cont.add(this.add.text(panelX + panelW/2, ry, value, {
-            fontFamily: 'monospace', fontSize: '12px', color: valColor, fontStyle: 'bold'
-          }).setOrigin(1, 0.5));
-        });
-      } else {
-        const taglines = {
-          runner: 'Grab the stash.\nReach the getaway car.',
-          plug:   'Hold the block.\nStop the runner.'
-        };
-        cont.add(this.add.text(0, statY0 + 14, taglines[modeKey] || '', {
-          fontFamily: 'monospace', fontSize: '12px', color: '#8a93a8',
-          align: 'center', lineSpacing: 6
-        }).setOrigin(0.5, 0.5));
-      }
+      const backing = this.add.rectangle(0, tickerY, cw, tickerH, 0x0a0d13, 0.8);
+      backing.setStrokeStyle(1, 0x2e3442);
+      cont.add(backing);
+
+      const cols = [
+        ["TODAY'S BEST", stats.daily ? formatNumber(stats.daily.stash ?? 0) : '—', '#f0f2f7'],
+        ['BEST ROUND',   String(stats.daily?.round ?? stats.alltime?.round ?? '—'), '#f0f2f7'],
+        ['YOUR RANK',    '—', '#8a93a8']
+      ];
+      const colW = cw / cols.length;
+      cols.forEach(([label, value, valColor], i) => {
+        const cx2 = -cw / 2 + colW * (i + 0.5);
+        cont.add(this.add.text(cx2, tickerY - 7, label, {
+          fontFamily: 'monospace', fontSize: '9px', color: '#8a93a8', letterSpacing: 1
+        }).setOrigin(0.5));
+        cont.add(this.add.text(cx2, tickerY + 7, value, {
+          fontFamily: 'monospace', fontSize: '13px', color: valColor, fontStyle: 'bold'
+        }).setOrigin(0.5));
+        if (i > 0) {
+          cont.add(this.add.rectangle(-cw / 2 + colW * i, tickerY, 1, tickerH - 10, 0x2e3442, 1));
+        }
+      });
     }
 
     // START button at BOTTOM (near full width like the mockup)

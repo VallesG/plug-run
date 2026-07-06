@@ -17,6 +17,23 @@ export default class LeaderboardScene extends Phaser.Scene {
 
   create() {
     console.log('[Leaderboard] create() called, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop());
+
+    // Rebuild on real viewport changes (desktop zoom / window drags) —
+    // same self-healing pattern as MenuScene/BaseGameScene.
+    if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
+    this._lastW = this.scale.gameSize.width;
+    this._lastH = this.scale.gameSize.height;
+    this._onResizeCb = (gameSize) => {
+      if (Math.abs(gameSize.width - this._lastW) < 40 && Math.abs(gameSize.height - this._lastH) < 40) return;
+      clearTimeout(this._resizeTimer);
+      this._resizeTimer = setTimeout(() => this.scene.restart(), 250);
+    };
+    this.scale.on('resize', this._onResizeCb);
+    this.events.once('shutdown', () => {
+      clearTimeout(this._resizeTimer);
+      if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
+      this._onResizeCb = null;
+    });
     const W = this.scale.width;
     const H = this.scale.height;
     const cx = W / 2;

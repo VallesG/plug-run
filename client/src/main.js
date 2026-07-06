@@ -41,30 +41,8 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-// Zoom detection and warning
-const checkZoom = () => {
-  const zoomWarning = document.getElementById('zoom-warning');
-  if (!zoomWarning) return;
-
-  // Detect zoom using visualViewport (most reliable for modern browsers)
-  const isZoomed = window.visualViewport
-    ? Math.abs(window.visualViewport.scale - 1) > 0.01  // Not 100% (with small tolerance)
-    : false;
-
-  if (isZoomed) {
-    zoomWarning.classList.add('show');
-  } else {
-    zoomWarning.classList.remove('show');
-  }
-};
-
-// Check zoom on load and resize
-checkZoom();
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', checkZoom);
-}
-
-// FIT mode rescales the canvas automatically on resize/rotation —
-// no manual game.scale.resize() needed (that also caused mid-game
-// scene restarts via BaseGameScene's resize listener).
-window.addEventListener('resize', checkZoom);
+// Zoom/resize handling: no warning banner needed — every scene rebuilds
+// itself on layout-viewport changes (RESIZE mode + per-scene restart
+// handlers), so desktop browser zoom just relayouts. Mobile pinch zoom is
+// user-intent zoom INTO the canvas; the viewport meta discourages it and
+// nothing breaks structurally.
