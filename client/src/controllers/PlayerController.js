@@ -21,6 +21,15 @@ export default class PlayerController {
     this._aimDragActive = false;
     this._lastTapAt = 0;
 
+    // DRAG-MOVE (plug, touch): once a gesture COMMITS to being a drag
+    // (held past DRAG_COMMIT_MS or traveled past DRAG_COMMIT_PX without
+    // release), plug walks toward the aim direction while dragging — one
+    // finger, one gesture: hold-drag steers + aims + moves. Quick swipes
+    // remain untouched because they release before commit.
+    this._dragMoveActive = false;
+    this.DRAG_COMMIT_MS = 180;
+    this.DRAG_COMMIT_PX = 32;
+
 
     // Runner-specific state
     this._runnerInputDir = { x: 1, y: 0 };
@@ -61,8 +70,11 @@ export default class PlayerController {
     } else {
       // Plug speed with aim slowdown
       let plugBaseSpeed = this.scene.meleeEnabled ? this.scene.plugSpeedNoAmmo : this.scene.plugSpeed;
-      const aimSlow = (this._aimDragActive || (this.scene.isDesktop && this.scene._mouseDown))
-        ? (this.scene.aimDragFactorPlug || 0.85) : 1;
+      // No slowdown while drag-moving — full speed feels better in a
+      // firefight, and precision already comes from the drag-relative
+      // aim (small finger moves = fine aim adjustments). Desktop
+      // mouse-down slowdown also removed for parity.
+      const aimSlow = 1;
       plugBaseSpeed *= aimSlow;
       speed = plugBaseSpeed;
     }
@@ -338,8 +350,11 @@ export default class PlayerController {
     // Track one touch ID at a time
     if (this._swipePid !== null) return;
     this._swipePid = pointer.id;
-    this._swipeStart = { x: pointer.x, y: pointer.y, t: performance.now() };
-    // When defending, treat drag as an aim gesture and slightly slow movement to help aiming
+    // x0/y0 = untouched original touch-down (needed for total-travel
+    // check in drag commit — the live x/y drifts when the origin
+    // re-anchors past AIM_MAX_PX).
+    this._swipeStart = { x: pointer.x, y: pointer.y, x0: pointer.x, y0: pointer.y, t: performance.now() };
+    this._dragMoveActive = false;
     if (this.scene.role === 'plug') {
       this._aimDragActive = true;
     }
@@ -381,12 +396,26 @@ export default class PlayerController {
         const step = Math.PI / 4;
         const nearest = Math.round(ang / step) * step;
         const SNAP_RAD = 0.26; // ~15° of the 22.5° half-sector
-        if (Math.abs(ang - nearest) < SNAP_RAD) {
-          this.playerGunAim = { x: Math.cos(nearest), y: Math.sin(nearest) };
-        } else {
-          this.playerGunAim = { x: dx / L, y: dy / L };
+        const aimVec = (Math.abs(ang - nearest) < SNAP_RAD)
+          ? { x: Math.cos(nearest), y: Math.sin(nearest) }
+          : { x: dx / L, y: dy / L };
+        this.playerGunAim = aimVec;
+
+        // DRAG-MOVE COMMIT: has this gesture proven itself as a drag?
+        // Committed either by holding past DRAG_COMMIT_MS OR by traveling
+        // past DRAG_COMMIT_PX — whichever hits first. Once committed,
+        // plug walks toward the aim vector while the finger stays down.
+        const held = performance.now() - (this._swipeStart?.t || 0);
+        const totalTravel = Math.hypot(pointer.x - this._swipeStart.x0, pointer.y - this._swipeStart.y0);
+        if (!this._dragMoveActive && (held >= this.DRAG_COMMIT_MS || totalTravel >= this.DRAG_COMMIT_PX)) {
+          this._dragMoveActive = true;
         }
-        // DON'T update playerMoveDir during drag - keeps movement straight
+        if (this._dragMoveActive) {
+          this.playerMoveDir = aimVec;
+          this.playerDrift = aimVec;
+          this.playerIntendedDir = aimVec;
+          this.scene.userTookOver = true;
+        }
       }
       return;
     }
@@ -404,6 +433,11 @@ export default class PlayerController {
   }
 
   endSwipe(pointer) {
+    // DRAG-MOVE END: gesture released. Drift already points where the
+    // finger was heading; clearing the flag drops the aim slowdown so
+    // post-release movement runs at full speed (per spec).
+    this._dragMoveActive = false;
+
     // Determine if the gesture qualifies as a tap (short duration and limited movement)
     const sx = this._swipeStart?.x ?? pointer.x;
     const sy = this._swipeStart?.y ?? pointer.y;
