@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import {
   getTopScores, getUserRank, getUserScore,
   getAllTimeTopScores, getAllTimeRank, getAllTimeScore,
+  getGlobalDailyLeaderboard, getGlobalAllTimeLeaderboard,
+  getGlobalDailyRank, getGlobalAllTimeRank,
   formatNumber
 } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
@@ -60,9 +62,11 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     // Tab buttons (closer to title, no stats bar)
     this.currentTab = 'daily';
-    this.currentRole = 'runner'; // Track selected role (runner/plug)
+    this.currentRole = 'runner';
+    this.currentSort = 'stash';
     this.createTabButtons(cx, 125);
     this.createRoleButtons(cx, 175);
+    this.createSortButtons(cx, 218);
 
     // Scrollable content container
     this.contentContainer = this.add.container(0, 0);
@@ -271,13 +275,54 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.refreshContent();
   }
 
+  createSortButtons(cx, y) {
+    this.sortButtons = {};
+    this.sortTexts = {};
+    this.sortLabel = this.add.text(cx - 100, y, 'Rank by:', {
+      fontSize: '11px', color: '#6b7280', fontStyle: 'italic'
+    }).setOrigin(0.5, 0.5);
+    const modes = [{ key: 'stash', label: 'Stash' }, { key: 'rep', label: 'Rep' }];
+    const btnW = 62, btnH = 24, gap = 6;
+    const startX = cx - ((btnW * modes.length + gap * (modes.length - 1)) / 2) + 45;
+    modes.forEach((m, i) => {
+      const x = startX + i * (btnW + gap);
+      const active = m.key === this.currentSort;
+      const bg = this.add.rectangle(x, y, btnW, btnH,
+        active ? 0x2a1a38 : 0x1a2038, 1)
+        .setStrokeStyle(1, active ? 0xfbbf24 : 0x2f3660)
+        .setInteractive({ useHandCursor: true });
+      const txt = this.add.text(x, y, m.label, {
+        fontSize: '12px', color: active ? '#fbbf24' : '#aab5ff',
+        fontStyle: active ? 'bold' : ''
+      }).setOrigin(0.5);
+      bg.on('pointerdown', () => this.switchSort(m.key));
+      this.sortButtons[m.key] = bg;
+      this.sortTexts[m.key] = txt;
+    });
+  }
+
+  switchSort(sort) {
+    if (this.currentSort === sort) return;
+    this.currentSort = sort;
+    Object.keys(this.sortButtons).forEach(key => {
+      const isActive = key === sort;
+      this.sortButtons[key]
+        .setFillStyle(isActive ? 0x2a1a38 : 0x1a2038)
+        .setStrokeStyle(1, isActive ? 0xfbbf24 : 0x2f3660);
+      this.sortTexts[key]
+        .setColor(isActive ? '#fbbf24' : '#aab5ff')
+        .setFontStyle(isActive ? 'bold' : '');
+    });
+    this.refreshContent();
+  }
+
   async refreshContent() {
     // Clear existing content
     this.contentContainer?.removeAll(true);
 
     const cx = this.scale.width / 2;
     const W = this.scale.width;
-    let y = 230;
+    let y = 260;
 
     if (this.currentTab === 'pvp') {
       // PvP tab - coming soon
@@ -303,10 +348,23 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     y += 40;
 
-    // Get data (now async - fetches from global leaderboards)
-    const topScores = this.currentTab === 'daily'
-      ? await getTopScores(this.currentRole, 20)
-      : await getAllTimeTopScores(this.currentRole, 20);
+    // Sort-aware fetch: STASH-ranked (default) or REP-ranked.
+    const sort = this.currentSort;
+    const topPayload = this.currentTab === 'daily'
+      ? await getGlobalDailyLeaderboard(this.currentRole, null, 20, sort)
+      : await getGlobalAllTimeLeaderboard(this.currentRole, 20, sort);
+    const topScores = topPayload?.entries || [];
+    const myRank = this.currentTab === 'daily'
+      ? await getGlobalDailyRank(this.currentRole, sort)
+      : await getGlobalAllTimeRank(this.currentRole, sort);
+
+    // YOU: #N badge — visible when player is on the board but past top-20
+    if (myRank && myRank > 20) {
+      const badge = this.add.text(cx, y - 10, `YOU: #${myRank}`, {
+        fontSize: '13px', color: '#fbbf24', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      this.contentContainer.add(badge);
+    }
 
     const userId = getUserID();
 
@@ -322,11 +380,13 @@ export default class LeaderboardScene extends Phaser.Scene {
     }).setOrigin(0, 0.5);
     const stashHeader = this.add.text(cx + 80, y, 'STASH', {
       fontSize: '12px',
-      color: '#6b7280'
+      color: sort === 'stash' ? '#86efac' : '#6b7280',
+      fontStyle: sort === 'stash' ? 'bold' : ''
     }).setOrigin(0.5, 0.5);
     const repHeader = this.add.text(cx + 155, y, 'REP', {
       fontSize: '12px',
-      color: '#6b7280'
+      color: sort === 'rep' ? '#ffd166' : '#6b7280',
+      fontStyle: sort === 'rep' ? 'bold' : ''
     }).setOrigin(1, 0.5);
 
     this.contentContainer.add([titleText, headerBg, rankHeader, nameHeader, stashHeader, repHeader]);
@@ -376,22 +436,25 @@ export default class LeaderboardScene extends Phaser.Scene {
           fontStyle: isUser ? 'bold' : ''
         }).setOrigin(0, 0.5);
 
-        // Stash (formatted for large numbers)
-        const stashValue = entry.stash || 0;
-        const stashFormatted = formatNumber(stashValue);
+        // Ranked column: bold + full color; the other muted.
+        const stashValue = entry.stash;
+        const repValue = entry.rep;
+        const stashFormatted = stashValue != null ? formatNumber(stashValue) : '—';
+        const repFormatted = repValue != null
+          ? (Math.abs(repValue) >= 10000 ? formatNumber(repValue)
+             : (repValue % 1 === 0 ? String(repValue) : repValue.toFixed(2)))
+          : '—';
+        const stashActive = sort === 'stash';
+        const repActive   = sort === 'rep';
         const stashText = this.add.text(cx + 80, y, stashFormatted, {
           fontSize: '14px',
-          color: '#86efac'
+          color: stashActive ? '#86efac' : '#4b5563',
+          fontStyle: stashActive ? 'bold' : ''
         }).setOrigin(0.5, 0.5);
-
-        // Rep (formatted to 2 decimals, or k/M for large numbers)
-        const repValue = entry.rep || 0;
-        const repFormatted = repValue >= 10000
-          ? formatNumber(repValue)
-          : (repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2));
         const repText = this.add.text(cx + 155, y, repFormatted, {
           fontSize: '14px',
-          color: '#ffd166'
+          color: repActive ? '#ffd166' : '#4b5563',
+          fontStyle: repActive ? 'bold' : ''
         }).setOrigin(1, 0.5);
 
         entries.push(rowBg, rankText, nameText, stashText, repText);
