@@ -2,7 +2,7 @@
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
-import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID } from '../utils/userManager.js';
+import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID, ensureProvisionedIdentity, getRecoveryCode, hasProvisionedIdentity, restoreFromRecoveryCode } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores, getLeaderboard, getAllTimeLeaderboard, formatNumber } from '../utils/leaderboardManager.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
@@ -1538,19 +1538,44 @@ export class MenuScene extends Phaser.Scene {
   }
 
   async initializeUserData() {
-    // Get the username before Supabase check
     const cachedUsername = getUsername();
-
-    // Wait for user data to load from Supabase (checks session and updates localStorage)
     await getCurrentUser();
 
-    // Get username after Supabase check
+    // Provision server-issued identity if we haven't yet (idempotent —
+    // short-circuits when already done). New CamelCase username lands here.
+    const result = await ensureProvisionedIdentity();
     const currentUsername = getUsername();
 
-    // If username changed, update the profile chip
     if (cachedUsername !== currentUsername) {
       this.updateProfileChipSync();
+      // First-time provisioning: gentle bottom banner nudging the user
+      // to save the recovery code. Dismissible, not blocking.
+      if (result && !result.existed) {
+        this.showRecoveryNudge();
+      }
     }
+  }
+
+  showRecoveryNudge() {
+    if (this._recoveryNudge) return;
+    const W = this.scale.width;
+    const y = this.scale.height * 0.86;
+    const bg = this.rexUI.add.roundRectangle(W/2, y, Math.min(360, W - 40), 44, 10, 0xfbbf24, 0.98)
+      .setStrokeStyle(2, 0xf59e0b)
+      .setDepth(30001)
+      .setInteractive({ cursor: 'pointer' });
+    const txt = this.add.text(W/2, y, "New handle! Tap here to save your recovery code →", {
+      fontFamily: 'monospace', fontSize: '12px', color: '#1a1a1a', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(30002);
+
+    const dismiss = () => {
+      bg.destroy(); txt.destroy(); this._recoveryNudge = null;
+    };
+    bg.on('pointerup', () => { dismiss(); this.openProfileModal(); });
+
+    // Auto-dismiss after 12s if ignored — nudge, not a nag
+    this.time.delayedCall(12000, () => { if (this._recoveryNudge) dismiss(); });
+    this._recoveryNudge = { bg, txt };
   }
 
   initDesktopSidebars() {
@@ -2521,6 +2546,48 @@ export class MenuScene extends Phaser.Scene {
     // Initialize with runner stats
     updateStats('runner');
 
+    // Recovery code section: shown only if we have one (i.e. server
+    // provisioned this browser). Label + code + "Copy" and "Restore..."
+    // buttons. This is the entire recovery UX — Level 2 identity.
+    const recovery = getRecoveryCode();
+    const recY = cy + panelH/2 - 92;
+
+    const recLabel = this.add.text(cx, recY - 22, 'RECOVERY CODE — save it to play on any device', {
+      color: '#8a93a8', fontFamily: 'monospace', fontSize: '9px', letterSpacing: 1
+    }).setOrigin(0.5).setDepth(52);
+    baseElements.push(recLabel);
+
+    if (recovery) {
+      const codeBg = this.add.rectangle(cx, recY, 240, 26, 0x0a0d13, 0.9)
+        .setStrokeStyle(1, 0xfbbf24).setDepth(52);
+      const codeTx = this.add.text(cx, recY, recovery, {
+        color: '#fbbf24', fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(53);
+
+      // Tap the code = copy to clipboard
+      codeBg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+        try {
+          navigator.clipboard.writeText(recovery);
+          codeTx.setText('Copied!');
+          this.time.delayedCall(1200, () => codeTx?.setText?.(recovery));
+        } catch {}
+      });
+
+      const restoreBg = this.add.rectangle(cx, recY + 30, 130, 22, 0x1a2038, 1)
+        .setStrokeStyle(1, PALETTE.stroke).setDepth(52)
+        .setInteractive({ useHandCursor: true });
+      const restoreTx = this.add.text(restoreBg.x, restoreBg.y, 'Restore on new device', {
+        color: '#cbd1ff', fontFamily: 'monospace', fontSize: '10px'
+      }).setOrigin(0.5).setDepth(53);
+      restoreBg.on('pointerup', () => this.openRestoreModal());
+      baseElements.push(codeBg, codeTx, restoreBg, restoreTx);
+    } else {
+      const noCodeTx = this.add.text(cx, recY, 'Not yet provisioned — play a round online', {
+        color: '#8a93a8', fontFamily: 'monospace', fontSize: '11px', fontStyle: 'italic'
+      }).setOrigin(0.5).setDepth(52);
+      baseElements.push(noCodeTx);
+    }
+
     // Close button
     const closeBg = this.add.rectangle(cx, cy + panelH/2 - 30, 92, 28, 0x1a2038, 1)
       .setStrokeStyle(1, PALETTE.stroke)
@@ -2535,6 +2602,78 @@ export class MenuScene extends Phaser.Scene {
     };
     closeBg.on('pointerdown', destroyAll);
     veil.on('pointerdown', destroyAll);
+  }
+
+  openRestoreModal(){
+    const W = this.scale.width, H = this.scale.height;
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+    const panelW = Math.min(340, W - 40);
+    const panelH = 200;
+
+    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.75).setDepth(60).setInteractive();
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.98).setDepth(61)
+      .setStrokeStyle(2, 0xfbbf24);
+    const title = this.add.text(cx, cy - panelH/2 + 22, 'Restore Identity', {
+      color: '#fbbf24', fontSize: '18px', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(62);
+    const hint = this.add.text(cx, cy - 30, 'Paste your recovery code:', {
+      color: '#cbd1ff', fontFamily: 'monospace', fontSize: '11px'
+    }).setOrigin(0.5).setDepth(62);
+
+    // DOM input overlay for text entry (Phaser doesn't do text input natively)
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.placeholder = 'XXXX-XXXX-XXXX';
+    inputEl.autocapitalize = 'characters';
+    inputEl.style.cssText = `
+      position: fixed; left: 50%; top: 50%; transform: translate(-50%, 5px);
+      width: 220px; padding: 8px; text-align: center;
+      font-family: monospace; font-size: 14px; letter-spacing: 2px;
+      background: #0a0d13; color: #fbbf24; border: 1px solid #fbbf24; border-radius: 4px;
+      z-index: 999999; text-transform: uppercase; outline: none;
+    `;
+    document.body.appendChild(inputEl);
+    setTimeout(() => inputEl.focus(), 50);
+
+    const status = this.add.text(cx, cy + 40, '', {
+      color: '#f87171', fontFamily: 'monospace', fontSize: '11px'
+    }).setOrigin(0.5).setDepth(62);
+
+    const okBg = this.add.rectangle(cx - 55, cy + panelH/2 - 26, 90, 26, 0xfbbf24, 1)
+      .setStrokeStyle(1, 0xf59e0b).setDepth(62).setInteractive({ useHandCursor: true });
+    const okTx = this.add.text(okBg.x, okBg.y, 'Restore', {
+      color: '#1a1a1a', fontStyle: 'bold', fontSize: '13px'
+    }).setOrigin(0.5).setDepth(63);
+
+    const cancelBg = this.add.rectangle(cx + 55, cy + panelH/2 - 26, 90, 26, 0x1a2038, 1)
+      .setStrokeStyle(1, PALETTE.stroke).setDepth(62).setInteractive({ useHandCursor: true });
+    const cancelTx = this.add.text(cancelBg.x, cancelBg.y, 'Cancel', {
+      color: '#cbd1ff', fontSize: '13px'
+    }).setOrigin(0.5).setDepth(63);
+
+    const elements = [veil, panel, title, hint, status, okBg, okTx, cancelBg, cancelTx];
+    const teardown = () => {
+      elements.forEach(o => o?.destroy());
+      inputEl.remove();
+    };
+
+    okBg.on('pointerup', async () => {
+      const code = inputEl.value.trim().toUpperCase();
+      status.setText('Restoring...');
+      status.setColor('#cbd1ff');
+      const res = await restoreFromRecoveryCode(code);
+      if (res.success) {
+        status.setText('Restored: ' + res.username);
+        status.setColor('#22c55e');
+        setTimeout(() => { teardown(); this.scene.restart(); }, 900);
+      } else {
+        status.setText(res.error || 'Restore failed');
+        status.setColor('#f87171');
+      }
+    });
+    cancelBg.on('pointerup', teardown);
+    veil.on('pointerdown', teardown);
   }
 
   createStatSection(cx, y, label, rank, score, panelW){

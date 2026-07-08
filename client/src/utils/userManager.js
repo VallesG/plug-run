@@ -2,6 +2,7 @@
 // Supports guest accounts (localStorage), claimed accounts (Supabase)
 // Falls back to localStorage-only when offline
 
+import { provisionIdentity as apiProvisionIdentity, restoreIdentity as apiRestoreIdentity } from './api.js';
 import {
   supabase,
   isOnline as supabaseIsOnline,
@@ -415,9 +416,84 @@ export function importUserData(userData) {
   }
 }
 
+
+// ============================================
+// SERVER-ISSUED IDENTITY (Level 2)
+// Provisions a CamelCase name + recovery code from the backend.
+// Idempotent — safe to call multiple times.
+// ============================================
+
+const STORAGE_KEY_RECOVERY = 'pr_recovery_code';
+const STORAGE_KEY_PROVISIONED = 'pr_provisioned'; // stops re-hitting the API after first success
+
+/**
+ * Ensure this browser has a server-issued identity. If not yet provisioned,
+ * hits the API and updates the local user with the new name (userId is
+ * preserved so existing leaderboard entries carry over).
+ *
+ * Idempotent — safe to call on every menu load; short-circuits if already done.
+ * Fails silently offline (user keeps their existing username).
+ */
+export async function ensureProvisionedIdentity() {
+  if (localStorage.getItem(STORAGE_KEY_PROVISIONED) === 'true') return null;
+  const user = getCurrentUserSync();
+  try {
+    const res = await apiProvisionIdentity({ seedUserId: user.id });
+    if (res?.username) {
+      user.username = res.username;
+      user.id = res.userId; // in case a fresh one was minted
+      saveUser(user);
+      try { localStorage.setItem(STORAGE_KEY_RECOVERY, res.recoveryCode); } catch {}
+      try { localStorage.setItem(STORAGE_KEY_PROVISIONED, 'true'); } catch {}
+      console.log('[UserManager] Provisioned identity:', res.username);
+      return res; // { username, recoveryCode, existed }
+    }
+  } catch (e) {
+    console.warn('[UserManager] Identity provisioning failed (offline?):', e.message);
+  }
+  return null;
+}
+
+/** Returns the recovery code stored locally, or null if never provisioned. */
+export function getRecoveryCode() {
+  try { return localStorage.getItem(STORAGE_KEY_RECOVERY); } catch { return null; }
+}
+
+/** True if this browser has been provisioned by the server at least once. */
+export function hasProvisionedIdentity() {
+  return localStorage.getItem(STORAGE_KEY_PROVISIONED) === 'true';
+}
+
+/**
+ * Restore an identity from a recovery code (on a new device).
+ * Overwrites the current local user on success.
+ */
+export async function restoreFromRecoveryCode(code) {
+  try {
+    const res = await apiRestoreIdentity(code);
+    if (res?.userId && res.username) {
+      const user = getCurrentUserSync();
+      user.id = res.userId;
+      user.username = res.username;
+      saveUser(user);
+      try { localStorage.setItem(STORAGE_KEY_RECOVERY, code.trim().toUpperCase()); } catch {}
+      try { localStorage.setItem(STORAGE_KEY_PROVISIONED, 'true'); } catch {}
+      console.log('[UserManager] Restored identity:', res.username);
+      return { success: true, username: res.username };
+    }
+    return { success: false, error: 'malformed response' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 export default {
   getCurrentUser,
   getCurrentUserSync,
+  ensureProvisionedIdentity,
+  hasProvisionedIdentity,
+  getRecoveryCode,
+  restoreFromRecoveryCode,
   createGuestAccount,
   saveUser,
   updateUserStats,
