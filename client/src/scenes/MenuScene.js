@@ -1501,38 +1501,55 @@ export class MenuScene extends Phaser.Scene {
   makeUserProfileChip(){
     const username = getUsername();
     const c = this.add.container(0, 0).setDepth(6);
-    // Clamp width: 35% of screen ballooned to 600px+ on desktop monitors
     const w = Math.min(220, Math.max(160, Math.floor(this.scale.width * 0.35)));
     const h = Math.min(36, Math.max(32, Math.floor(this.scale.height * 0.042)));
     c._w = w;
 
-    // Background with subtle blue tint - make IT interactive
-    const bg = this.rexUI.add.roundRectangle(0, 0, w, h, h/2, 0x1e3a8a, 0.85)
-      .setStrokeStyle(2, 0x3b82f6)
+    // Attention mode: unclaimed recovery code → amber chip + trailing "!"
+    const unseen = (() => { try { return localStorage.getItem('pr_recovery_unseen') === 'true'; } catch { return false; } })();
+    const fillColor   = unseen ? 0x78500a : 0x1e3a8a;
+    const strokeColor = unseen ? 0xfbbf24 : 0x3b82f6;
+    const strokeHover = unseen ? 0xfde68a : 0x60a5fa;
+    const textColor   = unseen ? '#fde68a' : '#cbd1ff';
+
+    const bg = this.rexUI.add.roundRectangle(0, 0, w, h, h/2, fillColor, 0.85)
+      .setStrokeStyle(2, strokeColor)
       .setInteractive({ cursor: 'pointer' });
 
-    // User icon
     const icon = this.add.text(-w/2 + h/2, 0, '👤', { fontSize: Math.floor(h * 0.6) + 'px' }).setOrigin(0.5);
 
-    // Username text
-    const t = this.add.text(h/4, 0, username, {
-      color:'#cbd1ff',
+    // Username centered; if unseen, add a subtle "!" indicator to the right
+    const nameOffset = unseen ? -6 : 0;
+    const t = this.add.text(h/4 + nameOffset, 0, username, {
+      color: textColor,
       fontSize: Math.max(12, Math.floor(h*0.5)) + 'px',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     c.add([bg, icon, t]);
 
-    // Background handles interaction
-    bg.on('pointerup', () => this.openProfileModal());
+    if (unseen) {
+      const bang = this.add.text(w/2 - h/2 + 2, 0, '!', {
+        color: '#fbbf24',
+        fontSize: Math.max(14, Math.floor(h*0.65)) + 'px',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      c.add(bang);
 
-    // Add visual feedback on hover
-    bg.on('pointerover', () => {
-      bg.setStrokeStyle(2, 0x60a5fa);
-    });
-    bg.on('pointerout', () => {
-      bg.setStrokeStyle(2, 0x3b82f6);
-    });
+      // Gentle pulse on the "!" so it reads as "hey, look at this"
+      this.tweens.add({
+        targets: bang,
+        alpha: { from: 1, to: 0.35 },
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inout'
+      });
+    }
+
+    bg.on('pointerup', () => this.openProfileModal());
+    bg.on('pointerover', () => bg.setStrokeStyle(2, strokeHover));
+    bg.on('pointerout',  () => bg.setStrokeStyle(2, strokeColor));
 
     return c;
   }
@@ -1551,32 +1568,13 @@ export class MenuScene extends Phaser.Scene {
       // First-time provisioning: gentle bottom banner nudging the user
       // to save the recovery code. Dismissible, not blocking.
       if (result && !result.existed) {
-        this.showRecoveryNudge();
+        try { localStorage.setItem('pr_recovery_unseen', 'true'); } catch {}
+        this.updateProfileChipSync();
       }
     }
   }
 
-  showRecoveryNudge() {
-    if (this._recoveryNudge) return;
-    const W = this.scale.width;
-    const y = this.scale.height * 0.86;
-    const bg = this.rexUI.add.roundRectangle(W/2, y, Math.min(360, W - 40), 44, 10, 0xfbbf24, 0.98)
-      .setStrokeStyle(2, 0xf59e0b)
-      .setDepth(30001)
-      .setInteractive({ cursor: 'pointer' });
-    const txt = this.add.text(W/2, y, "New handle! Tap here to save your recovery code →", {
-      fontFamily: 'monospace', fontSize: '12px', color: '#1a1a1a', fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(30002);
 
-    const dismiss = () => {
-      bg.destroy(); txt.destroy(); this._recoveryNudge = null;
-    };
-    bg.on('pointerup', () => { dismiss(); this.openProfileModal(); });
-
-    // Auto-dismiss after 12s if ignored — nudge, not a nag
-    this.time.delayedCall(12000, () => { if (this._recoveryNudge) dismiss(); });
-    this._recoveryNudge = { bg, txt };
-  }
 
   initDesktopSidebars() {
     // Only create sidebars once - they persist across menu ↔ game transitions
@@ -2357,11 +2355,20 @@ export class MenuScene extends Phaser.Scene {
   */
 
   async openProfileModal(){
+    // Opening the modal counts as "seen" the recovery code — clear the
+    // attention flag and refresh the chip so it drops back to normal blue.
+    try {
+      if (localStorage.getItem('pr_recovery_unseen') === 'true') {
+        localStorage.removeItem('pr_recovery_unseen');
+        this.updateProfileChipSync();
+      }
+    } catch {}
+
     const W = this.scale.width, H = this.scale.height;
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
     const panelW = Math.min(380, W - 40);
-    const panelH = Math.min(340, H - 80);
+    const panelH = Math.min(280, H - 100);
 
     const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
     const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.96).setDepth(51).setStrokeStyle(2, PALETTE.stroke);
@@ -2380,212 +2387,69 @@ export class MenuScene extends Phaser.Scene {
 
     const baseElements = [veil, panel, title];
 
-    let selectedRole = 'runner'; // Default to runner
-    let statsElements = [];
-
-    // Role toggle buttons
-    const roleY = cy - panelH/2 + 60;
-    const roleW = 90;
-    const roleH = 32;
-    const gap = 10;
-
-    const runnerBtn = this.add.rectangle(cx - roleW/2 - gap/2, roleY, roleW, roleH, 0x2a1a38, 1)
-      .setStrokeStyle(2, 0x60a5fa)
-      .setDepth(52)
-      .setInteractive({ useHandCursor: true });
-
-    const runnerText = this.add.text(cx - roleW/2 - gap/2, roleY, 'Runner', {
-      color: '#93c5fd',
-      fontSize: '14px',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(53);
-
-    const plugBtn = this.add.rectangle(cx + roleW/2 + gap/2, roleY, roleW, roleH, 0x1a2038, 1)
-      .setStrokeStyle(2, 0x2f3660)
-      .setDepth(52)
-      .setInteractive({ useHandCursor: true });
-
-    const plugText = this.add.text(cx + roleW/2 + gap/2, roleY, 'Plug', {
-      color: '#aab5ff',
-      fontSize: '14px'
-    }).setOrigin(0.5).setDepth(53);
-
-    baseElements.push(runnerBtn, runnerText, plugBtn, plugText);
-
-    // Function to update stats display
-    const updateStats = async (role) => {
-      selectedRole = role;
-
-      // Update button visuals
-      if (role === 'runner') {
-        runnerBtn.setFillStyle(0x2a1a38).setStrokeStyle(2, 0x60a5fa);
-        runnerText.setColor('#93c5fd').setFontStyle('bold');
-        plugBtn.setFillStyle(0x1a2038).setStrokeStyle(2, 0x2f3660);
-        plugText.setColor('#aab5ff').setFontStyle('');
-      } else {
-        plugBtn.setFillStyle(0x2a1a38).setStrokeStyle(2, 0x60a5fa);
-        plugText.setColor('#93c5fd').setFontStyle('bold');
-        runnerBtn.setFillStyle(0x1a2038).setStrokeStyle(2, 0x2f3660);
-        runnerText.setColor('#aab5ff').setFontStyle('');
-      }
-
-      // Clear old stats
-      statsElements.forEach(el => el?.destroy());
-      statsElements = [];
-
-      // Get stats for selected role (await since these are now async)
-      const dailyRank = await getUserRank(role);
-      const dailyScore = await getUserScore(role);
-      const allTimeRank = await getAllTimeRank(role);
-      const allTimeScore = await getAllTimeScore(role);
-
-      let y = cy - panelH/2 + 110;
-
-      // Daily Stats
-      const dailyLabel = this.add.text(cx - panelW/2 + 30, y, 'Daily:', {
-        color: '#cbd1ff',
-        fontSize: '16px',
-        fontStyle: 'bold'
-      }).setOrigin(0, 0.5).setDepth(52);
-      statsElements.push(dailyLabel);
-
-      y += 30;
-      if (dailyScore) {
-        const stashText = this.add.text(cx - panelW/2 + 40, y, `S: ${dailyScore.stash || 0}`, {
-          color: '#86efac',
-          fontSize: '15px',
-          fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setDepth(52);
-
-        const repValue = dailyScore.rep || 0;
-        const repFormatted = repValue % 1 === 0 ? repValue.toString() : repValue.toFixed(2);
-        const repText = this.add.text(cx - panelW/2 + 140, y, `REP: ${repFormatted}`, {
-          color: '#ffd166',
-          fontSize: '15px',
-          fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setDepth(52);
-
-        statsElements.push(stashText, repText);
-
-        if (dailyRank) {
-          const rankText = this.add.text(cx + panelW/2 - 30, y, `#${dailyRank}`, {
-            color: dailyRank <= 3 ? '#fbbf24' : '#cbd1ff',
-            fontSize: '15px',
-            fontStyle: 'bold'
-          }).setOrigin(1, 0.5).setDepth(52);
-          statsElements.push(rankText);
-        }
-      } else {
-        const noScore = this.add.text(cx - panelW/2 + 40, y, 'No score yet', {
-          color: '#6b7280',
-          fontSize: '14px',
-          fontStyle: 'italic'
-        }).setOrigin(0, 0.5).setDepth(52);
-        statsElements.push(noScore);
-      }
-
-      y += 50;
-
-      // All-time Stats
-      const allTimeLabel = this.add.text(cx - panelW/2 + 30, y, 'All-Time:', {
-        color: '#cbd1ff',
-        fontSize: '16px',
-        fontStyle: 'bold'
-      }).setOrigin(0, 0.5).setDepth(52);
-      statsElements.push(allTimeLabel);
-
-      y += 30;
-      if (allTimeScore) {
-        // Format large numbers with K suffix
-        const formatLarge = (num) => {
-          if (num >= 1000) {
-            return (num / 1000).toFixed(2) + 'K';
-          }
-          return num.toString();
-        };
-
-        const stashFormatted = formatLarge(allTimeScore.stash || 0);
-        const stashText = this.add.text(cx - panelW/2 + 40, y, `S: ${stashFormatted}`, {
-          color: '#86efac',
-          fontSize: '15px',
-          fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setDepth(52);
-
-        const repValue = allTimeScore.rep || 0;
-        const repFormatted = formatLarge(repValue);
-        const repText = this.add.text(cx - panelW/2 + 140, y, `REP: ${repFormatted}`, {
-          color: '#ffd166',
-          fontSize: '15px',
-          fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setDepth(52);
-
-        statsElements.push(stashText, repText);
-
-        if (allTimeRank) {
-          const rankText = this.add.text(cx + panelW/2 - 30, y, `#${allTimeRank}`, {
-            color: allTimeRank <= 3 ? '#fbbf24' : '#cbd1ff',
-            fontSize: '15px',
-            fontStyle: 'bold'
-          }).setOrigin(1, 0.5).setDepth(52);
-          statsElements.push(rankText);
-        }
-      } else {
-        const noScore = this.add.text(cx - panelW/2 + 40, y, 'No score yet', {
-          color: '#6b7280',
-          fontSize: '14px',
-          fontStyle: 'italic'
-        }).setOrigin(0, 0.5).setDepth(52);
-        statsElements.push(noScore);
-      }
-    };
-
-    // Button handlers
-    runnerBtn.on('pointerdown', () => updateStats('runner'));
-    plugBtn.on('pointerdown', () => updateStats('plug'));
-
-    // Initialize with runner stats
-    updateStats('runner');
-
-    // Recovery code section: shown only if we have one (i.e. server
-    // provisioned this browser). Label + code + "Copy" and "Restore..."
-    // buttons. This is the entire recovery UX — Level 2 identity.
-    const recovery = getRecoveryCode();
-    const recY = cy + panelH/2 - 92;
-
-    const recLabel = this.add.text(cx, recY - 22, 'RECOVERY CODE — save it to play on any device', {
-      color: '#8a93a8', fontFamily: 'monospace', fontSize: '9px', letterSpacing: 1
+    // Identity-only modal: stats live in the menu ticker + on the leaderboard
+    // screen. This modal exists for one thing — your recovery code.
+    const subtitle = this.add.text(cx, cy - panelH/2 + 55, 'YOUR IDENTITY', {
+      color: '#8a93a8', fontFamily: 'monospace', fontSize: '10px', letterSpacing: 2
     }).setOrigin(0.5).setDepth(52);
-    baseElements.push(recLabel);
+    baseElements.push(subtitle);
+
+    // Recovery code — hero element of the modal.
+    const recovery = getRecoveryCode();
+    const codeY = cy - 20;
+
+    const recHint = this.add.text(cx, codeY - 50, 'RECOVERY CODE', {
+      color: '#fbbf24', fontFamily: 'monospace', fontSize: '11px',
+      fontStyle: 'bold', letterSpacing: 3
+    }).setOrigin(0.5).setDepth(52);
+    const recSub = this.add.text(cx, codeY - 32, 'Save this to play on any device', {
+      color: '#8a93a8', fontFamily: 'monospace', fontSize: '10px'
+    }).setOrigin(0.5).setDepth(52);
+    baseElements.push(recHint, recSub);
 
     if (recovery) {
-      const codeBg = this.add.rectangle(cx, recY, 240, 26, 0x0a0d13, 0.9)
-        .setStrokeStyle(1, 0xfbbf24).setDepth(52);
-      const codeTx = this.add.text(cx, recY, recovery, {
-        color: '#fbbf24', fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold'
+      const codeBg = this.add.rectangle(cx, codeY, panelW - 60, 46, 0x0a0d13, 0.95)
+        .setStrokeStyle(2, 0xfbbf24).setDepth(52);
+      const codeTx = this.add.text(cx, codeY, recovery, {
+        color: '#fbbf24', fontFamily: 'monospace', fontSize: '20px',
+        fontStyle: 'bold', letterSpacing: 2
+      }).setOrigin(0.5).setDepth(53);
+      const tapHint = this.add.text(cx, codeY + 32, 'tap to copy', {
+        color: '#8a93a8', fontFamily: 'monospace', fontSize: '9px', fontStyle: 'italic'
       }).setOrigin(0.5).setDepth(53);
 
-      // Tap the code = copy to clipboard
       codeBg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
         try {
           navigator.clipboard.writeText(recovery);
-          codeTx.setText('Copied!');
-          this.time.delayedCall(1200, () => codeTx?.setText?.(recovery));
+          codeTx.setText('COPIED');
+          codeTx.setColor('#22c55e');
+          this.time.delayedCall(1400, () => {
+            if (codeTx?.active) { codeTx.setText(recovery); codeTx.setColor('#fbbf24'); }
+          });
         } catch {}
       });
+      baseElements.push(codeBg, codeTx, tapHint);
 
-      const restoreBg = this.add.rectangle(cx, recY + 30, 130, 22, 0x1a2038, 1)
-        .setStrokeStyle(1, PALETTE.stroke).setDepth(52)
-        .setInteractive({ useHandCursor: true });
-      const restoreTx = this.add.text(restoreBg.x, restoreBg.y, 'Restore on new device', {
-        color: '#cbd1ff', fontFamily: 'monospace', fontSize: '10px'
+      // Prominent restore button
+      const restoreY = cy + 60;
+      const restoreBg = this.rexUI.add.roundRectangle(cx, restoreY, panelW - 60, 42, 6, 0x1e3a8a, 1)
+        .setStrokeStyle(2, 0x3b82f6).setDepth(52);
+      const restoreTx = this.add.text(cx, restoreY, 'Restore on new device', {
+        color: '#cbd1ff', fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(53);
-      restoreBg.on('pointerup', () => this.openRestoreModal());
-      baseElements.push(codeBg, codeTx, restoreBg, restoreTx);
+      restoreBg.setInteractive({ useHandCursor: true })
+        .on('pointerup', () => this.openRestoreModal())
+        .on('pointerover', () => restoreBg.setStrokeStyle(2, 0x60a5fa))
+        .on('pointerout',  () => restoreBg.setStrokeStyle(2, 0x3b82f6));
+      baseElements.push(restoreBg, restoreTx);
     } else {
-      const noCodeTx = this.add.text(cx, recY, 'Not yet provisioned — play a round online', {
-        color: '#8a93a8', fontFamily: 'monospace', fontSize: '11px', fontStyle: 'italic'
+      const noCodeTx = this.add.text(cx, codeY, 'Not yet provisioned', {
+        color: '#8a93a8', fontFamily: 'monospace', fontSize: '14px', fontStyle: 'italic'
       }).setOrigin(0.5).setDepth(52);
-      baseElements.push(noCodeTx);
+      const noCodeSub = this.add.text(cx, codeY + 22, 'Play a round while online to activate', {
+        color: '#8a93a8', fontFamily: 'monospace', fontSize: '11px'
+      }).setOrigin(0.5).setDepth(52);
+      baseElements.push(noCodeTx, noCodeSub);
     }
 
     // Close button
@@ -2598,7 +2462,6 @@ export class MenuScene extends Phaser.Scene {
 
     const destroyAll = ()=> {
       baseElements.forEach(o=>o?.destroy());
-      statsElements.forEach(o=>o?.destroy());
     };
     closeBg.on('pointerdown', destroyAll);
     veil.on('pointerdown', destroyAll);
