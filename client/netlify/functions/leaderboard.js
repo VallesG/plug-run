@@ -219,13 +219,24 @@ async function handleTop(qs) {
   const payloadKey = (u) => kUserPayload(u);
   const routeRoleField = scope === 'daily' ? `${routeID}:${role}` : null;
 
-  const metaFetches = userIds.map(u => ['GET', metaKey(u)]);
+  // Fetch the OTHER metric's score so the UI can display both columns
+  // regardless of which one is being sorted on. The unsorted metric will
+  // just render as a muted secondary value client-side.
+  const otherSort = sort === 'stash' ? 'rep' : 'stash';
+  const otherKey =
+    scope === 'daily'
+      ? (otherSort === 'stash' ? kDailyStash(routeID, role) : kDailyRep(routeID, role))
+      : (otherSort === 'stash' ? kAllStash(role)             : kAllRep(role));
+
+  const metaFetches  = userIds.map(u => ['GET', metaKey(u)]);
   const payloadFetches = scope === 'daily'
     ? userIds.map(u => ['HGET', payloadKey(u), routeRoleField])
     : [];
+  const otherFetches = userIds.map(u => ['ZSCORE', otherKey, u]);
 
-  const metas = metaFetches.length ? await pipeline(metaFetches) : [];
+  const metas    = metaFetches.length  ? await pipeline(metaFetches)  : [];
   const payloads = payloadFetches.length ? await pipeline(payloadFetches) : [];
+  const others   = otherFetches.length ? await pipeline(otherFetches) : [];
 
   const entries = [];
   for (let i = 0; i < userIds.length; i++) {
@@ -237,7 +248,15 @@ async function handleTop(qs) {
     if (scope === 'daily' && payloads[i]) {
       try { round = JSON.parse(payloads[i]).round ?? null; } catch {}
     }
-    entries.push({ userId: uid, username, [sort]: score, round });
+    const otherRaw = others[i];
+    const otherScore = otherRaw === null || otherRaw === undefined ? null : Number(otherRaw);
+    entries.push({
+      userId: uid,
+      username,
+      [sort]: score,
+      [otherSort]: otherScore,
+      round
+    });
   }
   return OK({ entries });
 }
