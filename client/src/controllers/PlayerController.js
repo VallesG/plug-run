@@ -420,15 +420,52 @@ export default class PlayerController {
       return;
     }
 
-    // Runner: unchanged sprite-relative aim (used for power direction)
-    const who = this.scene.attacker;
-    if (!who) return;
-    const dx = pointer.x - who.x;
-    const dy = pointer.y - who.y;
-    const L = Math.hypot(dx, dy);
-    if (L >= this.SWIPE_DEAD_PX) {
-      const nx = dx / (L || 1), ny = dy / (L || 1);
-      this.playerGunAim = { x: nx, y: ny };
+    // Runner drag-move: mirrors plug's drag-relative + 8-way snap + commit
+    // mechanism, but drives MOVEMENT (there's no separate aim vector on
+    // runner — moveDir doubles as facing direction). Enables holding-and-
+    // steering diagonally, and picking up the finger keeps you moving that
+    // direction — same feel as plug, universally.
+    if (!this._swipeStart) return;
+    let dx = pointer.x - this._swipeStart.x;
+    let dy = pointer.y - this._swipeStart.y;
+    let L = Math.hypot(dx, dy);
+    const MOVE_MAX_PX = 56;
+    if (L > MOVE_MAX_PX) {
+      // Floating re-anchor: past full deflection the origin follows the
+      // finger so mid-drag direction changes respond instantly.
+      const over = L - MOVE_MAX_PX;
+      this._swipeStart.x += (dx / L) * over;
+      this._swipeStart.y += (dy / L) * over;
+      dx = pointer.x - this._swipeStart.x;
+      dy = pointer.y - this._swipeStart.y;
+      L = MOVE_MAX_PX;
+    }
+    const MOVE_DEAD_PX = 10;
+    if (L >= MOVE_DEAD_PX) {
+      // 8-way soft snap — crisp diagonals in corridors, free aim elsewhere.
+      const ang = Math.atan2(dy, dx);
+      const step = Math.PI / 4;
+      const nearest = Math.round(ang / step) * step;
+      const SNAP_RAD = 0.26;
+      const moveVec = (Math.abs(ang - nearest) < SNAP_RAD)
+        ? { x: Math.cos(nearest), y: Math.sin(nearest) }
+        : { x: dx / L, y: dy / L };
+
+      // Commit: hold past DRAG_COMMIT_MS OR travel past DRAG_COMMIT_PX
+      // without release. Below that threshold it's still a quick-swipe;
+      // release before commit and endSwipe fires the quick-swipe path.
+      const held = performance.now() - (this._swipeStart?.t || 0);
+      const totalTravel = Math.hypot(pointer.x - this._swipeStart.x0, pointer.y - this._swipeStart.y0);
+      if (!this._dragMoveActive && (held >= this.DRAG_COMMIT_MS || totalTravel >= this.DRAG_COMMIT_PX)) {
+        this._dragMoveActive = true;
+      }
+      if (this._dragMoveActive) {
+        this.playerMoveDir = moveVec;
+        this.playerDrift = moveVec;
+        this._runnerInputDir = moveVec; // powers read this
+        this.playerGunAim = moveVec;    // runner's "aim" tracks facing
+        this.scene.userTookOver = true;
+      }
     }
   }
 

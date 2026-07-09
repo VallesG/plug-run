@@ -1,6 +1,6 @@
 const TILE_TYPES = { FLOOR: 0, WALL: 1 };
 
-const THEMES = [
+export const THEMES = [
   {
     key: 'house_wood',
     bg: 0x080a10,
@@ -130,7 +130,7 @@ const THEMES = [
   }
 ];
 
-export { TILE_TYPES as T, THEMES };
+export { TILE_TYPES as T };
 
 const SHAPES = [
   [[0, 0]],

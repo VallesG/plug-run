@@ -5,6 +5,7 @@ import { trackTutorial } from '../utils/analytics.js';
 import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateSocialFeed } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
+import { THEMES } from '../utils/mazeGenerator.js';
 import RepTracker from '../utils/repTracker.js';
 import { getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 
@@ -77,7 +78,7 @@ function corridorAssist(scene, sprite, dir, dt){
   }
 }
 
-function generateArenaMap(cols, rows, seed){
+function generateArenaMap(cols, rows, seed, clusterScale = 1){
   const rnd = makeRng(seed);
   const grid = Array.from({ length: rows }, () => Array(cols).fill(T.FLOOR));
   for (let x = 0; x < cols; x++){ grid[0][x] = T.WALL; grid[rows - 1][x] = T.WALL; }
@@ -133,7 +134,7 @@ function generateArenaMap(cols, rows, seed){
       occ[y][x] = 1;
     }
   };
-  const target = Math.floor((cols * rows) / 36);
+  const target = Math.floor(((cols * rows) / 36) * Math.max(0.15, Math.min(1.5, clusterScale)));
   let placed = 0;
   let tries = 0;
   while (placed < target && tries < target * 40){
@@ -345,34 +346,7 @@ function makeCarLights(scene, cx, cy, side){
   return cont;
 }
 
-const THEMES = [
-  {
-    key: 'loft_concrete',
-    bg: 0x0b0f16,
-    floorTint: 0xb8bec9,
-    wallFillTint: 0x232a33,
-    wallEdgeTint: 0x8a8f98,
-    floorSet: 'checker',
-    checkerColors: [0xE5E7EB, 0xF3F4F6]
-  },
-  {
-    key: 'sand_wood',
-    bg: 0x0b0f12,
-    floorTint: 0xE9D5B4,
-    wallFillTint: 0x1f201e,
-    wallEdgeTint: 0xC8A97E,
-    floorSet: 'wood'
-  },
-  {
-    key: 'studio_white',
-    bg: 0x0b0f16,
-    floorTint: 0xF3F4F6,
-    wallFillTint: 0x1f2632,
-    wallEdgeTint: 0x9AA6B2,
-    floorSet: 'checker',
-    checkerColors: [0xF9FAFB, 0xE5E7EB]
-  }
-];
+// THEMES now imported from mazeGenerator — single source of truth
 
 export class TutorialMiniScene extends Phaser.Scene {
   constructor(){
@@ -888,7 +862,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     };
     const seed = seeds[idx] || STAGE_SEEDS.S1_MOVEMENT;
 
-    const arena = generateArenaMap(this.cols, this.rows, seed);
+    // Beginner ramp: stages 1-2 nearly empty (learn to move + grab stash),
+    // stage 3 half-density, stages 4-5 full. Matches the main-game 1-3 curve.
+    const stageOpenness = [1, 0.25, 0.35, 0.55, 0.9, 1][idx] ?? 1;
+    const arena = generateArenaMap(this.cols, this.rows, seed, stageOpenness);
     this.grid = arena.grid;
     this.egress = arena.egress;
     this.spawnRunnerCell = arena.spawns.runner;
@@ -975,7 +952,42 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.showStageModal(idx);
   }
 
+  neutralizeWallTextures(){
+    // Grayscale the wall textures at boot so theme neon tints render true.
+    // The source art is warm brown at ~38% brightness — Phaser tints MULTIPLY,
+    // so cool tints (blue/cyan/mint) hue-shifted into olive mud and could
+    // never render brighter than the base. Mirrors BaseGameScene's fix.
+    this._wallFillKey = 'wall_fill';
+    this._wallEdgeKey = 'wall_edge';
+    try {
+      for (const [srcKey, outKey] of [['wall_fill', 'wall_fill_neon'], ['wall_edge', 'wall_edge_neon']]) {
+        if (!this.textures.exists(srcKey)) continue;
+        if (!this.textures.exists(outKey)) {
+          const img = this.textures.get(srcKey).getSourceImage();
+          const cv = document.createElement('canvas');
+          cv.width = img.width; cv.height = img.height;
+          const ctx = cv.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const data = ctx.getImageData(0, 0, cv.width, cv.height);
+          const px = data.data;
+          for (let i = 0; i < px.length; i += 4) {
+            const lum = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+            const v = Math.min(255, lum * 2.6);
+            px[i] = px[i+1] = px[i+2] = v;
+          }
+          ctx.putImageData(data, 0, 0);
+          this.textures.addCanvas(outKey, cv);
+        }
+        if (srcKey === 'wall_fill') this._wallFillKey = outKey;
+        else this._wallEdgeKey = outKey;
+      }
+    } catch (e) {
+      console.warn('[Tutorial textures] neutralize failed, using originals', e);
+    }
+  }
+
   drawArena(){
+    this.neutralizeWallTextures();
     const { cell, cols, rows } = this;
     const width = Math.max(1, this.scale.width);
     const height = Math.max(1, this.scale.height);
@@ -999,12 +1011,12 @@ export class TutorialMiniScene extends Phaser.Scene {
         const wx = padX + x * cell + cell / 2;
         const wy = padY + y * cell + cell / 2;
         if (this.grid[y][x] === T.WALL){
-          this.add.image(wx, wy, 'wall_fill')
+          this.add.image(wx, wy, this._wallFillKey || 'wall_fill')
             .setDisplaySize(cell, cell)
             .setDepth(5)
             .setTint(theme.wallFillTint ?? 0xffffff);
           const addEdge = (angle) => {
-            this.add.image(wx, wy, 'wall_edge')
+            this.add.image(wx, wy, this._wallEdgeKey || 'wall_edge')
               .setDisplaySize(cell, cell)
               .setDepth(6)
               .setAngle(angle)
@@ -1034,6 +1046,119 @@ export class TutorialMiniScene extends Phaser.Scene {
         }
       }
     }
+
+    // MARGIN FILL: neutral wall-brick outside the maze grid, painted with
+    // amber reflector dashes on top. Skips the driveway mouth so the
+    // street reads as flowing off-map.
+    this.drawMarginFillAndDashes();
+
+    // NEON PLATEAU EDGE: theme-matched terraced perimeter with drop shadow.
+    this.drawNeonPerimeter();
+  }
+
+  drawMarginFillAndDashes(){
+    const { cols, rows, cell, pad } = this;
+    const width = Math.max(1, this.scale.width);
+    const height = Math.max(1, this.scale.height);
+    const ringsX = Math.ceil(pad.x / cell) + 1;
+    const ringsY = Math.ceil(pad.y / cell) + 1;
+
+    const gapSide = this.egress?.side;
+    const gapW = this.egress?.width || 0;
+    const gapCenterX = this.egress?.entry?.x ?? 0;
+    const gapCenterY = this.egress?.entry?.y ?? 0;
+    const gapLoX = Math.max(0, gapCenterX - Math.floor(gapW / 2));
+    const gapHiX = Math.min(cols - 1, gapCenterX + Math.floor(gapW / 2));
+    const gapLoY = Math.max(0, gapCenterY - Math.floor(gapW / 2));
+    const gapHiY = Math.min(rows - 1, gapCenterY + Math.floor(gapW / 2));
+    const inDriveway = (x, y) => {
+      if (gapSide === 'N') return y < 0 && x >= gapLoX && x <= gapHiX;
+      if (gapSide === 'S') return y >= rows && x >= gapLoX && x <= gapHiX;
+      if (gapSide === 'W') return x < 0 && y >= gapLoY && y <= gapHiY;
+      if (gapSide === 'E') return x >= cols && y >= gapLoY && y <= gapHiY;
+      return false;
+    };
+
+    const marks = this.add.graphics().setDepth(4);
+    marks.fillStyle(0xf5c542, 0.55);
+    const mw = Math.max(3, Math.floor(cell * 0.16));
+    const mh = Math.max(2, Math.floor(cell * 0.08));
+
+    for (let y = -ringsY; y < rows + ringsY; y++) {
+      for (let x = -ringsX; x < cols + ringsX; x++) {
+        if (x >= 0 && x < cols && y >= 0 && y < rows) continue; // interior
+        if (inDriveway(x, y)) continue;
+        const wx = pad.x + x * cell + cell / 2;
+        const wy = pad.y + y * cell + cell / 2;
+        this.add.image(wx, wy, this._wallFillKey || 'wall_fill')
+          .setDisplaySize(cell, cell)
+          .setDepth(3)
+          .setTint(this.theme?.wallFillTint ?? 0xffffff);
+        marks.fillRect(wx - cell * 0.28, wy - cell * 0.22, mw, mh);
+      }
+    }
+  }
+
+  drawNeonPerimeter(){
+    const { cols, rows, cell, pad } = this;
+    const lighten = (c, t) => {
+      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+      return ((r + (255 - r) * t) << 16 | (g + (255 - g) * t) << 8 | (b + (255 - b) * t)) >>> 0;
+    };
+    const darken = (c, t) => {
+      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+      return ((r * (1 - t)) << 16 | (g * (1 - t)) << 8 | (b * (1 - t))) >>> 0;
+    };
+    const isGrayish = (c) => {
+      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+      return Math.max(r, g, b) - Math.min(r, g, b) < 40;
+    };
+    const cA = this.theme?.wallEdgeTint ?? 0x00e5ff;
+    const rawB = this.theme?.carTint ?? 0xff4fd8;
+    const cB = isGrayish(rawB) ? 0xff4fd8 : rawB;
+    const cC = 0x333a48;
+
+    const x0 = pad.x, y0 = pad.y;
+    const x1 = pad.x + cols * cell, y1 = pad.y + rows * cell;
+
+    const side = this.egress?.side;
+    const gw = this.egress?.width || 0;
+    const gPad = cell * 0.4;
+    let gapLo = 0, gapHi = 0;
+    if (side === 'N' || side === 'S') {
+      const c0 = (this.egress?.entry?.x ?? 0) - Math.floor(gw / 2);
+      gapLo = pad.x + c0 * cell - gPad;
+      gapHi = pad.x + (c0 + gw) * cell + gPad;
+    } else if (side === 'W' || side === 'E') {
+      const c0 = (this.egress?.entry?.y ?? 0) - Math.floor(gw / 2);
+      gapLo = pad.y + c0 * cell - gPad;
+      gapHi = pad.y + (c0 + gw) * cell + gPad;
+    }
+
+    const g = this.add.graphics().setDepth(5);
+    const band = (a, b, color, alpha = 1) => {
+      g.fillStyle(color, alpha);
+      const spans = (lo, hi, isGapSide) => {
+        if (!isGapSide) return [[lo, hi]];
+        const out = [];
+        if (gapLo > lo) out.push([lo, Math.min(gapLo, hi)]);
+        if (gapHi < hi) out.push([Math.max(gapHi, lo), hi]);
+        return out;
+      };
+      for (const [s, e] of spans(x0 - b, x1 + b, side === 'N')) g.fillRect(s, y0 - b, e - s, b - a);
+      for (const [s, e] of spans(x0 - b, x1 + b, side === 'S')) g.fillRect(s, y1 + a, e - s, b - a);
+      for (const [s, e] of spans(y0 - b, y1 + b, side === 'W')) g.fillRect(x0 - b, s, b - a, e - s);
+      for (const [s, e] of spans(y0 - b, y1 + b, side === 'E')) g.fillRect(x1 + a, s, b - a, e - s);
+    };
+    const t = Math.max(8, Math.round(cell * 0.42));
+    band(0, 3, lighten(cA, 0.6));
+    band(3, 3 + t, cA);
+    band(3 + t, 3 + t * 2, darken(cB, 0.12));
+    band(3 + t * 2, 3 + t * 3, cC);
+    band(3 + t - 1, 3 + t + 1, 0x000000, 0.35);
+    band(3 + t * 2 - 1, 3 + t * 2 + 1, 0x000000, 0.35);
+    band(3 + t * 3, 3 + t * 3 + 7, 0x000000, 0.30);
+    band(3 + t * 3 + 7, 3 + t * 3 + 14, 0x000000, 0.14);
   }
   setupInput(){
     if (!this.cursors) this.cursors = this.input.keyboard.createCursorKeys();
@@ -1090,28 +1215,74 @@ export class TutorialMiniScene extends Phaser.Scene {
       };
       this._pointerMoveHandler = (p) => {
         const pid = getPid(p);
-        if (pid === this._activePointerId && p?.isDown){
-          this.pointer = p;
-          // Stage 5 (plug mode): continuously update aim during drag for gun aiming
-          // Stages 1-4 (runner mode): ignore drag, only process swipes on pointerup
-          if (this.stageIdx === 5){
-            const sx = this._swipeStart?.x ?? p.x;
-            const sy = this._swipeStart?.y ?? p.y;
-            const dx = p.x - sx;
-            const dy = p.y - sy;
-            const moved = Math.hypot(dx, dy);
-            const thresh = Math.max(10, this.cell * 0.4);
-            if (moved >= thresh){
-              this.updateAimFromPointer(p);
-              this.userTookOver = true;
-            }
+        if (pid !== this._activePointerId || !p?.isDown) return;
+        this.pointer = p;
+
+        // Stage 5 (plug): drag = aim, unchanged.
+        if (this.stageIdx === 5){
+          const sx = this._swipeStart?.x ?? p.x;
+          const sy = this._swipeStart?.y ?? p.y;
+          const moved = Math.hypot(p.x - sx, p.y - sy);
+          const thresh = Math.max(10, this.cell * 0.4);
+          if (moved >= thresh){
+            this.updateAimFromPointer(p);
+            this.userTookOver = true;
           }
+          return;
+        }
+
+        // Stages 1-4 (runner): DRAG-MOVE parity with main game.
+        // Quick swipe still handled on release; drag past commit thresholds
+        // = live steering, releases keep runner going that direction.
+        if (!this._swipeStart) return;
+        // Track untouched origin (x0/y0) for total-travel commit check even
+        // after the anchor re-floats past MOVE_MAX_PX.
+        if (this._swipeStart.x0 === undefined){
+          this._swipeStart.x0 = this._swipeStart.x;
+          this._swipeStart.y0 = this._swipeStart.y;
+        }
+        let dx = p.x - this._swipeStart.x;
+        let dy = p.y - this._swipeStart.y;
+        let L = Math.hypot(dx, dy);
+        const MOVE_MAX_PX = 56;
+        if (L > MOVE_MAX_PX){
+          const over = L - MOVE_MAX_PX;
+          this._swipeStart.x += (dx / L) * over;
+          this._swipeStart.y += (dy / L) * over;
+          dx = p.x - this._swipeStart.x;
+          dy = p.y - this._swipeStart.y;
+          L = MOVE_MAX_PX;
+        }
+        const MOVE_DEAD_PX = 10;
+        if (L < MOVE_DEAD_PX) return;
+        const ang = Math.atan2(dy, dx);
+        const step = Math.PI / 4;
+        const nearest = Math.round(ang / step) * step;
+        const SNAP_RAD = 0.26;
+        const moveVec = (Math.abs(ang - nearest) < SNAP_RAD)
+          ? { x: Math.cos(nearest), y: Math.sin(nearest) }
+          : { x: dx / L, y: dy / L };
+
+        // Commit: held past 180ms OR traveled past 32px without release.
+        const held = performance.now() - (this._swipeStart?.t || 0);
+        const totalTravel = Math.hypot(p.x - this._swipeStart.x0, p.y - this._swipeStart.y0);
+        if (!this._dragMoveActive && (held >= 180 || totalTravel >= 32)){
+          this._dragMoveActive = true;
+        }
+        if (this._dragMoveActive){
+          this.playerDrift = moveVec;
+          this.playerAim = moveVec;
+          this.playerGunAim = moveVec;
+          this._runnerInputDir = moveVec;
+          this.userTookOver = true;
         }
       };
       this._pointerUpHandler = (p) => {
         const pid = getPid(p);
         if (pid === this._activePointerId){
           const now = performance.now();
+          const wasDragMove = this._dragMoveActive;
+          this._dragMoveActive = false;
           const sx = this._swipeStart?.x ?? p.x;
           const sy = this._swipeStart?.y ?? p.y;
           const dt = now - (this._swipeStart?.t || 0);
@@ -1137,8 +1308,11 @@ export class TutorialMiniScene extends Phaser.Scene {
                 this._lastPointerTapAt = now;
               }
             }
-          } else if (moved >= TAP_DIST) {
-            // Treat as a directional swipe: convert to cardinal direction (matches main game)
+          } else if (moved >= TAP_DIST && !wasDragMove) {
+            // Quick cardinal swipe (only when drag-move didn't take over).
+            // Drag-move commits already set drift/aim to the live vector;
+            // running the cardinal snap on release would clobber a nice
+            // diagonal into an axis. Same guard the main game uses.
             let cardinalDir = { x: 0, y: 0 };
             if (Math.abs(dx) > Math.abs(dy)) {
               // Horizontal swipe
@@ -1479,10 +1653,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (idx === 1){
       const mobileLines = [
         'You move automatically',
-        'Swipe to change direction',
+        'Swipe to pivot, hold + drag to steer',
         'Reach the Getaway Car',
         '',
-        'Tip: No need to hold the screen',
+        'Tip: Diagonals work too — drag any direction',
         '',
         'You are the RUNNER'
       ];
@@ -1550,7 +1724,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       const plugLines = [
         'Great! Now you have the stashes.',
         'Defend against runners.',
-        desktop ? 'Click to shoot, move mouse to aim.' : 'Tap screen to shoot, drag to aim.',
+        desktop ? 'Click to shoot, move mouse to aim.' : 'Tap to shoot. Hold + drag to aim AND move.',
         '',
         'You are now the PLUG'
       ];
@@ -3729,9 +3903,3 @@ export class TutorialMiniScene extends Phaser.Scene {
 }
 
 export default TutorialMiniScene;
-
-
-
-
-
-
