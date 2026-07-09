@@ -157,9 +157,12 @@ export default class ProgressionManager {
         try {
           const { getUserScore } = await import('../utils/leaderboardManager.js');
           const existingScore = await getUserScore(this.scene.role);
-          const cumulativeRep = (existingScore?.rep || 0) + this.scene.pveSessionRep;
-          console.log(`[ProgressionManager] 🚀 SUBMITTING DAILY SCORE - Round ${this.scene.pveRound}, Stash: ${stashToSubmit}, Session Rep: ${this.scene.pveSessionRep}, Existing Rep: ${existingScore?.rep || 0}, Cumulative Rep: ${cumulativeRep}`);
-          await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, cumulativeRep);
+          // Submit SESSION rep (already cumulative across this run's rounds).
+          // Previous logic added pveSessionRep to existingScore.rep, which
+          // double-counted every round because pveSessionRep is itself the
+          // running total, not the per-round delta. Server keeps the max.
+          console.log(`[ProgressionManager] 🚀 SUBMITTING DAILY SCORE - Round ${this.scene.pveRound}, Stash: ${stashToSubmit}, Session Rep: ${this.scene.pveSessionRep}`);
+          await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, this.scene.pveSessionRep);
           console.log('[ProgressionManager] ✅ Daily score submitted successfully!');
 
           // Also submit to all-time leaderboard (successful extraction = earned stash)
