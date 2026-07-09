@@ -9,7 +9,12 @@ const OFFLINE_MSG = 'Online features are disabled in this build';
 export const supabase = null;
 
 export function isOnline() {
-  return false;
+  // Now-live leaderboard runs through Netlify Functions + Upstash, not
+  // Supabase. This flag gates every online path in leaderboardManager;
+  // returning navigator.onLine (rather than a stub false) lets those
+  // paths actually attempt the network. The API layer has its own
+  // timeouts + fallback-to-local on failure.
+  return typeof navigator === 'undefined' || navigator.onLine !== false;
 }
 
 export async function getCurrentSupabaseUser() {
