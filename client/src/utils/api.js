@@ -71,11 +71,16 @@ export function hasToken() { return !!getToken(); }
  * seedUserId lets an existing local guest carry their userId forward.
  */
 export async function provisionIdentity({ seedUserId = null } = {}) {
-  return await tryFetch(`${ENDPOINT}?action=provision`, {
+  const data = await tryFetch(`${ENDPOINT}?action=provision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(seedUserId ? { seedUserId } : {})
   });
+  // Store the token immediately so the FIRST submit passes the auth
+  // check. Provisioning creates the userMeta on the server, which puts
+  // subsequent submits on the "meta exists → require token" branch.
+  if (data?.token) setToken(data.token);
+  return data;
 }
 
 /**

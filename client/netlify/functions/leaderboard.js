@@ -325,7 +325,7 @@ async function handleProvision(body) {
     try {
       const existing = JSON.parse(existingRaw);
       if (existing.username && existing.recoveryCode) {
-        return OK({ userId, username: existing.username, recoveryCode: existing.recoveryCode, existed: true });
+        return OK({ userId, username: existing.username, recoveryCode: existing.recoveryCode, token: existing.token, existed: true });
       }
     } catch {}
   }
@@ -349,7 +349,9 @@ async function handleProvision(body) {
     ['SET', `username:${username}`, userId] // reverse lookup (future-proofing)
   ]);
 
-  return OK({ userId, username, recoveryCode, existed: false });
+  // Return the token so the client can save it BEFORE the first submit —
+  // otherwise submit hits the "meta exists but token missing" 403 path.
+  return OK({ userId, username, recoveryCode, token, existed: false });
 }
 
 // POST { recoveryCode } → { userId, username, token }
