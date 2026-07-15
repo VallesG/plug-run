@@ -2650,6 +2650,9 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.roundOver = true;
     this.roundPausedForMenu = true;
+    // Finalize the replay NOW — tick() won't get another chance before the
+    // scene restarts into the next round and begin() resets the recorder.
+    ReplaySystem.finalize();
 
     // Clean up active effects so the modal/restart feels calm
     this.destroyDecoySprite();

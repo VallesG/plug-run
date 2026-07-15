@@ -50,6 +50,7 @@ export default class ProgressionManager {
 
     // Set roundOver immediately to prevent multiple calls from update loop
     this.scene.roundOver = true;
+    ReplaySystem.finalize();
 
     const cleanupArena = () => {
       this.scene.destroyDecoySprite?.();
@@ -71,6 +72,7 @@ export default class ProgressionManager {
     // PvE Plug mode: runner extracted (plug failed)
     if (this.scene.mode === 'pve' && this.scene.role === 'plug') {
       this.scene.roundOver = true;
+    ReplaySystem.finalize();
       this.scene.roundPausedForMenu = true;
       this.scene.input.keyboard.enabled = false;
       this.scene._mouseDown = false;
@@ -181,6 +183,7 @@ export default class ProgressionManager {
     }
 
     this.scene.roundOver = true;
+    ReplaySystem.finalize();
     this.scene.input.keyboard.enabled = false;
     this.scene._mouseDown = false;
     cleanupArena();
@@ -289,6 +292,7 @@ export default class ProgressionManager {
   endRound(winner) {
     if (this.scene.roundOver) return;
     this.scene.roundOver = true;
+    ReplaySystem.finalize();
 
     // clear bullets & effects
     this.scene.bulletsA?.getChildren?.().forEach(b => b.destroy());

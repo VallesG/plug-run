@@ -230,8 +230,8 @@ const ReplaySystem = {
   /** Call once at the top of the scene's update(). */
   tick(scene, delta) {
     if (!rec) return;
-    if (scene.roundPausedForMenu) return;
     if (scene.roundOver) { this._finalize(); return; }
+    if (scene.roundPausedForMenu) return;
 
     rec.accum += delta;
     if (rec.accum < SAMPLE_MS && rec.started) return;
@@ -249,6 +249,11 @@ const ReplaySystem = {
     rec.samples.push(takeSample(scene, false));
     while (rec.samples.length > MAX_SAMPLES) foldOldest();
   },
+
+  /** Explicitly finalize the active recording. Round-end code calls this
+   *  synchronously BEFORE building end-of-round modals, so hasReplay() is
+   *  accurate in the same frame the round ends. Safe to call repeatedly. */
+  finalize() { this._finalize(); },
 
   _finalize() {
     if (!rec || !rec.started || rec.samples.length < 8) { rec = null; return; }
