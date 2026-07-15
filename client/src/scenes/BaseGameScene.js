@@ -2707,17 +2707,18 @@ export class BaseGameScene extends Phaser.Scene {
     // Track route progress for leaderboard
     updateRouteProgress(this.role, currentRound);
 
-    // Submit score to daily leaderboard with cumulative rep (existing + session)
+    // Submit score to daily leaderboard
     // Stash = current round (plugs earn stash by eliminating runners)
     const stashToSubmit = currentRound;
 
-    // Fetch existing cumulative rep and add session rep for true total
+    // Submit SESSION rep (already cumulative across this run's rounds).
+    // Previous logic added pveSessionRep to the stored leaderboard rep,
+    // which double-counted every round because pveSessionRep is itself
+    // the running total, not the per-round delta. Server keeps the max.
+    // (Same fix as the runner path in ProgressionManager.)
     try {
-      const { getUserScore } = await import('../utils/leaderboardManager.js');
-      const existingScore = await getUserScore(this.role);
-      const cumulativeRep = (existingScore?.rep || 0) + this.pveSessionRep;
-      console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE - Round ${currentRound}, Stash: ${stashToSubmit}, Session Rep: ${this.pveSessionRep}, Existing Rep: ${existingScore?.rep || 0}, Cumulative Rep: ${cumulativeRep}`);
-      await submitScore(this.role, currentRound, stashToSubmit, cumulativeRep);
+      console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE - Round ${currentRound}, Stash: ${stashToSubmit}, Session Rep: ${this.pveSessionRep}`);
+      await submitScore(this.role, currentRound, stashToSubmit, this.pveSessionRep);
       console.log('[BaseGameScene] ✅ Score submitted successfully to Supabase!');
     } catch (err) {
       console.error('[BaseGameScene] ❌ Score submission failed:', err);

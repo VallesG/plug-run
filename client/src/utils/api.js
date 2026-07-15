@@ -38,7 +38,12 @@ export async function submitRun(payload) {
   const data = await tryFetch(`${ENDPOINT}?action=submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    // Survive page unload: if the player closes the tab or hits browser-back
+    // right after a round ends, the browser completes this request anyway
+    // instead of killing it mid-flight. (Ignored by browsers that don't
+    // support it — harmless.)
+    keepalive: true
   });
   if (data?.token) setToken(data.token);
   return data;

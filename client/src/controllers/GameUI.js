@@ -16,7 +16,7 @@ export default class GameUI {
    * Show a centered modal with title, lines, and buttons
    * Returns { destroy, veil, panel, btnCenters, registerExtra }
    */
-  showModal({ title, lines = [], buttons = [] }) {
+  showModal({ title, lines = [], buttons = [], inputDelay = 700 }) {
     // block world input + hide touch controls
     this.scene.input.keyboard.enabled = false;
     this.scene.suspendTouchUI?.(true);
@@ -84,8 +84,27 @@ export default class GameUI {
     const extras = [];
     const registerExtra = (...objs) => extras.push(...objs);
 
+    // Input grace period: players tap rapidly during a round, and if the
+    // round ends mid-tap the next tap can land on a button (e.g. Exit)
+    // before they even see the modal. An invisible full-screen blocker
+    // above ALL modal content (including custom buttons added later via
+    // registerExtra) swallows every pointer event for `inputDelay` ms,
+    // then arms the modal. Standard buttons render dimmed until armed.
+    let blocker = null;
+    if (inputDelay > 0) {
+      blocker = this.scene.add.rectangle(cx, cy, W, H, 0x000000, 0.001)
+        .setScrollFactor(0).setDepth(Z + 500).setInteractive();
+      btnObjs.forEach(o => o.setAlpha(0.55));
+      this.scene.time.delayedCall(inputDelay, () => {
+        if (blocker?.active) blocker.destroy();
+        blocker = null;
+        btnObjs.forEach(o => { if (o?.active) o.setAlpha(1); });
+      });
+    }
+
     const destroy = () => {
       [veil, panel, titleTxt, ...content, ...btnObjs, ...extras].forEach(o => o?.destroy?.());
+      if (blocker?.active) blocker.destroy();
       this.scene.suspendTouchUI?.(false);
       // inputs re-enabled by startMatch()
     };

@@ -152,11 +152,8 @@ export default class ProgressionManager {
       // Stash = current round for both modes (you just completed this round successfully)
       const stashToSubmit = this.scene.pveRound;
 
-      // Fetch existing cumulative rep from Supabase and add session rep to get true total
       (async () => {
         try {
-          const { getUserScore } = await import('../utils/leaderboardManager.js');
-          const existingScore = await getUserScore(this.scene.role);
           // Submit SESSION rep (already cumulative across this run's rounds).
           // Previous logic added pveSessionRep to existingScore.rep, which
           // double-counted every round because pveSessionRep is itself the

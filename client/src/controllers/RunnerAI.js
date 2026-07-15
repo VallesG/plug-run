@@ -263,7 +263,7 @@ export function updateRunnerBehavior(scene, aiController, delta) {
       }
     }
 
-    const speed = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1); // No sprint boost - players can't sprint
+    const speed = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1) * (scene.attacker._speedMul || 1); // No sprint boost - players can't sprint
 
     const opp = (a, b) => (a.x === -b.x && a.y === -b.y);
     if (aiController._aiLastMoveDir && opp(dir, aiController._aiLastMoveDir) && performance.now() < aiController._aiFlipGuardUntil) {
@@ -425,7 +425,7 @@ export function updateRunnerBehavior(scene, aiController, delta) {
  * Fallback cruise movement for AI Runner
  */
 function aiRunnerCruise(scene, aiController) {
-  const speedBase = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1);
+  const speedBase = scene.runnerSpeed * (scene.hasStash ? scene.carrySlow : 1) * (scene.attacker._speedMul || 1);
   const dir = aiController._aiCruiseDir || { x: 1, y: 0 };
   const c = scene.toCell(scene.attacker.x, scene.attacker.y);
   const tryDirs = [dir, { x: dir.y, y: -dir.x }, { x: -dir.y, y: dir.x }, { x: -dir.x, y: -dir.y }];
