@@ -18,6 +18,7 @@ import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundComple
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
+import ReplaySystem from '../controllers/ReplaySystem.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { createBottomLeftButtons } from '../utils/authUI.js';
 import { applyStreetWarsAI, updateStreetWarsPlugAI, applyStreetWarsShootingBehavior, updateStreetWarsRunnerAI, considerStreetWarsPowerUse } from '../utils/streetWarsAI.js';
@@ -1120,6 +1121,10 @@ export class BaseGameScene extends Phaser.Scene {
   startMatch(role){
     this.role = role;
 
+    // Start replay recording for this round (keeps the previous round's
+    // finished replay intact until this one actually records something)
+    ReplaySystem.begin(this);
+
     // Initialize desktop sidebars (only on desktop) - do this early so they appear immediately
     console.log('[BaseGameScene] startMatch, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop(), 'role:', role);
     if (isDesktop()) {
@@ -2100,6 +2105,9 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   update(_, delta){
+    // Replay recorder: samples world sprites ~15x/sec, auto-finalizes on round end
+    try { ReplaySystem.tick(this, delta); } catch (e) { console.error('[Replay] tick error:', e); }
+
     // Update visual effects (delegated to VFX controller)
     try {
       this.vfx.update(delta / 1000);

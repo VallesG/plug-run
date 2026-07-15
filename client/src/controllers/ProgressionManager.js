@@ -9,6 +9,7 @@ import {
   markSpawnSwapUsed
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
+import ReplaySystem from './ReplaySystem.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
 import { trackGameStart, trackRoundComplete, trackGameOver } from '../utils/analytics.js';
@@ -322,14 +323,12 @@ export default class ProgressionManager {
       buttons: [
         {
           label: 'Rematch (same role)',
-          bg: 0x1a2038,
-          color: '#cbd1ff',
+          variant: 'primary',
           onClick: () => this.scene.scene.restart({ role: this.scene.role, seed: (Math.random() * 2 ** 32) | 0 })
         },
         {
           label: 'Switch Role',
-          bg: 0x1a2038,
-          color: '#cbd1ff',
+          variant: 'secondary',
           onClick: () => this.scene.scene.restart({ role: (this.scene.role === 'runner' ? 'plug' : 'runner'), seed: (Math.random() * 2 ** 32) | 0 })
         },
       ]
@@ -399,12 +398,36 @@ export default class ProgressionManager {
     // Check if spawn swap has been used
     const swapUsed = hasUsedSpawnSwap(role);
 
+    // Replay + Share as a compact pair at the top of the stack. Both keep the
+    // modal alive (keepOpen) — it's hidden during playback and restored after.
+    const replayShareRow = ReplaySystem.hasReplay(this.scene.role) ? [{
+      pair: [
+        {
+          label: '\u25B6 Replay',
+          variant: 'secondary',
+          keepOpen: true,
+          onClick: (m) => {
+            m.setVisible(false);
+            ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
+          }
+        },
+        {
+          label: '\u2934 Share Clip',
+          variant: 'secondary',
+          keepOpen: true,
+          onClick: (m) => {
+            m.setVisible(false);
+            ReplaySystem.play(this.scene, { autoShare: true, onDone: () => m.setVisible(true) });
+          }
+        }
+      ]
+    }] : [];
+
     const buttons = [
+      ...replayShareRow,
       {
         label: `Continue from Round ${roundNumber}`,
-        bg: 0x16a34a, // Green
-        stroke: 0x22c55e,
-        color: '#ffffff',
+        variant: 'primary',
         onClick: () => this.scene.scene.restart({
           mode: 'pve',
           role,
@@ -418,9 +441,7 @@ export default class ProgressionManager {
       {
         // TEMP: Removed daily limit for testing
         label: `Continue & Swap Spawns`,
-        bg: 0x6b21a8, // Purple
-        stroke: 0x9333ea,
-        color: '#e9d5ff',
+        variant: 'secondary',
         disabled: false, // Always enabled for testing
         onClick: () => {
           // markSpawnSwapUsed(role); // TEMP: Don't mark as used
@@ -440,9 +461,7 @@ export default class ProgressionManager {
       },
       {
         label: isPlug ? 'Defend Again (Round 1)' : 'Run Again (Round 1)',
-        bg: 0x374151, // Gray
-        stroke: 0x4b5563,
-        color: '#d1d5db',
+        variant: 'tertiary',
         onClick: () => {
           this.scene.scene.restart({
             mode: 'pve',
@@ -457,17 +476,15 @@ export default class ProgressionManager {
       },
       {
         label: 'Exit',
-        bg: 0x991b1b, // Red
-        stroke: 0xdc2626,
-        color: '#fecaca',
+        variant: 'danger',
         onClick: () => this.scene.scene.start('MENU')
       }
     ];
 
     const modal = this.scene.gameUI?.showModal?.({
       title,
+      subtitle: descriptor,
       lines: [
-        descriptor,
         ``,
         `Total Stash Collected: ${this.scene.pveSessionStash}`,
         `Total Rep Earned: ${this.scene.pveSessionRep}`,
