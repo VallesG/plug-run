@@ -23,6 +23,7 @@ const SAMPLE_MS = 66;                                   // ~15Hz
 const MAX_SAMPLES = Math.round(45_000 / SAMPLE_MS);     // keep last ~45s
 const GHOST_DEPTH_BASE = 30_000;                        // above modals (Z=20k)
 const HUD_DEPTH = 31_000;
+const GRACE_MS = 1600;   // keep recording this long after round end
 const MIN_ALPHA = 0.02;                                 // skip invisible sensors
 
 const TMP_M1 = new Phaser.GameObjects.Components.TransformMatrix();
@@ -53,6 +54,7 @@ function baseSnap(o, effAlpha, depthOverride) {
     sx: Math.round(w.sx * 100) / 100,
     sy: Math.round(w.sy * 100) / 100,
     a: Math.round(effAlpha * 100) / 100,
+    sf: (o.scrollFactorX === 0 && o.scrollFactorY === 0) ? 0 : 1,
     d: depthOverride ?? o.depth,
     ox: o.originX ?? 0.5,
     oy: o.originY ?? 0.5,
@@ -147,7 +149,7 @@ function walk(scene, list, out, parentVisible, parentAlpha, inheritDepth) {
   for (const o of list) {
     if (o._isReplayGhost) continue;
     if (!parentVisible || !o.visible) continue;
-    if (!o.parentContainer && o.scrollFactorX === 0 && o.scrollFactorY === 0) continue; // UI
+    if (!o.parentContainer && o.scrollFactorX === 0 && o.scrollFactorY === 0 && !o._replayCapture) continue; // UI
 
     if (o.type === 'Container') {
       const effA = parentAlpha * o.alpha;
@@ -217,6 +219,7 @@ const ReplaySystem = {
   /** Call from startMatch(). Resets the active recording; does NOT touch
    *  lastReplay, so the previous round stays watchable from pre-round menus. */
   begin(scene) {
+    if (rec) this._finalize(); // seal anything pending (fast Continue taps)
     epoch++;
     rec = {
       keyframe: new Map(), keyCam: null, samples: [],
@@ -230,8 +233,15 @@ const ReplaySystem = {
   /** Call once at the top of the scene's update(). */
   tick(scene, delta) {
     if (!rec) return;
-    if (scene.roundOver) { this._finalize(); return; }
-    if (scene.roundPausedForMenu) return;
+    if (rec.endAt !== undefined) {
+      // Round is over — keep sampling through the grace window so the
+      // takedown fade and reward popups land in the clip, then seal.
+      if (rec.elapsed >= rec.endAt) { this._finalize(); return; }
+    } else if (scene.roundOver) {
+      rec.endAt = rec.elapsed + GRACE_MS; // backstop if finalize() wasn't called
+    } else if (scene.roundPausedForMenu) {
+      return;
+    }
 
     rec.accum += delta;
     if (rec.accum < SAMPLE_MS && rec.started) return;
@@ -253,7 +263,9 @@ const ReplaySystem = {
   /** Explicitly finalize the active recording. Round-end code calls this
    *  synchronously BEFORE building end-of-round modals, so hasReplay() is
    *  accurate in the same frame the round ends. Safe to call repeatedly. */
-  finalize() { this._finalize(); },
+  finalize() {
+    if (rec && rec.endAt === undefined) rec.endAt = rec.elapsed + GRACE_MS;
+  },
 
   _finalize() {
     if (!rec || !rec.started || rec.samples.length < 8) { rec = null; return; }
@@ -270,7 +282,11 @@ const ReplaySystem = {
 
   /** Pass a role to only match replays recorded in that role. */
   hasReplay(role) {
-    return !!lastReplay && (!role || lastReplay.meta.role === role);
+    if (lastReplay && (!role || lastReplay.meta.role === role)) return true;
+    // An in-flight recording (round just ended, grace window still open)
+    // counts too — the game-over modal is built in that same frame.
+    if (rec && rec.started && rec.samples.length >= 8 && (!role || rec.meta?.role === role)) return true;
+    return false;
   },
   getMeta() { return lastReplay?.meta ?? null; },
   getLastClip() { return this._clip ?? null; },
@@ -280,6 +296,7 @@ const ReplaySystem = {
   // -------------------------------------------------------------------------
 
   play(scene, opts = {}) {
+    if (rec) this._finalize(); // user may tap Watch Replay inside the grace window
     if (!lastReplay || this._playing) { opts.onDone?.(); return; }
     this._playing = true;
     const { record = true, autoShare = false, onDone } = opts;
@@ -343,6 +360,7 @@ const ReplaySystem = {
       g._fx2 = s.x; g._fy2 = s.y; g._tx = s.x; g._ty = s.y;
       g._fr = s.r; g._tr = s.r;
       g._wx = s.x; g._wy = s.y;
+      g._sf = s.sf ?? 1;
       applyMut(g, s);
       if (s.pkg) {
         const rd = g._gd ?? 0;
@@ -434,7 +452,8 @@ const ReplaySystem = {
       for (const g of ghosts.values()) {
         g._wx = g._fx2 + (g._tx - g._fx2) * p;
         g._wy = g._fy2 + (g._ty - g._fy2) * p;
-        g.setPosition(g._wx - csx, g._wy - csy);
+        if (g._sf === 0) g.setPosition(g._wx, g._wy);
+        else g.setPosition(g._wx - csx, g._wy - csy);
         if (g._fr !== g._tr) g.setRotation(lerpAngle(g._fr, g._tr, p));
         if (g._rings) {
           g._rings[0].setPosition(g.x, g.y).setRadius(haloR).setAlpha(g.alpha);

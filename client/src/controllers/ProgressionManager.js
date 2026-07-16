@@ -407,7 +407,7 @@ export default class ProgressionManager {
     const replayShareRow = ReplaySystem.hasReplay(this.scene.role) ? [{
       pair: [
         {
-          label: '\u25B6 Replay',
+          label: '\u25B6 Watch Replay',
           variant: 'secondary',
           keepOpen: true,
           onClick: (m) => {
@@ -430,7 +430,7 @@ export default class ProgressionManager {
     const buttons = [
       ...replayShareRow,
       {
-        label: `Continue from Round ${roundNumber}`,
+        label: `Play Round ${roundNumber} Again`,
         variant: 'primary',
         onClick: () => this.scene.scene.restart({
           mode: 'pve',
@@ -444,7 +444,7 @@ export default class ProgressionManager {
       },
       {
         // TEMP: Removed daily limit for testing
-        label: `Continue & Swap Spawns`,
+        label: `Again & Swap Spawns`,
         variant: 'secondary',
         disabled: false, // Always enabled for testing
         onClick: () => {
@@ -464,7 +464,7 @@ export default class ProgressionManager {
         }
       },
       {
-        label: isPlug ? 'Defend Again (Round 1)' : 'Run Again (Round 1)',
+        label: isPlug ? 'New Defense (Round 1)' : 'New Run (Round 1)',
         variant: 'tertiary',
         onClick: () => {
           this.scene.scene.restart({

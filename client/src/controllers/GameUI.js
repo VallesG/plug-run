@@ -435,7 +435,7 @@ export default class GameUI {
         .setStrokeStyle(1, T.accentHi, 0.8)
         .setDepth(20004)
         .setInteractive({ useHandCursor: true });
-      const repText = this.scene.add.text(repX, menuBtnY, '\u25B6 Last Round', {
+      const repText = this.scene.add.text(repX, menuBtnY, '\u25B6 Watch Replay', {
         color: T.accentTxt,
         fontSize: '13px',
         fontStyle: 'bold'
@@ -768,7 +768,7 @@ export default class GameUI {
         .setStrokeStyle(1, T.accentHi, 0.8)
         .setDepth(20004)
         .setInteractive({ useHandCursor: true });
-      const repText = this.scene.add.text(repX, menuBtnY, '\u25B6 Last Round', {
+      const repText = this.scene.add.text(repX, menuBtnY, '\u25B6 Watch Replay', {
         color: T.accentTxt,
         fontSize: '13px',
         fontStyle: 'bold'
