@@ -53,7 +53,7 @@ function upsertBest(entries, entry) {
 
 // ---------------- submission ----------------
 
-export async function submitScore(role, round, stash, rep = 0) {
+export async function submitScore(role, round, stash, rep = 0, runId = null) {
   const routeID = getCurrentRouteID();
   const userId  = getUserID();
   const username = getUsername();
@@ -63,7 +63,7 @@ export async function submitScore(role, round, stash, rep = 0) {
 
   if (isOnline()) {
     try {
-      const res = await submitRun({ userId, username, role, round, stash, rep, routeID });
+      const res = await submitRun({ userId, username, role, round, stash, rep, routeID, ...(runId ? { runId } : {}) });
       invalidateCache('daily', role);
       invalidateCache('all', role);
       return { updated: true, rank: 0, total: 0, local: false, improved: res?.improved };

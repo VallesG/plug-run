@@ -175,6 +175,10 @@ export class BaseGameScene extends Phaser.Scene {
       this.pveSessionRep = initData?.pveSessionRep ?? initData?.savedSession?.pveSessionRep ?? 0;
       this.pveCleanStreak = initData?.pveCleanStreak ?? initData?.savedSession?.pveCleanStreak ?? 0;
       this.retryAfterDeath = initData?.retryAfterDeath ?? false;
+      // One id per run, minted fresh when no restart data carries one —
+      // the leaderboard uses it to scope write semantics to the run.
+      this.runId = initData?.runId ?? initData?.savedSession?.runId
+        ?? (globalThis.crypto?.randomUUID?.() ?? (Date.now().toString(36) + Math.random().toString(36).slice(2)));
       this.pveBestRound = initData?.pveBestRound ?? initData?.savedSession?.pveBestRound ?? 0;
       // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
       // opponent's spot, 2 = take the second opponent's spot (round 8+),
@@ -496,6 +500,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
         pveCleanStreak: this.pveCleanStreak || 0,
+        runId: this.runId,
         pveBestRound: this.pveBestRound
       }));
       this.load.start();
@@ -622,6 +627,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
         pveCleanStreak: this.pveCleanStreak || 0,
+        runId: this.runId,
         pveBestRound: this.pveBestRound
       }), 250);
     };
@@ -2749,7 +2755,7 @@ export class BaseGameScene extends Phaser.Scene {
     // (Same fix as the runner path in ProgressionManager.)
     try {
       console.log(`[BaseGameScene] 🚀 SUBMITTING SCORE - Round ${currentRound}, Stash: ${stashToSubmit}, Session Rep: ${this.pveSessionRep}`);
-      await submitScore(this.role, currentRound, stashToSubmit, this.pveSessionRep);
+      await submitScore(this.role, currentRound, stashToSubmit, this.pveSessionRep, this.runId);
       console.log('[BaseGameScene] ✅ Score submitted successfully to Supabase!');
     } catch (err) {
       console.error('[BaseGameScene] ❌ Score submission failed:', err);
@@ -2769,6 +2775,7 @@ export class BaseGameScene extends Phaser.Scene {
       pveSessionStash: this.pveSessionStash,
       pveSessionRep: this.pveSessionRep,
         pveCleanStreak: this.pveCleanStreak || 0,
+        runId: this.runId,
       pveBestRound: this.pveBestRound
     });
 
@@ -2786,6 +2793,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
         pveCleanStreak: this.pveCleanStreak || 0,
+        runId: this.runId,
         pveBestRound: this.pveBestRound
       });
     });

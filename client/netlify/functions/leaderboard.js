@@ -107,7 +107,7 @@ async function handleSubmit(body) {
   const err = badPayload(body);
   if (err) return BAD(`invalid ${err}`);
 
-  const { userId, username, role, round, stash, rep, routeID, token, inputLog } = body;
+  const { userId, username, role, round, stash, rep, routeID, token, inputLog, runId } = body;
   if (!Number.isInteger(routeID))    return BAD('routeID');
 
   // Token check: first submission issues one, subsequent submissions must match
@@ -153,6 +153,32 @@ async function handleSubmit(body) {
   const shouldWrite = (existing, incoming) =>
     existing === null || existing === undefined || Number(existing) < incoming;
 
+  // RUN-SCOPED WRITE SEMANTICS: within one run, the latest submission wins
+  // (session penalties like death/swap must stick on the board); across
+  // runs, only a better total dethrones the standing best. Old clients
+  // without runId fall back to pure best-only writes.
+  meta.boardRuns = meta.boardRuns || {};
+  const decide = (boardKey, existing, incoming) => {
+    if (runId && meta.boardRuns[boardKey] === runId) return true; // same run: overwrite
+    if (shouldWrite(existing, incoming)) {
+      if (runId) meta.boardRuns[boardKey] = runId;
+      return true;
+    }
+    return false;
+  };
+  const writeDailyStash = decide(dailyStashKey, existingDailyStash, stash);
+  const writeDailyRep   = decide(dailyRepKey,   existingDailyRep,   rep);
+  const writeAllStash   = decide(allStashKey,   existingAllStash,   stash);
+  const writeAllRep     = decide(allRepKey,     existingAllRep,     rep);
+  // prune boardRuns to live board keys so rolled-over daily keys don't pile up
+  {
+    const keep = {};
+    for (const k of [dailyStashKey, dailyRepKey, allStashKey, allRepKey]) {
+      if (meta.boardRuns[k]) keep[k] = meta.boardRuns[k];
+    }
+    meta.boardRuns = keep;
+  }
+
   const writeOps = [
     ['SET', kUserMeta(userId), JSON.stringify(meta)]
   ];
@@ -167,10 +193,10 @@ async function handleSubmit(body) {
   };
   writeOps.push(['HSET', kUserPayload(userId), `${routeID}:${role}`, JSON.stringify(payload)]);
 
-  if (shouldWrite(existingDailyStash, stash)) writeOps.push(['ZADD', dailyStashKey, stash, userId]);
-  if (shouldWrite(existingDailyRep,   rep))   writeOps.push(['ZADD', dailyRepKey,   rep,   userId]);
-  if (shouldWrite(existingAllStash,   stash)) writeOps.push(['ZADD', allStashKey,   stash, userId]);
-  if (shouldWrite(existingAllRep,     rep))   writeOps.push(['ZADD', allRepKey,     rep,   userId]);
+  if (writeDailyStash) writeOps.push(['ZADD', dailyStashKey, stash, userId]);
+  if (writeDailyRep)   writeOps.push(['ZADD', dailyRepKey,   rep,   userId]);
+  if (writeAllStash)   writeOps.push(['ZADD', allStashKey,   stash, userId]);
+  if (writeAllRep)     writeOps.push(['ZADD', allRepKey,     rep,   userId]);
 
   // Age out daily boards to conserve free-tier storage
   writeOps.push(['EXPIRE', dailyStashKey, DAILY_EXPIRE_SEC]);
@@ -182,10 +208,10 @@ async function handleSubmit(body) {
     ok: true,
     token: meta.token,  // client stores this on first submit
     improved: {
-      dailyStash: shouldWrite(existingDailyStash, stash),
-      dailyRep:   shouldWrite(existingDailyRep,   rep),
-      allStash:   shouldWrite(existingAllStash,   stash),
-      allRep:     shouldWrite(existingAllRep,     rep)
+      dailyStash: writeDailyStash,
+      dailyRep:   writeDailyRep,
+      allStash:   writeAllStash,
+      allRep:     writeAllRep
     }
   });
 }

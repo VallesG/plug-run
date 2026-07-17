@@ -10,6 +10,7 @@ import {
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
+import { SESSION_RULES, streakBonus } from '../utils/repTracker.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
 import { trackGameStart, trackRoundComplete, trackGameOver } from '../utils/analytics.js';
@@ -127,6 +128,21 @@ export default class ProgressionManager {
         console.log('[PvE] REP Breakdown:', repResult.breakdown);
       }
 
+      // Tough spawn cleared: died here, ran it back unswapped, beat it.
+      if (this.scene.retryAfterDeath) {
+        repEarned = Math.round((repEarned + SESSION_RULES.TOUGH_SPAWN_BONUS) * 10) / 10;
+        this.scene.retryAfterDeath = false;
+        console.log('[PvE] Tough spawn cleared \u2192 +' + SESSION_RULES.TOUGH_SPAWN_BONUS, 'REP');
+      }
+
+      // Clean streak: consecutive completions without a death or swap.
+      this.scene.pveCleanStreak = (this.scene.pveCleanStreak || 0) + 1;
+      const sBonus = streakBonus(this.scene.pveCleanStreak);
+      if (sBonus > 0) {
+        repEarned = Math.round((repEarned + sBonus) * 10) / 10;
+        console.log('[PvE] Clean streak', this.scene.pveCleanStreak, '\u2192 +' + sBonus, 'REP');
+      }
+
       this.scene.pveSessionStash += stashEarned;
       this.scene.pveSessionRep = Math.round((this.scene.pveSessionRep || 0) + repEarned);
       this.scene.pveBestRound = Math.max(this.scene.pveBestRound, this.scene.pveRound);
@@ -148,6 +164,8 @@ export default class ProgressionManager {
         pveRound: this.scene.pveRound + 1,
         pveSessionStash: this.scene.pveSessionStash,
         pveSessionRep: this.scene.pveSessionRep,
+              pveCleanStreak: this.scene.pveCleanStreak || 0,
+              runId: this.scene.runId,
         pveBestRound: this.scene.pveBestRound
       });
 
@@ -162,7 +180,7 @@ export default class ProgressionManager {
           // double-counted every round because pveSessionRep is itself the
           // running total, not the per-round delta. Server keeps the max.
           console.log(`[ProgressionManager] 🚀 SUBMITTING DAILY SCORE - Round ${this.scene.pveRound}, Stash: ${stashToSubmit}, Session Rep: ${this.scene.pveSessionRep}`);
-          await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, this.scene.pveSessionRep);
+          await submitScore(this.scene.role, this.scene.pveRound, stashToSubmit, this.scene.pveSessionRep, this.scene.runId);
           console.log('[ProgressionManager] ✅ Daily score submitted successfully!');
 
           // Also submit to all-time leaderboard (successful extraction = earned stash)
@@ -221,6 +239,8 @@ export default class ProgressionManager {
               pveRound: this.scene.mode === 'pve' ? (this.scene.pveRound || 1) + 1 : undefined,
               pveSessionStash: this.scene.pveSessionStash,
               pveSessionRep: this.scene.pveSessionRep,
+              pveCleanStreak: this.scene.pveCleanStreak || 0,
+              runId: this.scene.runId,
               pveBestRound: this.scene.pveBestRound
             });
           }
@@ -293,6 +313,17 @@ export default class ProgressionManager {
     if (this.scene.roundOver) return;
     this.scene.roundOver = true;
     ReplaySystem.finalize();
+
+    // Losing the round costs real rep — retrying is not free, it's just
+    // cheaper than swapping spawns. Applied before final score submission.
+    const playerLost = (this.scene.role === 'runner' && winner === 'plug')
+                    || (this.scene.role === 'plug' && winner === 'runner');
+    if (this.scene.mode === 'pve' && playerLost) {
+      const before = this.scene.pveSessionRep || 0;
+      this.scene.pveSessionRep = Math.max(0, Math.round(before - SESSION_RULES.DEATH_PENALTY));
+      this.scene._lastDeathPenalty = before - this.scene.pveSessionRep;
+      this.scene.pveCleanStreak = 0;
+    }
 
     // clear bullets & effects
     this.scene.bulletsA?.getChildren?.().forEach(b => b.destroy());
@@ -388,7 +419,7 @@ export default class ProgressionManager {
     const stashToSubmit = Math.max(0, roundNumber - 1);
     console.log(`[ProgressionManager] 🚀 GAME OVER - Submitting final scores - Round ${roundNumber}, Stash: ${stashToSubmit}, Rep: ${this.scene.pveSessionRep}`);
     await Promise.all([
-      submitScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep),
+      submitScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep, this.scene.runId),
       submitAllTimeScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep)
     ]);
     console.log('[ProgressionManager] ✅ Final scores submitted to Supabase!');
@@ -443,16 +474,23 @@ export default class ProgressionManager {
           pveRound: roundNumber, // Same round
           pveSessionStash: this.scene.pveSessionStash,
           pveSessionRep: this.scene.pveSessionRep,
+              pveCleanStreak: this.scene.pveCleanStreak || 0,
+              runId: this.scene.runId,
           pveBestRound: this.scene.pveBestRound,
+          retryAfterDeath: true, // same spawn, no swap — tough-spawn bonus armed
           seed: continueSeed
         })
       },
       {
         // TEMP: Removed daily limit for testing
-        label: `Again & Swap Spawns`,
+        label: `Again & Swap Spawns (\u2212${SESSION_RULES.SWAP_PENALTY} REP)`,
         variant: 'secondary',
         disabled: false, // Always enabled for testing
         onClick: () => {
+          // Swapping spawns buys information a death doesn't — priced
+          // accordingly, and the label says so up front.
+          this.scene.pveSessionRep = Math.max(0, Math.round((this.scene.pveSessionRep || 0) - SESSION_RULES.SWAP_PENALTY));
+          this.scene.pveCleanStreak = 0;
           // markSpawnSwapUsed(role); // TEMP: Don't mark as used
           this.scene.scene.restart({
             mode: 'pve',
@@ -460,6 +498,8 @@ export default class ProgressionManager {
             pveRound: roundNumber, // Same round
             pveSessionStash: this.scene.pveSessionStash,
             pveSessionRep: this.scene.pveSessionRep,
+              pveCleanStreak: this.scene.pveCleanStreak || 0,
+              runId: this.scene.runId,
             pveBestRound: this.scene.pveBestRound,
             seed: continueSeed,
             // Advance the spawn cycle each press: original -> opponent's
@@ -497,6 +537,7 @@ export default class ProgressionManager {
         ``,
         `Total Stash Collected: ${this.scene.pveSessionStash}`,
         `Total Rep Earned: ${this.scene.pveSessionRep}`,
+        ...(this.scene._lastDeathPenalty ? [`Loss penalty: \u2212${this.scene._lastDeathPenalty} REP`] : []),
         `Best Round: ${this.scene.pveBestRound}`
       ],
       buttons
