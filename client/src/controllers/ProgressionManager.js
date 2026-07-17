@@ -323,6 +323,17 @@ export default class ProgressionManager {
       this.scene.pveSessionRep = Math.max(0, Math.round(before - SESSION_RULES.DEATH_PENALTY));
       this.scene._lastDeathPenalty = before - this.scene.pveSessionRep;
       this.scene.pveCleanStreak = 0;
+      // Persist the setback: same round, penalty applied, tough-spawn
+      // bonus armed — survives a page close mid-grind.
+      saveSessionState(this.scene.role, {
+        pveRound: this.scene.pveRound,
+        pveSessionStash: this.scene.pveSessionStash,
+        pveSessionRep: this.scene.pveSessionRep,
+        pveCleanStreak: 0,
+        runId: this.scene.runId,
+        pveBestRound: this.scene.pveBestRound,
+        retryAfterDeath: true
+      });
     }
 
     // clear bullets & effects
@@ -433,40 +444,22 @@ export default class ProgressionManager {
     // Check if spawn swap has been used
     const swapUsed = hasUsedSpawnSwap(role);
 
-    // Replay + Share as a compact pair at the top of the stack. Both keep the
-    // modal alive (keepOpen) — it's hidden during playback and restored after.
+    // Single full-width Watch Replay at the top — sharing lives on the
+    // replay's end screen, where the clip actually exists.
     const replayShareRow = ReplaySystem.hasReplay(this.scene.role) ? [{
-      pair: [
-        {
-          label: '\u25B6 Watch Replay',
-          variant: 'secondary',
-          keepOpen: true,
-          onClick: (m) => {
-            m.setVisible(false);
-            ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
-          }
-        },
-        {
-          label: '\u2934 Share Clip',
-          variant: 'secondary',
-          keepOpen: true,
-          onClick: (m) => {
-            // Clip already rendered for this round? Share NOW, inside this
-            // tap — iOS's share sheet demands a live user gesture.
-            if (ReplaySystem.hasCurrentClip()) { ReplaySystem.shareClip(); return; }
-            // Otherwise the clip gets rendered by watching the replay once;
-            // the end screen's Share button opens the sheet from a fresh tap.
-            m.setVisible(false);
-            ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
-          }
-        }
-      ]
+      label: '\u25B6 Watch Replay',
+      variant: 'secondary',
+      keepOpen: true,
+      onClick: (m) => {
+        m.setVisible(false);
+        ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
+      }
     }] : [];
 
     const buttons = [
       ...replayShareRow,
       {
-        label: `Play Round ${roundNumber} Again`,
+        label: `Retry Round ${roundNumber}`,
         variant: 'primary',
         onClick: () => this.scene.scene.restart({
           mode: 'pve',
@@ -483,7 +476,7 @@ export default class ProgressionManager {
       },
       {
         // TEMP: Removed daily limit for testing
-        label: `Again & Swap Spawns (\u2212${SESSION_RULES.SWAP_PENALTY} REP)`,
+        label: `Retry Round ${roundNumber} & Swap Spawns`,
         variant: 'secondary',
         disabled: false, // Always enabled for testing
         onClick: () => {
@@ -491,6 +484,17 @@ export default class ProgressionManager {
           // accordingly, and the label says so up front.
           this.scene.pveSessionRep = Math.max(0, Math.round((this.scene.pveSessionRep || 0) - SESSION_RULES.SWAP_PENALTY));
           this.scene.pveCleanStreak = 0;
+          // Swapping forfeits the tough-spawn bonus — different spawn,
+          // different challenge. Persist the purchase.
+          saveSessionState(this.scene.role, {
+            pveRound: this.scene.pveRound,
+            pveSessionStash: this.scene.pveSessionStash,
+            pveSessionRep: this.scene.pveSessionRep,
+            pveCleanStreak: 0,
+            runId: this.scene.runId,
+            pveBestRound: this.scene.pveBestRound,
+            retryAfterDeath: false
+          });
           // markSpawnSwapUsed(role); // TEMP: Don't mark as used
           this.scene.scene.restart({
             mode: 'pve',
@@ -505,21 +509,6 @@ export default class ProgressionManager {
             // Advance the spawn cycle each press: original -> opponent's
             // spot -> 2nd opponent's spot (round 8+) -> original again
             swapSpawnCycle: (this.scene.swapSpawnCycle || 0) + 1
-          });
-        }
-      },
-      {
-        label: isPlug ? 'New Defense (Round 1)' : 'New Run (Round 1)',
-        variant: 'tertiary',
-        onClick: () => {
-          this.scene.scene.restart({
-            mode: 'pve',
-            role,
-            pveRound: 1,
-            pveSessionStash: 0,
-            pveSessionRep: 0,
-            pveBestRound: 0,
-            seed: restartSeed
           });
         }
       },

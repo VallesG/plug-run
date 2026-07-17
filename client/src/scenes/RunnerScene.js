@@ -8,7 +8,7 @@ export class RunnerScene extends BaseGameScene {
   init(data) {
     super.init?.(data);
     this.mode = data?.mode || 'pve';
-    this.pveRound = data?.pveRound || 1;
+    this.pveRound = data?.pveRound ?? this.pveRound ?? 1; // respect base-class resume
     this.pveSession = data?.pveSession || { rounds: 0, bestRound: 0 };
     this.role = 'runner';
   }

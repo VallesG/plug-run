@@ -4,6 +4,7 @@ import Phaser from 'phaser';
 import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID, ensureProvisionedIdentity, getRecoveryCode, hasProvisionedIdentity, restoreFromRecoveryCode } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores, getLeaderboard, getAllTimeLeaderboard, formatNumber } from '../utils/leaderboardManager.js';
+import { getSessionState } from '../utils/routeProgress.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
@@ -467,10 +468,11 @@ export class MenuScene extends Phaser.Scene {
 
     // Set button text based on mode
     let buttonText = 'START';
-    if (modeKey === 'runner') {
-      buttonText = 'PLAY AS RUNNER';
-    } else if (modeKey === 'plug') {
-      buttonText = 'PLAY AS PLUG';
+    if (modeKey === 'runner' || modeKey === 'plug') {
+      const base = modeKey === 'runner' ? 'PLAY AS RUNNER' : 'PLAY AS PLUG';
+      let sess = null;
+      try { sess = getSessionState(modeKey); } catch {}
+      buttonText = sess && sess.pveRound > 1 ? `${base} \u2014 ROUND ${sess.pveRound}` : base;
     }
 
     const startText = this.add.text(0, btnY, buttonText, {

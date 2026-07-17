@@ -276,6 +276,9 @@ export function saveSessionState(role, sessionData) {
       pveSessionStash: sessionData.pveSessionStash || 0,
       pveSessionRep: sessionData.pveSessionRep || 0,
       pveBestRound: sessionData.pveBestRound || 0,
+      pveCleanStreak: sessionData.pveCleanStreak || 0,
+      runId: sessionData.runId || null,
+      retryAfterDeath: !!sessionData.retryAfterDeath,
       timestamp: Date.now()
     };
 

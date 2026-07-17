@@ -14,7 +14,7 @@ import { makeRunnerSprite, makePlugSprite, updateAvatarVisuals } from '../utils/
 import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/mazeGenerator.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
-import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
+import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
@@ -166,20 +166,27 @@ export class BaseGameScene extends Phaser.Scene {
     console.log('[BaseGameScene] User:', user.username, user.isGuest ? '(guest)' : '(claimed)');
 
     if (this.mode === 'pve') {
-      // Store saved session if provided (will show modal after map loads)
-      this.savedSession = initData?.savedSession ?? null;
+      // FORCED PROGRESSION: entering from the menu (no explicit round data)
+      // adopts the day's stored progression automatically. One continuous
+      // climb per daily route — pass a round and you're on the next, die
+      // and you're retrying it. Resets when the route rolls over (session
+      // storage is keyed by routeID, so a new day simply misses).
+      const menuEntry = initData?.pveRound == null && !initData?.savedSession;
+      const entryRole = initData?.role ?? (this.scene.key === 'PLUG' ? 'plug' : 'runner');
+      const sess = initData?.savedSession ?? (menuEntry ? getSessionState(entryRole) : null);
+      this.savedSession = sess;
 
       // Continue session or start new
-      this.pveRound = initData?.pveRound ?? initData?.savedSession?.pveRound ?? 1;
-      this.pveSessionStash = initData?.pveSessionStash ?? initData?.savedSession?.pveSessionStash ?? 0;
-      this.pveSessionRep = initData?.pveSessionRep ?? initData?.savedSession?.pveSessionRep ?? 0;
-      this.pveCleanStreak = initData?.pveCleanStreak ?? initData?.savedSession?.pveCleanStreak ?? 0;
-      this.retryAfterDeath = initData?.retryAfterDeath ?? false;
+      this.pveRound = initData?.pveRound ?? sess?.pveRound ?? 1;
+      this.pveSessionStash = initData?.pveSessionStash ?? sess?.pveSessionStash ?? 0;
+      this.pveSessionRep = initData?.pveSessionRep ?? sess?.pveSessionRep ?? 0;
+      this.pveCleanStreak = initData?.pveCleanStreak ?? sess?.pveCleanStreak ?? 0;
+      this.retryAfterDeath = initData?.retryAfterDeath ?? sess?.retryAfterDeath ?? false;
       // One id per run, minted fresh when no restart data carries one —
       // the leaderboard uses it to scope write semantics to the run.
-      this.runId = initData?.runId ?? initData?.savedSession?.runId
+      this.runId = initData?.runId ?? this.savedSession?.runId
         ?? (globalThis.crypto?.randomUUID?.() ?? (Date.now().toString(36) + Math.random().toString(36).slice(2)));
-      this.pveBestRound = initData?.pveBestRound ?? initData?.savedSession?.pveBestRound ?? 0;
+      this.pveBestRound = initData?.pveBestRound ?? sess?.pveBestRound ?? 0;
       // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
       // opponent's spot, 2 = take the second opponent's spot (round 8+),
       // then wraps back to original. Boolean swapSpawns kept for compat.

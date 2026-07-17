@@ -283,62 +283,7 @@ export default class GameUI {
     const weaponButtons = []; // Track weapon buttons for selection styling
     let startRoundButton = null; // Reference to Start Round button
 
-    // Add Continue button ABOVE weapons (Round 1 only)
-    let firstRowY_adjusted = firstRowY;
-    if (this.scene.pveRound === 1) {
-      let continueData = null;
-      let continueLabel = null;
-
-      // Check for active session first (highest priority)
-      if (this.scene.savedSession && this.scene.savedSession.pveRound > 1) {
-        continueData = this.scene.savedSession;
-        continueLabel = `Continue from Round ${this.scene.savedSession.pveRound}`;
-      }
-      // Otherwise check for route progress (if premium user)
-      else if (isPremiumUser()) {
-        const routeProgress = getCurrentRouteProgress();
-        const highestRound = this.scene.role === 'runner' ? routeProgress.runnerHighestRound : routeProgress.plugHighestRound;
-        if (highestRound > 1) {
-          continueData = {
-            pveRound: highestRound,
-            pveSessionStash: 0,
-            pveSessionRep: 0,
-            pveBestRound: highestRound
-          };
-          continueLabel = `Continue from Round ${highestRound}`;
-        }
-      }
-
-      if (continueData && continueLabel) {
-        const continueY = cy - 50; // Above weapon buttons
-        const continueW = Math.min(280, panelW - 80);
-        const continueH = 36;
-
-        const continueBg = this.scene.add.rectangle(cx, continueY, continueW, continueH, 0x16a34a, 1)
-          .setStrokeStyle(2, 0x22c55e)
-          .setDepth(20004)
-          .setInteractive({ useHandCursor: true });
-
-        const continueText = this.scene.add.text(cx, continueY, continueLabel, {
-          color: '#ffffff',
-          fontSize: '14px',
-          fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(20005);
-
-        continueBg.on('pointerdown', (pointer, localX, localY, event) => {
-          if (event) event.stopPropagation();
-          destroy();
-          this.scene.scene.restart({
-            mode: 'pve',
-            role: this.scene.role,
-            ...continueData
-          });
-        });
-
-        registerExtra(continueBg, continueText);
-        firstRowY_adjusted = firstRowY + 10; // Push weapon buttons down slightly
-      }
-    }
+    const firstRowY_adjusted = firstRowY; // forced progression: scene already starts at the right round
 
     let lastRowY = firstRowY_adjusted;
     options.forEach((weapon, idx) => {
@@ -553,61 +498,8 @@ export default class GameUI {
     // Move up for rounds 2+ to use empty space (round 1 has Continue button in that space)
     let y = (this.scene.pveRound && this.scene.pveRound > 1) ? cy - 50 : cy + 10;
 
-    // Add Continue button ABOVE powers (Round 1 only)
-    if (this.scene.pveRound === 1) {
-      let continueData = null;
-      let continueLabel = null;
-
-      // Check for active session first (highest priority)
-      if (this.scene.savedSession && this.scene.savedSession.pveRound > 1) {
-        continueData = this.scene.savedSession;
-        continueLabel = `Continue from Round ${this.scene.savedSession.pveRound}`;
-      }
-      // Otherwise check for route progress (if premium user)
-      else if (isPremiumUser()) {
-        const routeProgress = getCurrentRouteProgress();
-        const highestRound = this.scene.role === 'runner' ? routeProgress.runnerHighestRound : routeProgress.plugHighestRound;
-        if (highestRound > 1) {
-          continueData = {
-            pveRound: highestRound,
-            pveSessionStash: 0,
-            pveSessionRep: 0,
-            pveBestRound: highestRound
-          };
-          continueLabel = `Continue from Round ${highestRound}`;
-        }
-      }
-
-      if (continueData && continueLabel) {
-        const continueY = cy - 90; // Above power buttons
-        const continueW = Math.min(280, panel?.width - 80 || 200);
-        const continueH = 36;
-
-        const continueBg = this.scene.add.rectangle(cx, continueY, continueW, continueH, 0x16a34a, 1)
-          .setStrokeStyle(2, 0x22c55e)
-          .setDepth(20004)
-          .setInteractive({ useHandCursor: true });
-
-        const continueText = this.scene.add.text(cx, continueY, continueLabel, {
-          color: '#ffffff',
-          fontSize: '14px',
-          fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(20005);
-
-        continueBg.on('pointerdown', (pointer, localX, localY, event) => {
-          if (event) event.stopPropagation();
-          destroy();
-          this.scene.scene.restart({
-            mode: 'pve',
-            role: this.scene.role,
-            ...continueData
-          });
-        });
-
-        registerExtra(continueBg, continueText);
-        y = cy - 30; // Push power buttons down slightly if Continue button is shown
-      }
-    }
+    // Forced progression: the scene already starts at the day's round —
+    // no continue fork here anymore.
 
     const chosen = [];
     const badges = new Map(); // Map of powerId -> { badge1, badge2 }

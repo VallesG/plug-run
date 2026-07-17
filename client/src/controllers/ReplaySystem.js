@@ -157,7 +157,8 @@ function walk(scene, list, out, parentVisible, parentAlpha, inheritDepth) {
       const hasGfx = o.list?.some?.(ch => ch.type === 'Graphics');
       if (o._rid === undefined) o._rid = rec.nextId++;
       if (hasGfx) {
-        const s = snapContainerUnit(scene, o, effA, inheritDepth);
+        let s = null;
+        try { s = snapContainerUnit(scene, o, effA, inheritDepth); } catch { s = null; }
         if (s) out.push({ id: o._rid, s });
       } else {
         // Children render at the ROOT container's depth in Phaser, not
@@ -169,7 +170,8 @@ function walk(scene, list, out, parentVisible, parentAlpha, inheritDepth) {
 
     const effA = parentAlpha * o.alpha;
     if (effA < MIN_ALPHA) continue;
-    const s = snapLeaf(o, effA, inheritDepth);
+    let s = null;
+    try { s = snapLeaf(o, effA, inheritDepth); } catch { continue; } // skip poisoned objects
     if (!s) continue;
     if (o._rid === undefined) o._rid = rec.nextId++;
     out.push({ id: o._rid, s });
@@ -219,6 +221,7 @@ const ReplaySystem = {
   /** Call from startMatch(). Resets the active recording; does NOT touch
    *  lastReplay, so the previous round stays watchable from pre-round menus. */
   begin(scene) {
+    this._playing = false; // a dead scene can't run its teardown — never stay bricked
     if (rec) this._finalize(); // seal anything pending (fast Continue taps)
     epoch++;
     rec = {
@@ -420,11 +423,19 @@ const ReplaySystem = {
     let elapsed = 0, segment = -1, finished = false;
 
     const applySample = (s) => {
-      for (const b of s.born) spawnGhost(b.id, b.s);
+      for (const b of s.born) { try { spawnGhost(b.id, b.s); } catch {} }
+      const tpDist = (meta.cell || 24) * 2.5; // beyond this, it's a teleport
       for (const m of s.moved) {
         const g = ghosts.get(m.id);
         if (!g) continue;
-        g._fx2 = g._wx; g._fy2 = g._wy; g._fr = g._tr;
+        const jump = Math.hypot(m.s.x - (g._tx ?? m.s.x), m.s.y - (g._ty ?? m.s.y));
+        if (jump > tpDist) {
+          // Teleport (e.g. anti-camp stash relocation): snap, don't streak.
+          g._fx2 = m.s.x; g._fy2 = m.s.y;
+        } else {
+          g._fx2 = g._wx; g._fy2 = g._wy;
+        }
+        g._fr = g._tr;
         g._tx = m.s.x; g._ty = m.s.y; g._tr = m.s.r;
         applyMut(g, m.s);
       }
@@ -444,8 +455,20 @@ const ReplaySystem = {
       return a + d * p;
     };
 
+    let stepErrors = 0;
     const step = (_, delta) => {
       if (finished) return;
+      try {
+        stepInner(delta);
+        stepErrors = 0;
+      } catch (e) {
+        if (++stepErrors > 30) { // ~0.5s of consecutive failures: give up cleanly
+          console.warn('[Replay] playback aborted after repeated errors:', e);
+          endPlayback(true);
+        }
+      }
+    };
+    const stepInner = (delta) => {
       elapsed += delta;
       const idx = Math.min(Math.floor(elapsed / SAMPLE_MS), data.samples.length - 1);
       while (segment < idx) { segment++; applySample(data.samples[segment]); }
