@@ -290,6 +290,12 @@ const ReplaySystem = {
   },
   getMeta() { return lastReplay?.meta ?? null; },
   getLastClip() { return this._clip ?? null; },
+  /** True when a rendered clip exists for the replay we'd currently show —
+   *  lets UI share instantly (fresh tap → share sheet) without re-watching. */
+  hasCurrentClip() {
+    const c = this._clip, m = lastReplay?.meta;
+    return !!(c && m && c.meta.round === m.round && c.meta.role === m.role);
+  },
 
   // -------------------------------------------------------------------------
   // playback
@@ -486,10 +492,10 @@ const ReplaySystem = {
         this._clip = { blob: new Blob(chunks, { type: mime || 'video/webm' }), meta };
       }
       if (skipped) { teardownAll(); onDone?.(); return; }
-      if (autoShare && this._clip) {
-        await this.shareClip();
-        teardownAll(); onDone?.(); return;
-      }
+      // NOTE: never auto-call shareClip() here — the user gesture expired
+      // during recording and iOS will reject navigator.share(), dumping the
+      // user into the download fallback. The end screen's Share button is a
+      // fresh tap, which is what the share sheet requires.
       const mkBtn = (y, label, fill, txtColor, cb) => {
         const bw = Math.min(240, W - 60);
         const bg = mk(scene.add.rectangle(cx, y, bw, 38, fill, 1)
@@ -518,25 +524,35 @@ const ReplaySystem = {
   async shareClip() {
     const clip = this._clip;
     if (!clip) return false;
-    const ext = (clip.blob.type || '').includes('mp4') ? 'mp4' : 'webm';
-    const file = new File([clip.blob], `plugrun-round${clip.meta.round}-${clip.meta.role}.${ext}`, { type: clip.blob.type });
+    // iOS quirk: canShare() rejects Files typed with codec parameters
+    // ('video/mp4;codecs=avc1.42E01E'), even though that's exactly what
+    // MediaRecorder stamps on the blob. Same bytes, bare container type.
+    const cleanType = (clip.blob.type || 'video/mp4').split(';')[0].trim() || 'video/mp4';
+    const ext = cleanType.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([clip.blob], `plugrun-round${clip.meta.round}-${clip.meta.role}.${ext}`, { type: cleanType });
     try {
-      if (navigator.canShare?.({ files: [file] })) {
+      // Some Safari builds misreport canShare — if share exists, try it.
+      if (navigator.canShare?.({ files: [file] }) || (navigator.share && navigator.canShare === undefined)) {
         await navigator.share({
           files: [file],
           title: 'Plug Run',
-          text: `Round ${clip.meta.round} as ${clip.meta.role} \u2014 play at plugrun.io`
+          text: `Round ${clip.meta.round} as ${clip.meta.role} \u2014 can you beat my run? \u25B6 plugrun.io`,
+          url: 'https://plugrun.io'
         });
         return true;
       }
     } catch (e) {
       if (e?.name === 'AbortError') return false;
     }
+    // Fallback (no Web Share API — desktop, or non-HTTPS contexts like a
+    // LAN dev server, where Safari doesn't expose navigator.share at all).
     const url = URL.createObjectURL(clip.blob);
     const a = document.createElement('a');
     a.href = url; a.download = file.name;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    // Safari's download prompt is modal — if the user hesitates on it past
+    // the revoke, the download silently dies. Give it 5 minutes.
+    setTimeout(() => URL.revokeObjectURL(url), 300_000);
     return true;
   }
 };

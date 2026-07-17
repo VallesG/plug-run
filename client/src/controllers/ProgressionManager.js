@@ -420,8 +420,13 @@ export default class ProgressionManager {
           variant: 'secondary',
           keepOpen: true,
           onClick: (m) => {
+            // Clip already rendered for this round? Share NOW, inside this
+            // tap — iOS's share sheet demands a live user gesture.
+            if (ReplaySystem.hasCurrentClip()) { ReplaySystem.shareClip(); return; }
+            // Otherwise the clip gets rendered by watching the replay once;
+            // the end screen's Share button opens the sheet from a fresh tap.
             m.setVisible(false);
-            ReplaySystem.play(this.scene, { autoShare: true, onDone: () => m.setVisible(true) });
+            ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
           }
         }
       ]
