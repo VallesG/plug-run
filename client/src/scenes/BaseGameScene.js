@@ -19,6 +19,7 @@ import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } fr
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
 import ReplaySystem from '../controllers/ReplaySystem.js';
+import { streakBonus, SESSION_RULES } from '../utils/repTracker.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { createBottomLeftButtons } from '../utils/authUI.js';
 import { applyStreetWarsAI, updateStreetWarsPlugAI, applyStreetWarsShootingBehavior, updateStreetWarsRunnerAI, considerStreetWarsPowerUse } from '../utils/streetWarsAI.js';
@@ -172,6 +173,8 @@ export class BaseGameScene extends Phaser.Scene {
       this.pveRound = initData?.pveRound ?? initData?.savedSession?.pveRound ?? 1;
       this.pveSessionStash = initData?.pveSessionStash ?? initData?.savedSession?.pveSessionStash ?? 0;
       this.pveSessionRep = initData?.pveSessionRep ?? initData?.savedSession?.pveSessionRep ?? 0;
+      this.pveCleanStreak = initData?.pveCleanStreak ?? initData?.savedSession?.pveCleanStreak ?? 0;
+      this.retryAfterDeath = initData?.retryAfterDeath ?? false;
       this.pveBestRound = initData?.pveBestRound ?? initData?.savedSession?.pveBestRound ?? 0;
       // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
       // opponent's spot, 2 = take the second opponent's spot (round 8+),
@@ -492,6 +495,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveRound: this.pveRound,
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
+        pveCleanStreak: this.pveCleanStreak || 0,
         pveBestRound: this.pveBestRound
       }));
       this.load.start();
@@ -617,6 +621,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveRound: this.pveRound,
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
+        pveCleanStreak: this.pveCleanStreak || 0,
         pveBestRound: this.pveBestRound
       }), 250);
     };
@@ -2701,6 +2706,21 @@ export class BaseGameScene extends Phaser.Scene {
       console.log('[Plug] REP Breakdown:', repResult.breakdown);
     }
 
+    // Tough spawn cleared: died here, ran it back unswapped, beat it.
+    if (this.retryAfterDeath) {
+      repEarned = Math.round((repEarned + SESSION_RULES.TOUGH_SPAWN_BONUS) * 10) / 10;
+      this.retryAfterDeath = false;
+      console.log('[Plug] Tough spawn cleared \u2192 +' + SESSION_RULES.TOUGH_SPAWN_BONUS, 'REP');
+    }
+
+    // Clean streak: consecutive completions without a death or swap.
+    this.pveCleanStreak = (this.pveCleanStreak || 0) + 1;
+    const sBonus = streakBonus(this.pveCleanStreak);
+    if (sBonus > 0) {
+      repEarned = Math.round((repEarned + sBonus) * 10) / 10;
+      console.log('[Plug] Clean streak', this.pveCleanStreak, '\u2192 +' + sBonus, 'REP');
+    }
+
     this.pveSessionStash += stashEarned;
     this.pveSessionRep = Math.round((this.pveSessionRep || 0) + repEarned);
     this.pveBestRound = Math.max(this.pveBestRound ?? 0, currentRound);
@@ -2748,6 +2768,7 @@ export class BaseGameScene extends Phaser.Scene {
       pveRound: nextRound,
       pveSessionStash: this.pveSessionStash,
       pveSessionRep: this.pveSessionRep,
+        pveCleanStreak: this.pveCleanStreak || 0,
       pveBestRound: this.pveBestRound
     });
 
@@ -2764,6 +2785,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveRound: nextRound,
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
+        pveCleanStreak: this.pveCleanStreak || 0,
         pveBestRound: this.pveBestRound
       });
     });

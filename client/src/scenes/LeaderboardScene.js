@@ -54,6 +54,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Subtitle
+    this.titleRule = this.add.rectangle(cx, 71, 150, 2, 0x2f8fe0, 1);
     this.add.text(cx, 85, 'Plug. Run. Climb. Streets watching.', {
       fontSize: '14px',
       color: '#aab5ff',
@@ -64,9 +65,10 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.currentTab = 'daily';
     this.currentRole = 'runner';
     this.currentSort = 'stash';
+    if (this.currentTab === 'pvp') this.currentTab = 'daily';
     this.createTabButtons(cx, 125);
     this.createRoleButtons(cx, 175);
-    this.createSortButtons(cx, 218);
+    this.applyAccents();
 
     // Scrollable content container
     this.contentContainer = this.add.container(0, 0);
@@ -168,15 +170,39 @@ export default class LeaderboardScene extends Phaser.Scene {
     }
   }
 
+  // Selection accent follows the viewed role: runner blue / plug red —
+  // same branding the rest of the game speaks.
+  roleAccent() {
+    return this.currentRole === 'plug'
+      ? { stroke: 0xe14b4b, text: '#ff6b6b', fill: 0x2a1416 }
+      : { stroke: 0x4db2ff, text: '#4db2ff', fill: 0x121f30 };
+  }
+
+  applyAccents() {
+    const a = this.roleAccent();
+    const styleSet = (btns, txts, activeKey) => {
+      if (!btns) return;
+      Object.keys(btns).forEach(key => {
+        const isActive = key === activeKey;
+        btns[key].setFillStyle(isActive ? a.fill : 0x1a2038, 1)
+                 .setStrokeStyle(2, isActive ? a.stroke : 0x2f3660);
+        txts[key].setColor(isActive ? a.text : '#aab5ff')
+                 .setFontStyle(isActive ? 'bold' : '');
+      });
+    };
+    styleSet(this.tabButtons, this.tabTexts, this.currentTab);
+    styleSet(this.roleButtons, this.roleTexts, this.currentRole);
+    this.titleRule?.setFillStyle(a.stroke, 1);
+  }
+
   createTabButtons(cx, y) {
     const tabW = 100;
     const tabH = 40;
     const gap = 10;
 
     const tabs = [
-      { key: 'daily', label: 'Daily', x: cx - tabW - gap },
-      { key: 'alltime', label: 'All-Time', x: cx },
-      { key: 'pvp', label: 'PvP', x: cx + tabW + gap }
+      { key: 'daily', label: 'Daily', x: cx - tabW/2 - gap/2 },
+      { key: 'alltime', label: 'All-Time', x: cx + tabW/2 + gap/2 }
     ];
 
     this.tabButtons = {};
@@ -239,80 +265,22 @@ export default class LeaderboardScene extends Phaser.Scene {
 
   switchTab(tab) {
     this.currentTab = tab;
-
-    // Update tab visuals
-    Object.keys(this.tabButtons).forEach(key => {
-      const isActive = key === tab;
-      this.tabButtons[key]
-        .setFillStyle(isActive ? 0x2a1a38 : 0x1a2038)
-        .setStrokeStyle(2, isActive ? 0x60a5fa : 0x2f3660);
-
-      this.tabTexts[key]
-        .setColor(isActive ? '#93c5fd' : '#aab5ff')
-        .setFontStyle(isActive ? 'bold' : '');
-    });
-
+    this.applyAccents();
     trackLeaderboardView(tab, this.currentRole);
     this.refreshContent();
   }
 
   switchRole(role) {
     this.currentRole = role;
-
-    // Update role button visuals
-    Object.keys(this.roleButtons).forEach(key => {
-      const isActive = key === role;
-      this.roleButtons[key]
-        .setFillStyle(isActive ? 0x2a1a38 : 0x1a2038)
-        .setStrokeStyle(2, isActive ? 0x60a5fa : 0x2f3660);
-
-      this.roleTexts[key]
-        .setColor(isActive ? '#93c5fd' : '#aab5ff')
-        .setFontStyle(isActive ? 'bold' : '');
-    });
-
+    this.applyAccents();
     trackLeaderboardView(this.currentTab, role);
     this.refreshContent();
   }
 
-  createSortButtons(cx, y) {
-    this.sortButtons = {};
-    this.sortTexts = {};
-    this.sortLabel = this.add.text(cx - 100, y, 'Rank by:', {
-      fontSize: '11px', color: '#6b7280', fontStyle: 'italic'
-    }).setOrigin(0.5, 0.5);
-    const modes = [{ key: 'stash', label: 'Stash' }, { key: 'rep', label: 'Rep' }];
-    const btnW = 62, btnH = 24, gap = 6;
-    const startX = cx - ((btnW * modes.length + gap * (modes.length - 1)) / 2) + 45;
-    modes.forEach((m, i) => {
-      const x = startX + i * (btnW + gap);
-      const active = m.key === this.currentSort;
-      const bg = this.add.rectangle(x, y, btnW, btnH,
-        active ? 0x2a1a38 : 0x1a2038, 1)
-        .setStrokeStyle(1, active ? 0xfbbf24 : 0x2f3660)
-        .setInteractive({ useHandCursor: true });
-      const txt = this.add.text(x, y, m.label, {
-        fontSize: '12px', color: active ? '#fbbf24' : '#aab5ff',
-        fontStyle: active ? 'bold' : ''
-      }).setOrigin(0.5);
-      bg.on('pointerdown', () => this.switchSort(m.key));
-      this.sortButtons[m.key] = bg;
-      this.sortTexts[m.key] = txt;
-    });
-  }
 
   switchSort(sort) {
     if (this.currentSort === sort) return;
     this.currentSort = sort;
-    Object.keys(this.sortButtons).forEach(key => {
-      const isActive = key === sort;
-      this.sortButtons[key]
-        .setFillStyle(isActive ? 0x2a1a38 : 0x1a2038)
-        .setStrokeStyle(1, isActive ? 0xfbbf24 : 0x2f3660);
-      this.sortTexts[key]
-        .setColor(isActive ? '#fbbf24' : '#aab5ff')
-        .setFontStyle(isActive ? 'bold' : '');
-    });
     this.refreshContent();
   }
 
@@ -322,18 +290,7 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     const cx = this.scale.width / 2;
     const W = this.scale.width;
-    let y = 260;
-
-    if (this.currentTab === 'pvp') {
-      // PvP tab - coming soon
-      const comingSoon = this.add.text(cx, y + 80, 'PvP Leaderboards\nComing Soon', {
-        fontSize: '18px',
-        color: '#aab5ff',
-        align: 'center'
-      }).setOrigin(0.5);
-      this.contentContainer.add(comingSoon);
-      return;
-    }
+    let y = 225;
 
     // Show single leaderboard for selected role and tab
     const roleLabel = this.currentRole === 'runner' ? 'Runners' : 'Plugs';
@@ -342,7 +299,7 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     const titleText = this.add.text(cx, y, title, {
       fontSize: '20px',
-      color: '#cbd1ff',
+      color: this.roleAccent().text,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -369,6 +326,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     const userId = getUserID();
 
     // Table header
+    const headerY = y;
     const headerBg = this.add.rectangle(cx, y, Math.min(400, W - 40), 35, 0x1a2038, 0.5);
     const rankHeader = this.add.text(cx - 180, y, 'RANK', {
       fontSize: '12px',
@@ -378,16 +336,21 @@ export default class LeaderboardScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#6b7280'
     }).setOrigin(0, 0.5);
-    const stashHeader = this.add.text(cx + 80, y, 'STASH', {
+    // Sortable column headers: tap STASH or REP to rank by that column.
+    // Active column carries the sort caret; inactive is brighter than the
+    // static labels so it reads as tappable.
+    const stashHeader = this.add.text(cx + 80, y, sort === 'stash' ? 'STASH \u25BE' : 'STASH', {
       fontSize: '12px',
-      color: sort === 'stash' ? '#86efac' : '#6b7280',
+      color: sort === 'stash' ? '#86efac' : '#8a93a8',
       fontStyle: sort === 'stash' ? 'bold' : ''
-    }).setOrigin(0.5, 0.5);
-    const repHeader = this.add.text(cx + 155, y, 'REP', {
+    }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
+    stashHeader.on('pointerdown', () => this.switchSort('stash'));
+    const repHeader = this.add.text(cx + 155, y, sort === 'rep' ? 'REP \u25BE' : 'REP', {
       fontSize: '12px',
-      color: sort === 'rep' ? '#ffd166' : '#6b7280',
+      color: sort === 'rep' ? '#ffd166' : '#8a93a8',
       fontStyle: sort === 'rep' ? 'bold' : ''
-    }).setOrigin(1, 0.5);
+    }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+    repHeader.on('pointerdown', () => this.switchSort('rep'));
 
     this.contentContainer.add([titleText, headerBg, rankHeader, nameHeader, stashHeader, repHeader]);
     y += 45;
@@ -396,12 +359,17 @@ export default class LeaderboardScene extends Phaser.Scene {
     const entries = [];
 
     if (topScores.length === 0) {
-      const emptyText = this.add.text(cx, y, 'No scores yet.\nBe the first!', {
-        fontSize: '16px',
-        color: '#aab5ff',
-        align: 'center'
+      // Empty state lives INSIDE the framed panel: advance the y cursor so
+      // the panel bounds enclose it instead of clipping at the header.
+      const emptyH = 88;
+      const head = this.add.text(cx, y + emptyH / 2 - 11, 'NO SCORES YET', {
+        fontSize: '14px', color: '#8a93a8', fontStyle: 'bold', letterSpacing: 2
       }).setOrigin(0.5);
-      entries.push(emptyText);
+      const sub = this.add.text(cx, y + emptyH / 2 + 11, 'Be the first on the board', {
+        fontSize: '12px', color: '#6b7280', fontStyle: 'italic'
+      }).setOrigin(0.5);
+      entries.push(head, sub);
+      y += emptyH;
     } else {
       topScores.forEach((entry, index) => {
         const rank = index + 1;
@@ -463,6 +431,18 @@ export default class LeaderboardScene extends Phaser.Scene {
     }
 
     this.contentContainer.add(entries);
+
+    // Stroked panel behind the table — same framed look as the in-round
+    // modals. Added after rows (height depends on entry count), inserted
+    // under them in the container's render order.
+    const tableTop = headerY - 22;
+    const tableBottom = y - 6;
+    const tablePanel = this.add.rectangle(
+      cx, (tableTop + tableBottom) / 2,
+      Math.min(400, W - 40) + 16, tableBottom - tableTop,
+      0x0d1016, 0.55
+    ).setStrokeStyle(2, 0x2e3442);
+    this.contentContainer.addAt(tablePanel, 1);
   }
 
 }

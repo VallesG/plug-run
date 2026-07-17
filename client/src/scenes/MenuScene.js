@@ -90,12 +90,9 @@ export class MenuScene extends Phaser.Scene {
       .setDisplaySize(emblemSize, emblemSize)
       .setDepth(5);
 
-    // Static street number for main sign (888 WAY - memorable and consistent)
-    const mainStreetNum = 888;
-    const mainSuffix = 'WAY';
 
     // Main title
-    this.logo = this.add.text(W/2, logoY + signH/2 - logoSize * 0.35, 'PLUG RUN', {
+    this.logo = this.add.text(W/2, logoY + signH/2, 'PLUG RUN', {
       fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
       fontSize: logoSize + 'px',
       color: '#ffffff',
@@ -104,25 +101,14 @@ export class MenuScene extends Phaser.Scene {
       strokeThickness: 2
     }).setOrigin(0.5, 0.5).setDepth(5);
 
-    // Address number below
-    const mainAddressSize = Math.max(12, Math.floor(logoSize * 0.65));
-    this.logoAddress = this.add.text(W/2, logoY + signH/2 + logoSize * 0.45, `${mainStreetNum} ${mainSuffix}`, {
-      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
-      fontSize: mainAddressSize + 'px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 1.5,
-      letterSpacing: 2
-    }).setOrigin(0.5, 0.5).setDepth(5);
 
     this.signBg = signBg;
     this.signShadow = signShadow;
 
     // Cards data - only show the two main game modes
     const modes = [
-      { key:'runner', title:'Run the Block',      sub:'1179 ST - Play as the runner. Evade the plug.', showTimer: false },
-      { key:'plug',   title:'Defend the Block',   sub:'42 ST - Play as the plug. Stop the runner.', showTimer: false }
+      { key:'runner', title:'Run the Block',      sub:'Grab the stash, escape before the Plug catches you.', showTimer: false },
+      { key:'plug',   title:'Defend the Block',   sub:'Stop the Runner before they get away.', showTimer: false }
     ];
 
     // Carousel root container to keep z-order tidy
@@ -148,6 +134,9 @@ export class MenuScene extends Phaser.Scene {
 
     // Leaderboard button for mobile (trophy icon - only visible on mobile)
     this.leaderboardBtn = this.makeIconButton('🏆', () => this.scene.start('LEADERBOARD'));
+
+    // Help button — explains the premise/leaderboard/replays for newcomers
+    this.helpBtn = this.makeIconButton('?', () => this.openHelp());
 
     // Tutorial button (large yellow button like in mockup)
     this.tutorialBtn = this.makeTutorialButton();
@@ -295,17 +284,6 @@ export class MenuScene extends Phaser.Scene {
       speck.fillRect(sx, sy, 2, 2);
     }
     c.add(speck);
-
-    // Center lane dashes (drawn with wrap margin for seamless scroll)
-    const DASH = 26, GAP = 26, PERIOD = DASH + GAP;
-    const g = this.add.graphics();
-    g.fillStyle(0xd4a017, 0.3);
-    for (let y = -PERIOD; y < H + PERIOD; y += PERIOD){
-      g.fillRect(W/2 - 2, y, 4, DASH);
-    }
-    this._laneDashes = g;
-    this._lanePeriod = PERIOD;
-    c.add(g);
 
     this._streetBg = c;
   }
@@ -463,6 +441,19 @@ export class MenuScene extends Phaser.Scene {
           cont.add(this.add.rectangle(-cw / 2 + colW * i, tickerY, 1, tickerH - 10, 0x2e3442, 1));
         }
       });
+    }
+
+    // One-line tagline just under the stats strip — tells a first-time
+    // visitor what this mode actually is before they commit a tap.
+    if (sub) {
+      const tagY = -ch * 0.5 + titleBgHeight + 38;
+      cont.add(this.add.text(0, tagY, sub, {
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        color: '#aab3c8',
+        align: 'center',
+        wordWrap: { width: cw - 28 }
+      }).setOrigin(0.5, 0));
     }
 
     // START button at BOTTOM (near full width like the mockup)
@@ -1441,7 +1432,7 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(1, 0x3a4155)
       .setInteractive({ cursor: 'pointer' });
 
-    const t = this.add.text(0, 0, 'HOW TO PLAY', {
+    const t = this.add.text(0, 0, 'PLAY TUTORIAL', {
       fontFamily: 'monospace',
       fontSize: Math.max(12, Math.floor(btnHeight * 0.38)) + 'px',
       color: '#aab3c8',
@@ -2158,6 +2149,105 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
+  openHelp(){
+    const W = this.scale.width, H = this.scale.height;
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+    const panelW = Math.min(400, W - 32);
+    const wrapW = panelW - 44;
+
+    // Sections: each line is an array of segments so role names can carry
+    // their own color/weight inline (Phaser text objects are single-style).
+    const ROLE_BLUE = '#4db2ff', ROLE_RED = '#ff6b6b';
+    const sections = [
+      { head: 'THE PREMISE', lines: [
+        [{ t: 'A daily arcade chase with two roles.' }],
+        [{ t: 'RUNNER: ', c: ROLE_BLUE, b: true }, { t: 'Grab the stash and reach the getaway car.' }],
+        [{ t: 'PLUG: ', c: ROLE_RED, b: true }, { t: 'Stop the Runner before they escape.' }],
+        [{ t: 'Each round gets harder.' }],
+      ]},
+      { head: 'THE DAILY BLOCK', lines: [
+        [{ t: 'A new route drops for each role every day. Everyone playing that role gets the same route.' }],
+      ]},
+      { head: 'LEADERBOARDS', lines: [
+        [{ t: 'Each role has daily and all-time rankings. Survive more rounds to climb higher.' }],
+      ]},
+      { head: 'REPLAYS', lines: [
+        [{ t: 'After every run, watch the replay and download the clip to share.' }],
+      ]},
+      { head: 'REP', lines: [
+        [{ t: 'Every run starts with the same amount of Rep. What you do in the round decides how much you walk away with.' }],
+      ]},
+    ];
+
+    const els = [];
+    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
+    els.push(veil);
+
+    // Measure pass: build all texts at local (xOff, yCursor); position later.
+    const mkStyle = (seg, availW) => ({
+      fontFamily: 'monospace', fontSize: '12px',
+      color: seg.c || '#aab3c8',
+      fontStyle: seg.b ? 'bold' : 'normal',
+      align: 'left', lineSpacing: 3,
+      wordWrap: availW ? { width: availW } : undefined
+    });
+    let y = 0;
+    const content = []; // { obj, xOff, yOff }
+    for (const sec of sections) {
+      const h = this.add.text(0, 0, sec.head, {
+        fontFamily: 'monospace', fontSize: '12px', color: '#86efac',
+        fontStyle: 'bold', letterSpacing: 1
+      }).setOrigin(0, 0).setDepth(52);
+      content.push({ obj: h, xOff: 0, yOff: y });
+      y += h.height + 4;
+      for (const line of sec.lines) {
+        let x = 0, lineH = 0;
+        line.forEach((seg, i) => {
+          const last = i === line.length - 1;
+          const obj = this.add.text(0, 0, seg.t, mkStyle(seg, last ? wrapW - x : null))
+            .setOrigin(0, 0).setDepth(52);
+          content.push({ obj, xOff: x, yOff: y });
+          x += obj.width;
+          lineH = Math.max(lineH, obj.height);
+        });
+        y += lineH + 3;
+      }
+      y += 11; // section gap
+    }
+    const contentH = y;
+    const titleH = 34, btnH = 40;
+    const panelH = Math.min(H - 60, contentH + titleH + btnH + 30);
+
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.97)
+      .setDepth(51).setStrokeStyle(2, 0x2f8fe0);
+    els.push(panel);
+    const title = this.add.text(cx, cy - panelH/2 + 20, 'HOW IT WORKS', {
+      color: PALETTE.title, fontSize: '16px', fontFamily: 'monospace', letterSpacing: 2, fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(52);
+    els.push(title);
+    const titleRule = this.add.rectangle(cx, cy - panelH/2 + 36, 130, 2, 0x2f8fe0, 1).setDepth(52);
+    els.push(titleRule);
+
+    const contentX = cx - panelW/2 + 22;
+    const contentY = cy - panelH/2 + titleH + 6;
+    for (const { obj, xOff, yOff } of content) {
+      obj.setPosition(contentX + xOff, contentY + yOff);
+      els.push(obj);
+    }
+
+    const gotBg = this.add.rectangle(cx, cy + panelH/2 - btnH/2 - 10, Math.min(220, panelW - 60), btnH - 8, 0xfbbf24, 1)
+      .setStrokeStyle(2, 0xf59e0b).setDepth(52).setInteractive({ cursor: 'pointer' });
+    const gotTxt = this.add.text(gotBg.x, gotBg.y, 'GOT IT', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#1e293b', fontStyle: 'bold', letterSpacing: 1
+    }).setOrigin(0.5).setDepth(53);
+    els.push(gotBg, gotTxt);
+
+    const close = () => els.forEach(e => e.destroy());
+    gotBg.on('pointerup', close);
+    veil.on('pointerup', close);
+  }
+
   openSettings(){
     const W = this.scale.width, H = this.scale.height;
     const cx = this.cameras.main.centerX;
@@ -2166,8 +2256,9 @@ export class MenuScene extends Phaser.Scene {
     const panelH = 170; // Taller to fit both toggles
 
     const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.96).setDepth(51).setStrokeStyle(2, PALETTE.stroke);
-    const title = this.add.text(cx, cy - panelH/2 + 22, 'Settings', { color: PALETTE.title, fontSize: '18px' }).setOrigin(0.5).setDepth(52);
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.96).setDepth(51).setStrokeStyle(2, 0x2f8fe0);
+    const title = this.add.text(cx, cy - panelH/2 + 22, 'SETTINGS', { color: PALETTE.title, fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', letterSpacing: 2 }).setOrigin(0.5).setDepth(52);
+    const titleRule = this.add.rectangle(cx, cy - panelH/2 + 38, 110, 2, 0x2f8fe0, 1).setDepth(52);
 
     const btnW = 84, btnH = 28;
 
@@ -2240,7 +2331,7 @@ export class MenuScene extends Phaser.Scene {
     // Close button
     const closeBg = this.add.rectangle(cx, cy + panelH/2 - 22, 92, 28, 0x1a2038, 1).setStrokeStyle(1, PALETTE.stroke).setDepth(52).setInteractive({ useHandCursor:true });
     const closeTx = this.add.text(closeBg.x, closeBg.y, 'Close', { color:'#cbd1ff' }).setOrigin(0.5).setDepth(53);
-    const destroyAll = ()=> { [veil, panel, title, musicLabel, musicBg, musicTxt, soundsLabel, soundsBg, soundsTxt, closeBg, closeTx].forEach(o=>o?.destroy()); };
+    const destroyAll = ()=> { [veil, panel, title, titleRule, musicLabel, musicBg, musicTxt, soundsLabel, soundsBg, soundsTxt, closeBg, closeTx].forEach(o=>o?.destroy()); };
     closeBg.on('pointerdown', destroyAll);
     veil.on('pointerdown', destroyAll);
   }
@@ -2607,10 +2698,6 @@ export class MenuScene extends Phaser.Scene {
 
   update(){
     // Slow lane-dash scroll for ambient motion
-    if (this._laneDashes?.active) {
-      this._laneDashes.y += 0.35;
-      if (this._laneDashes.y >= this._lanePeriod) this._laneDashes.y -= this._lanePeriod;
-    }
   }
 
   reposition(){
@@ -2632,8 +2719,7 @@ export class MenuScene extends Phaser.Scene {
     this.emblem?.setPosition(W/2 - signW/2 + emblemSize/2 + 8, logoY + signH/2);
     this.emblem?.setDisplaySize(emblemSize, emblemSize);
 
-    this.logo?.setPosition(W/2, logoY + signH/2 - logoSize * 0.35);
-    this.logoAddress?.setPosition(W/2, logoY + signH/2 + logoSize * 0.45);
+    this.logo?.setPosition(W/2, logoY + signH/2);
 
     // Ticker chip: midway between the sign and the first card, clamped so
     // it never overlaps either (tall desktop windows compressed this gap)
@@ -2695,6 +2781,10 @@ export class MenuScene extends Phaser.Scene {
 
     // Leaderboard button (trophy icon) — all platforms now that the
     // desktop sidebar leaderboard is removed
+    if (this.helpBtn) {
+      this.helpBtn.setPosition(railR - pad - 24 - 112, widgetBottomY); // Left of trophy
+      this.helpBtn.setAlpha(1);
+    }
     if (this.leaderboardBtn) {
       this.leaderboardBtn.setPosition(railR - pad - 24 - 56, widgetBottomY); // Left of settings
       this.leaderboardBtn.setAlpha(1);

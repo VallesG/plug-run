@@ -9,9 +9,11 @@ const TIME_DECAY_PER_SECOND = 0.02;
 const RUNNER_PENALTIES = {
   HIT_BY_BULLET: -0.5,
   BUNK_STASH: -1.0,
-  POWER_GHOST: -0.75,
-  POWER_DECOY: -0.6,
-  POWER_SPEED: -0.6
+  // Powers are tools, not sins — token cost only. Discipline is rewarded
+  // through the NO_POWERS / PERFECT bonuses instead of punished here.
+  POWER_GHOST: -0.15,
+  POWER_DECOY: -0.1,
+  POWER_SPEED: -0.1
 };
 
 // Runner bonuses
@@ -30,9 +32,9 @@ const RUNNER_BONUSES = {
 const PLUG_PENALTIES = {
   MISSED_SHOT: -0.03,
   MISSED_MELEE: -0.05,
-  POWER_TRAP: -0.75,
-  POWER_VISION: -0.6,
-  POWER_SPEED: -0.6,
+  POWER_TRAP: -0.15,
+  POWER_VISION: -0.1,
+  POWER_SPEED: -0.1,
   RUNNER_GOT_STASH: -2.0,
   RUNNER_EXTRACTED: -5.0
 };
@@ -48,6 +50,25 @@ const PLUG_BONUSES = {
   NO_POWERS: 1.0,
   EARLY_ELIMINATION: 1.0     // Before stash pickup
 };
+
+// SESSION-LEVEL RULES — the efficiency hierarchy: clean play > play with
+// tools > die > swap spawns. Deaths cost real rep; swapping spawns costs
+// more than dying, because it buys information a death doesn't.
+export const SESSION_RULES = {
+  DEATH_PENALTY: 5,    // subtracted from session rep when you lose the round
+  SWAP_PENALTY: 12,    // subtracted when using Again & Swap Spawns
+  STREAK_STEP: 0.25,   // bonus per consecutive clean completion (after the 1st)
+  STREAK_CAP: 1.5,     // max streak bonus per round
+  // The carrot opposite SWAP_PENALTY's stick: die on a spawn, run it back
+  // WITHOUT swapping, beat it \u2192 get paid. Grinding the tough spawn
+  // (\u22125 death +2.5 clear = net \u22122.5) always beats buying out (\u221212).
+  TOUGH_SPAWN_BONUS: 2.5
+};
+
+export function streakBonus(streak) {
+  if (!streak || streak < 2) return 0;
+  return Math.min(SESSION_RULES.STREAK_CAP, SESSION_RULES.STREAK_STEP * (streak - 1));
+}
 
 export class RepTracker {
   constructor(role, scene) {
