@@ -1650,11 +1650,10 @@ export class TutorialMiniScene extends Phaser.Scene {
     const desktop = this.sys.game.device.os.desktop;
     if (idx === 1){
       const mobileLines = [
-        'Hold + drag to move — any direction',
-        'Quick swipe to turn',
+        'Swipe to move — flick or hold + drag',
         'Reach the Getaway Car',
         '',
-        'Tip: keep your finger down to steer diagonals',
+        'Tip: Hold + drag to steer diagonally',
         '',
         'You are the RUNNER'
       ];
