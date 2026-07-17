@@ -1191,13 +1191,13 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.input.keyboard.on('keydown-RIGHT', () => setDir(1, 0));
       this._quickAimBound = true;
     }
-    if (!this._initDrift){
-      this._initDrift = this.sys.game.device.os.desktop ? { x: 1, y: 0 } : randomCardinal();
-    }
-    this.playerDrift = { x: this._initDrift.x, y: this._initDrift.y };
-    this.playerAim = { x: this._initDrift.x, y: this._initDrift.y };
-    this.playerGunAim = { x: this._initDrift.x, y: this._initDrift.y };
-    this._runnerInputDir = { x: this.playerAim.x, y: this.playerAim.y };
+    // MAIN-GAME PARITY: no pre-seeded drift. The runner stands still until
+    // the first gesture — exactly like a real round. (_initDrift left unset
+    // so the drift fallback resolves to null, same as PlayerController.)
+    this.playerDrift = null;
+    this.playerAim = null;
+    this.playerGunAim = { x: 1, y: 0 }; // facing only — doesn't move anything
+    this._runnerInputDir = { x: 1, y: 0 };
     this.userTookOver = false;
     this.autoDrift = true;
     const getPid = (evt) => (evt?.id ?? evt?.pointerId ?? 0);
@@ -1290,8 +1290,8 @@ export class TutorialMiniScene extends Phaser.Scene {
           const dy = p.y - sy;
           const moved = Math.hypot(dx, dy);
           // Define thresholds similar to PvP for taps and swipes
-          const TAP_TIME = 260;
-          const TAP_DIST = Math.max(10, this.cell * 0.4);
+          const TAP_TIME = 220;                 // PlayerController.TAP_TIME_MS
+          const TAP_DIST = 20;                  // PlayerController.TAP_MOVE_PX
           if (dt <= TAP_TIME && moved <= TAP_DIST){
             // Stage 5: tap to shoot
             if (this.stageIdx === 5){
@@ -1301,18 +1301,17 @@ export class TutorialMiniScene extends Phaser.Scene {
             // Don't activate powers during modal selection
             else if (this.stageIdx >= 3 && this.runnerPowersSelected && !this.pausedForModal){
               const diff = now - (this._lastPointerTapAt || 0);
-              if (diff > 0 && diff <= 280){
+              if (diff > 0 && diff <= 250){     // PlayerController.DOUBLE_TAP_MAX_MS
                 this._lastPointerTapAt = 0;
                 this.activateNextRunnerPower();
               } else {
                 this._lastPointerTapAt = now;
               }
             }
-          } else if (moved >= TAP_DIST && !wasDragMove) {
-            // Quick cardinal swipe (only when drag-move didn't take over).
-            // Drag-move commits already set drift/aim to the live vector;
-            // running the cardinal snap on release would clobber a nice
-            // diagonal into an axis. Same guard the main game uses.
+          } else if (moved >= 1) {
+            // MAIN-GAME PARITY: PlayerController.endSwipe cardinal-snaps
+            // EVERY runner release — no drag-move exemption. Diagonals are a
+            // live, finger-down thing; releases resolve to a cardinal.
             let cardinalDir = { x: 0, y: 0 };
             if (Math.abs(dx) > Math.abs(dy)) {
               // Horizontal swipe
@@ -1561,12 +1560,11 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.userTookOver = false;
     this._lastTap = null;
 
-    // Pick a safe initial drift direction that doesn't lead into walls
-    const safeDrift = this.pickSafeInitialDirection();
-    this.playerDrift = safeDrift;
-    this.playerAim = safeDrift;
-    this.playerGunAim = safeDrift;
-    this._runnerInputDir = { x: safeDrift.x, y: safeDrift.y };
+    // MAIN-GAME PARITY: no auto-movement — the runner waits for input.
+    this.playerDrift = null;
+    this.playerAim = null;
+    this.playerGunAim = { x: 1, y: 0 };
+    this._runnerInputDir = { x: 1, y: 0 };
   }
 
   // Pick an initial movement direction that doesn't immediately hit a wall
@@ -1652,17 +1650,16 @@ export class TutorialMiniScene extends Phaser.Scene {
     const desktop = this.sys.game.device.os.desktop;
     if (idx === 1){
       const mobileLines = [
-        'You move automatically',
-        'Swipe to pivot, hold + drag to steer',
+        'Hold + drag to move — any direction',
+        'Quick swipe to turn',
         'Reach the Getaway Car',
         '',
-        'Tip: Diagonals work too — drag any direction',
+        'Tip: keep your finger down to steer diagonals',
         '',
         'You are the RUNNER'
       ];
       const desktopLines = [
-        'You move automatically',
-        'Use arrow keys / WASD to change direction',
+        'Use arrow keys / WASD to move',
         'Reach the Getaway Car',
         '',
         'You are the RUNNER'
