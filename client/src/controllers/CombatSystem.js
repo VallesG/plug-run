@@ -334,15 +334,55 @@ export default class CombatSystem {
       this.scene.audio?.play('ouch', { volume: 0.7, rateRand: 0.03 });
     } catch {}
 
-    this.scene.cameras.main.shake(80, 0.006);
-    this.scene.tweens.add({
-      targets: who,
-      alpha: 0.2,
-      duration: 70,
-      yoyo: true,
-      repeat: Math.max(1, Math.floor((this.scene.iFrameMs || 900) / (70 * 2)) - 1),
-      onComplete: () => who.setAlpha(1)
+    this.scene.cameras.main.shake(90, 0.007);
+
+    // === DAMAGE FEEDBACK: three distinct visual states ===
+    // 1) IMPACT FLASH — hard white tint-fill snap decaying through red.
+    //    Reads as "hit landed" even in peripheral vision, and (since tint is
+    //    a recorded property) shows up in replays automatically.
+    const flashTargets = [who.sprite, ...(who.outline || [])].filter(Boolean);
+    const savedTints = flashTargets.map(t => (t.isTinted && !t.tintFill) ? t.tintTopLeft : null);
+    flashTargets.forEach(t => { try { t.setTintFill(0xffffff); } catch {} });
+    this.scene.time.delayedCall(80, () => flashTargets.forEach(t => {
+      if (t.active) { try { t.setTintFill(0xff5544); } catch {} }
+    }));
+    this.scene.time.delayedCall(200, () => flashTargets.forEach((t, i) => {
+      if (!t.active) return;
+      try { if (savedTints[i] !== null) t.setTint(savedTints[i]); else t.clearTint(); } catch {}
+    }));
+
+    // 2) I-FRAME STROBE — high-contrast 1.0 <-> 0.25 (~11Hz), the universal
+    //    "temporarily untouchable" signal. Starts after the impact frame so
+    //    the flash lands clean, runs the rest of the i-frame window.
+    const iMs = this.scene.iFrameMs || 900;
+    this.scene.time.delayedCall(120, () => {
+      if (!who.active) return;
+      this.scene.tweens.add({
+        targets: who,
+        alpha: 0.25,
+        duration: 45,
+        yoyo: true,
+        repeat: Math.max(1, Math.floor((iMs - 120) / 90) - 1),
+        onComplete: () => { if (who.active) who.setAlpha(1); }
+      });
     });
+
+    // 3) HURT STATE — at 1 HP, once the strobe ends the glow outline wears
+    //    a pulsing amber warning until death or round end: "next one ends it."
+    if (who.hp === 1 && who.outline?.length) {
+      this.scene.time.delayedCall(iMs, () => {
+        if (!who.active || who.hp !== 1) return;
+        who.outline.forEach(o => { if (o.active) { try { o.setTint(0xffb020); } catch {} } });
+        who._hurtTween = this.scene.tweens.add({
+          targets: who.outline,
+          alpha: { from: 0.85, to: 0.35 },
+          duration: 550,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      });
+    }
 
     if (who.hp <= 0) {
       if (who === this.scene.attacker || who === this.scene.attacker2) {

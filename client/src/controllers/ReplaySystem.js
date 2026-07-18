@@ -23,6 +23,15 @@ const SAMPLE_MS = 66;                                   // ~15Hz
 const MAX_SAMPLES = Math.round(45_000 / SAMPLE_MS);     // keep last ~45s
 const GHOST_DEPTH_BASE = 30_000;                        // above modals (Z=20k)
 const HUD_DEPTH = 31_000;
+const DBG_EVENTS = [];
+function dbg(ev) {
+  const line = `${(performance.now() / 1000).toFixed(1)}s ${ev}`;
+  DBG_EVENTS.push(line);
+  if (DBG_EVENTS.length > 14) DBG_EVENTS.shift();
+  if (DBG_ON) console.log('[ReplayDBG]', line);
+}
+const DBG_ON = typeof location !== 'undefined' && /replaydebug=1/.test(location.search);
+
 const GRACE_MS = 1600;   // keep recording this long after round end
 const MIN_ALPHA = 0.02;                                 // skip invisible sensors
 
@@ -223,10 +232,11 @@ const ReplaySystem = {
   begin(scene) {
     this._playing = false; // a dead scene can't run its teardown — never stay bricked
     if (rec) this._finalize(); // seal anything pending (fast Continue taps)
+    dbg(`begin r${scene.pveRound || '?'} (pending rec: ${rec ? (rec.started ? 'started/' + rec.samples.length : 'unstarted') : 'none'})`);
     epoch++;
     rec = {
       keyframe: new Map(), keyCam: null, samples: [],
-      accum: 0, started: false, nextId: 1,
+      accum: 0, elapsed: 0, started: false, nextId: 1,
       lastSig: new Map(), texKeys: [], texMeta: new Map(),
       textures: scene.textures,
       meta: { role: scene.role, round: scene.pveRound || 1, cell: scene.cell || 24 }
@@ -236,12 +246,14 @@ const ReplaySystem = {
   /** Call once at the top of the scene's update(). */
   tick(scene, delta) {
     if (!rec) return;
+    rec.elapsed = (rec.elapsed || 0) + delta; // wall clock for the grace window
+    if (DBG_ON) this.debugOverlay(scene);
     if (rec.endAt !== undefined) {
       // Round is over — keep sampling through the grace window so the
       // takedown fade and reward popups land in the clip, then seal.
-      if (rec.elapsed >= rec.endAt) { this._finalize(); return; }
+      if (rec.elapsed >= rec.endAt) { dbg(`grace elapsed r${rec.meta?.round}`); this._finalize(); return; }
     } else if (scene.roundOver) {
-      rec.endAt = rec.elapsed + GRACE_MS; // backstop if finalize() wasn't called
+      rec.endAt = (rec.elapsed || 0) + GRACE_MS; // backstop if finalize() wasn't called
     } else if (scene.roundPausedForMenu) {
       return;
     }
@@ -267,11 +279,15 @@ const ReplaySystem = {
    *  synchronously BEFORE building end-of-round modals, so hasReplay() is
    *  accurate in the same frame the round ends. Safe to call repeatedly. */
   finalize() {
-    if (rec && rec.endAt === undefined) rec.endAt = rec.elapsed + GRACE_MS;
+    if (rec && rec.endAt === undefined) rec.endAt = (rec.elapsed || 0) + GRACE_MS;
   },
 
   _finalize() {
-    if (!rec || !rec.started || rec.samples.length < 8) { rec = null; return; }
+    if (!rec || !rec.started || rec.samples.length < 8) {
+      if (rec) dbg(`DISCARD r${rec.meta?.round} (${rec.started ? rec.samples.length + ' samples' : 'unstarted'})`);
+      rec = null; return;
+    }
+    dbg(`SEAL r${rec.meta?.round} (${rec.samples.length} samples)`);
     // free baked textures from the replay we're replacing
     if (lastReplay?.texKeys?.length && lastReplay.textures) {
       for (const k of lastReplay.texKeys) { try { lastReplay.textures.remove(k); } catch {} }
@@ -292,6 +308,20 @@ const ReplaySystem = {
     return false;
   },
   getMeta() { return lastReplay?.meta ?? null; },
+  /** ?replaydebug=1: renders the event log into the scene, top-left. */
+  debugOverlay(scene) {
+    if (!DBG_ON) return;
+    try {
+      if (!scene._rsDbgText || !scene._rsDbgText.active) {
+        scene._rsDbgText = scene.add.text(6, 6, '', {
+          fontFamily: 'monospace', fontSize: '9px', color: '#7fff9f',
+          backgroundColor: '#000000aa', padding: { x: 4, y: 3 }
+        }).setScrollFactor(0).setDepth(99999);
+        scene._rsDbgText._isReplayGhost = true; // never record the debugger
+      }
+      scene._rsDbgText.setText(DBG_EVENTS.join('\n'));
+    } catch {}
+  },
   getLastClip() { return this._clip ?? null; },
   /** True when a rendered clip exists for the replay we'd currently show —
    *  lets UI share instantly (fresh tap → share sheet) without re-watching. */
@@ -305,7 +335,12 @@ const ReplaySystem = {
   // -------------------------------------------------------------------------
 
   play(scene, opts = {}) {
-    if (rec) this._finalize(); // user may tap Watch Replay inside the grace window
+    // Seal a rec that has CONTENT (tap inside the grace window) — but an
+    // UNSTARTED rec is the upcoming round's recorder, armed at scene create.
+    // Finalizing it here discards it and nothing re-arms it, leaving the
+    // whole next round unrecorded (the watch-at-modal stale-replay bug).
+    if (rec && rec.started) this._finalize();
+    dbg(`PLAY \u2192 ${lastReplay ? 'r' + lastReplay.meta?.round : 'none'}`);
     if (!lastReplay || this._playing) { opts.onDone?.(); return; }
     this._playing = true;
     const { record = true, autoShare = false, onDone } = opts;
