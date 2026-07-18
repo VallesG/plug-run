@@ -218,6 +218,9 @@ function takeSample(scene, isKeyframe) {
 function foldOldest() {
   const s = rec.samples.shift();
   if (!s) return;
+  rec.trimmedMs += SAMPLE_MS;
+  const cut = rec.firstSampleElapsed + rec.trimmedMs;
+  while (rec.sounds.length && rec.sounds[0].t < cut) rec.sounds.shift();
   for (const b of s.born) rec.keyframe.set(b.id, b.s);
   for (const m of s.moved) rec.keyframe.set(m.id, m.s);
   for (const id of s.dead) rec.keyframe.delete(id);
@@ -237,10 +240,30 @@ const ReplaySystem = {
     rec = {
       keyframe: new Map(), keyCam: null, samples: [],
       accum: 0, elapsed: 0, started: false, nextId: 1,
+      sounds: [], firstSampleElapsed: 0, trimmedMs: 0,
       lastSig: new Map(), texKeys: [], texMeta: new Map(),
       textures: scene.textures,
       meta: { role: scene.role, round: scene.pveRound || 1, cell: scene.cell || 24 }
     };
+
+    // Sound events are recorded the same way visuals are: as timestamped
+    // events, re-performed at playback. One wrap on the AudioManager
+    // singleton's play() is the whole capture surface.
+    const am = scene.audio;
+    if (am && typeof am.play === 'function' && !am._rsWrapped) {
+      const orig = am.play.bind(am);
+      am.play = (key, opts) => {
+        try { ReplaySystem._noteSound(key, opts); } catch {}
+        return orig(key, opts);
+      };
+      am._rsWrapped = true;
+    }
+  },
+
+  _noteSound(key, opts) {
+    if (!rec || !rec.started || this._playing) return; // never re-record playback audio
+    rec.sounds.push({ t: rec.elapsed, k: key, v: opts?.volume });
+    if (rec.sounds.length > 900) rec.sounds.shift();
   },
 
   /** Call once at the top of the scene's update(). */
@@ -264,6 +287,7 @@ const ReplaySystem = {
 
     if (!rec.started) {
       rec.started = true;
+      rec.firstSampleElapsed = rec.elapsed;
       rec.meta.role = scene.role;
       rec.meta.round = scene.pveRound || 1;
       const first = takeSample(scene, true);
@@ -292,9 +316,13 @@ const ReplaySystem = {
     if (lastReplay?.texKeys?.length && lastReplay.textures) {
       for (const k of lastReplay.texKeys) { try { lastReplay.textures.remove(k); } catch {} }
     }
+    const soundBase = rec.firstSampleElapsed + rec.trimmedMs;
     lastReplay = {
       keyframe: rec.keyframe, keyCam: rec.keyCam, samples: rec.samples,
-      meta: rec.meta, texKeys: rec.texKeys, textures: rec.textures
+      meta: rec.meta, texKeys: rec.texKeys, textures: rec.textures,
+      sounds: (rec.sounds || [])
+        .map(s => ({ t: s.t - soundBase, k: s.k, v: s.v }))
+        .filter(s => s.t >= 0)
     };
     rec = null;
   },
@@ -347,6 +375,23 @@ const ReplaySystem = {
     const data = lastReplay;
     const meta = data.meta;
     const durationMs = data.samples.length * SAMPLE_MS;
+    const sounds = data.sounds || [];
+    let sndIdx = 0;
+
+    // Background music: the audio tap records whatever the music bus is
+    // playing. If the round's track already runs (it usually loops through
+    // modals), leave it be; if it stopped (post game-over), start the
+    // role's track for the duration of the watch.
+    let startedMusic = false;
+    try {
+      const am = scene.audio;
+      const wantKey = meta.role === 'plug' ? 'bg_plug' : 'bg_main';
+      const playing = am?.music?.sound?.isPlaying;
+      if (am?.playMusic && !playing) {
+        am.playMusic(wantKey, { volume: 0.4, loop: true, fade: 250 });
+        startedMusic = true;
+      }
+    } catch {}
 
     const W = scene.scale.gameSize.width;
     const H = scene.scale.gameSize.height;
@@ -441,17 +486,39 @@ const ReplaySystem = {
       color: '#8a92b8', fontSize: '16px'
     }).setOrigin(1, 0).setDepth(HUD_DEPTH).setInteractive({ useHandCursor: true }));
 
-    // --- video capture ---
+    // --- video (+ audio) capture ---
+    // Audio: tap the WebAudio graph into a MediaStreamDestination and mux
+    // its track alongside the canvas video. Fan-out taps don't alter what
+    // the speakers play, and every failure path falls back to video-only.
     let recorder = null, chunks = [], mime = '';
+    const audioTaps = [];
     if (record && typeof MediaRecorder !== 'undefined' && scene.game.canvas?.captureStream) {
       const mimes = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
       mime = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      const videoStream = scene.game.canvas.captureStream(30);
+      let stream = videoStream;
       try {
-        recorder = new MediaRecorder(scene.game.canvas.captureStream(30),
-          mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
+        const ctx = scene.audio?._ctx || scene.sound?.context || null;
+        if (ctx?.createMediaStreamDestination) {
+          const dest = ctx.createMediaStreamDestination();
+          const tapNode = (n) => { if (n?.connect) { try { n.connect(dest); audioTaps.push([n, dest]); } catch {} } };
+          tapNode(scene.sound?.masterVolumeNode);   // Phaser-played sfx
+          tapNode(scene.audio?._busMaster);          // AudioManager bus graph
+          if (audioTaps.length && dest.stream.getAudioTracks().length) {
+            stream = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+          }
+        }
+      } catch {}
+      const mkRecorder = (s) => new MediaRecorder(s, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
+      try {
+        recorder = mkRecorder(stream);
+      } catch {
+        try { recorder = mkRecorder(videoStream); } catch { recorder = null; } // audio mux unsupported: video-only
+      }
+      if (recorder) {
         recorder.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
         recorder.start(500);
-      } catch { recorder = null; }
+      }
     }
 
     // --- playback loop ---
@@ -505,6 +572,15 @@ const ReplaySystem = {
     };
     const stepInner = (delta) => {
       elapsed += delta;
+      // Re-perform the round's sound events (skip any that arrive stale,
+      // e.g. after a frame hitch). _noteSound no-ops while _playing, so
+      // these can't be re-recorded.
+      while (sndIdx < sounds.length && sounds[sndIdx].t <= elapsed) {
+        const snd = sounds[sndIdx++];
+        if (snd.t >= elapsed - 300) {
+          try { scene.audio?.play?.(snd.k, snd.v != null ? { volume: snd.v } : undefined); } catch {}
+        }
+      }
       const idx = Math.min(Math.floor(elapsed / SAMPLE_MS), data.samples.length - 1);
       while (segment < idx) { segment++; applySample(data.samples[segment]); }
       const p = Math.min((elapsed - segment * SAMPLE_MS) / SAMPLE_MS, 1);
@@ -531,6 +607,9 @@ const ReplaySystem = {
 
     const teardownAll = () => {
       scene.events.off('update', step);
+      for (const [n, d] of audioTaps) { try { n.disconnect(d); } catch {} }
+      audioTaps.length = 0;
+      if (startedMusic) { try { scene.audio?.stopMusic?.(250); } catch {} }
       all.forEach(o => o?.destroy?.());
       ghosts.clear();
       this._playing = false;
