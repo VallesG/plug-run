@@ -6,7 +6,18 @@
 
 import { BaseGameScene } from '../scenes/BaseGameScene.js';
 import GameUI from './GameUI.js';
+import AIController from './AIController.js';
+import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
+
+// Injected rather than imported by BotDriver so that file stays clear of the
+// Phaser dependency graph and its logic remains runnable under plain Node.
+const AI_HOOKS = {
+  applyRunnerProgression,
+  updateRunnerBehavior,
+  considerRunnerPowerUse,
+  makeController: (scene) => new AIController(scene)
+};
 
 /* ---------------- modal auto-dismissal ---------------- */
 
@@ -121,9 +132,9 @@ export function installBotDriver() {
       // Built lazily: no scene exists at install time, and each round's
       // scene.restart() must get a bot with fresh timers.
       if (!this._bot || this._bot.scene !== this) {
-        this._bot = new BotDriver(this, cfg);
+        this._bot = new BotDriver(this, cfg, AI_HOOKS);
       }
-      this._bot.update();
+      this._bot.update(delta);
     } catch (e) {
       console.error('[BOT] update error:', e);
     }

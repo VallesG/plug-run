@@ -59,6 +59,12 @@ export const DEFAULTS = {
   fireAlignCells: 0.5,
   fireCooldownMs: 260,
 
+  // Borrow the game's own tuned runner AI instead of the naive pathfinder
+  // below, at this round's skill level. 0 falls back to the built-in logic.
+  // The shipped AI already handles corridor commitment, stuck recovery and
+  // power usage — all things the naive version does badly or not at all.
+  aiLevel: 20,
+
   // How long a result modal stays up before the bot presses on. Long enough
   // to read while watching, short enough to not dominate an unattended run.
   modalDelayMs: 900,
@@ -68,14 +74,122 @@ export const DEFAULTS = {
 };
 
 export default class BotDriver {
-  constructor(scene, opts = {}) {
+  /**
+   * @param scene    the live BaseGameScene
+   * @param opts     DEFAULTS overrides
+   * @param aiHooks  optional { applyRunnerProgression, updateRunnerBehavior,
+   *                 considerRunnerPowerUse, makeController } — injected by
+   *                 installBotDriver rather than imported, so this file stays
+   *                 free of the Phaser dependency graph and testable in Node.
+   */
+  constructor(scene, opts = {}, aiHooks = null) {
     this.scene = scene;
     this.cfg = { ...DEFAULTS, ...opts };
+    this.aiHooks = aiHooks;
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._startedAt = performance.now();
     this._path = null;
     this._pathIdx = 0;
+    this._borrowed = null;   // lazily-built AIController for the borrowed AI
+    this._progressionApplied = false;
+  }
+
+  /** Should we be driving with the game's own runner AI? */
+  get useBorrowedAI() {
+    return !!(this.aiHooks && this.cfg.aiLevel > 0 && this.scene.role === 'runner');
+  }
+
+  /**
+   * Drive using the shipped runner AI, at cfg.aiLevel's skill.
+   *
+   * THE SPOOFING, AND WHY
+   * updateRunnerBehavior/considerRunnerPowerUse/applyRunnerProgression all
+   * bail unless scene.role === 'plug' — they exist to drive the AI runner
+   * when the *player* is the plug, which is the mirror of our situation. So
+   * role is swapped for the duration of the call and restored in a finally.
+   * Same for the power arrays: the AI reads aiRunnerPowersSelected, the
+   * player's live on runnerPowersSelected, so they're aliased across.
+   *
+   * THE POSITION RESTORE, AND WHY
+   * updateRunnerBehavior computes a velocity and then writes attacker.x/y
+   * itself. Letting that stand would move the runner outside the input layer:
+   * no intent recorded, traces that don't reproduce the run, and a bot doing
+   * things no player could. We keep the velocity, undo the move, and steer
+   * through driveMove() like every other input.
+   *
+   * THE SPEED RESTORE, AND WHY
+   * applyRunnerProgression assigns scene.runnerSpeed an absolute value tuned
+   * for the AI opponent (~151 at round 20), clobbering the player's real
+   * runner speed (7.0 cells/sec). Left alone it would quietly slow the runner
+   * and every duration we record would be measuring the wrong game.
+   */
+  driveBorrowedAI(me, delta, now) {
+    const s = this.scene;
+    const h = this.aiHooks;
+
+    if (!this._borrowed) this._borrowed = h.makeController(s);
+
+    const saved = {
+      role: s.role,
+      round: s.pveRound,
+      speed: s.runnerSpeed,
+      sel: s.aiRunnerPowersSelected,
+      used: s.aiRunnerPowersConsumed,
+      x: s.attacker.x,
+      y: s.attacker.y
+    };
+
+    // Snapshot power consumption so newly-spent slots can be recorded after.
+    const before = [...(s.runnerPowersConsumed || [])];
+
+    try {
+      s.role = 'plug';
+      s.pveRound = this.cfg.aiLevel;
+      s.aiRunnerPowersSelected = s.runnerPowersSelected;
+      s.aiRunnerPowersConsumed = s.runnerPowersConsumed;
+
+      if (!this._progressionApplied) {
+        h.applyRunnerProgression(s);
+        this._progressionApplied = true;
+      }
+
+      h.updateRunnerBehavior(s, this._borrowed, delta);
+
+      // Throttled: considerRunnerPowerUse logs several lines per call and
+      // enforces a 2s cooldown internally, so per-frame checking buys nothing
+      // and buries the [RUN] telemetry under console spam.
+      if (now >= (this._nextPowerCheckAt || 0)) {
+        this._nextPowerCheckAt = now + 250;
+        h.considerRunnerPowerUse(s, this._borrowed, now);
+      }
+    } catch (e) {
+      console.error('[BOT] borrowed AI failed, falling back:', e);
+      this.aiHooks = null; // one failure is enough; use the simple bot
+    } finally {
+      s.attacker.x = saved.x;
+      s.attacker.y = saved.y;
+      s.role = saved.role;
+      s.pveRound = saved.round;
+      s.runnerSpeed = saved.speed;
+      s.aiRunnerPowersSelected = saved.sel;
+      s.aiRunnerPowersConsumed = saved.used;
+    }
+
+    // activateRunnerPowerByIndex skips the intent record when it thinks it's
+    // driving the AI — which, mid-spoof, it does. Record what it spent so the
+    // trace still reflects every power the runner actually used.
+    const after = s.runnerPowersConsumed || [];
+    for (let i = 0; i < after.length; i++) {
+      if (after[i] && !before[i]) {
+        s.intent?.recordPower(i);
+        console.log('[BOT] used power slot', i, '->', s.runnerPowersSelected?.[i]);
+      }
+    }
+
+    const vx = this._borrowed._aiVX || 0;
+    const vy = this._borrowed._aiVY || 0;
+    return this._driveOrCoast(me, { x: vx, y: vy });
   }
 
   /* ---------------- target selection ---------------- */
@@ -215,7 +329,7 @@ export default class BotDriver {
 
   /* ---------------- main tick ---------------- */
 
-  update() {
+  update(delta = 16.67) {
     const s = this.scene;
     if (!s.intent) return;
     if (s.roundOver || s.roundPausedForMenu) return;
@@ -229,6 +343,15 @@ export default class BotDriver {
       console.warn('[BOT] maxRunMs exceeded — abandoning run');
       s.finalizeRun?.('bot_timeout');
       s.roundOver = true;
+      return;
+    }
+
+    // The shipped AI keeps its own planning cadence (planEvery, keepDirMs)
+    // and its own stuck recovery, so it runs every frame and skips the
+    // replan timer and imperfection knobs below — those exist to make the
+    // naive pathfinder look human, and this one already is tuned.
+    if (this.useBorrowedAI) {
+      this.driveBorrowedAI(me, delta, now);
       return;
     }
 

@@ -325,6 +325,85 @@ console.log('\nBotDriver logic\n');
   check('dodges onto a walkable cell', s.isWalkableCell(cell.x, cell.y));
 }
 
+/* ---------------- borrowed AI ---------------- */
+
+// Stubs that misbehave the way the real ones do: updateRunnerBehavior writes
+// the sprite position itself, and applyRunnerProgression clobbers
+// scene.runnerSpeed with a value tuned for the AI opponent. Both must be
+// undone, or the runner moves outside the input layer and every recorded
+// duration measures a differently-paced game.
+function makeHooks(over = {}) {
+  return {
+    applyRunnerProgression(s) { s.runnerSpeed = 151.5; },
+    updateRunnerBehavior(s, ai) {
+      ai._aiVX = 100; ai._aiVY = 0;
+      s.attacker.x += 999;      // the position write we must discard
+      s.attacker.y += 999;
+    },
+    considerRunnerPowerUse(s) {
+      if (s.aiRunnerPowersConsumed) s.aiRunnerPowersConsumed[0] = true;
+    },
+    makeController: () => ({ _aiVX: 0, _aiVY: 0 }),
+    ...over
+  };
+}
+
+function borrowScene() {
+  const s = makeScene();
+  s.role = 'runner';
+  s.pveRound = 3;
+  s.runnerSpeed = 182;
+  s.runnerPowersSelected = ['dash', 'phase'];
+  s.runnerPowersConsumed = [false, false];
+  s.intent.recordPower = function (i) { s._driven.push({ kind: 'power', i }); };
+  return s;
+}
+
+// 16. Everything the spoof touches is put back.
+{
+  const s = borrowScene();
+  const bot = new BotDriver(s, { aiLevel: 20 }, makeHooks());
+  const x0 = s.attacker.x, y0 = s.attacker.y;
+  bot.update(16.67);
+
+  check('restores role after borrowing', s.role === 'runner', `got ${s.role}`);
+  check('restores pveRound', s.pveRound === 3, `got ${s.pveRound}`);
+  check('restores runnerSpeed', s.runnerSpeed === 182, `got ${s.runnerSpeed}`);
+  check('discards the AI position write', s.attacker.x === x0 && s.attacker.y === y0);
+  check('steers from the AI velocity', !!lastMove(s) && lastMove(s).x > 0.9);
+}
+
+// 17. Restoration survives a throwing hook. Without the finally, a crash mid
+//     call would strand role='plug' and the game would be driving the wrong
+//     character from then on.
+{
+  const s = borrowScene();
+  const bot = new BotDriver(s, { aiLevel: 20 }, makeHooks({
+    updateRunnerBehavior() { throw new Error('boom'); }
+  }));
+  bot.update(16.67);
+  check('restores role even when the AI throws', s.role === 'runner', `got ${s.role}`);
+  check('disables borrowed AI after a failure', bot.aiHooks === null);
+}
+
+// 18. Powers spent during the spoof still reach the trace. The scene skips
+//     its own record when it believes it is driving the AI, which mid-spoof
+//     it does — so the bot has to notice and record them itself.
+{
+  const s = borrowScene();
+  const bot = new BotDriver(s, { aiLevel: 20 }, makeHooks());
+  bot.update(16.67);
+  check('records powers the borrowed AI spent',
+    s._driven.some((d) => d.kind === 'power' && d.i === 0));
+}
+
+// 19. aiLevel 0 opts back out to the built-in pathfinder.
+{
+  const s = borrowScene();
+  const bot = new BotDriver(s, { aiLevel: 0 }, makeHooks());
+  check('aiLevel 0 disables borrowing', bot.useBorrowedAI === false);
+}
+
 /* ---------------- report ---------------- */
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
