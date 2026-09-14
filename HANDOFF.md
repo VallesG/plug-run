@@ -1,6 +1,7 @@
 # Plug Run — PvP conversion, session handoff
 
-Written 2026-09-14. Branch: `claude/input-intent-layer`, based on `origin/master`.
+Written 2026-09-14, updated after the second session. Branch:
+`claude/input-intent-layer`, based on `origin/master`.
 
 ---
 
@@ -23,8 +24,10 @@ data crossing the wire. That's the property the whole plan rests on.
 
 ## What was built
 
-Eight commits, all additive. No existing game file was modified except
-`main.js` (6 lines) — everything else is new files or prototype wraps.
+Thirteen commits. The first eight were additive scaffolding — no existing game
+file touched except `main.js` (6 lines). The five since then fix four real bugs
+in shipped code and extend the harness; those do modify game files, and the
+first four are listed under **Bugs fixed** below.
 
 ### `InputIntent.js` — one place player intent is expressed
 
@@ -32,7 +35,8 @@ Direction was previously written in ~9 places across `BaseGameScene` and
 `PlayerController` through five parallel variables (`playerMoveDir` /
 `playerDrift` / `playerAim` / `playerGunAim` / `_runnerInputDir`). Nothing could
 observe what the player *asked for* without re-deriving it from sprite
-positions.
+positions. One of the five, `playerAim`, turned out to be null on every read —
+it is gone now, so there are four.
 
 `InputIntent` records that intent as a compact trace: `seed + input stream`.
 Events are stamped with `scene.simTick`, never `performance.now()` — wall-clock
@@ -58,20 +62,45 @@ Enable with `?bot=1`. Every knob is URL-overridable:
 
 Console helpers: `__plugRunSummary()`, `__plugRunDownload()`, `__plugRunReset()`.
 
-### `client/test/botDriver.test.mjs` — 32 assertions, no framework, no browser
+**`lockRound` — sampling maps instead of climbing.** Pins `pveRound` so
+difficulty holds still, and advances the map instead by walking `routeID`
+forward one per map (the game's own seed derivation, asked for "this round, on
+a different day"). `seedRepeats` sets how many attempts each map gets before
+the next one; a clear always advances.
 
 ```
-node client/test/botDriver.test.mjs
+?bot=1&lockRound=16                  one shot per map
+?bot=1&lockRound=16&seedRepeats=5    up to five, across many maps
 ```
 
-Exists in this form because browser binaries can't be downloaded in a
-locked-down container (the Playwright CDN 403s). Covers targeting, BFS pathing,
-mistake legality, evasion, dual-plug awareness, and — most importantly — that
-the borrowed-AI spoof restores `role`/`pveRound`/`runnerSpeed`/position even
-when the AI throws mid-call.
+`__plugRunSummary()` then reports a `perMap` block — maps sampled, first-try
+clear rate, and the attempts-to-clear spread. That grouping is the whole point:
+a pooled 26% completion rate reads as a hard round, while nine maps cleared
+first try and one costing 29 reads as a lottery, and only the second tells you
+a fixed 8-map block is the wrong container.
+
+### Tests — 64 assertions, no framework, no browser
+
+```
+cd client && npm test
+```
+
+Three suites, all plain Node:
+
+| file | covers |
+|---|---|
+| `test/botDriver.test.mjs` | targeting, BFS pathing, mistake legality, evasion, dual-plug awareness, and that the borrowed-AI spoof restores `role`/`pveRound`/`runnerSpeed`/position even when the AI throws mid-call |
+| `test/threat.test.mjs` | which plug a runner is afraid of, including the second one |
+| `test/runStats.test.mjs` | the per-map summary the sizing decision gets read off |
+
+They exist in this form because browser binaries can't be downloaded in a
+locked-down container (the Playwright CDN 403s). Anything they need to reach
+has to import nothing — `utils/gameUtils.js` pulls in Phaser, so logic that
+wants a test lives in `src/logic/` instead.
 
 **Not covered:** Phaser integration, the prototype wraps, and whether movement
-feels right. Those need a real browser and a human.
+feels right. Those need a real browser and a human. `lockRound` in particular
+is reasoned-through but unrun — see below.
 
 ---
 
@@ -120,61 +149,98 @@ shouldn't be touched. If one attempt only, you want ~2–3× the path length.
 
 ---
 
-## Bugs found in existing code (not yet fixed)
+## Bugs fixed this session
 
-1. **`showPvEGameOver` awaits leaderboard submission before building its
-   buttons.** `await Promise.all([submitScore, submitAllTimeScore])` runs before
-   any UI exists. With no backend reachable those hang or reject, and `endRound`
-   calls it with no `.catch()` — so the death modal never renders at all. The bot
-   works around this by replacing the method; **real players hit this too.**
-   Move the submission after the modal, or `.catch()` it.
+All four bugs the harness surfaced last session are fixed, one commit each.
 
-2. **`playerAim` is dead code.** `setDir()` (`BaseGameScene.js:832`) sets it,
-   then `PlayerController.js:216` overwrites it every frame with its own copy,
-   which is initialised `null` at `:42` and never assigned. The fallback at
-   `:137` always falls through to `drift`. Movement runs entirely on
-   `playerDrift`.
+1. **`showPvEGameOver` awaited leaderboard submission before building its
+   buttons.** With no backend reachable those hang or reject, and `endRound`
+   called it with no `.catch()`, so the death modal never rendered at all — a
+   frozen board with no Retry and no Exit, recoverable only by reloading and
+   losing the session. The bot had been replacing the method to work around it;
+   real players hit it too. The modal is now built first and the submission
+   follows it, wrapped.
 
-3. **`endRound(winner)` is called with `'defender'`/`'attacker'`** (`hit()`,
-   `BaseGameScene.js:2735`) but tests `winner === 'plug'` / `'runner'`. So
-   `playerLost` is false on every runner death and the death REP penalty never
-   applies.
+2. **`playerAim` was dead code** — `PlayerController` overwrote it with null
+   every frame, and every read of it sat behind a fallback that is never null.
+   Deleted. Movement runs on `playerDrift`, as it always has. (`TutorialMiniScene`
+   has its own live `playerAim` on a scene that shares no code with this path;
+   untouched.)
 
-4. **`RunnerAI.js` has no concept of `defender2`.** Fine in its original context
-   (it drives the runner when the player is the plug, where the round-8 dual
-   spawn makes a second *runner*), but it means the AI is blind to the second
-   plug whenever a runner faces one.
+3. **`endRound(winner)` is called with `'defender'`/`'attacker'`** but compared
+   against `'plug'`/`'runner'`, so `playerLost` was false on every death and the
+   death REP penalty had never once applied. Both vocabularies now resolve
+   through one named `runnerWon`. **Note this switches a real penalty on for the
+   first time: dying costs 5 REP.** That is what the constant, the modal's
+   "Loss penalty" line and the comment all intended — it had simply never
+   happened, which also means the 12-REP swap-spawns price has until now been
+   quoted against a free alternative.
+
+4. **`RunnerAI.js` had no concept of `defender2`.** Correct in its original
+   context, wrong the moment it is borrowed to drive a player-side runner, where
+   from round 8 it was blind to half the guns on screen. `nearestPlug()`
+   (`src/logic/threat.js`) answers "which plug matters now", measured
+   toroidally. With no live `defender2` it returns `scene.defender` unchanged,
+   so shipped plug-mode behaviour is bit-for-bit what it was.
+
+A fifth, found while adding `lockRound`: the `maxRunMs` guard ended a run
+without starting another, so an unattended batch died on its first wedge.
 
 ---
 
 ## Next steps, in order
 
-1. **Get the human number.** Play 10 rounds with the bot off — the telemetry
-   records any player. That brackets the bot's 6.5s floor and takes five minutes.
-2. **Add a `lockRound` option** so the bot samples many different seeds at one
-   fixed difficulty, instead of 29 samples of round 16. That's what turns this
-   into a proper map-sizing dataset.
+Everything left at the top of this list needs a human at a keyboard. The code
+side of the queue is done up to the point where a design decision blocks it.
+
+1. **Run a locked batch.** `?bot=1&lockRound=16&seedRepeats=5`, leave it going,
+   then `__plugRunSummary()` and read the `perMap` block. This is the
+   map-sizing dataset, and it is now one URL away. Worth running at two or
+   three rounds (say 8, 16, 24) to see whether the wall rate rises with
+   difficulty or is flat and seed-driven, which is the question the whole race
+   format hangs on.
+
+   `lockRound` is reasoned-through but has never been run — no browser in this
+   container. First thing to check is the `[BOT] round locked at N — map M`
+   line, which prints on every restart and should show M advancing.
+
+2. **Get the human number.** Play 10 rounds with the bot off — the telemetry
+   records any player. That brackets the bot's 6.5s floor and takes five
+   minutes. Still the cheapest unknown on the list.
+
 3. **Decide: one attempt per map, or retry until cleared?** Everything about
-   grid sizing depends on it.
+   grid sizing depends on it, and step 1 now produces the evidence for it
+   directly: `seedRepeats=1` measures the first, `seedRepeats=5` the second.
+
 4. **Fixed timestep.** `update(_, delta)` runs on variable delta and every `dt`
    consumer is downstream. Replay the same inputs at different frame timings and
    you drift. This is the one genuinely invasive change in the plan, and ghosts,
    server-side verification, and running the harness at 100× all depend on it.
    The 8-map split caps the blast radius: each map starts from a clean seeded
    state, so drift can't accumulate across a block.
+
+   Deliberately not started. It rewrites the movement loop, its correctness
+   shows up only as feel, and nothing in this container can play the game. It
+   wants a session with a browser and someone watching.
+
 5. **Then** the progress bar and the matchmaking/relay backend.
 
 ---
 
 ## Working notes
 
-**Pushing from a cloud session was impossible this session.** `git fetch` works
-(transparent read-only proxy) but `git push` gets no credential, and the GitHub
-API returns `403 Resource not accessible by integration` on writes — the App has
-Contents: Read only. Reconnecting the connector mid-session does not help; a
-session mints credentials at start. **Start a fresh session to get working
-push access.** Until then, work travels as `git format-patch` files applied with
-`git am`.
+**Pushing from a cloud session is still impossible — two sessions in a row now.**
+`git fetch` works (transparent read-only proxy) but `git push` returns 403:
+"Claude doesn't have GitHub access to VallesG/plug-run for your organization."
+A fresh session did *not* fix it, so the guess that credentials are minted at
+session start was wrong — the GitHub App simply is not installed with write
+access for this repo. Re-attaching the repo with push access mid-session does
+nothing either.
+
+The fix is on the account side, not in here: install or re-link the Claude
+GitHub App at https://github.com/apps/claude/installations/select_target, or
+reconnect GitHub from claude.ai settings. Until then, work travels as
+`git format-patch` files applied with `git am`.
 
 **Telemetry lives on `window`** — it survives `scene.restart()` but not a page
 reload. `__plugRunDownload()` before refreshing.
