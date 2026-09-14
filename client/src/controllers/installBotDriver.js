@@ -190,6 +190,12 @@ function installGameOverBypass(cfg) {
 
 /* ---------------- round locking ---------------- */
 
+// The knobs this session is actually running with. Recorded into every export
+// because a batch that doesn't say what produced it cannot be compared with
+// another one — aiLevel and lockRound change what the numbers mean, and
+// reconstructing them afterwards from a filename is guesswork.
+let activeConfig = null;
+
 // Which map we are on and how many attempts it has had. Module-level because
 // every attempt is a scene.restart() — nothing on the scene survives one.
 let seedCursor = { routeID: null, attempts: 0, repeats: 1 };
@@ -285,6 +291,7 @@ export function installBotDriver() {
   if (!cfg) return false;
 
   BaseGameScene.prototype.__botInstalled = true;
+  activeConfig = { ...DEFAULTS, ...cfg };
   installModalAutoDismiss(cfg);
   installRoundLock(cfg);
   const origUpdate = BaseGameScene.prototype.update;
@@ -375,6 +382,10 @@ function installSummaryHelper() {
 
     const payload = {
       exportedAt: new Date().toISOString(),
+      // What produced these numbers. aiLevel sets the bot's own skill and
+      // lockRound the opposition's; without both on the file, two batches
+      // cannot be told apart, let alone compared.
+      config: activeConfig,
       summary: window.__plugRunSummary?.(),
       rows,
       traces: includeTraces ? (window.__plugRunTraces || []) : undefined
