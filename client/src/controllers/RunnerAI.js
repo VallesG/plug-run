@@ -3,6 +3,7 @@ import {
   applyCenterBias,
   toroDist
 } from '../utils/gameUtils.js';
+import { nearestPlug } from '../logic/threat.js';
 
 /**
  * RunnerAI - Attacker AI (Opponent in Plug Mode)
@@ -143,7 +144,8 @@ export function updateRunnerBehavior(scene, aiController, delta) {
   if (!isOrienting && (!aiController._aiPlanAt || now >= aiController._aiPlanAt)) {
     // Detect panic state (plug is close)
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
-    const plugCell = scene.toCell(scene.defender.x, scene.defender.y);
+    const threat = nearestPlug(scene, scene.attacker);
+    const plugCell = scene.toCell(threat.x, threat.y);
     const distToPlug = toroDist(attackerCell, plugCell, scene.cols, scene.rows);
     const isPanicking = distToPlug <= scene.aiRunner.panicThreshold;
 
@@ -474,8 +476,11 @@ export function considerRunnerPowerUse(scene, aiController, now) {
   const cooldown = 2000; // 2 seconds between power uses
   if (aiController._aiRunnerLastPowerAt && (now - aiController._aiRunnerLastPowerAt) < cooldown) return;
 
-  // Calculate distance to plug (defender)
-  const dist = Math.hypot(scene.defender.x - scene.attacker.x, scene.defender.y - scene.attacker.y);
+  // Calculate distance to the nearest plug. Every `dist` check below — panic
+  // phase, decoy range, defensive dash — is about the gun closest to us, which
+  // from round 8 in runner mode may be defender2.
+  const threat = nearestPlug(scene, scene.attacker);
+  const dist = Math.hypot(threat.x - scene.attacker.x, threat.y - scene.attacker.y);
   const distInCells = dist / scene.cell;
 
   console.log('[RunnerAI] Distance to plug:', distInCells.toFixed(2), 'cells');
@@ -522,7 +527,7 @@ export function considerRunnerPowerUse(scene, aiController, now) {
     }
 
     // Evasive maneuver: Being chased and can phase to put wall between us and plug
-    const plugCell = scene.toCell(scene.defender.x, scene.defender.y);
+    const plugCell = scene.toCell(threat.x, threat.y);
     const distToPlug = toroDist(attackerCell, plugCell, scene.cols, scene.rows);
 
     if (distToPlug <= 6 && distToPlug > 2) {
