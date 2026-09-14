@@ -223,7 +223,7 @@ export function installBotDriver() {
   installSummaryHelper();
 
   console.log('[BOT] installed', JSON.stringify({ ...DEFAULTS, ...cfg }));
-  console.log('[BOT] call __plugRunSummary() in the console for completion stats');
+  console.log('[BOT] console helpers: __plugRunSummary() | __plugRunDownload() | __plugRunReset()');
   return true;
 }
 
@@ -271,6 +271,50 @@ function installSummaryHelper() {
     console.table(out);
     console.log('[BOT]', JSON.stringify(summary, null, 2));
     return summary;
+  };
+
+  /**
+   * window.__plugRunDownload() — save everything collected so far as a file.
+   *
+   * Copy-pasting rows out of the console stops being practical somewhere
+   * around fifty runs, and the input traces are the interesting part for
+   * replay work but far too noisy to read inline.
+   *
+   * Includes the traces by default; pass false to get summary + rows only,
+   * which is a fraction of the size.
+   */
+  window.__plugRunDownload = function (includeTraces = true) {
+    const rows = window.__plugRunTelemetry || [];
+    if (!rows.length) { console.log('[BOT] nothing to download yet'); return; }
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      summary: window.__plugRunSummary?.(),
+      rows,
+      traces: includeTraces ? (window.__plugRunTraces || []) : undefined
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `plugrun-telemetry-${rows.length}runs-${Date.now()}.json`;
+    a.click();
+    // Revoke on a delay — Chrome cancels the download if the URL dies first.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+    console.log(`[BOT] downloading ${rows.length} runs (${(blob.size / 1024).toFixed(1)} KB)`);
+  };
+
+  /**
+   * window.__plugRunReset() — clear collected data without reloading.
+   * A reload would restart the bot's whole climb from round 1; this lets you
+   * change a setting and start a clean batch from wherever you are.
+   */
+  window.__plugRunReset = function () {
+    window.__plugRunTelemetry = [];
+    window.__plugRunTraces = [];
+    console.log('[BOT] telemetry cleared');
   };
 }
 
