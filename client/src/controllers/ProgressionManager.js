@@ -437,16 +437,10 @@ export default class ProgressionManager {
     // Track route progress for leaderboard
     updateRouteProgress(this.scene.role, roundNumber);
 
-    // Submit score to daily and all-time leaderboards (await to ensure completion)
-    // Game over means you failed current round, so stash = last completed round (current - 1)
-    // Example: Died on round 7 = completed round 6 = 6 stash
+    // Game over means you failed current round, so stash = last completed round
+    // (current - 1). Example: Died on round 7 = completed round 6 = 6 stash.
+    // The submission itself happens AFTER the modal is on screen — see below.
     const stashToSubmit = Math.max(0, roundNumber - 1);
-    console.log(`[ProgressionManager] 🚀 GAME OVER - Submitting final scores - Round ${roundNumber}, Stash: ${stashToSubmit}, Rep: ${this.scene.pveSessionRep}`);
-    await Promise.all([
-      submitScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep, this.scene.runId),
-      submitAllTimeScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep)
-    ]);
-    console.log('[ProgressionManager] ✅ Final scores submitted to Supabase!');
 
     // Build buttons array
     const routeID = this.scene.currentRouteID ?? getCurrentRouteID();
@@ -550,6 +544,26 @@ export default class ProgressionManager {
     } else {
       this.scene.currentModal = modal;
     }
+
+    // Scores go out only once the death screen exists. This used to be awaited
+    // above, before a single button was built: with no backend reachable the
+    // two calls hang or reject, and endRound() invokes this with no .catch(),
+    // so the rejection killed the function and the modal never rendered at
+    // all — the player was left staring at a frozen board with no way out.
+    // Reaching the network is not a precondition for showing a UI.
+    console.log(`[ProgressionManager] 🚀 GAME OVER - Submitting final scores - Round ${roundNumber}, Stash: ${stashToSubmit}, Rep: ${this.scene.pveSessionRep}`);
+    try {
+      await Promise.all([
+        submitScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep, this.scene.runId),
+        submitAllTimeScore(this.scene.role, roundNumber, stashToSubmit, this.scene.pveSessionRep)
+      ]);
+      console.log('[ProgressionManager] ✅ Final scores submitted to Supabase!');
+    } catch (err) {
+      // A lost score is worth a warning, not a broken death screen.
+      console.warn('[ProgressionManager] score submission failed:', err);
+    }
+
+    return modal;
   }
 
   /**
