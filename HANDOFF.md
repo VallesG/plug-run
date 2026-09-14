@@ -229,18 +229,16 @@ side of the queue is done up to the point where a design decision blocks it.
 
 ## Working notes
 
-**Pushing from a cloud session is still impossible — two sessions in a row now.**
-`git fetch` works (transparent read-only proxy) but `git push` returns 403:
-"Claude doesn't have GitHub access to VallesG/plug-run for your organization."
-A fresh session did *not* fix it, so the guess that credentials are minted at
-session start was wrong — the GitHub App simply is not installed with write
-access for this repo. Re-attaching the repo with push access mid-session does
-nothing either.
+**Pushing works now.** It was broken for two sessions — `git push` returned 403,
+"Claude doesn't have GitHub access to VallesG/plug-run for your organization"
+— and neither starting a fresh session nor re-attaching the repo with push
+access helped. The cause was account-side, not per-session: the Claude GitHub
+App did not have write access to this repo. Reconnecting the App fixed it
+immediately, mid-session, with no restart needed.
 
-The fix is on the account side, not in here: install or re-link the Claude
-GitHub App at https://github.com/apps/claude/installations/select_target, or
-reconnect GitHub from claude.ai settings. Until then, work travels as
-`git format-patch` files applied with `git am`.
+So if push 403s again, it is the App installation, and reconnecting it from
+claude.ai settings clears it on the spot. No need to re-derive that, and no
+need to fall back to `git format-patch` first.
 
 **Telemetry lives on `window`** — it survives `scene.restart()` but not a page
 reload. `__plugRunDownload()` before refreshing.
