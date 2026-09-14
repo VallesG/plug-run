@@ -12,6 +12,7 @@ import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seede
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
 import { mapStats } from '../logic/runStats.js';
+import { advanceCursor } from '../logic/seedCursor.js';
 
 // Injected rather than imported by BotDriver so that file stays clear of the
 // Phaser dependency graph and its logic remains runnable under plain Node.
@@ -213,6 +214,17 @@ let seedCursor = { routeID: null, attempts: 0, repeats: 1 };
  * chance, power skill, the round-8 second plug — reads scene.pveRound, and
  * that is what gets held. The only thing varying is layout.
  *
+ * WHY IT HOOKS create() AND NOT init()
+ * It hooked init() first, and the round-pinning half silently did nothing.
+ * RunnerScene.init and PlugScene.init both call super.init(data) and then
+ * immediately reassign `this.pveRound = data?.pveRound ?? ...`, so a wrap on
+ * BaseGameScene.prototype.init is overwritten by the subclass a line later.
+ * The seed half survived (the subclasses don't touch it), which made the logs
+ * look right while the round climbed anyway — a locked run that wasn't.
+ * create() runs after every init in the chain, and before the seed is consumed
+ * by maze generation. Both subclasses' create() bodies are a bare
+ * super.create(), so nothing can get in ahead of it.
+ *
  * WHAT GOES QUIET
  * Spawn swapping after repeat losses is meaningless when each attempt is a
  * different map, so at seedRepeats 1 the bypass below never reaches for it.
@@ -227,32 +239,32 @@ function installRoundLock(cfg) {
   const repeats = Math.max(1, Math.round(cfg.seedRepeats ?? DEFAULTS.seedRepeats ?? 1));
   seedCursor = { routeID: getCurrentRouteID(), attempts: 0, repeats };
 
-  const origInit = BaseGameScene.prototype.init;
-  BaseGameScene.prototype.init = function (data) {
-    origInit.call(this, data);
-    if (this.mode !== 'pve') return;
+  const origCreate = BaseGameScene.prototype.create;
+  BaseGameScene.prototype.create = function () {
+    if (this.mode === 'pve') {
+      // A clear restarts at pveRound + 1 (a death restarts at the same round),
+      // so the round the scene arrives holding tells us how the last attempt
+      // went without needing a second hook into the outcome. Read off the
+      // scene rather than restart data because by now every init in the chain
+      // has had its say and this is the value that would have been played.
+      const advanced = advanceCursor(seedCursor, this.pveRound, lockRound, repeats);
+      seedCursor.routeID = advanced.routeID;
+      seedCursor.attempts = advanced.attempts;
 
-    // A clear restarts at pveRound + 1 (a death restarts at the same round),
-    // so the round the scene was handed tells us how the last attempt went
-    // without needing a second hook into the outcome.
-    const cleared = (data?.pveRound ?? 0) > lockRound;
-    if (cleared || seedCursor.attempts >= repeats) {
-      seedCursor.routeID += 1;
-      seedCursor.attempts = 0;
+      this.pveRound = lockRound;
+      this.currentRouteID = seedCursor.routeID;
+      this.seed = getRouteSeed(seedCursor.routeID, lockRound, this.role);
+      // Mirrors the scene's own derivation — a different sequence from the one
+      // the maze generator draws on, from the same seed.
+      this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01);
+
+      console.log(
+        `[BOT] round locked at ${lockRound} — map ${seedCursor.routeID} ` +
+        `(attempt ${seedCursor.attempts}/${repeats}), seed ${this.seed}`
+      );
     }
-    seedCursor.attempts++;
 
-    this.pveRound = lockRound;
-    this.currentRouteID = seedCursor.routeID;
-    this.seed = getRouteSeed(seedCursor.routeID, lockRound, this.role);
-    // Mirrors the scene's own derivation — a different sequence from the one
-    // the maze generator draws on, from the same seed.
-    this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01);
-
-    console.log(
-      `[BOT] round locked at ${lockRound} — map ${seedCursor.routeID} ` +
-      `(attempt ${seedCursor.attempts}/${repeats}), seed ${this.seed}`
-    );
+    return origCreate.call(this);
   };
 }
 
