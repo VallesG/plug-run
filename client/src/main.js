@@ -6,6 +6,12 @@ import { TutorialMiniScene } from './scenes/TutorialMiniScene.js';
 import LeaderboardScene from './scenes/LeaderboardScene.js';
 // import { PvpScene } from './scenes/PvpScene.js'; // Future multiplayer
 import rexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
+import { installBotDriver } from './controllers/installBotDriver.js';
+
+// Test harness only. No-ops unless ?bot=1 is in the URL, so players never
+// touch this path. Runs before the game boots so the prototype wrap is in
+// place before any scene starts.
+installBotDriver();
 
 // The canvas fills the whole window (Phaser.Scale.RESIZE) — no letterbox
 // bars on any screen or zoom level. Map fairness is enforced one level

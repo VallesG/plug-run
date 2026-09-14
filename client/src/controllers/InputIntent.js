@@ -134,6 +134,67 @@ export default class InputIntent {
   recordPower(idx) { this.record(K.POWER, idx, 0); }
   recordFire()     { this.record(K.FIRE, 0, 0); }
 
+  /* ---------------- programmatic drive (bots / replay) ---------------- */
+
+  // WHY THESE WRITE WHERE THEY DO
+  // PlayerController keeps its OWN copies of the direction vars and mirrors
+  // them onto the scene at the end of every handlePlayerMovement() call. So
+  // writing scene.playerDrift directly gets silently clobbered a frame later.
+  // The controller's copy is the real one; that's what we set.
+  //
+  // These intentionally mirror the quick-swipe branch of endSwipe() rather
+  // than inventing a new movement path — a bot should be indistinguishable
+  // from a player flicking the screen, or the runs it produces aren't valid
+  // evidence about how the game plays.
+
+  /**
+   * Steer. `x`/`y` need not be normalized.
+   * Returns false if there's no controller to drive yet (scene still booting).
+   */
+  driveMove(x, y) {
+    const pc = this.scene.playerController;
+    if (!pc) return false;
+
+    const len = Math.hypot(x, y);
+    if (len < 1e-6) return false;
+    const nx = x / len, ny = y / len;
+
+    pc.playerMoveDir = { x: nx, y: ny };
+    pc.playerDrift = { x: nx, y: ny };
+    pc.playerIntendedDir = { x: nx, y: ny };
+    if (this.scene.role === 'runner') {
+      pc._runnerInputDir = { x: nx, y: ny };
+      pc.playerGunAim = { x: nx, y: ny }; // runner facing tracks movement
+    }
+    this.scene.userTookOver = true;
+
+    this.recordMove(nx, ny);
+    return true;
+  }
+
+  /** Aim without steering (plug only — runner facing follows movement). */
+  driveGun(x, y) {
+    const pc = this.scene.playerController;
+    if (!pc) return false;
+    const len = Math.hypot(x, y);
+    if (len < 1e-6) return false;
+    const nx = x / len, ny = y / len;
+    pc.playerGunAim = { x: nx, y: ny };
+    this.scene.playerGunAim = { x: nx, y: ny };
+    this.recordGun(nx, ny);
+    return true;
+  }
+
+  /** Fire. Goes through firePlug(), so ammo and weapon guards still apply. */
+  driveFire() {
+    this.scene.firePlug?.();
+  }
+
+  /** Activate a runner power by slot (0 or 1). */
+  drivePower(idx) {
+    this.scene.activateRunnerPowerByIndex?.(idx);
+  }
+
   /* ---------------- serialization ---------------- */
 
   /**
