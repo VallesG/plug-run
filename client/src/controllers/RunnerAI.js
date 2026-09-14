@@ -4,6 +4,7 @@ import {
   toroDist
 } from '../utils/gameUtils.js';
 import { nearestPlug } from '../logic/threat.js';
+import { phaseSteer } from '../logic/steering.js';
 
 /**
  * RunnerAI - Attacker AI (Opponent in Plug Mode)
@@ -272,7 +273,27 @@ export function updateRunnerBehavior(scene, aiController, delta) {
       dir = aiController._aiLastMoveDir;
     }
 
-    if (!isWalkableDirFrom(scene, scene.attacker, dir)) {
+    // PHASING: go through the wall, which is the entire point of the power.
+    //
+    // Everything above this plans over walkable cells only —
+    // findNextStepTowards runs BFS across floor, and the guard below refuses
+    // any direction that ends in a wall. Correct almost always, and exactly
+    // wrong while intangible: the AI decided to phase *because* a wall was in
+    // the way (shouldPhaseForTactics reasons explicitly about cutting through
+    // one), then politely routed around that same wall until the window
+    // expired. canMoveTo has always permitted the move; nothing ever asked it
+    // to. The power was spent, the sound played, the sprite faded, and the
+    // runner never passed through anything.
+    //
+    // The flip guard is deliberately above this: a phase window is short and
+    // committing to the cut matters more than direction smoothing.
+    const phasing = scene.runnerIsPhasing?.() === true;
+    if (phasing) {
+      const straight = phaseSteer(attackerCell, targetCell, scene.cols, scene.rows);
+      if (straight) dir = straight;
+    }
+
+    if (!phasing && !isWalkableDirFrom(scene, scene.attacker, dir)) {
       aiRunnerCruise(scene, aiController);
     } else {
       aiController._aiCruiseDir = dir;
@@ -490,8 +511,12 @@ export function considerRunnerPowerUse(scene, aiController, now) {
 
   // Helper function to check if phasing through walls would create a tactical advantage
   const shouldPhaseForTactics = () => {
-    // AI uses tactical phasing from round 1 for offensive plays
-    if (scene.aiRunner.powerSkill < 0.4) return false; // Very low skill rounds only
+    // No skill gate here. There used to be a `powerSkill < 0.4` bail with a
+    // "very low skill rounds only" comment, but powerSkill is
+    // min(0.95, 0.75 + (round-1) * 0.07) and the base stats start it at 0.75
+    // — it has never been below 0.4 at any round, so the branch never ran.
+    // Tactical phasing is on from round 1, which is what the comment beside
+    // it always claimed.
 
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
 
