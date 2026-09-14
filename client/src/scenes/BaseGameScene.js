@@ -823,7 +823,6 @@ export class BaseGameScene extends Phaser.Scene {
     });
 
     // split aims (player vs AI) and separate gun aim for desktop
-    this.playerAim    = { x:1, y:0 }; // movement aim (mobile + keyboard)
     this.playerGunAim = { x:1, y:0 }; // gun aim (desktop mouse)
     this.playerMoveDir = { x:1, y:0 }; // Actual movement direction (straight line)
     this.playerIntendedDir = { x:1, y:0 }; // Direction player swiped/chose (never forced to change)
@@ -835,7 +834,6 @@ export class BaseGameScene extends Phaser.Scene {
       const len = Math.hypot(x, y) || 1;
       const nx = x / len;
       const ny = y / len;
-      this.playerAim = { x: nx, y: ny };
       this.playerDrift = { x: nx, y: ny };
       this.playerMoveDir = { x: nx, y: ny }; // Set straight-line movement direction
       this.playerIntendedDir = { x: nx, y: ny }; // Track what player intended
@@ -1301,7 +1299,6 @@ export class BaseGameScene extends Phaser.Scene {
     // Set movement direction for straight-line movement
     this.playerMoveDir = { x: this._initDrift.x, y: this._initDrift.y };
     this.playerIntendedDir = { x: this._initDrift.x, y: this._initDrift.y }; // Track initial direction
-    this.playerAim = { x: this.playerDrift.x, y: this.playerDrift.y };
     this.playerGunAim = { x: this.playerDrift.x, y: this.playerDrift.y };
     if (this.role === 'runner') this._runnerInputDir = { x: this.playerDrift.x, y: this.playerDrift.y };
     // Flag flips to true after first user-controlled aim so initial drift never applies again
@@ -2125,7 +2122,7 @@ export class BaseGameScene extends Phaser.Scene {
   destroyRunnerAbilityUI(){ this.runnerAbilityText?.destroy?.(); this.runnerAbilityText=null; this.destroyAbilityButton(); return; /* HUD disabled */ }
 
   getRunnerFacing(){
-    const aim = this._runnerInputDir || this._runnerLastAim || this.playerAim || this._aiLastMoveDir || { x: 1, y: 0 };
+    const aim = this._runnerInputDir || this._runnerLastAim || this._aiLastMoveDir || { x: 1, y: 0 };
     const len = Math.hypot(aim.x, aim.y) || 1;
     return { x: aim.x / len, y: aim.y / len };
   }
@@ -2175,7 +2172,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.intent?.recordFire();
 
     // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
-    const aim = (this.playerController?.playerGunAim || this.playerAim) || { x: 1, y: 0 };
+    const aim = this.playerController?.playerGunAim || { x: 1, y: 0 };
     this.combatSystem.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
 
     // Play a quick shooting animation if available

@@ -39,7 +39,6 @@ export default class PlayerController {
     // Legacy-style initial drift (fallback movement when no input)
     this._initDrift = null;
     this.playerDrift = null;
-    this.playerAim = null;
 
     // Input references (set by scene)
     this.cursors = null;
@@ -138,9 +137,8 @@ export default class PlayerController {
       // Legacy fallback: use player's aim or drift
       // After first user interaction, never fall back to initial drift
       const drift = this.scene.userTookOver ? (this.playerDrift || null) : (this.playerDrift || this._initDrift || null);
-      const aim = this.playerAim || drift;
-
-      // Only move if there's a valid aim/drift (don't default to right movement)
+      // Only move if there's a valid drift (don't default to right movement)
+      const aim = drift;
       if (aim) {
         const lenAim = Math.hypot(aim.x, aim.y);
         if (lenAim > 0.0001) {
@@ -217,7 +215,6 @@ export default class PlayerController {
     this.scene.playerGunAim = this.playerGunAim;
     this.scene.playerIntendedDir = this.playerIntendedDir;
     this.scene.playerDrift = this.playerDrift;
-    this.scene.playerAim = this.playerAim;
     this.scene._initDrift = this._initDrift;
     this.scene._runnerInputDir = this._runnerInputDir;
     this.scene._runnerMoveDir = this._runnerMoveDir;

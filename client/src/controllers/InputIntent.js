@@ -2,8 +2,11 @@
 //
 // WHY THIS EXISTS
 // Player direction currently gets written in ~9 scattered places across
-// BaseGameScene and PlayerController, through five parallel variables
-// (playerMoveDir / playerDrift / playerAim / playerGunAim / _runnerInputDir).
+// BaseGameScene and PlayerController, through four parallel variables
+// (playerMoveDir / playerDrift / playerGunAim / _runnerInputDir). There was a
+// fifth, playerAim, until tracing these writes showed PlayerController
+// overwrote it with null every frame and every read of it was shadowed by a
+// fallback that is never null; it is gone now.
 // Nothing can observe "what did the player actually ask for" without
 // re-deriving it from sprite positions after the fact.
 //

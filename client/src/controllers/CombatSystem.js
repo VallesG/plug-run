@@ -508,7 +508,7 @@ export default class CombatSystem {
     this.scene.roundAmmo[weapon] -= 1;
 
     // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
-    const aim = (this.scene.playerController?.playerGunAim || this.scene.playerAim) || { x: 1, y: 0 };
+    const aim = this.scene.playerController?.playerGunAim || { x: 1, y: 0 };
     this.spawnWeaponBurst(this.scene.defender, aim, weapon, this.scene.bulletsD);
 
     // Play a quick shooting animation if available
