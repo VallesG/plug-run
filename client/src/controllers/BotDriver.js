@@ -77,7 +77,32 @@ export const DEFAULTS = {
   // "Continue & Swap Spawns" option instead of retrying the same spawn. Some
   // seeds put the runner in the plug's line of sight on frame one, and no
   // amount of skill beats that — a human reaches for the swap, so does this.
-  swapAfterFails: 2
+  swapAfterFails: 2,
+
+  // Pin the round number and sample a fresh MAP each time instead of climbing
+  // the ladder. 0 = off.
+  //
+  // The first batch off this harness was 61 runs in which round 16 alone
+  // accounted for 29 — the bot hit one wall map and beat its head against it
+  // until the session ended. Half the dataset described a single seed. That
+  // says a great deal about that seed and almost nothing about round 16, and
+  // "how long does a map at difficulty N take" is the question map sizing
+  // actually needs answered.
+  //
+  // Locking the round holds difficulty still (every scaling curve reads
+  // pveRound) and walks the seed instead, so the spread you measure is the
+  // spread across MAPS at one difficulty — which is the spread a fixed
+  // 8-map block will draw from.
+  lockRound: 0,
+
+  // Attempts on each map before moving to the next, when lockRound is on.
+  //   1  — one shot per map: first-try clear rate, and the time distribution
+  //        of a single-attempt race format.
+  //   n  — up to n shots: how many tries a map really costs, sampled across
+  //        maps rather than down one.
+  // A clear always advances to the next map; there is nothing left to learn
+  // from a map you just beat.
+  seedRepeats: 1
 };
 
 export default class BotDriver {
@@ -407,6 +432,13 @@ export default class BotDriver {
       console.warn('[BOT] maxRunMs exceeded — abandoning run');
       s.finalizeRun?.('bot_timeout');
       s.roundOver = true;
+      // Record it as a timeout, then leave by the same door a death leaves
+      // by. Setting roundOver alone ends the run but starts nothing: the bot
+      // returns early from every subsequent tick and the session sits on a
+      // dead board until someone notices. That is survivable when you are
+      // watching it; an overnight batch loses everything after the first
+      // wedge, which is exactly the batch lockRound exists to collect.
+      s.progressionManager?.showPvEGameOver?.();
       return;
     }
 

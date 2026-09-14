@@ -230,6 +230,27 @@ console.log('\nBotDriver logic\n');
   check('maxRunMs abandons the run', s.finalizeCalls.includes('bot_timeout') && s.roundOver === true);
 }
 
+// 9b. ...and then leaves by the same door a death leaves by. Ending the run
+//     without starting another one strands an unattended batch on a dead
+//     board: the bot returns early from every later tick and nothing ever
+//     restarts it.
+{
+  let gameOverCalls = 0;
+  const s = makeScene({ progressionManager: { showPvEGameOver() { gameOverCalls++; } } });
+  const bot = new BotDriver(s, { maxRunMs: -1 });
+  bot.update();
+  check('maxRunMs hands off to the restart path', gameOverCalls === 1);
+}
+
+// 9c. A scene without a progression manager must not take the bot down with
+//     it — the guard's whole job is to be the thing that still works.
+{
+  const s = makeScene();
+  let threw = false;
+  try { new BotDriver(s, { maxRunMs: -1 }).update(); } catch { threw = true; }
+  check('maxRunMs survives a scene with no progression manager', !threw);
+}
+
 // 10. Plug fires only along a lane, never at arbitrary angles.
 {
   const aligned = makeScene({

@@ -8,9 +8,10 @@ import { BaseGameScene } from '../scenes/BaseGameScene.js';
 import GameUI from './GameUI.js';
 import AIController from './AIController.js';
 import ProgressionManager from './ProgressionManager.js';
-import { getCurrentRouteID, getRouteSeed } from '../utils/seededRandom.js';
+import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
+import { mapStats } from '../logic/runStats.js';
 
 // Injected rather than imported by BotDriver so that file stays clear of the
 // Phaser dependency graph and its logic remains runnable under plain Node.
@@ -186,6 +187,75 @@ function installGameOverBypass(cfg) {
   };
 }
 
+/* ---------------- round locking ---------------- */
+
+// Which map we are on and how many attempts it has had. Module-level because
+// every attempt is a scene.restart() — nothing on the scene survives one.
+let seedCursor = { routeID: null, attempts: 0, repeats: 1 };
+
+/**
+ * Hold the round number still and walk the MAP forward instead.
+ *
+ * WHY THE SEED HAS TO MOVE
+ * PvE map generation is `getRouteSeed(todaysRouteID, pveRound, role)`, and the
+ * scene recomputes it on every init — the `seed` that showPvEGameOver passes
+ * into restart() is ignored outright in this mode. So pinning the round
+ * without touching anything else would hand out the same map forever, which
+ * is the opposite of the point.
+ *
+ * routeID is normally today's date. Advancing it by one is the game's own
+ * seed derivation asked for "this same round, on a different day" — a fresh
+ * map drawn from exactly the distribution real players see at this round
+ * number, rather than an arbitrary number pushed into the generator.
+ *
+ * WHAT STAYS FIXED
+ * Difficulty. Every scaling curve — runner speed, plan interval, wander
+ * chance, power skill, the round-8 second plug — reads scene.pveRound, and
+ * that is what gets held. The only thing varying is layout.
+ *
+ * WHAT GOES QUIET
+ * Spawn swapping after repeat losses is meaningless when each attempt is a
+ * different map, so at seedRepeats 1 the bypass below never reaches for it.
+ * Route progress and the leaderboard read the real routeID from the clock
+ * themselves, so the synthetic one stays confined to seed derivation and the
+ * telemetry row — where it is the map's identity, and wanted.
+ */
+function installRoundLock(cfg) {
+  const lockRound = Math.round(cfg.lockRound ?? DEFAULTS.lockRound ?? 0);
+  if (!(lockRound >= 1)) return;
+
+  const repeats = Math.max(1, Math.round(cfg.seedRepeats ?? DEFAULTS.seedRepeats ?? 1));
+  seedCursor = { routeID: getCurrentRouteID(), attempts: 0, repeats };
+
+  const origInit = BaseGameScene.prototype.init;
+  BaseGameScene.prototype.init = function (data) {
+    origInit.call(this, data);
+    if (this.mode !== 'pve') return;
+
+    // A clear restarts at pveRound + 1 (a death restarts at the same round),
+    // so the round the scene was handed tells us how the last attempt went
+    // without needing a second hook into the outcome.
+    const cleared = (data?.pveRound ?? 0) > lockRound;
+    if (cleared || seedCursor.attempts >= repeats) {
+      seedCursor.routeID += 1;
+      seedCursor.attempts = 0;
+    }
+    seedCursor.attempts++;
+
+    this.pveRound = lockRound;
+    this.currentRouteID = seedCursor.routeID;
+    this.seed = getRouteSeed(seedCursor.routeID, lockRound, this.role);
+    // Mirrors the scene's own derivation — a different sequence from the one
+    // the maze generator draws on, from the same seed.
+    this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01);
+
+    console.log(
+      `[BOT] round locked at ${lockRound} — map ${seedCursor.routeID} ` +
+      `(attempt ${seedCursor.attempts}/${repeats}), seed ${this.seed}`
+    );
+  };
+}
+
 /**
  * Wrap BaseGameScene.prototype.update so the bot ticks after the scene's own
  * update. Guarded so hot-reload can't stack wrappers on top of each other.
@@ -204,6 +274,7 @@ export function installBotDriver() {
 
   BaseGameScene.prototype.__botInstalled = true;
   installModalAutoDismiss(cfg);
+  installRoundLock(cfg);
   const origUpdate = BaseGameScene.prototype.update;
 
   BaseGameScene.prototype.update = function (time, delta) {
@@ -262,11 +333,14 @@ function installSummaryHelper() {
     const done = rows.filter((r) => r.outcome === 'extracted');
     const summary = {
       totalRuns: rows.length,
-      completionRate: +((done.length / rows.length) * 100).toFixed(1) + '%',
+      completionRate: ((done.length / rows.length) * 100).toFixed(1) + '%',
       grid: rows[0] ? `${rows[0].cols}x${rows[0].rows}` : null,
       avgTraceBytes: Math.round(rows.reduce((s, r) => s + (r.traceBytes || 0), 0) / rows.length),
       byOutcome: out
     };
+
+    const perMap = mapStats(rows);
+    if (perMap) summary.perMap = perMap;
 
     console.table(out);
     console.log('[BOT]', JSON.stringify(summary, null, 2));
@@ -314,6 +388,11 @@ function installSummaryHelper() {
   window.__plugRunReset = function () {
     window.__plugRunTelemetry = [];
     window.__plugRunTraces = [];
+    // Start the next batch on a map boundary. The map in flight has already
+    // spent attempts that the cleared telemetry no longer records, so
+    // carrying it over would report a map that took four tries as one that
+    // took one. Exhausting its budget sends the next round to a fresh map.
+    seedCursor.attempts = seedCursor.repeats;
     console.log('[BOT] telemetry cleared');
   };
 }
