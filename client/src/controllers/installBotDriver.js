@@ -113,9 +113,18 @@ function installModalAutoDismiss(cfg) {
   installGameOverBypass(cfg);
 }
 
-// Consecutive losses on the current round, so the bot knows when retrying the
+// Consecutive losses on the current MAP, so the bot knows when retrying the
 // same spawn has stopped being worth it.
-let failsOnRound = { round: null, count: 0 };
+//
+// Keyed on the seed, not the round. It used to key on the round, which is the
+// same thing on a ladder — one map per round — and quietly wrong under
+// lockRound, where the round is held still and the map changes underneath it.
+// The counter never reset, so the swap fired on every second death no matter
+// which map that death was on, and a fresh map could inherit a swapped spawn
+// it had never earned. Both clears in the first properly-locked batch landed
+// on a swapped spawn, which is not a fact about those maps so much as about
+// this counter.
+let failsOnMap = { seed: null, count: 0 };
 
 /**
  * Replace the death screen with a direct restart.
@@ -147,11 +156,12 @@ function installGameOverBypass(cfg) {
     const round = s.pveRound || 1;
     const role = s.role === 'plug' ? 'plug' : 'runner';
 
-    if (failsOnRound.round !== round) failsOnRound = { round, count: 0 };
-    failsOnRound.count++;
+    const mapKey = s.seed ?? null;
+    if (failsOnMap.seed !== mapKey) failsOnMap = { seed: mapKey, count: 0 };
+    failsOnMap.count++;
 
-    const shouldSwap = failsOnRound.count >= swapAfter;
-    if (shouldSwap) failsOnRound.count = 0; // give the new spawn a fair run
+    const shouldSwap = failsOnMap.count >= swapAfter;
+    if (shouldSwap) failsOnMap.count = 0; // give the new spawn a fair run
 
     const routeID = s.currentRouteID ?? getCurrentRouteID();
     const seed = getRouteSeed(routeID, round, role);
@@ -170,7 +180,7 @@ function installGameOverBypass(cfg) {
     if (shouldSwap) params.swapSpawnCycle = (s.swapSpawnCycle || 0) + 1;
 
     console.log(
-      `[BOT] died on round ${round} (loss ${failsOnRound.count || swapAfter}/${swapAfter})` +
+      `[BOT] died on round ${round} (loss ${failsOnMap.count || swapAfter}/${swapAfter} on this map)` +
       (shouldSwap ? ' — retrying with SWAPPED SPAWNS' : ' — retrying same spawn')
     );
 
