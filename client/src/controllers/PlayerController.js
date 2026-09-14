@@ -129,6 +129,10 @@ export default class PlayerController {
         if (sprite === this.scene.attacker) {
           this._runnerInputDir = { x: nx, y: ny };
         }
+
+        // Held-key path: runs EVERY frame a key is down. InputIntent dedups
+        // on direction, so a 3-second hold is one event, not 180.
+        this.scene.intent?.recordMove(nx, ny);
       }
     } else {
       // Legacy fallback: use player's aim or drift
@@ -400,6 +404,7 @@ export default class PlayerController {
           ? { x: Math.cos(nearest), y: Math.sin(nearest) }
           : { x: dx / L, y: dy / L };
         this.playerGunAim = aimVec;
+        this.scene.intent?.recordGun(aimVec.x, aimVec.y);
 
         // DRAG-MOVE COMMIT: has this gesture proven itself as a drag?
         // Committed either by holding past DRAG_COMMIT_MS OR by traveling
@@ -415,6 +420,7 @@ export default class PlayerController {
           this.playerDrift = aimVec;
           this.playerIntendedDir = aimVec;
           this.scene.userTookOver = true;
+          this.scene.intent?.recordMove(aimVec.x, aimVec.y);
         }
       }
       return;
@@ -465,6 +471,8 @@ export default class PlayerController {
         this._runnerInputDir = moveVec; // powers read this
         this.playerGunAim = moveVec;    // runner's "aim" tracks facing
         this.scene.userTookOver = true;
+        // Runner facing is derived from move, so one MOVE event covers both.
+        this.scene.intent?.recordMove(moveVec.x, moveVec.y);
       }
     }
   }
@@ -542,6 +550,10 @@ export default class PlayerController {
         if (who && this.scene.role === 'runner') {
           this._runnerInputDir = { x: nx, y: ny };
         }
+
+        // Quick-swipe path: cardinal only, one event per gesture.
+        this.scene.intent?.recordMove(nx, ny);
+        if (this.scene.role === 'plug') this.scene.intent?.recordGun(nx, ny);
       }
     }
 

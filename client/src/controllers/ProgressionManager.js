@@ -74,6 +74,9 @@ export default class ProgressionManager {
     if (this.scene.mode === 'pve' && this.scene.role === 'plug') {
       this.scene.roundOver = true;
     ReplaySystem.finalize();
+      // Plug mode: the AI runner got away. A loss, despite being the
+      // "extraction" path — hence the distinct outcome label.
+      this.scene.finalizeRun?.('runner_extracted');
       this.scene.roundPausedForMenu = true;
       this.scene.input.keyboard.enabled = false;
       this.scene._mouseDown = false;
@@ -202,6 +205,9 @@ export default class ProgressionManager {
 
     this.scene.roundOver = true;
     ReplaySystem.finalize();
+    // Runner-mode success. The plug-mode branch above already returned, so
+    // reaching here means the player extracted.
+    this.scene.finalizeRun?.('extracted');
     this.scene.input.keyboard.enabled = false;
     this.scene._mouseDown = false;
     cleanupArena();
@@ -313,6 +319,9 @@ export default class ProgressionManager {
     if (this.scene.roundOver) return;
     this.scene.roundOver = true;
     ReplaySystem.finalize();
+    // Death or timeout. Which one is recoverable from the record: a run whose
+    // durationMs lands at timerMs ran out the clock; anything shorter died.
+    this.scene.finalizeRun?.(`round_end_${winner}`);
 
     // Losing the round costs real rep — retrying is not free, it's just
     // cheaper than swapping spawns. Applied before final score submission.

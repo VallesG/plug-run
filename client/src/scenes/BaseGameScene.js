@@ -33,6 +33,7 @@ import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } fr
 import { isDesktop, areSidebarsActive, getExistingSidebars, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setCurrentMode } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity, logRunnerExtract, logPlugStop, logRunnerEliminated, logBunkPickup, logPersonalBest } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
+import InputIntent from '../controllers/InputIntent.js';
 
 function makeRng(seed){
   let t = seed >>> 0;
@@ -152,6 +153,11 @@ export class BaseGameScene extends Phaser.Scene {
     this.vfx = new VisualEffects(this);
     this.gameUI = new GameUI(this);
     this.progressionManager = new ProgressionManager(this);
+    this.intent = new InputIntent(this);
+
+    // Frame counter used as the trace timebase. Must be reset per round —
+    // a trace's tick 0 is its own round's start, not the session's.
+    this.simTick = 0;
 
     // Effects / options
     // Force high-contrast bullets ON for all players
@@ -840,6 +846,11 @@ export class BaseGameScene extends Phaser.Scene {
       }
       this._runnerInputDir = { x: nx, y: ny };
       this.userTookOver = true;
+      // Intent tap: keyboard direction change (discrete keydown, already deduped
+      // by the browser's own key-repeat suppression — the per-frame held-key
+      // path is recorded separately in PlayerController).
+      this.intent?.recordMove(nx, ny);
+      if (!(this.isDesktop && this.role === 'plug')) this.intent?.recordGun(nx, ny);
     };
     // WASD
     this.input.keyboard.on('keydown-W', ()=> setDir(0,-1));
@@ -1211,6 +1222,7 @@ export class BaseGameScene extends Phaser.Scene {
         // Direct update for instant response
         this.playerGunAim = { x: dx/L, y: dy/L };
         this.playerController.playerGunAim = { x: dx/L, y: dy/L };
+        this.intent?.recordGun(dx/L, dy/L);
       };
       this.input.on('pointermove', this._pointerMoveHandler);
       this._mouseDown = false;
@@ -1906,6 +1918,14 @@ export class BaseGameScene extends Phaser.Scene {
     this.endAt = performance.now() + this.timerMs;
     this.roundPausedForMenu = false;
 
+    // Start the intent trace here, not in create(): by this point the weapon
+    // and power-selection modals are closed, so tick 0 is the first frame the
+    // player can actually move. Anything earlier records menu noise and makes
+    // tick 0 mean something different on every run.
+    this.simTick = 0;
+    this._runStartedAt = performance.now();
+    this.intent?.start({ startedAt: Date.now() });
+
     // Initialize RepTracker for this round via ProgressionManager
     if (this.progressionManager) {
       this.progressionManager.startRound(this.pveRound || 1);
@@ -1914,6 +1934,53 @@ export class BaseGameScene extends Phaser.Scene {
     // Reset AI orientation timers for new round
     resetPlugOrientation(this);
     resetRunnerOrientation(this);
+  }
+
+  /**
+   * Close out a run: finalize the intent trace and emit one structured
+   * telemetry record.
+   *
+   * IDEMPOTENT BY DESIGN. A round can finish through several paths (extract,
+   * eliminated, timeout, AI runner extracted) and some of them overlap —
+   * startExtractionSequence sets roundOver and then endRound may also fire.
+   * intent.stop() returns null once already stopped, so the second and third
+   * call cost nothing. Call it liberally rather than trying to find the one
+   * true exit point; there isn't one.
+   *
+   * The emitted line is the dataset for sizing maps to a ~20s target: dump
+   * `window.__plugRunTelemetry` after a session, or scrape [RUN] from logs.
+   */
+  finalizeRun(outcome = 'unknown'){
+    const trace = this.intent?.stop();
+    if (!trace) return null;
+
+    const durationMs = Math.round(performance.now() - (this._runStartedAt || performance.now()));
+    const record = {
+      outcome,
+      durationMs,
+      ticks: this.simTick | 0,
+      role: this.role,
+      mode: this.mode,
+      round: this.pveRound ?? null,
+      routeID: this.currentRouteID ?? null,
+      seed: this.seed ?? null,
+      cols: this.cols,
+      rows: this.rows,
+      gotStash: !!this.hasStash,
+      events: trace.events.length,
+      traceBytes: InputIntent.size(trace)
+    };
+
+    // Structured single-line output — greppable, and parseable straight out
+    // of a headless browser console by the bot harness.
+    console.log('[RUN]', JSON.stringify(record));
+
+    try {
+      (window.__plugRunTelemetry ||= []).push(record);
+      (window.__plugRunTraces ||= []).push(trace);
+    } catch {}
+
+    return { record, trace };
   }
 
   // Weapon selection prompt (delegated to GameUI controller)
@@ -1941,6 +2008,12 @@ export class BaseGameScene extends Phaser.Scene {
     // perform power immediately (no per-power cooldown; consumable)
     this.performRunnerPower(power);
     used[idx] = true;
+
+    // Only the human's activations belong in the trace. This same function
+    // drives the AI runner when the player is the plug (isAI above), and
+    // recording those would make the trace unreplayable — the AI is
+    // reconstructed from the seed, not from the input stream.
+    if (!isAI) this.intent?.recordPower(idx);
 
     // Update the correct property based on who's using it
     if (isAI) {
@@ -2097,6 +2170,10 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.roundAmmo[weapon] -= 1;
 
+    // Recorded after the ammo/weapon guards above, so the trace holds shots
+    // that actually left the barrel — not every trigger pull on an empty clip.
+    this.intent?.recordFire();
+
     // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
     const aim = (this.playerController?.playerGunAim || this.playerAim) || { x: 1, y: 0 };
     this.combatSystem.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
@@ -2123,6 +2200,11 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   update(_, delta){
+    // Trace timebase. Advances once per rendered frame today; once update()
+    // steps at a fixed dt this becomes an exact time coordinate and traces
+    // become replayable across machines.
+    this.simTick = (this.simTick | 0) + 1;
+
     // Replay recorder: samples world sprites ~15x/sec, auto-finalizes on round end
     try { ReplaySystem.tick(this, delta); } catch (e) { console.error('[Replay] tick error:', e); }
 
@@ -2331,6 +2413,7 @@ export class BaseGameScene extends Phaser.Scene {
       const L = Math.hypot(dx, dy) || 1;
       this.playerGunAim = { x: dx/L, y: dy/L };
       this.playerController.playerGunAim = { x: dx/L, y: dy/L };
+      this.intent?.recordGun(dx/L, dy/L);
     }
 
     updateAvatarVisuals(this, dt);
@@ -2671,6 +2754,7 @@ export class BaseGameScene extends Phaser.Scene {
     // Finalize the replay NOW — tick() won't get another chance before the
     // scene restarts into the next round and begin() resets the recorder.
     ReplaySystem.finalize();
+    this.finalizeRun('runner_eliminated');
 
     // Clean up active effects so the modal/restart feels calm
     this.destroyDecoySprite();
