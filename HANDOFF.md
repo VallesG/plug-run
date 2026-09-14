@@ -104,7 +104,11 @@ is reasoned-through but unrun — see below.
 
 ---
 
-## What the data said (61 bot runs, 16×35 grid, level 20)
+## What the first batch said (61 bot runs, 16×35 grid, level 20)
+
+Superseded in part by the measured curve above — kept because the trace-size
+and carry-death findings still stand, and because the r16 wall is the finding
+that motivated `lockRound`.
 
 ### Difficulty is seed-dominated, not round-dominated
 
@@ -146,6 +150,52 @@ attempts × ~7s, which at a typical 3 attempts lands near 20s by accident.
 So it depends on a design decision not yet made: **is a race map one attempt, or
 until you clear it?** If retries are allowed, 16×35 is about right and the grid
 shouldn't be touched. If one attempt only, you want ~2–3× the path length.
+
+---
+
+## The difficulty curve, measured (98 bot runs, aiLevel 20, 16x35)
+
+Three locked batches. Only rounds 4 and 11 have enough maps to trust; the rest
+are 1-7 maps and included for direction only.
+
+| round | maps | per-map clear | first-try | extract median | plugs |
+|---|---|---|---|---|---|
+| **4** | **23** | **60.9%** | **43.5%** | 5.8s | 1 |
+| 8 | 2 | 50% | 0% | 3.7s | 2 |
+| 10 | 3 | 33% | 33% | 9.1s | 2 |
+| **11** | **20** | **15.0%** | **5.0%** | 6.9s | 2 |
+| 12 | 4 | 0% | 0% | - | 2 |
+
+### The cliff is probably the second plug, not the scaling
+
+Rounds 1-7 spawn one plug; from round 8 `BaseGameScene` spawns `defender2`.
+Every round on the bad side of the collapse is a two-plug round, and the
+character of the deaths changes exactly there:
+
+- **Round 4** - 52% of deaths happen *carrying* the stash. The extraction leg
+  is the dangerous half, which is the drama worth keeping: a lead can flip late.
+- **Round 11** - only 29% die carrying; **71% never reach the stash**. Two
+  plugs intercept on the approach. That is a gate, not tension.
+
+**The test that separates the two hypotheses needs no code:** run `lockRound=7`
+against `lockRound=8`. Same scaling either side, one structural change between.
+A cliff means the fix is a spawn rule; a smooth slope means flatten the curve.
+This is the next thing to run.
+
+### Read retry counts with care
+
+The bot's attempts are independent - it never learns a map, where a human's
+second run at a layout is much better than their first. So `attemptsToClear`
+**overstates** what retries cost a person, and **first-try clear rate is the
+transferable number**. For a one-attempt-per-map race, round 4's 43.5% is the
+realistic starting point, not 60.9%.
+
+### Two questions these batches close
+
+- **Map size is fine.** Round 4 extractions: median 5.8s, p75 8.0s, max 11.6s.
+  With retries that lands near 20s without touching the 16x35 grid.
+- **Trace payload stays tiny** on these busier runs - median 1874 bytes, so an
+  8-map block is ~15 KB.
 
 ---
 
