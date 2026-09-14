@@ -43,10 +43,17 @@ export const DEFAULTS = {
 
   // Chance per replan of taking a deliberately wrong step. The single most
   // important knob for making the time distribution look human.
-  wrongTurnChance: 0.12,
+  wrongTurnChance: 0.08,
 
   // Chance per replan of simply not acting — the pause at a junction.
-  hesitateChance: 0.05,
+  hesitateChance: 0.04,
+
+  // Runner evasion. A bot with no dodge walks straight down the plug's firing
+  // lane and dies on repeat, which yields a dataset of nothing but deaths —
+  // useless for the completion-time question this exists to answer. Humans
+  // instinctively refuse to stand in a lane with a gun at the end of it.
+  dangerCells: 7,      // how close the plug must be for its lane to matter
+  laneToleranceCells: 0.6,  // how aligned counts as "in the lane"
 
   // Plug only: how aligned a shot must be before firing, in cells.
   fireAlignCells: 0.5,
@@ -90,13 +97,28 @@ export default class BotDriver {
       return s.extract ? { x: s.extract.x, y: s.extract.y } : null;
     }
 
-    const live = [s.stash, s.bunkStash].filter(
-      (d) => d && d.active !== false && d.visible !== false
-    );
-    if (!live.length) return null;
-
     const me = s.attacker;
     if (!me) return null;
+
+    const live = [s.stash, s.bunkStash].filter((d) => {
+      if (!d || d.active === false || d.visible === false) return false;
+
+      // Skip a duffel that's mid-pickup. On bunk pickup BaseGameScene sets
+      // _fading and runs a ~680ms fade before nulling the reference, so for
+      // that whole window the bot is standing ON a target it still thinks it
+      // needs to reach. Goal distance goes to ~0, the steering vector goes to
+      // zero, driveMove() rejects it, and the bot just stops dead. Reads as
+      // hesitation; it's a stall.
+      if (d._fading) return false;
+
+      // Same guard for the real stash, and for any case where we're already
+      // on top of a target: there is nothing left to steer toward.
+      if (Math.hypot(d.x - me.x, d.y - me.y) < s.cell * 0.5) return false;
+
+      return true;
+    });
+    if (!live.length) return null;
+
     let best = live[0];
     let bestD = Infinity;
     for (const d of live) {
@@ -104,6 +126,57 @@ export default class BotDriver {
       if (dist < bestD) { bestD = dist; best = d; }
     }
     return { x: best.x, y: best.y };
+  }
+
+  /**
+   * Is the plug lined up to shoot us right now?
+   *
+   * The plug fires down rows and columns (see its aim logic — it only shoots
+   * when roughly axis-aligned), so "danger" is specifically: sharing a lane,
+   * close enough to matter. Returns the axis we're exposed on, or null.
+   */
+  firingLaneRisk(me) {
+    const s = this.scene;
+    if (s.role !== 'runner') return null;
+
+    const plug = s.defender;
+    if (!plug || !plug.active || !plug.visible) return null;
+
+    const dx = plug.x - me.x;
+    const dy = plug.y - me.y;
+    if (Math.hypot(dx, dy) > s.cell * this.cfg.dangerCells) return null;
+
+    const tol = s.cell * this.cfg.laneToleranceCells;
+    if (Math.abs(dy) < tol) return 'row'; // same row — exposed horizontally
+    if (Math.abs(dx) < tol) return 'col'; // same column — exposed vertically
+    return null;
+  }
+
+  /**
+   * Step out of the firing lane. Prefers whichever perpendicular direction
+   * also makes progress toward the goal, so dodging doesn't throw away the
+   * run — that's the difference between evading and just flailing.
+   */
+  dodge(me, axis, goal) {
+    const s = this.scene;
+    const cell = s.toCell(me.x, me.y);
+
+    // Exposed along a row means bullets travel horizontally, so we move
+    // vertically to leave it, and vice versa.
+    const options = (axis === 'row')
+      ? [{ x: 0, y: 1 }, { x: 0, y: -1 }]
+      : [{ x: 1, y: 0 }, { x: -1, y: 0 }];
+
+    const legal = options.filter((d) => s.isWalkableCell?.(cell.x + d.x, cell.y + d.y));
+    if (!legal.length) return null;
+
+    // Break the tie toward the goal rather than at random.
+    legal.sort((a, b) => {
+      const da = Math.hypot(goal.x - (me.x + a.x * s.cell), goal.y - (me.y + a.y * s.cell));
+      const db = Math.hypot(goal.x - (me.x + b.x * s.cell), goal.y - (me.y + b.y * s.cell));
+      return da - db;
+    });
+    return legal[0];
   }
 
   /* ---------------- steering ---------------- */
@@ -164,12 +237,57 @@ export default class BotDriver {
     if (Math.random() < this.cfg.hesitateChance) return;
 
     const goal = this.currentGoal();
-    if (!goal) return;
+    if (!goal) {
+      // No target to steer toward (mid-pickup, or everything collected).
+      // Keep the last heading rather than emitting nothing — a bot that
+      // freezes here reads as deliberate caution and quietly corrupts the
+      // timing data with pauses that no player would take.
+      this._driveOrCoast(me, null);
+      return;
+    }
 
-    const dir = this.plan(me, goal);
-    s.intent.driveMove(dir.x, dir.y);
+    // Evasion outranks pathing. Being on the optimal route is worthless from
+    // inside a firing lane, and dying resets the whole map.
+    const risk = this.firingLaneRisk(me);
+    if (risk) {
+      const out = this.dodge(me, risk, goal);
+      if (out) {
+        s.intent.driveMove(out.x, out.y);
+        this._lastDir = out;
+        this._maybeFire(me, now);
+        return;
+      }
+    }
 
+    this._driveOrCoast(me, this.plan(me, goal));
     this._maybeFire(me, now);
+  }
+
+  /**
+   * Steer, with a guaranteed fallback.
+   *
+   * driveMove() rejects zero-length vectors, so any moment the desired
+   * direction collapses to ~0 would otherwise leave the bot stationary. Reuse
+   * the last good heading, and failing that pick any legal neighbour — the
+   * bot should always be doing something, because "stopped" is never a state
+   * a racing player would choose and it shows up as inflated round times.
+   */
+  _driveOrCoast(me, dir) {
+    const s = this.scene;
+
+    if (dir && s.intent.driveMove(dir.x, dir.y)) {
+      const len = Math.hypot(dir.x, dir.y);
+      this._lastDir = { x: dir.x / len, y: dir.y / len };
+      return true;
+    }
+
+    if (this._lastDir && s.intent.driveMove(this._lastDir.x, this._lastDir.y)) return true;
+
+    const cell = s.toCell(me.x, me.y);
+    const ns = s.neighbors4?.(cell) || [];
+    if (!ns.length) return false;
+    const n = ns[(Math.random() * ns.length) | 0];
+    return s.intent.driveMove(s.toWorldX(n.x) - me.x, s.toWorldY(n.y) - me.y);
   }
 
   _maybeFire(me, now) {

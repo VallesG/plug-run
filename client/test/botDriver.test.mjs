@@ -250,6 +250,81 @@ console.log('\nBotDriver logic\n');
   check('plug holds fire off-axis', !offAxis._driven.some((d) => d.kind === 'fire'));
 }
 
+// 11. A duffel mid-pickup is not a target. Regression: BaseGameScene sets
+//     _fading on bunk pickup and waits ~680ms before nulling the reference.
+//     Targeting it during that window put the bot on top of its own goal, the
+//     steering vector collapsed to zero, and it stopped dead — observed live
+//     as "gets a stash and just stands there".
+{
+  const s = makeScene();
+  s.bunkStash._fading = true;
+  const goal = new BotDriver(s, {}).currentGoal();
+  check('ignores a duffel that is mid-pickup',
+    goal && goal.x === s.stash.x && goal.y === s.stash.y,
+    `got ${JSON.stringify(goal)}`);
+}
+
+// 12. Nor is a duffel we're already standing on.
+{
+  const s = makeScene();
+  s.attacker.x = s.bunkStash.x;
+  s.attacker.y = s.bunkStash.y;
+  const goal = new BotDriver(s, {}).currentGoal();
+  check('ignores a duffel it is standing on',
+    goal && goal.x === s.stash.x && goal.y === s.stash.y);
+}
+
+// 13. Never freeze. With no goal at all the bot must still be moving —
+//     a stationary racer is not a thing a player would ever be, and the pause
+//     silently inflates every round time it touches.
+{
+  const s = makeScene({ stash: null, bunkStash: null });
+  const bot = new BotDriver(s, { hesitateChance: 0, wrongTurnChance: 0 });
+  bot._lastDir = { x: 1, y: 0 };
+  bot.update();
+  check('keeps moving when there is no goal', !!lastMove(s));
+}
+
+// 14. Firing-lane detection: same row, close, means exposed.
+{
+  const s = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true },
+    defender: { x: CELL * 5.5, y: CELL * 1.5, active: true, visible: true }
+  });
+  const bot = new BotDriver(s, {});
+  check('detects a shared row as a firing lane', bot.firingLaneRisk(s.attacker) === 'row');
+
+  // Distance threshold. The stub grid is only 10 wide, so an aligned plug
+  // can never be more than 7 cells off — tighten dangerCells instead to put
+  // the same geometry outside the danger radius.
+  const far = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true },
+    defender: { x: CELL * 1.5, y: CELL * 8.5, active: true, visible: true }
+  });
+  check('ignores a plug beyond dangerCells',
+    new BotDriver(far, { dangerCells: 3 }).firingLaneRisk(far.attacker) === null);
+  check('still reacts to that plug at default range',
+    new BotDriver(far, {}).firingLaneRisk(far.attacker) === 'col');
+}
+
+// 15. Dodging leaves the lane perpendicularly, and onto a walkable cell.
+{
+  const s = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true },
+    defender: { x: CELL * 5.5, y: CELL * 1.5, active: true, visible: true }
+  });
+  const bot = new BotDriver(s, { hesitateChance: 0, wrongTurnChance: 0 });
+  withRandom(0.99, () => bot.update());
+  const mv = lastMove(s);
+  // Exposed along a row means bullets fly horizontally, so we must move in y.
+  check('dodges perpendicular to the firing lane',
+    !!mv && Math.abs(mv.y) > 0.9 && Math.abs(mv.x) < 0.1,
+    mv ? `dir=(${mv.x.toFixed(2)},${mv.y.toFixed(2)})` : 'no move');
+
+  const cell = s.toCell(s.attacker.x + (mv?.x || 0) * CELL, s.attacker.y + (mv?.y || 0) * CELL);
+  check('dodges onto a walkable cell', s.isWalkableCell(cell.x, cell.y));
+}
+
 /* ---------------- report ---------------- */
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
