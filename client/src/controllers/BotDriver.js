@@ -69,8 +69,15 @@ export const DEFAULTS = {
   // to read while watching, short enough to not dominate an unattended run.
   modalDelayMs: 900,
 
-  // Hard stop so a wedged bot can't hang a harness run forever.
-  maxRunMs: 180_000
+  // Hard stop so a wedged bot can't hang a harness run forever. Measured
+  // PER ROUND, not per session — see _onNewRound().
+  maxRunMs: 180_000,
+
+  // Consecutive losses on the same round before the bot takes the
+  // "Continue & Swap Spawns" option instead of retrying the same spawn. Some
+  // seeds put the runner in the plug's line of sight on frame one, and no
+  // amount of skill beats that — a human reaches for the swap, so does this.
+  swapAfterFails: 2
 };
 
 export default class BotDriver {
@@ -93,6 +100,30 @@ export default class BotDriver {
     this._pathIdx = 0;
     this._borrowed = null;   // lazily-built AIController for the borrowed AI
     this._progressionApplied = false;
+    this._lastTick = 0;
+  }
+
+  /**
+   * Reset per-round state.
+   *
+   * Phaser's scene.restart() reuses the SAME Scene instance, so the bot is
+   * never reconstructed between rounds and anything scoped to a run has to be
+   * cleared explicitly. Missing this made maxRunMs a session budget rather
+   * than a per-round one: after ~3 minutes of cumulative play every new round
+   * tripped the runaway guard on its first frame and killed itself, which
+   * looked exactly like "the loop dies after round 5".
+   *
+   * The borrowed controller goes too — it caches references to attacker and
+   * defender sprites that create() has just replaced with new objects.
+   */
+  _onNewRound() {
+    this._startedAt = performance.now();
+    this._progressionApplied = false;
+    this._borrowed = null;
+    this._lastDir = null;
+    this._nextPlanAt = 0;
+    this._nextFireAt = 0;
+    this._nextPowerCheckAt = 0;
   }
 
   /** Should we be driving with the game's own runner AI? */
@@ -336,6 +367,12 @@ export default class BotDriver {
 
     const me = (s.role === 'plug') ? s.defender : s.attacker;
     if (!me || !me.active || !me.visible) return;
+
+    // beginRoundTimer() zeroes simTick, so a tick that went backwards means
+    // a fresh round started under us on the same Scene instance.
+    const tick = s.simTick | 0;
+    if (tick < this._lastTick) this._onNewRound();
+    this._lastTick = tick;
 
     const now = performance.now();
 

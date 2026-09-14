@@ -7,6 +7,8 @@
 import { BaseGameScene } from '../scenes/BaseGameScene.js';
 import GameUI from './GameUI.js';
 import AIController from './AIController.js';
+import ProgressionManager from './ProgressionManager.js';
+import { getCurrentRouteID, getRouteSeed } from '../utils/seededRandom.js';
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
 
@@ -81,11 +83,12 @@ function installModalAutoDismiss(cfg) {
     const live = buttons.filter((b) => !b.disabled && typeof b.onClick === 'function');
     if (!live.length) return modal; // selection modals pass buttons: [] — nothing to press
 
-    // First live button. In showPvEGameOver that's "Continue from Round N",
-    // which retries the same seed until it's beaten and then advances — the
-    // shape real play takes, and it yields both repeat samples of one map and
-    // progression across maps.
-    const target = live[0];
+    // Skip keepOpen buttons. Those don't advance anything — "▶ Watch Replay"
+    // is one, and clicking it would park the bot in the replay viewer
+    // indefinitely instead of starting the next round.
+    const actionable = live.filter((b) => !b.keepOpen);
+    if (!actionable.length) return modal;
+    const target = actionable[0];
 
     // Deferred, not immediate: these handlers call scene.restart(), and
     // tearing the scene down inside its own modal construction is asking for
@@ -103,6 +106,83 @@ function installModalAutoDismiss(cfg) {
     });
 
     return modal;
+  };
+
+  installGameOverBypass(cfg);
+}
+
+// Consecutive losses on the current round, so the bot knows when retrying the
+// same spawn has stopped being worth it.
+let failsOnRound = { round: null, count: 0 };
+
+/**
+ * Replace the death screen with a direct restart.
+ *
+ * WHY BYPASS RATHER THAN CLICK
+ * showPvEGameOver awaits submitScore/submitAllTimeScore BEFORE it builds any
+ * buttons. Those calls go to a backend that isn't reachable here, so they
+ * hang or reject — and endRound calls showPvEGameOver() with no .catch(), so
+ * a rejection is an unhandled promise and execution never reaches the modal.
+ * Nothing is ever rendered, so there is nothing to click and the session
+ * stops dead on the first death. It only bites on death because the
+ * extraction path restarts without awaiting any submission.
+ *
+ * The telemetry is safe either way: finalizeRun() runs inside endRound,
+ * before any of this.
+ *
+ * SPAWN SWAPPING
+ * Some seeds drop the runner inside the plug's opening line of fire, and no
+ * skill level beats that — retrying the identical spawn just burns rounds. A
+ * human reaches for "Retry & Swap Spawns" after a couple of those, so after
+ * cfg.swapAfterFails losses on one round the bot advances swapSpawnCycle,
+ * which is the same thing that button does.
+ */
+function installGameOverBypass(cfg) {
+  const swapAfter = cfg.swapAfterFails ?? DEFAULTS.swapAfterFails;
+
+  ProgressionManager.prototype.showPvEGameOver = function () {
+    const s = this.scene;
+    const round = s.pveRound || 1;
+    const role = s.role === 'plug' ? 'plug' : 'runner';
+
+    if (failsOnRound.round !== round) failsOnRound = { round, count: 0 };
+    failsOnRound.count++;
+
+    const shouldSwap = failsOnRound.count >= swapAfter;
+    if (shouldSwap) failsOnRound.count = 0; // give the new spawn a fair run
+
+    const routeID = s.currentRouteID ?? getCurrentRouteID();
+    const seed = getRouteSeed(routeID, round, role);
+
+    const params = {
+      mode: 'pve',
+      role,
+      pveRound: round,
+      pveSessionStash: s.pveSessionStash,
+      pveSessionRep: s.pveSessionRep,
+      pveCleanStreak: s.pveCleanStreak || 0,
+      runId: s.runId,
+      pveBestRound: s.pveBestRound,
+      seed
+    };
+    if (shouldSwap) params.swapSpawnCycle = (s.swapSpawnCycle || 0) + 1;
+
+    console.log(
+      `[BOT] died on round ${round} (loss ${failsOnRound.count || swapAfter}/${swapAfter})` +
+      (shouldSwap ? ' — retrying with SWAPPED SPAWNS' : ' — retrying same spawn')
+    );
+
+    // Deferred so the restart doesn't happen inside endRound's own stack.
+    const delay = Math.max(0, cfg.modalDelayMs ?? DEFAULTS.modalDelayMs);
+    s.time?.delayedCall?.(delay, () => {
+      try {
+        s.scene.restart(params);
+      } catch (e) {
+        console.error('[BOT] restart after death failed:', e);
+      }
+    });
+
+    return null;
   };
 }
 
