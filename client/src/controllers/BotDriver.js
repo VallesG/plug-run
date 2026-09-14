@@ -218,6 +218,17 @@ export default class BotDriver {
       }
     }
 
+    // Evasion overrides the AI's chosen direction when it has walked us into
+    // a firing lane. Layered on top rather than merged in, because the AI
+    // cannot see defender2 at all (see firingLaneRisk) — from round 8 this
+    // override is the only thing dodging the second plug.
+    const risk = this.firingLaneRisk(me);
+    if (risk) {
+      const goal = this.currentGoal() || { x: me.x, y: me.y };
+      const out = this.dodge(me, risk, goal);
+      if (out) return this._driveOrCoast(me, out);
+    }
+
     const vx = this._borrowed._aiVX || 0;
     const vy = this._borrowed._aiVY || 0;
     return this._driveOrCoast(me, { x: vx, y: vy });
@@ -288,17 +299,33 @@ export default class BotDriver {
     const s = this.scene;
     if (s.role !== 'runner') return null;
 
-    const plug = s.defender;
-    if (!plug || !plug.active || !plug.visible) return null;
-
-    const dx = plug.x - me.x;
-    const dy = plug.y - me.y;
-    if (Math.hypot(dx, dy) > s.cell * this.cfg.dangerCells) return null;
+    // BOTH plugs. From round 8 the game spawns defender2, and the shipped
+    // runner AI contains no reference to it at all — reasonably, since that
+    // AI drives the runner when the PLAYER is the plug, and in that mode the
+    // dual spawn produces a second runner, never a second plug. So from round
+    // 8 onward the borrowed AI is blind to half the threats on screen, and
+    // this override is the only thing watching the other one.
+    const plugs = [s.defender, s.defender2].filter((p) => p && p.active && p.visible);
+    if (!plugs.length) return null;
 
     const tol = s.cell * this.cfg.laneToleranceCells;
-    if (Math.abs(dy) < tol) return 'row'; // same row — exposed horizontally
-    if (Math.abs(dx) < tol) return 'col'; // same column — exposed vertically
-    return null;
+    const range = s.cell * this.cfg.dangerCells;
+
+    // Nearest threat wins — it shoots first and its lane is the urgent one.
+    let best = null;
+    let bestDist = Infinity;
+    for (const plug of plugs) {
+      const dx = plug.x - me.x;
+      const dy = plug.y - me.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > range || dist >= bestDist) continue;
+
+      const axis = (Math.abs(dy) < tol) ? 'row' : (Math.abs(dx) < tol) ? 'col' : null;
+      if (!axis) continue;
+      best = axis;
+      bestDist = dist;
+    }
+    return best;
   }
 
   /**

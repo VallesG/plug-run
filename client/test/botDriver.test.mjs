@@ -325,6 +325,44 @@ console.log('\nBotDriver logic\n');
   check('dodges onto a walkable cell', s.isWalkableCell(cell.x, cell.y));
 }
 
+// 20. The SECOND plug counts too. From round 8 the game spawns defender2,
+//     and RunnerAI.js contains no reference to it — so with the borrowed AI
+//     driving, this override is the only thing watching that threat. A bot
+//     blind to it walks into the other one while dodging the first.
+{
+  const s = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true },
+    // defender is far and off-axis; defender2 is the one lined up on us.
+    defender: { x: CELL * 7.5, y: CELL * 6.5, active: true, visible: true },
+    defender2: { x: CELL * 5.5, y: CELL * 1.5, active: true, visible: true }
+  });
+  check('sees a firing lane from the second plug',
+    new BotDriver(s, {}).firingLaneRisk(s.attacker) === 'row');
+}
+
+// 21. An inactive second plug is not a threat (it dies before the round does).
+{
+  const s = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true },
+    defender: { x: CELL * 7.5, y: CELL * 6.5, active: true, visible: true },
+    defender2: { x: CELL * 5.5, y: CELL * 1.5, active: false, visible: true }
+  });
+  check('ignores a dead second plug',
+    new BotDriver(s, {}).firingLaneRisk(s.attacker) === null);
+}
+
+// 22. With two plugs lined up, the nearer one sets the dodge axis — it
+//     shoots first, so its lane is the urgent one.
+{
+  const s = makeScene({
+    attacker: { x: CELL * 3.5, y: CELL * 2.5, active: true, visible: true },
+    defender:  { x: CELL * 3.5, y: CELL * 7.5, active: true, visible: true }, // col, 5 away
+    defender2: { x: CELL * 1.5, y: CELL * 2.5, active: true, visible: true }  // row, 2 away
+  });
+  check('nearest threat decides the axis',
+    new BotDriver(s, {}).firingLaneRisk(s.attacker) === 'row');
+}
+
 /* ---------------- borrowed AI ---------------- */
 
 // Stubs that misbehave the way the real ones do: updateRunnerBehavior writes
