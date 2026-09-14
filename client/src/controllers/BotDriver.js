@@ -59,6 +59,10 @@ export const DEFAULTS = {
   fireAlignCells: 0.5,
   fireCooldownMs: 260,
 
+  // How long a result modal stays up before the bot presses on. Long enough
+  // to read while watching, short enough to not dominate an unattended run.
+  modalDelayMs: 900,
+
   // Hard stop so a wedged bot can't hang a harness run forever.
   maxRunMs: 180_000
 };
