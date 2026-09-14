@@ -323,10 +323,16 @@ export default class ProgressionManager {
     // durationMs lands at timerMs ran out the clock; anything shorter died.
     this.scene.finalizeRun?.(`round_end_${winner}`);
 
+    // Every call site names the winner by SPRITE ('attacker' / 'defender'),
+    // not by role ('runner' / 'plug'), so the old role-worded comparison below
+    // was false on every death and the loss penalty never once applied. Accept
+    // both vocabularies and settle the question in one place.
+    const runnerWon = (winner === 'attacker' || winner === 'runner');
+
     // Losing the round costs real rep — retrying is not free, it's just
     // cheaper than swapping spawns. Applied before final score submission.
-    const playerLost = (this.scene.role === 'runner' && winner === 'plug')
-                    || (this.scene.role === 'plug' && winner === 'runner');
+    const playerLost = (this.scene.role === 'runner' && !runnerWon)
+                    || (this.scene.role === 'plug' && runnerWon);
     if (this.scene.mode === 'pve' && playerLost) {
       const before = this.scene.pveSessionRep || 0;
       this.scene.pveSessionRep = Math.max(0, Math.round(before - SESSION_RULES.DEATH_PENALTY));
@@ -349,8 +355,6 @@ export default class ProgressionManager {
     this.scene.bulletsA?.getChildren?.().forEach(b => b.destroy());
     this.scene.bulletsD?.getChildren?.().forEach(b => b.destroy());
     this.scene.destroyDecoySprite?.();
-
-    const runnerWon = (winner === 'attacker');
 
     // freeze movement input
     this.scene.input.keyboard.enabled = false;
