@@ -106,6 +106,16 @@ export const DEFAULTS = {
   // 8-map block will draw from.
   lockRound: 0,
 
+  // Sweep a RANGE of rounds in one session instead of pinning one. The bot
+  // dies around round 8-11, so a ladder run never reaches the high rounds at
+  // all; covering 1-120 means locking each round in turn. Doing that by hand
+  // costs a page reload per round, and a reload wipes the telemetry.
+  //   ?bot=1&aiLevel=20&sweepFrom=1&sweepTo=120&mapsPerRound=5
+  // 0 = off. sweepFrom overrides lockRound when set.
+  sweepFrom: 0,
+  sweepTo: 0,
+  mapsPerRound: 5,
+
   // Attempts on each map before moving to the next, when lockRound is on.
   //   1  — one shot per map: first-try clear rate, and the time distribution
   //        of a single-attempt race format.

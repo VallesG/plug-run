@@ -206,7 +206,10 @@ export default class ProgressionManager {
     this.scene.roundOver = true;
     ReplaySystem.finalize();
     // Runner-mode success. The plug-mode branch above already returned, so
-    // reaching here means the player extracted.
+    // reaching here means the player extracted. Close the forensics first so
+    // the record carries the leg split for a WIN too — a clean run is the
+    // baseline every failure gets compared against.
+    this.scene.forensics?.extract(this.scene);
     this.scene.finalizeRun?.('extracted');
     this.scene.input.keyboard.enabled = false;
     this.scene._mouseDown = false;

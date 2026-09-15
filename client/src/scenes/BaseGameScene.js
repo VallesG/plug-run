@@ -15,6 +15,7 @@ import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
+import RunForensics from '../logic/runForensics.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
@@ -1174,6 +1175,11 @@ export class BaseGameScene extends Phaser.Scene {
     this.hasStash = false;
     this.stashCarrier = null;
 
+    // Forensics start here, not in create(): this is the point the round is
+    // actually playable, so spawn geometry is what the player is handed.
+    this.forensics = this.forensics || new RunForensics();
+    this.forensics.begin(this);
+
     console.log('[startMatch] AFTER reset - hasStash:', this.hasStash, 'stashCarrier:', this.stashCarrier ? 'EXISTS' : 'null', 'carrySprite:', this.carrySprite ? 'EXISTS' : 'null');
     this.destroyRunnerAbilityUI();
     this.destroyDecoySprite();
@@ -1965,7 +1971,9 @@ export class BaseGameScene extends Phaser.Scene {
       rows: this.rows,
       gotStash: !!this.hasStash,
       events: trace.events.length,
-      traceBytes: InputIntent.size(trace)
+      traceBytes: InputIntent.size(trace),
+      // Where the run actually went wrong, rather than only that it did.
+      forensics: this.forensics?.summary(this) ?? null
     };
 
     // Structured single-line output — greppable, and parseable straight out
@@ -2002,6 +2010,7 @@ export class BaseGameScene extends Phaser.Scene {
     if (used[idx]) return;
 
     const power = sel[idx];
+    this.forensics?.power(this, idx, power);
     // perform power immediately (no per-power cooldown; consumable)
     this.performRunnerPower(power);
     used[idx] = true;
@@ -2292,7 +2301,10 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     const left = Math.max(0, this.endAt - now);
-    if (left <= 0) return this.endRound('defender');
+    if (left <= 0) {
+      this.forensics?.death(this, null, 'clock');
+      return this.endRound('defender');
+    }
 
     const moveSpeedRunner = this.runnerSpeed * (this.hasStash ? this.carrySlow : 1);
     let plugBaseSpeed = (this.meleeEnabled ? this.plugSpeedNoAmmo : this.plugSpeed);
@@ -2499,6 +2511,7 @@ export class BaseGameScene extends Phaser.Scene {
         this.attacker = pickupAttacker;
         console.log('[STASH PICKUP] AFTER swap - this.attacker:', this.attacker === this.attacker2 ? 'attacker2' : 'attacker', 'HP:', this.attacker.hp);
         this.hasStash = true;
+        this.forensics?.pickup(this, 'real');
         console.log('[STASH PICKUP] Set hasStash = true');
 
         this.aiRunnerTargetsBunkFirst = false;
@@ -2542,6 +2555,7 @@ export class BaseGameScene extends Phaser.Scene {
         const decoy = this.bunkStash;
         if (decoy && !decoy._fading){
           decoy._fading = true;
+          this.forensics?.pickup(this, 'bunk');
           this.aiRunnerTargetsBunkFirst = false;
           // Track bunk stash pickup for REP (runner got fooled)
           if (this.progressionManager?.repTracker && this.role === 'runner') {
@@ -2588,6 +2602,8 @@ export class BaseGameScene extends Phaser.Scene {
         }
       }
     }
+
+    this.forensics?.tick(this);
 
     // Unstuck runner if inside wall and not phasing (only check alive attackers)
     try {

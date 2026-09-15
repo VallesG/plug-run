@@ -12,7 +12,7 @@ import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seede
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
 import { mapStats } from '../logic/runStats.js';
-import { advanceCursor } from '../logic/seedCursor.js';
+import { advanceCursor, advanceSweep } from '../logic/seedCursor.js';
 
 // Injected rather than imported by BotDriver so that file stays clear of the
 // Phaser dependency graph and its logic remains runnable under plain Node.
@@ -208,7 +208,7 @@ let activeConfig = null;
 
 // Which map we are on and how many attempts it has had. Module-level because
 // every attempt is a scene.restart() — nothing on the scene survives one.
-let seedCursor = { routeID: null, attempts: 0, repeats: 1 };
+let seedCursor = { routeID: null, attempts: 0, repeats: 1, mapsDone: 0, round: 0 };
 
 /**
  * Hold the round number still and walk the MAP forward instead.
@@ -249,11 +249,24 @@ let seedCursor = { routeID: null, attempts: 0, repeats: 1 };
  * telemetry row — where it is the map's identity, and wanted.
  */
 function installRoundLock(cfg) {
-  const lockRound = Math.round(cfg.lockRound ?? DEFAULTS.lockRound ?? 0);
+  const repeats = Math.max(1, Math.round(cfg.seedRepeats ?? DEFAULTS.seedRepeats ?? 1));
+
+  // Sweep mode drives the round itself; lockRound is the single-round case.
+  const from = Math.round(cfg.sweepFrom ?? DEFAULTS.sweepFrom ?? 0);
+  const to = Math.round(cfg.sweepTo ?? DEFAULTS.sweepTo ?? 0);
+  const sweep = (from >= 1)
+    ? {
+        from,
+        to: Math.max(from, to || from),
+        mapsPerRound: Math.max(1, Math.round(cfg.mapsPerRound ?? DEFAULTS.mapsPerRound ?? 5)),
+        repeats
+      }
+    : null;
+
+  const lockRound = sweep ? sweep.from : Math.round(cfg.lockRound ?? DEFAULTS.lockRound ?? 0);
   if (!(lockRound >= 1)) return;
 
-  const repeats = Math.max(1, Math.round(cfg.seedRepeats ?? DEFAULTS.seedRepeats ?? 1));
-  seedCursor = { routeID: getCurrentRouteID(), attempts: 0, repeats };
+  seedCursor = { routeID: getCurrentRouteID(), attempts: 0, repeats, mapsDone: 0, round: lockRound };
 
   const origCreate = BaseGameScene.prototype.create;
   BaseGameScene.prototype.create = function () {
@@ -263,20 +276,25 @@ function installRoundLock(cfg) {
       // went without needing a second hook into the outcome. Read off the
       // scene rather than restart data because by now every init in the chain
       // has had its say and this is the value that would have been played.
-      const advanced = advanceCursor(seedCursor, this.pveRound, lockRound, repeats);
-      seedCursor.routeID = advanced.routeID;
-      seedCursor.attempts = advanced.attempts;
+      const advanced = sweep
+        ? advanceSweep(seedCursor, this.pveRound, sweep)
+        : advanceCursor(seedCursor, this.pveRound, lockRound, repeats);
+      seedCursor = { ...seedCursor, ...advanced };
 
-      this.pveRound = lockRound;
+      const round = sweep ? seedCursor.round : lockRound;
+
+      this.pveRound = round;
       this.currentRouteID = seedCursor.routeID;
-      this.seed = getRouteSeed(seedCursor.routeID, lockRound, this.role);
+      this.seed = getRouteSeed(seedCursor.routeID, round, this.role);
       // Mirrors the scene's own derivation — a different sequence from the one
       // the maze generator draws on, from the same seed.
       this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01);
 
       console.log(
-        `[BOT] round locked at ${lockRound} — map ${seedCursor.routeID} ` +
-        `(attempt ${seedCursor.attempts}/${repeats}), seed ${this.seed}`
+        (sweep
+          ? `[BOT] sweep round ${round}/${sweep.to} (map ${(seedCursor.mapsDone || 0) + 1}/${sweep.mapsPerRound})`
+          : `[BOT] round locked at ${round}`) +
+        ` — map ${seedCursor.routeID} (attempt ${seedCursor.attempts}/${repeats}), seed ${this.seed}`
       );
     }
 

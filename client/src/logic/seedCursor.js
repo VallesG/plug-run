@@ -30,3 +30,36 @@ export function advanceCursor(cursor, arrivingRound, lockRound, repeats) {
 
   return next;
 }
+
+/**
+ * Walk the round itself once a round has had its share of maps.
+ *
+ * A ladder run cannot reach round 120: the bot dies somewhere around 8-11 and
+ * the climb stops there forever. Covering a range means locking each round in
+ * turn, and doing that by hand is one URL edit and one page reload per round —
+ * and a reload wipes the telemetry, so a 120-round sweep by hand is 120 files.
+ *
+ * This advances the locked round in place instead, keeping one session and one
+ * dataset. Returns the same cursor shape plus the round to play.
+ *
+ * @param cursor { routeID, attempts, mapsDone, round }
+ * @param sweep  { from, to, mapsPerRound, repeats }
+ */
+export function advanceSweep(cursor, arrivingRound, sweep) {
+  const round = cursor.round ?? sweep.from;
+  const next = advanceCursor(cursor, arrivingRound, round, sweep.repeats);
+
+  // A map is finished when the next round starts a different one.
+  const finishedMap = next.routeID !== cursor.routeID;
+  const mapsDone = (cursor.mapsDone || 0) + (finishedMap ? 1 : 0);
+
+  if (mapsDone >= sweep.mapsPerRound) {
+    // Done with this round. Step up, or stop at the top of the range — the
+    // caller keeps replaying the last round rather than running off the end,
+    // which is harmless and obvious in the data.
+    const stepped = Math.min(sweep.to, round + 1);
+    return { routeID: next.routeID, attempts: next.attempts, mapsDone: 0, round: stepped };
+  }
+
+  return { routeID: next.routeID, attempts: next.attempts, mapsDone, round };
+}

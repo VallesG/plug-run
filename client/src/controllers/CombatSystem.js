@@ -139,6 +139,10 @@ export default class CombatSystem {
       bullet._radius = radius;
       bullet._trailAt = performance.now();
       bullet._repTracked = false; // Mark if we've tracked this bullet's outcome for REP
+      // Who fired it. Needed to attribute a kill to defender vs defender2 —
+      // from round 8 there are two of them, and "which one is doing the
+      // killing" is the question the round-8 cliff turns on.
+      bullet._from = origin;
 
       // Soft glow that follows the projectile
       bullet._glow = this.scene.add.circle(origin.x, origin.y, Math.floor(radius * 1.7), color, 0.28)
@@ -276,11 +280,14 @@ export default class CombatSystem {
           this.scene.progressionManager.repTracker.onBulletFired(true);
           b._repTracked = true;
         }
+        const from = b._from;
         b._glow?.destroy?.();
         b._rim?.destroy?.();
         b.destroy();
         if (this.scene.canDamage(this.scene.attacker)) {
+          this._lastShooter = from;
           this.hit(this.scene.attacker);
+          this._lastShooter = null;
         }
       }
       // Dual AI: Check collision with second attacker
@@ -385,6 +392,13 @@ export default class CombatSystem {
     }
 
     if (who.hp <= 0) {
+      if (who === this.scene.attacker) {
+        const from = this._lastShooter;
+        const name = from
+          ? (from === this.scene.defender2 ? 'defender2' : 'defender')
+          : null;
+        this.scene.forensics?.death(this.scene, name, from ? 'bullet' : 'melee');
+      }
       if (who === this.scene.attacker || who === this.scene.attacker2) {
         if (this.scene.mode === 'pve' && this.scene.role === 'plug') {
           // Dual AI: Check if BOTH attackers are dead before ending round
