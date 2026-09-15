@@ -9,6 +9,53 @@ plan. This file is onboarding; that one is the research log.
 
 ---
 
+## Codex continuation — 2026-09-15
+
+The block-map redirect below is implemented and the human approved its rendered
+appearance. It is now a continuous exterior neighborhood with opaque stepped
+fog, a winding street, exterior rooftops, warm window/street lights and an
+animated reveal. No interior floor plans are shown on that map. The two block
+interstitials use the viewport and GameUI's contentBounds. Use
+`/block-map-preview.html` under Vite to inspect progress 0–15.
+
+The next art pass is implemented but still needs human visual review:
+- `controllers/RunnerLoadout.js` replaces runner selection with drawn
+  Phase/Dash/Decoy icons, descriptions and two ordered charge slots. Same
+  repeatable-power selection behavior, now in import-free
+  `logic/powerSelection.js`. The settings gear is also drawn in code.
+- `controllers/InteriorDecor.js` uses import-free `logic/interior.js` to
+  replace suitable solid wall components with overhead sofas, cabinets, tables,
+  chairs and plants. No collision-grid edits, floor decoration obstacles, or
+  gameplay RNG consumption. All original floor palettes, wall tints/shading,
+  characters and real/bunk stash visuals are preserved.
+- The old lazy furniture-texture loading/restart in BaseGameScene is removed.
+  Legacy assets and the old exported decorator are retained for other callers.
+- `/interior-style-preview.html` uses actual BaseGameScene drawing methods for
+  a stationary art preview, with themes, sample seeds and viewport sizes.
+- The in-game runner ability HUD is deliberately disabled in BaseGameScene.
+  Do not accidentally re-enable it while changing selection icons.
+
+Validation: 249 assertions in 12 suites passed in the available V8 runtime
+with import bindings adapted and a performance clock shim; this was NOT a
+native npm test run. Stubbed Phaser checks covered selection, duplicate powers,
+disabled start, replay visibility, cleanup and finite prop geometry. Real/bunk
+construction, maze generation and maze RNG were compared unchanged.
+
+The local shell and browser automation could not start (Windows process
+creation errors 267 / 5). Native build, native module loading and the new
+interior/loadout appearance remain unverified here.
+
+`npm run verify` now runs tests and the production build. `npm test` also
+includes `test/moduleSyntax.test.mjs`: it copies every source module and both
+preview inline modules into a temporary .mjs file and invokes native
+`node --check`. This guards against trap 1 below. It does not resolve imports;
+Vite still needs to pass. The new native syntax checker itself remains unrun in
+this restricted session.
+
+The remaining sections preserve the earlier handoff and research context.
+
+---
+
 ## What the game is
 
 Top-down arcade maze game, Phaser 3 + Vite, deployed on Netlify. You are a
