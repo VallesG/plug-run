@@ -1,6 +1,8 @@
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
+import { landingLayout } from '../logic/landingLayout.js';
+import { drawPowerIcon } from '../controllers/PowerIcons.js';
 import { PALETTE as INK } from '../logic/palette.js';
 import { PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import AudioManager from '../audio/AudioManager.js';
@@ -31,8 +33,9 @@ export class MenuScene extends Phaser.Scene {
   constructor(){ super('MENU'); }
 
   preload(){
-    // Load emblem logo
-    this.load.image('emblem', '/emblem.png');
+    // SVG outlines are the shared brand masters, independent of system fonts.
+    this.load.svg('plug_run_wordmark', '/brand/plug-run-wordmark.svg', { width: 1200, height: 384 });
+    this.load.svg('plug_run_street', '/brand/night-block.svg', { width: 960, height: 240 });
 
     // Load character sprites for card visuals
     this.load.image('td_runner', '/sprites/td/runner.png');
@@ -66,52 +69,15 @@ export class MenuScene extends Phaser.Scene {
     // Night street background: asphalt road, curbs, scrolling lane dashes
     this.drawStreetBackground();
 
-    // Top logo text - styled like a street sign
-    const logoY = 36;
-    const logoSize = Math.max(26, Math.floor(H * 0.05));
-
-    // Street sign background (blue rectangle with white border - LA street sign style)
-    // Match card width proportions
-    const cardWidth = Math.min(520, Math.floor(W * 0.82));
-    const signW = cardWidth; // Same width as cards
-    const signH = logoSize * 2.2; // Taller for two lines
-    // Comic grammar, same as in-game: flat fill, ink line, hard offset shadow.
-    const signBg = this.add.rectangle(W/2, logoY + signH/2, signW, signH, 0x0047AB, 1)
-      .setStrokeStyle(4, INK.ink)
-      .setDepth(4);
-    const signShadow = this.add.rectangle(W/2 + 5, logoY + signH/2 + 6, signW, signH, INK.ink, 0.55)
-      .setDepth(3);
-
-    // Emblem - circular logo on the left side of the sign
-    const emblemSize = signH * 0.85; // Slightly smaller than sign height
-    this.emblem = this.add.image(
-      W/2 - signW/2 + emblemSize/2 + 8, // Left side with small padding
-      logoY + signH/2,
-      'emblem'
-    )
-      .setDisplaySize(emblemSize, emblemSize)
-      .setDepth(5);
-
-
-    // Main title
-    this.logo = this.add.text(W/2, logoY + signH/2, 'PLUG RUN', {
-      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
-      fontSize: logoSize + 'px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: INK.inkCss,
-      strokeThickness: 4
-    }).setOrigin(0.5, 0.5).setDepth(5);
-
-
-    this.signBg = signBg;
-    this.signShadow = signShadow;
+    const brand = landingLayout(W, H);
+    this.logo = this.add.image(W/2, brand.logoY, 'plug_run_wordmark')
+      .setDisplaySize(brand.logoW, brand.logoH).setDepth(5);
 
     // Plug mode is SHELVED, not removed: everything behind it still works, it
     // just isn't offered until runner mode is good and people ask for it.
     const SHOW_PLUG_MODE = false;
     const modes = [
-      { key:'runner', title:'Run the Block', sub:'Grab the stash, escape before the Plug catches you.', showTimer: false },
+      { key:'runner', title:'Run the Block', sub:'Grab the stash. Lose the Plug. Get out.', showTimer: false },
       ...(SHOW_PLUG_MODE ? [{ key:'plug', title:'Defend the Block', sub:'Stop the Runner before they get away.', showTimer: false }] : [])
     ];
 
@@ -134,10 +100,10 @@ export class MenuScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('A,D,ENTER,SPACE,ESC');
 
     // Bottom-right settings button
-    this.settingsBtn = this.makeIconButton('⚙', () => this.openSettings());
+    this.settingsBtn = this.makeIconButton('settings', () => this.openSettings());
 
     // Leaderboard button for mobile (trophy icon - only visible on mobile)
-    this.leaderboardBtn = this.makeIconButton('🏆', () => this.scene.start('LEADERBOARD'));
+    this.leaderboardBtn = this.makeIconButton('trophy', () => this.scene.start('LEADERBOARD'));
 
     // Help button — explains the premise/leaderboard/replays for newcomers
     this.helpBtn = this.makeIconButton('?', () => this.openHelp());
@@ -269,25 +235,19 @@ export class MenuScene extends Phaser.Scene {
     if (this._streetBg) { this._streetBg.destroy(true); this._streetBg = null; }
     const c = this.add.container(0, 0).setDepth(0);
 
-    // Off-road base + asphalt strip
-    c.add(this.add.rectangle(W/2, H/2, W, H, 0x0d1016, 1));
+    c.add(this.add.rectangle(W/2, H/2, W, H, 0x070b0e, 1));
     const roadW = Math.min(600, Math.floor(W * 0.96));
-    c.add(this.add.rectangle(W/2, H/2, roadW, H, 0x191c22, 1));
-
-    // Curbs
-    const curbX = roadW/2 - 2;
-    c.add(this.add.rectangle(W/2 - curbX, H/2, 3, H, 0x262a33, 1));
-    c.add(this.add.rectangle(W/2 + curbX, H/2, 3, H, 0x262a33, 1));
-
-    // Asphalt speckle noise
-    const speck = this.add.graphics();
-    speck.fillStyle(0x0d0f13, 0.55);
-    for (let i = 0; i < 70; i++){
-      const sx = W/2 - roadW/2 + 6 + Math.random() * (roadW - 12);
-      const sy = Math.random() * H;
-      speck.fillRect(sx, sy, 2, 2);
+    c.add(this.add.rectangle(W/2, H/2, roadW, H, 0x10171c, 1));
+    const g = this.add.graphics();
+    // A restrained print texture, fixed in place across menu rebuilds.
+    g.fillStyle(0x64736e, 0.08);
+    for (let i = 0; i < 180; i++) {
+      g.fillRect(W/2 - roadW/2 + (i * 83 % Math.floor(roadW)), (i * 137 % Math.floor(H)), 1, 1);
     }
-    c.add(speck);
+    g.lineStyle(1, 0x354342, 0.5);
+    g.lineBetween(W/2-roadW/2, 0, W/2-roadW/2, H);
+    g.lineBetween(W/2+roadW/2, 0, W/2+roadW/2, H);
+    c.add(g);
 
     this._streetBg = c;
   }
@@ -301,7 +261,7 @@ export class MenuScene extends Phaser.Scene {
     const t = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
       fontSize: '12px',
-      color: '#7ee0a3',
+      color: '#b6bbaa',
       letterSpacing: 1
     }).setOrigin(0.5);
     c.add([bg, t]);
@@ -354,13 +314,7 @@ export class MenuScene extends Phaser.Scene {
   // Simple card with background and text overlay
   makeCard(title, sub, modeKey, showTimer = false){
     const W = this.scale.width, H = this.scale.height;
-    const cw = Math.min(480, Math.floor(W * 0.82));
-
-    // Intelligently scale cards based on available vertical space
-    // Mobile/smaller screens: 34% | Desktop/larger screens: up to 38%
-    const baseHeight = H * 0.34;
-    const maxHeight = H * 0.38;
-    const ch = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const { cardW: cw, cardH: ch } = landingLayout(W, H);
 
     // Create container first
     const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
@@ -373,12 +327,18 @@ export class MenuScene extends Phaser.Scene {
     bg.setStrokeStyle(3, INK.ink, 1);
     cont.add(bg);
 
-    // Add animated sprite visuals (single line of sprites)
-    this.addCardVisuals(cont, modeKey, cw, ch);
+    // An exterior establishing shot, not a miniature gameplay demonstration.
+    if (modeKey === 'runner') {
+      const pictureW = Math.min(cw - 28, (ch - 182) * 4);
+      cont.add(this.add.image(0, 14, 'plug_run_street')
+        .setDisplaySize(pictureW, pictureW / 4));
+    } else {
+      this.addCardVisuals(cont, modeKey, cw, ch);
+    }
 
     // Title at TOP (LA street sign font with blue background bar)
     const titleText = String(title).toUpperCase();
-    const titleSize = Math.max(12, Math.floor(ch * 0.12)); // Proportional to smaller card height
+    const titleSize = Math.min(25, Math.max(20, Math.floor(cw * 0.058))); // Proportional to smaller card height
 
     // Static street numbers for each mode (consistent each time)
     const streetAddresses = {
@@ -393,7 +353,7 @@ export class MenuScene extends Phaser.Scene {
     const suffix = address.suffix;
 
     // Mode-colored street sign header (green = runner, red = plug)
-    const SIGN_COLORS = { runner: 0x1a7a3c, plug: 0xa32d2d };
+    const SIGN_COLORS = { runner: 0x17262d, plug: 0x382329 };
     const signColor = SIGN_COLORS[modeKey] ?? 0x0047AB;
 
     // Single-line bar: street name left, address right
@@ -404,11 +364,11 @@ export class MenuScene extends Phaser.Scene {
 
     const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2, titleText, {
       color: '#ffffff',
-      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
+      fontFamily: 'Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: titleSize + 'px',
       stroke: INK.inkCss,
-      strokeThickness: 3
+      strokeThickness: 1
     }).setOrigin(0.5, 0.5);
 
     cont.add(titleBg);
@@ -462,14 +422,14 @@ export class MenuScene extends Phaser.Scene {
     }
 
     // START button at BOTTOM (near full width like the mockup)
-    const btnWidth = Math.min(400, Math.floor(cw * 0.88));
-    const btnHeight = Math.max(38, Math.floor(ch * 0.18));
-    const btnY = (ch / 2) - (btnHeight / 2) - 8; // Position at bottom edge with small padding
+    const btnWidth = cw - 32;
+    const btnHeight = 44;
+    const btnY = (ch / 2) - (btnHeight / 2) - 14; // Position at bottom edge with small padding
 
     // Comic button: flat yellow, ink line, hard shadow underneath.
     const startShadow = this.rexUI.add.roundRectangle(4, btnY + 5, btnWidth, btnHeight, 6, INK.ink, 0.6);
-    const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 6, 0xfbbf24, 1)
-      .setStrokeStyle(3, INK.ink)
+    const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 4, 0xf1ca82, 1)
+      .setStrokeStyle(2, INK.ink)
       .setInteractive({ cursor: 'pointer' });
 
     // The button speaks in blocks and maps. A session past the end of the
@@ -485,7 +445,7 @@ export class MenuScene extends Phaser.Scene {
     }
 
     const startText = this.add.text(0, btnY, buttonText, {
-      fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
+      fontFamily: 'Arial, sans-serif',
       fontSize: Math.max(16, Math.floor(btnHeight * 0.42)) + 'px',
       color: INK.inkCss,
       fontStyle: 'bold'
@@ -524,8 +484,8 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Hover effects
-    startBg.on('pointerover', () => startBg.setFillStyle(0xfcd34d));
-    startBg.on('pointerout',  () => startBg.setFillStyle(0xfbbf24));
+    startBg.on('pointerover', () => startBg.setFillStyle(0xffdf9f));
+    startBg.on('pointerout',  () => startBg.setFillStyle(0xf1ca82));
 
     return cont;
   }
@@ -1428,7 +1388,19 @@ export class MenuScene extends Phaser.Scene {
     const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, 0.92)
       .setStrokeStyle(2, PALETTE.stroke)
       .setInteractive({ cursor: 'pointer' });
-    const t = this.add.text(0, 0, label, { fontSize: Math.max(12, Math.floor(r*0.95)) + 'px', color: PALETTE.title }).setOrigin(0.5);
+    let t;
+    if (label === 'settings') {
+      t = drawPowerIcon(this, 0, 0, 'settings', 21, 0xb7c7cc, 6);
+    } else if (label === 'trophy') {
+      t = this.add.graphics();
+      t.lineStyle(2, 0xf1ca82, 1);
+      t.strokeRect(-5, -8, 10, 10);
+      t.lineBetween(-8, -7, -8, -1); t.lineBetween(-8, -1, -5, 1);
+      t.lineBetween(8, -7, 8, -1); t.lineBetween(8, -1, 5, 1);
+      t.lineBetween(0, 2, 0, 7); t.lineBetween(-6, 8, 6, 8);
+    } else {
+      t = this.add.text(0, 0, label, { fontSize: '18px', color: '#b7c7cc' }).setOrigin(0.5);
+    }
     const btn = this.add.container(0, 0, [bg, t]).setSize(r*2, r*2).setDepth(6);
 
     // Background handles interaction
@@ -1449,7 +1421,7 @@ export class MenuScene extends Phaser.Scene {
     // Ghost/secondary style — the two PLAY buttons are the stars
     const W = this.scale.width;
     const btnWidth = 170;
-    const btnHeight = Math.max(32, Math.floor(this.scale.height * 0.04));
+    const btnHeight = 36;
 
     const bg = this.rexUI.add.roundRectangle(0, 0, btnWidth, btnHeight, 6, 0x10131a, 0.6)
       .setStrokeStyle(1, 0x3a4155)
@@ -1515,14 +1487,14 @@ export class MenuScene extends Phaser.Scene {
   makeUserProfileChip(){
     const username = getUsername();
     const c = this.add.container(0, 0).setDepth(6);
-    const w = Math.min(220, Math.max(160, Math.floor(this.scale.width * 0.35)));
+    const w = landingLayout(this.scale.width, this.scale.height).profileW;
     const h = Math.min(36, Math.max(32, Math.floor(this.scale.height * 0.042)));
     c._w = w;
 
     // Attention mode: unclaimed recovery code → amber chip + trailing "!"
     const unseen = (() => { try { return localStorage.getItem('pr_recovery_unseen') === 'true'; } catch { return false; } })();
-    const fillColor   = unseen ? 0x78500a : 0x1e3a8a;
-    const strokeColor = unseen ? 0xfbbf24 : 0x3b82f6;
+    const fillColor   = unseen ? 0x78500a : 0x1d303c;
+    const strokeColor = unseen ? 0xfbbf24 : 0x54798e;
     const strokeHover = unseen ? 0xfde68a : 0x60a5fa;
     const textColor   = unseen ? '#fde68a' : '#cbd1ff';
 
@@ -1530,7 +1502,10 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(2, strokeColor)
       .setInteractive({ cursor: 'pointer' });
 
-    const icon = this.add.text(-w/2 + h/2, 0, '👤', { fontSize: Math.floor(h * 0.6) + 'px' }).setOrigin(0.5);
+    const icon = this.add.graphics({ x: -w/2 + h/2, y: 0 });
+    icon.lineStyle(1.5, 0xb7c7cc, 1);
+    icon.strokeCircle(0, -5, 4);
+    icon.strokeRoundedRect(-7, 2, 14, 8, 3);
 
     // Username centered; if unseen, add a subtle "!" indicator to the right
     const nameOffset = unseen ? -6 : 0;
@@ -1540,6 +1515,7 @@ export class MenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
+    if (t.width > w - h - 18) t.setScale((w - h - 18) / t.width);
     c.add([bg, icon, t]);
 
     if (unseen) {
@@ -1899,7 +1875,7 @@ export class MenuScene extends Phaser.Scene {
    */
   cardCenterY(i, cardHeight){
     const H = this.scale.height;
-    if ((this.cards?.length || 1) === 1) return Math.floor(H * 0.46);
+    if ((this.cards?.length || 1) === 1) return landingLayout(this.scale.width, H).cardY;
     return H * 0.34 + i * (cardHeight + 8);
   }
 
@@ -1912,7 +1888,7 @@ export class MenuScene extends Phaser.Scene {
     // Calculate card spacing with intelligent sizing for desktop
     const baseHeight = H * 0.34;
     const maxHeight = H * 0.38;
-    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const cardHeight = landingLayout(W, H).cardH;
     const gap = 8; // Gap between cards
     const topOffset = H * 0.34; // Start lower to avoid overlap with PLUG RUN header
 
@@ -1945,7 +1921,7 @@ export class MenuScene extends Phaser.Scene {
 
       // All cards have same border style (no selection highlighting)
       if (card._bg) {
-        card._bg.setStrokeStyle(2, 0x2f3650, 1);
+        card._bg.setStrokeStyle(1, 0x435250, 1);
       }
 
       // Run animations on all cards
@@ -1966,7 +1942,7 @@ export class MenuScene extends Phaser.Scene {
     // Calculate card positions (same as layoutCards) with intelligent sizing
     const baseHeight = H * 0.34;
     const maxHeight = H * 0.38;
-    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const cardHeight = landingLayout(W, H).cardH;
     const gap = 8;
     const topOffset = H * 0.34; // Start lower to avoid overlap with PLUG RUN header
 
@@ -2739,31 +2715,10 @@ export class MenuScene extends Phaser.Scene {
     const W = this.scale.width, H = this.scale.height;
     // Rebuild street background at new dimensions
     this.drawStreetBackground();
-    const logoY = Math.max(16, Math.floor(H*0.04));
-    const logoSize = Math.max(26, Math.floor(H * 0.05));
-    const signH = logoSize * 2.2; // Updated for two-line sign
-
-    // Reposition street sign elements
-    this.signShadow?.setPosition(W/2 + 5, logoY + signH/2 + 6);
-    this.signBg?.setPosition(W/2, logoY + signH/2);
-
-    // Reposition emblem
-    const cardWidth = Math.min(520, Math.floor(W * 0.82));
-    const signW = cardWidth;
-    const emblemSize = signH * 0.85;
-    this.emblem?.setPosition(W/2 - signW/2 + emblemSize/2 + 8, logoY + signH/2);
-    this.emblem?.setDisplaySize(emblemSize, emblemSize);
-
-    this.logo?.setPosition(W/2, logoY + signH/2);
-
-    // Ticker chip: midway between the sign and the first card, clamped so
-    // it never overlaps either (tall desktop windows compressed this gap)
-    {
-      const cardH0 = H > 900 ? Math.min(300, H * 0.38) : Math.min(265, H * 0.34);
-      const firstCardTop = this.cardCenterY(0, cardH0) - cardH0 / 2;
-      const signBottom = logoY + signH;
-      this.tickerChip?.setPosition(W/2, Math.min(signBottom + 18, (signBottom + firstCardTop) / 2));
-    }
+    const brand = landingLayout(W, H);
+    this.logo?.setPosition(W/2, brand.logoY);
+    this.logo?.setDisplaySize(brand.logoW, brand.logoH);
+    this.tickerChip?.setPosition(W/2, brand.tickerY);
 
     // Bottom dock bar (sidewalk strip)
     const dockH = 56;
@@ -2775,36 +2730,7 @@ export class MenuScene extends Phaser.Scene {
     // Bottom elements
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
 
-    // Tutorial button positioned with gaps from both card above and widgets below
-    const baseHeight = H * 0.34;
-    const maxHeight = H * 0.38;
-    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
-    const gap = 8;
-    const topOffset = H * 0.34;
-    const bottomCardY = this.cardCenterY((this.cards?.length || 1) - 1, cardHeight); // last card
-    const bottomOfCard = bottomCardY + cardHeight/2; // Bottom edge of second card
-
-    const tutorialBtnHeight = Math.max(36, Math.floor(H * 0.045));
-    const widgetY = H - pad - 18; // Widget center position (lowered to create more space)
-    const widgetHeight = 48; // Approximate widget height
-    const topOfWidgets = widgetY - widgetHeight/2; // Top edge of widgets
-
-    const minGapFromCard = 8; // Minimum gap from card above
-    const minGapFromWidgets = 8; // Minimum gap from widgets below
-
-    // Calculate available space and center the button if there's room
-    const availableSpace = topOfWidgets - bottomOfCard;
-    const minNeededSpace = minGapFromCard + tutorialBtnHeight + minGapFromWidgets;
-
-    let tutorialY;
-    if (availableSpace > minNeededSpace + 20) {
-      // Plenty of space (desktop) - center the button in available space
-      tutorialY = bottomOfCard + availableSpace / 2;
-    } else {
-      // Tight space (mobile) - maintain minimum gaps, prioritize card gap
-      tutorialY = bottomOfCard + minGapFromCard + tutorialBtnHeight/2;
-    }
-    this.tutorialBtn?.setPosition(W / 2, tutorialY);
+    this.tutorialBtn?.setPosition(W/2, brand.tutorialY);
 
     // Bottom widgets — anchored to the ROAD STRIP, not the screen edges,
     // so on wide desktop monitors the chip and buttons stay together

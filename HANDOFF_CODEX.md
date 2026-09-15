@@ -18,7 +18,7 @@ animated reveal. No interior floor plans are shown on that map. The two block
 interstitials use the viewport and GameUI's contentBounds. Use
 `/block-map-preview.html` under Vite to inspect progress 0–15.
 
-The next art pass is implemented but still needs human visual review:
+The interior/loadout art pass below has now also been visually approved by the human:
 - `controllers/RunnerLoadout.js` replaces runner selection with drawn
   Phase/Dash/Decoy icons, descriptions and two ordered charge slots. Same
   repeatable-power selection behavior, now in import-free
@@ -51,6 +51,24 @@ preview inline modules into a temporary .mjs file and invokes native
 `node --check`. This guards against trap 1 below. It does not resolve imports;
 Vite still needs to pass. The new native syntax checker itself remains unrun in
 this restricted session.
+
+Landing/brand continuation:
+- The human approved the interior/loadout appearance, then requested a matching
+  landing page and reusable identity. The new identity is "Follow the light":
+  custom outlined ivory/blue wordmark, route-to-house gold marker, muted exterior
+  street illustration, warm primary action. Masters live in client/public/brand/.
+- MenuScene uses the SVG masters, a quieter card and drawn footer icons. Start,
+  continue, restart, daily stats, identity and tutorial keep their original paths.
+  The profile chip now fits beside the controls on narrow phones.
+- Import-free logic/landingLayout.js owns responsive bounds, covered by 44 new
+  assertions. /brand-preview.html shows the SVG masters and embeds the actual
+  game for phone/tablet/desktop review. The iframe is not a sandboxed fake game.
+- SVG favicon updated; legacy PNG/apple-touch fallbacks remain unchanged.
+- 293 behavior assertions passed under adapted V8, not native npm. Stubbed
+  Phaser checks covered 16 card viewport/session combinations and four restart
+  actions; launchCard was compared unchanged. Native ESM, Vite build, SVG loading,
+  font metrics, actual taps and the new landing appearance still need local review.
+  Windows process launch still fails with error 267. Run npm run verify locally.
 
 The remaining sections preserve the earlier handoff and research context.
 
@@ -303,3 +321,4 @@ Still open, and deliberately left for someone with the game on screen:
 - The replay system records the display list. If you add visual objects to
   characters, they get recorded; per-frame offsets are fine, tweens fighting
   for the same property are not.
+
