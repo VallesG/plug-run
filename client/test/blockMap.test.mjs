@@ -13,62 +13,63 @@ function check(name, cond, detail = '') {
 
 console.log('\nBlock map\n');
 
-// The three states, in order down the street.
-check('cleared houses are lit', houseState(3, 5, 15) === 'lit');
+check('cleared houses are revealed', houseState(3, 5, 15) === 'revealed');
 check('the house after the last cleared one is next', houseState(6, 5, 15) === 'next');
-check('everything beyond that is dark', houseState(7, 5, 15) === 'dark');
-
-// The finale keeps the same states with a prefix, so a renderer can draw it
-// differently without a second state machine.
-check('the last house is the finale', houseState(15, 5, 15) === 'finale-dark');
+check('everything beyond that stays fogged', houseState(7, 5, 15) === 'fogged');
+check('the last house is the finale', houseState(15, 5, 15) === 'finale-fogged');
 check('finale becomes next when 14 are cleared', houseState(15, 14, 15) === 'finale-next');
-check('finale is lit when the block is done', houseState(15, 15, 15) === 'finale-lit');
+check('finale is revealed when the block is done', houseState(15, 15, 15) === 'finale-revealed');
 
-// Fresh night: nothing lit, house 1 is next.
 {
-  const { houses } = layoutBlock({ maps: 15, cleared: 0, width: 440 });
-  check('a fresh block has nothing lit', houses.every((h) => !h.state.endsWith('lit')));
+  const { houses } = layoutBlock({ maps: 15, cleared: 0, width: 440, height: 200 });
+  check('a fresh block has nothing revealed', houses.every((house) => !house.state.endsWith('revealed')));
   check('and house 1 is next', houses[0].state === 'next');
 }
 
-// Mid-night: counts add up.
 {
-  const { houses } = layoutBlock({ maps: 15, cleared: 7, width: 440 });
-  const lit = houses.filter((h) => h.state.endsWith('lit')).length;
-  const next = houses.filter((h) => h.state.endsWith('next'));
-  check('lit count equals cleared', lit === 7);
+  const { houses } = layoutBlock({ maps: 15, cleared: 7, width: 440, height: 200 });
+  const revealed = houses.filter((house) => house.state.endsWith('revealed')).length;
+  const next = houses.filter((house) => house.state.endsWith('next'));
+  check('revealed count equals cleared', revealed === 7);
   check('exactly one house is next', next.length === 1 && next[0].index === 8);
-  check('one house per map', houses.length === 15);
+  check('one house exists per map', houses.length === 15);
 }
 
-// Layout fits its width — houses must not spill past the panel edge.
 {
-  const width = 440, x0 = 20;
-  const { houses } = layoutBlock({ maps: 15, cleared: 4, width, x0 });
-  const minL = Math.min(...houses.map((h) => h.x - h.w / 2));
-  const maxR = Math.max(...houses.map((h) => h.x + h.w / 2));
-  check('houses stay inside the given width', minL >= x0 && maxR <= x0 + width, `${minL}..${maxR}`);
-  check('houses are left-to-right in map order',
-    houses.every((h, i) => i === 0 || h.x > houses[i - 1].x));
-  check('the finale is the widest house', houses[14].w > houses[0].w);
+  const width = 440;
+  const height = 200;
+  const x0 = 20;
+  const y0 = 30;
+  const layout = layoutBlock({ maps: 15, cleared: 4, width, height, x0, y0 });
+  const inside = layout.houses.every((house) => (
+    house.x - house.w / 2 >= x0
+    && house.x + house.w / 2 <= x0 + width
+    && house.y - house.h / 2 >= y0
+    && house.y + house.h / 2 <= y0 + height
+  ));
+  check('15 maps use the prototyped 5 by 3 neighborhood', layout.columns === 5 && layout.rows === 3);
+  check('every floor plan stays inside the map card', inside);
+  check('map order snakes back across the middle row',
+    layout.houses[5].col === 4 && layout.houses[9].col === 0);
+  check('mini mazes preserve the real 16 by 35 aspect',
+    layout.houses.every((house) => Math.abs(house.w / house.h - 16 / 35) < 1e-9));
 }
 
-// Out-of-range input is clamped, not trusted.
 {
-  const over = layoutBlock({ maps: 15, cleared: 40, width: 440 });
-  check('cleared past the end clamps to all lit', over.houses.every((h) => h.state.endsWith('lit')));
-  const under = layoutBlock({ maps: 15, cleared: -3, width: 440 });
-  check('negative cleared clamps to none lit', under.houses[0].state === 'next');
+  const over = layoutBlock({ maps: 15, cleared: 40, width: 440, height: 200 });
+  const under = layoutBlock({ maps: 15, cleared: -3, width: 440, height: 200 });
+  check('out-of-range progress clamps at both ends',
+    over.houses.every((house) => house.state.endsWith('revealed')) && under.houses[0].state === 'next');
 }
 
-// A 7-map PvP block works with the same code.
 {
-  const { houses } = layoutBlock({ maps: 7, cleared: 6, width: 300 });
-  check('a 7-map block puts its finale next when 6 are cleared', houses[6].state === 'finale-next');
+  const layout = layoutBlock({ maps: 7, cleared: 6, width: 300, height: 160 });
+  check('a 7-map block reflows and still marks its finale',
+    layout.columns === 4 && layout.rows === 2 && layout.houses[6].state === 'finale-next');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 if (failures.length) {
-  for (const f of failures) console.log(`  - ${f}`);
+  for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }

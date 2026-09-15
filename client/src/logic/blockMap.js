@@ -1,55 +1,103 @@
-// The block map — a street of houses, one per map, lighting up as you clear
-// them. Pure layout and state; the drawing lives in controllers/BlockMap.js.
+// The block map — fifteen real floor plans arranged as a neighborhood seen
+// from above. Pure layout and state; maze generation and drawing stay in
+// controllers/BlockMap.js.
 //
 // WHY
-// Between maps the game showed a blank "ROUND N / Continue" modal (with a
-// comment that it would be an ad slot later). That is the moment a daily
-// needs a picture of progress: which houses are lit, which is next, and the
-// big one at the end of the street where the second plug waits. It is also
-// the image a finished night can be shared as — "12 of 15 lit".
-//
-// Houses past the furthest one reached are dark silhouettes, the way an
-// unexplored region is fog on a world map. The finale is drawn bigger and
-// carries a tell, so by night three you know what the end of the street means.
+// A one-dimensional street made the daily look like a level ladder. The block
+// is a place: plots, cross streets and a route that folds back through them.
+// Five columns by three rows leaves enough height for every 16x35 maze cell to
+// remain visible even in the completed-run modal, while a snaking order makes
+// progress readable without spending the map's scarce pixels on arrows.
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const MAZE_COLS = 16;
+const MAZE_ROWS = 35;
 
-/**
- * State of house i (1-based) given how many maps are cleared.
- *   lit    cleared
- *   next   the one about to be played
- *   dark   not reached yet
- * The last house is the finale and gets a 'finale-' prefix on the same states.
- */
 export function houseState(i, cleared, maps) {
   const c = clamp(cleared | 0, 0, maps);
-  const base = i <= c ? 'lit' : (i === c + 1 ? 'next' : 'dark');
+  const base = i <= c ? 'revealed' : (i === c + 1 ? 'next' : 'fogged');
   return i === maps ? `finale-${base}` : base;
 }
 
-/**
- * Lay the street out across `width` px starting at `x0`.
- *
- * Every house gets an equal slot; the finale takes most of its slot, the rest
- * take about two thirds so there is street between them. Heights are in px
- * and deliberately small: this draws inside a modal, above the buttons.
- */
-export function layoutBlock({ maps = 15, cleared = 0, width, x0 = 0, baseY = 0 }) {
-  const c = clamp(cleared | 0, 0, maps);
-  const slot = width / maps;
-  const houses = [];
-  for (let i = 1; i <= maps; i++) {
-    const finale = i === maps;
-    const w = finale ? slot * 0.95 : slot * 0.66;
-    const h = finale ? 30 : 22;
-    houses.push({
-      index: i,
-      state: houseState(i, c, maps),
-      finale,
-      x: x0 + slot * (i - 0.5),   // centre
-      w, h,
-      baseY                        // where it stands (bottom edge)
+export function layoutBlock({
+  maps = 15,
+  cleared = 0,
+  width,
+  height = 200,
+  x0 = 0,
+  y0 = 0,
+  columns
+}) {
+  const total = Math.max(1, maps | 0);
+  const c = clamp(cleared | 0, 0, total);
+  const w = Math.max(1, Number(width) || 1);
+  const h = Math.max(1, Number(height) || 1);
+  const requestedColumns = columns | 0;
+  const defaultColumns = total > 8 ? 5 : Math.min(4, total);
+  const columnCount = clamp(requestedColumns || defaultColumns, 1, total);
+  const rowCount = Math.ceil(total / columnCount);
+  const street = clamp(Math.min(w * 0.026, h * 0.065), 6, 12);
+  const lotW = (w - street * (columnCount - 1)) / columnCount;
+  const lotH = (h - street * (rowCount - 1)) / rowCount;
+
+  const roads = [];
+  for (let col = 1; col < columnCount; col++) {
+    roads.push({
+      orientation: 'vertical',
+      x: x0 + col * lotW + (col - 1) * street,
+      y: y0,
+      w: street,
+      h
     });
   }
-  return { houses, slot, cleared: c, maps };
+  for (let row = 1; row < rowCount; row++) {
+    roads.push({
+      orientation: 'horizontal',
+      x: x0,
+      y: y0 + row * lotH + (row - 1) * street,
+      w,
+      h: street
+    });
+  }
+
+  const houses = [];
+  for (let i = 1; i <= total; i++) {
+    const routeSlot = i - 1;
+    const row = Math.floor(routeSlot / columnCount);
+    const offset = routeSlot % columnCount;
+    const col = row % 2 === 0 ? offset : columnCount - 1 - offset;
+    const lotX = x0 + col * (lotW + street);
+    const lotY = y0 + row * (lotH + street);
+    const cell = Math.max(0, Math.min((lotW * 0.58) / MAZE_COLS, (lotH - 6) / MAZE_ROWS));
+    const footprintW = cell * MAZE_COLS;
+    const footprintH = cell * MAZE_ROWS;
+
+    houses.push({
+      index: i,
+      state: houseState(i, c, total),
+      finale: i === total,
+      row,
+      col,
+      lotX,
+      lotY,
+      lotW,
+      lotH,
+      x: lotX + lotW / 2,
+      y: lotY + lotH / 2 + 1,
+      w: footprintW,
+      h: footprintH,
+      cell
+    });
+  }
+
+  return {
+    houses,
+    roads,
+    columns: columnCount,
+    rows: rowCount,
+    street,
+    cleared: c,
+    maps: total,
+    bounds: { x: x0, y: y0, w, h }
+  };
 }

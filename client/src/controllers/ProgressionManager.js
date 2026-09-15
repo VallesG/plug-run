@@ -11,7 +11,7 @@ import {
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
-import { drawBlockStreet } from './BlockMap.js';
+import { drawBlockMap } from './BlockMap.js';
 import { SESSION_RULES, streakBonus } from '../utils/repTracker.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
@@ -416,7 +416,7 @@ export default class ProgressionManager {
   }
 
   /**
-   * Between houses: the street so far, lit up to here, next one marked.
+   * Between houses: the overhead block so far, revealed up to here, next one marked.
    *
    * This replaces a blank "ROUND N / Continue" modal, and it is the slot the
    * old code annotated as the future ad spot. The screen is already black
@@ -428,12 +428,12 @@ export default class ProgressionManager {
     const cleared = Math.min(maps, this.scene.pveRound || 1);
     const modal = this.scene.gameUI?.showModal?.({
       title: `House ${cleared} cleared`,
-      subtitle: `${cleared} of ${maps} lit`,
+      subtitle: `${cleared} of ${maps} houses revealed`,
       lines: [],
       buttons: [{ label: cleared + 1 >= maps ? 'THE LAST HOUSE' : 'NEXT HOUSE', variant: 'primary', onClick: goNext }]
     });
     if (!modal) { goNext(); return null; }
-    drawBlockStreet(this.scene, modal, { cleared, maps });
+    drawBlockMap(this.scene, modal, { cleared, maps });
     if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
     return modal;
   }
@@ -476,8 +476,8 @@ export default class ProgressionManager {
     if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
     else this.scene.currentModal = modal;
 
-    // The whole street lit. This is the image the night can be shared as.
-    if (modal) drawBlockStreet(this.scene, modal, { cleared: maps, maps });
+    // The whole block revealed. This is the image the night can be shared as.
+    if (modal) drawBlockMap(this.scene, modal, { cleared: maps, maps });
 
     return modal;
   }
