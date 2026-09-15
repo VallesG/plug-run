@@ -1,103 +1,75 @@
-// The block map — fifteen real floor plans arranged as a neighborhood seen
-// from above. Pure layout and state; maze generation and drawing stay in
-// controllers/BlockMap.js.
-//
-// WHY
-// A one-dimensional street made the daily look like a level ladder. The block
-// is a place: plots, cross streets and a route that folds back through them.
-// Five columns by three rows leaves enough height for every 16x35 maze cell to
-// remain visible even in the completed-run modal, while a snaking order makes
-// progress readable without spending the map's scarce pixels on arrows.
-
+// A continuous overhead neighborhood. Unvisited geography is hidden, including
+// its roads: progress uncovers a connected patch of land, not a grid of cards.
+// Coordinates are stable world units; fitting never changes daily geography.
+export const BLOCK_WORLD = { width: 200, height: 220, tile: 2 };
+const ROUTE = [
+  [32,194,-1],[32,155,-1],[65,155,1],[65,113,1],[30,113,-1],
+  [30,68,-1],[30,25,-1],[76,25,1],[119,25,1],[119,68,-1],
+  [164,68,1],[164,113,1],[164,157,1],[119,157,-1],[119,198,1]
+];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const MAZE_COLS = 16;
-const MAZE_ROWS = 35;
 
 export function houseState(i, cleared, maps) {
   const c = clamp(cleared | 0, 0, maps);
-  const base = i <= c ? 'revealed' : (i === c + 1 ? 'next' : 'fogged');
-  return i === maps ? `finale-${base}` : base;
+  const base = i <= c ? 'revealed' : i === c + 1 ? 'next' : 'fogged';
+  return i === maps ? 'finale-' + base : base;
 }
 
-export function layoutBlock({
-  maps = 15,
-  cleared = 0,
-  width,
-  height = 200,
-  x0 = 0,
-  y0 = 0,
-  columns
-}) {
-  const total = Math.max(1, maps | 0);
-  const c = clamp(cleared | 0, 0, total);
-  const w = Math.max(1, Number(width) || 1);
-  const h = Math.max(1, Number(height) || 1);
-  const requestedColumns = columns | 0;
-  const defaultColumns = total > 8 ? 5 : Math.min(4, total);
-  const columnCount = clamp(requestedColumns || defaultColumns, 1, total);
-  const rowCount = Math.ceil(total / columnCount);
-  const street = clamp(Math.min(w * 0.026, h * 0.065), 6, 12);
-  const lotW = (w - street * (columnCount - 1)) / columnCount;
-  const lotH = (h - street * (rowCount - 1)) / rowCount;
+// A coordinate hash, never a mutable RNG. Decoration and fog stay identical
+// through every clear, replay hide/show, and viewport resize.
+export function blockNoise(x, y, seed = 0) {
+  let n = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ (seed | 0);
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+}
 
-  const roads = [];
-  for (let col = 1; col < columnCount; col++) {
-    roads.push({
-      orientation: 'vertical',
-      x: x0 + col * lotW + (col - 1) * street,
-      y: y0,
-      w: street,
-      h
-    });
-  }
-  for (let row = 1; row < rowCount; row++) {
-    roads.push({
-      orientation: 'horizontal',
-      x: x0,
-      y: y0 + row * lotH + (row - 1) * street,
-      w,
-      h: street
-    });
-  }
+export function distanceToStreet(x, y, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const t = clamp(((x-a.x)*dx + (y-a.y)*dy) / (dx*dx + dy*dy || 1), 0, 1);
+  return Math.hypot(x - a.x - t*dx, y - a.y - t*dy);
+}
 
-  const houses = [];
-  for (let i = 1; i <= total; i++) {
-    const routeSlot = i - 1;
-    const row = Math.floor(routeSlot / columnCount);
-    const offset = routeSlot % columnCount;
-    const col = row % 2 === 0 ? offset : columnCount - 1 - offset;
-    const lotX = x0 + col * (lotW + street);
-    const lotY = y0 + row * (lotH + street);
-    const cell = Math.max(0, Math.min((lotW * 0.58) / MAZE_COLS, (lotH - 6) / MAZE_ROWS));
-    const footprintW = cell * MAZE_COLS;
-    const footprintH = cell * MAZE_ROWS;
-
-    houses.push({
-      index: i,
-      state: houseState(i, c, total),
-      finale: i === total,
-      row,
-      col,
-      lotX,
-      lotY,
-      lotW,
-      lotH,
-      x: lotX + lotW / 2,
-      y: lotY + lotH / 2 + 1,
-      w: footprintW,
-      h: footprintH,
-      cell
-    });
-  }
-
+export function layoutBlock({ maps = 15, cleared = 0, width, height, x0 = 0, y0 = 0 }) {
+  const count = clamp(maps | 0, 1, ROUTE.length);
+  const progress = clamp(cleared | 0, 0, count);
+  const scale = Math.max(0, Math.min((Number(width)||0)/200, (Number(height)||0)/220));
+  const houses = ROUTE.slice(0, count).map(([x,y,side], i) => ({
+    index: i+1, state: houseState(i+1, progress, count), finale: i+1 === count,
+    road: { x,y }, lamp: { x:x+side*5, y:y+5 },
+    x:x+side*13, y:y-1, w:11+(i%3), h:18+(i%4), side
+  }));
+  const entrance = { x:32, y:214 };
+  const streets = houses.map((house,i) => ({
+    index:i+1, a:i ? houses[i-1].road : entrance, b:house.road
+  }));
   return {
-    houses,
-    roads,
-    columns: columnCount,
-    rows: rowCount,
-    street,
-    cleared: c,
-    maps: total,
-    bounds: { x: x0, y: y0, w, h }
+    houses, streets, maps:count, cleared:progress, scale,
+    x:x0 + ((Number(width)||0)-200*scale)/2,
+    y:y0 + ((Number(height)||0)-220*scale)/2,
+    w:200*scale, h:220*scale,
+    marker: progress ? houses[progress-1].road : entrance
   };
+}
+
+// Each tile belongs to its FIRST visit. This makes reveal strictly cumulative:
+// changing progress can only remove fog, never redraw the neighborhood.
+export function revealAt(x, y, block, seed = 0) {
+  const rough = blockNoise(Math.floor(x/4), Math.floor(y/4), seed);
+  for (const house of block.houses) {
+    const street = block.streets[house.index-1];
+    const roadDistance = distanceToStreet(x,y,street.a,street.b);
+    const yardDistance = Math.hypot((x-house.x)*1.05, (y-house.y)*0.9);
+    if (roadDistance <= 10 + rough*2 || yardDistance <= 16 + rough*1.5) return house.index;
+  }
+  return Infinity;
+}
+
+export function buildFog(block, seed = 0) {
+  const tiles = [];
+  for (let y=0; y<BLOCK_WORLD.height; y+=BLOCK_WORLD.tile) {
+    for (let x=0; x<BLOCK_WORLD.width; x+=BLOCK_WORLD.tile) {
+      tiles.push({ x,y, unlock:revealAt(x+1,y+1,block,seed) });
+    }
+  }
+  return tiles;
 }

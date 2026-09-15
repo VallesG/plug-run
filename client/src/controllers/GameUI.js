@@ -49,7 +49,7 @@ export default class GameUI {
     };
   }
 
-  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700 }) {
+  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false }) {
     // block world input + hide touch controls
     this.scene.input.keyboard.enabled = false;
     this.scene.suspendTouchUI?.(true);
@@ -64,15 +64,15 @@ export default class GameUI {
     const veil = this.scene.add.rectangle(cx, cy, W, H, 0x000000, 0.82)
       .setScrollFactor(0).setDepth(Z - 1).setInteractive();
 
-    const panelW = Math.min(480, W - 40);
+    const panelW = fullScreen ? W - 16 : Math.min(480, W - 40);
     const baseH = 340;
     const btnH = 38;
     const btnGap = 10;
     const rowCount = buttons.length; // pairs count as one row
     const btnAreaH = rowCount * btnH + Math.max(0, rowCount - 1) * btnGap + 40;
-    const panelH = Math.min(baseH + btnAreaH, H - 40);
-    const panel = this.scene.add.rectangle(cx, cy, panelW, panelH, T.panelBg, 0.97)
-      .setStrokeStyle(2, T.accent, 0.9).setScrollFactor(0).setDepth(Z);
+    const panelH = fullScreen ? H - 16 : Math.min(baseH + btnAreaH, H - 40);
+    const panel = this.scene.add.rectangle(cx, cy, panelW, panelH, fullScreen ? 0x07090b : T.panelBg, 0.97)
+      .setStrokeStyle(fullScreen ? 1 : 2, fullScreen ? 0x34382d : T.accent, 0.9).setScrollFactor(0).setDepth(Z);
 
     // header: title, accent underline, optional subtitle
     const titleTxt = this.scene.add.text(cx, cy - panelH / 2 + 30, (title || '').toUpperCase(), {
@@ -194,7 +194,17 @@ export default class GameUI {
       }
     };
 
-    this.currentModal = { destroy, veil, panel, btnCenters, registerExtra, setVisible };
+    // Expose the actual free area between copy and actions. Custom content no
+    // longer has to guess header height or overlap the completed-run totals.
+    const contentTop = y + 10;
+    const contentBottom = btnCenters.length
+      ? Math.min(...btnCenters.map(p => p.y)) - btnH / 2 - 12
+      : cy + panelH / 2 - 24;
+    const contentBounds = {
+      x: cx - panelW / 2 + 16, y: contentTop,
+      width: panelW - 32, height: Math.max(0, contentBottom - contentTop)
+    };
+    this.currentModal = { destroy, veil, panel, btnCenters, registerExtra, setVisible, contentBounds };
     return this.currentModal;
   }
 

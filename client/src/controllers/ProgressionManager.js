@@ -427,10 +427,11 @@ export default class ProgressionManager {
     const maps = PVE_BLOCK_MAPS;
     const cleared = Math.min(maps, this.scene.pveRound || 1);
     const modal = this.scene.gameUI?.showModal?.({
+      fullScreen: true,
       title: `House ${cleared} cleared`,
-      subtitle: `${cleared} of ${maps} houses revealed`,
+      subtitle: 'Another light in the dark.',
       lines: [],
-      buttons: [{ label: cleared + 1 >= maps ? 'THE LAST HOUSE' : 'NEXT HOUSE', variant: 'primary', onClick: goNext }]
+      buttons: [{ label: cleared + 1 >= maps ? 'HOUSE 15 · TWO PLUGS' : `HEAD TO HOUSE ${cleared + 1}`, variant: 'primary', onClick: goNext }]
     });
     if (!modal) { goNext(); return null; }
     drawBlockMap(this.scene, modal, { cleared, maps });
@@ -460,6 +461,7 @@ export default class ProgressionManager {
     }] : [];
 
     const modal = this.scene.gameUI?.showModal?.({
+      fullScreen: true,
       title: 'BLOCK CLEARED',
       subtitle: `All ${maps} runs, start to finish.`,
       lines: [

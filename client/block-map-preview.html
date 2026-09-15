@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run — block map preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111512;color:#ded9c2;font:14px system-ui}
+header{padding:14px 20px;border-bottom:1px solid #3b4233;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+label{display:flex;align-items:center;gap:8px}button,select{padding:8px;background:#283125;color:inherit;border:1px solid #5a654c;border-radius:4px}
+#stage{margin:16px auto;max-width:100%;}canvas{display:block}
+p{margin:0;color:#aaa88f}a{color:#e4ca84}
+</style>
+</head>
+<body>
+<header>
+<strong>BLOCK MAP / ART PREVIEW</strong>
+<label>Cleared <input id="progress" type="range" min="0" max="15" value="1"><output id="count">1</output></label>
+<select id="size"><option value="390,844">Phone · 390×844</option><option value="320,568">Small phone · 320×568</option><option value="768,1024">Tablet · 768×1024</option><option value="844,390">Landscape · 844×390</option></select>
+<button id="again">Replay reveal</button>
+<p>Drag to 1, 7, or 15. This preview uses the actual game renderer and modal.</p>
+</header>
+<div id="stage"></div>
+<script type="module">
+import Phaser from 'phaser';
+import GameUI from './src/controllers/GameUI.js';
+import { drawBlockMap } from './src/controllers/BlockMap.js';
+let game, activeScene;
+const progress=document.querySelector('#progress');
+const output=document.querySelector('#count');
+function paint(animate=true) {
+  if(!activeScene) return;
+  const cleared=Number(progress.value);
+  output.value=String(cleared);
+  activeScene.gameUI.currentModal?.destroy();
+  const modal=activeScene.gameUI.showModal({
+    fullScreen:true,inputDelay:0,
+    title:cleared===15?'BLOCK CLEARED':cleared===0?'TONIGHT’S BLOCK':'House '+cleared+' cleared',
+    subtitle:cleared===15?'All 15 runs, start to finish.':'Another light in the dark.',
+    lines:cleared===15?['','Total Stash Collected: 15','Total Rep Earned: 150']:[],
+    buttons:cleared===15?[
+      {label:'Watch Replay',variant:'secondary',onClick:()=>paint(true)},
+      {label:'Back to preview',variant:'primary',onClick:()=>{progress.value='0';paint(false);}}
+    ]:[{label:cleared===14?'HOUSE 15 · TWO PLUGS':'HEAD TO HOUSE '+(cleared+1),
+      variant:'primary',onClick:()=>{progress.value=String(Math.min(15,cleared+1));paint(true);}}]
+  });
+  drawBlockMap(activeScene,modal,{cleared,maps:15,animate});
+}
+function start() {
+  activeScene=null;
+  if(game) game.destroy(true);
+  const [width,height]=document.querySelector('#size').value.split(',').map(Number);
+  const stage=document.querySelector('#stage');
+  stage.style.width=width+'px';stage.style.height=height+'px';
+  class Preview extends Phaser.Scene {
+    create() {
+      this.role='runner';this.currentRouteID=20260915;
+      this.gameUI=new GameUI(this);
+      activeScene=this;paint(false);
+    }
+  }
+  game=new Phaser.Game({type:Phaser.AUTO,parent:'stage',width,height,
+    backgroundColor:'#07090b',scene:Preview,render:{antialias:false,roundPixels:false},
+    scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_HORIZONTALLY}});
+}
+progress.addEventListener('input',()=>paint(false));
+document.querySelector('#again').addEventListener('click',()=>paint(true));
+document.querySelector('#size').addEventListener('change',start);
+start();
+</script>
+</body></html>
