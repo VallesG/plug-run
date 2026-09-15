@@ -267,6 +267,49 @@ batch before that fix, 15% did.
 
 ---
 
+## Block format and polish (later in session 2)
+
+**PvE block is 15 maps; the second plug appears only on map 15.** The sweep
+showed the round-8 collapse (50% -> 17%) was the second plug, not the scaling
+(defender2 took 56-76% of kills). Clearing map 15 shows BLOCK CLEARED instead
+of restarting into map 16. Numbers live in `src/logic/blockFormat.js`; PvP
+blocks are 7 with the finale on 7 by the same rule.
+
+**Unmeasured, and the next thing to run:** single-plug rounds 8-14 have never
+been played. The 17% was measured with defender2 present. A sweep
+`sweepFrom=8&sweepTo=15&mapsPerRound=5` (~40 runs, tab in front) answers
+whether the back half of the block needs its difficulty ramp flattened too.
+The last attempt stopped at round 6 when the tab was backgrounded — the round
+clock is wall-time, so a backgrounded tab clocks out and the sweep stalls.
+
+**Polish pass (treatment, not art) — reference look: Nearly Dead.**
+- Characters: eight ink outline copies (opaque, NORMAL blend) replace the
+  team-coloured ADD-blend haze; one hard offset shadow and a thin team-colour
+  ring replace the three white puddle ellipses; scale is derived from the
+  texture height instead of `(cell/128)*3.0`. `src/logic/palette.js`.
+- Juice: step bob, squash on hard turns, recoil on fire, dust on dash, and a
+  death burst (dust + expanding ring + shake) where there used to be
+  `setVisible(false)`. All per-frame decaying offsets, not tweens, so they
+  neither fight each other nor confuse replays.
+- Objects: duffel stroke and the car now carry the same ink line weight; duffel
+  has a hard shadow. Camera vignette (WebGL only).
+- Cull: Kenney character images and g1/g2 gangster sheets deleted with their
+  preloads and never-played anims. `/tiles/kenney` is untouched.
+
+**None of this has been seen rendered** — no browser in the container. Three
+things need eyes: (1) is a 2px outline (`outlinePx`) too heavy at 24px cells;
+(2) does the plug still read as the enemy — its red tint was KEPT because the
+art has never been seen untinted, and the ring makes it safe to soften;
+(3) bob amplitude (`cell * 0.06`).
+
+**Deliberately not touched blind:** the wall palette. `drawNeonArena` uses
+saturated neon edge colours per theme, which compete with the characters for
+attention; the reference look wants walls dark and chunky with saturation
+reserved for people, bullets and the stash. That is a taste retune of THEMES in
+`utils/mazeGenerator.js` and should be done with the game on screen.
+
+---
+
 ## Bugs fixed this session
 
 All four bugs the harness surfaced last session are fixed, one commit each.
