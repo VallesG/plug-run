@@ -2,7 +2,7 @@
 //
 //   node client/test/cover.test.mjs
 
-import { coverAwareStep, exposedCells, isExposedAt } from '../src/logic/cover.js';
+import { coverAwareStep, exposedCells, isExposedAt, phaseEscapeDir } from '../src/logic/cover.js';
 
 let passed = 0;
 const failures = [];
@@ -122,6 +122,71 @@ console.log('\nCover routing\n');
     if (!adj || !w.isWalkable(s.x, s.y)) bad++;
   }
   check('every step it suggests is adjacent and walkable', bad === 0, `${bad} bad steps`);
+}
+
+/* ---------------- phase escape ---------------- */
+
+// Setup for all of these: the runner sits at (1,2) with a plug down row 2, so
+// the row IS the lane. The wall to phase through is perpendicular to it — put
+// the wall IN the lane instead and the runner has cover and nothing to escape,
+// which is how the first version of these tests was wrong.
+const pinned = { from: { x: 1, y: 2 }, threats: [{ x: 9, y: 2 }], goal: { x: 8, y: 6 } };
+
+// A one-cell wall with clear floor behind it: exactly what phase is for.
+{
+  const out = phaseEscapeDir({ ...world([[1, 3]]), ...pinned, maxWall: 3 });
+  check('phases through a thin wall to covered floor',
+    !!out && out.dir.y === 1 && out.landing.y === 4, JSON.stringify(out));
+}
+
+// THE BUG. A wall thicker than the 600ms window can cross strands the runner
+// inside the geometry with the power spent. Seen in play before this check
+// existed: "gets stuck when phasing if wall is too much".
+{
+  const out = phaseEscapeDir({
+    ...world([[1, 3], [1, 4], [1, 5], [1, 6]]), ...pinned, maxWall: 3
+  });
+  check('refuses to phase into a wall it cannot cross', out === null, JSON.stringify(out));
+}
+
+// ...and clears the same shape when it fits, so the refusal is about thickness
+// rather than about giving up.
+{
+  const out = phaseEscapeDir({
+    ...world([[1, 3], [1, 4], [1, 5]]), ...pinned, maxWall: 3
+  });
+  check('crosses a wall exactly at the budget',
+    !!out && out.landing.y === 6, JSON.stringify(out));
+}
+
+// Landing back in a firing lane is no escape at all.
+{
+  const out = phaseEscapeDir({
+    ...world([[1, 3]]), from: pinned.from, goal: pinned.goal,
+    threats: [{ x: 9, y: 2 }, { x: 9, y: 4 }], maxWall: 3
+  });
+  check('will not land in another plug\u2019s lane', out === null, JSON.stringify(out));
+}
+
+// Not pinned: nothing to escape, so keep the power.
+{
+  const out = phaseEscapeDir({
+    ...world([[1, 3]]), from: pinned.from, goal: pinned.goal,
+    threats: [{ x: 7, y: 6 }], maxWall: 3
+  });
+  check('does not spend phase when not in a lane', out === null);
+}
+
+// Open ground on every side — running is the better answer.
+{
+  const out = phaseEscapeDir({ ...world(), from: { x: 5, y: 2 }, threats: pinned.threats, goal: pinned.goal, maxWall: 3 });
+  check('does not spend phase with no wall to pass through', out === null);
+}
+
+// The map border is not an exit.
+{
+  const out = phaseEscapeDir({ ...world([[1, 3]]), ...pinned, maxWall: 3 });
+  check('never phases out through the border', !out || (out.landing.x > 0 && out.landing.y > 0));
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

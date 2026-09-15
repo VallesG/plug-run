@@ -496,12 +496,14 @@ function borrowScene() {
     bot._coverStep(safe.attacker, 1000) === null);
 }
 
-// 25. Phase gets spent to break out of a lane — but only with a wall to go
-//     through. In the open, running is the better answer and the power keeps.
+// 25. Phase gets spent to break out of a lane — but only when there is a wall
+//     thin enough to cross with floor worth landing on beyond it. The stub's
+//     wall column sits at x=5 for y=3..6, so standing at (4,4) with a plug
+//     down the row gives a one-cell wall and open floor at (6,4).
 {
   const pinned = makeScene({
-    attacker: { x: CELL * 1.5, y: CELL * 2.5, active: true, visible: true },
-    defender: { x: CELL * 6.5, y: CELL * 2.5, active: true, visible: true }
+    attacker: { x: CELL * 4.5, y: CELL * 4.5, active: true, visible: true },
+    defender: { x: CELL * 1.5, y: CELL * 4.5, active: true, visible: true }
   });
   let fired = -1;
   pinned.runnerPowersSelected = ['phase', 'dash'];
@@ -511,7 +513,7 @@ function borrowScene() {
 
   const bot = new BotDriver(pinned, {});
   const used = bot._phaseEscape(pinned.attacker);
-  check('phases out of a lane when a wall is adjacent', used === true && fired === 0);
+  check('phases through a crossable wall to escape a lane', used === true && fired === 0);
 }
 
 {

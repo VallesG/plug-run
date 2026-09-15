@@ -36,7 +36,7 @@
 // BaseGameScene lives in installBotDriver.js.
 
 import { planDodge } from '../logic/evasion.js';
-import { coverAwareStep, isExposedAt } from '../logic/cover.js';
+import { coverAwareStep, isExposedAt, phaseEscapeDir } from '../logic/cover.js';
 
 export const DEFAULTS = {
   // How often the bot re-decides, in ms. Human reaction floor is ~200ms and
@@ -101,6 +101,11 @@ export const DEFAULTS = {
   // is cover on the other side of a wall. The shipped AI only phases to shorten
   // a route or to escape at 2-6 cells; neither says "I am pinned in the open".
   phaseEscapeCells: 9,
+  // How many cells of wall the 600ms window can actually clear. At 7 cells/sec
+  // (5.95 carrying) the ceiling is about four; three leaves margin. Phasing
+  // into anything thicker strands the runner inside the geometry with the
+  // power spent — which is exactly what it did before this was checked.
+  phaseMaxWall: 3,
 
   // Evasion commitment. Dodging is re-decided on a timer, not every frame:
   // with two plugs, leaving one's lane walks into the other's, and a
@@ -171,6 +176,7 @@ export default class BotDriver {
     this._nextCoverAt = 0;
     this._coverDir = null;
     this._nextPhaseAt = 0;
+    this._phaseDrive = null;
     this._lastTick = 0;
   }
 
@@ -201,6 +207,7 @@ export default class BotDriver {
     this._nextCoverAt = 0;
     this._coverDir = null;
     this._nextPhaseAt = 0;
+    this._phaseDrive = null;
   }
 
   /** Should we be driving with the game's own runner AI? */
@@ -293,6 +300,13 @@ export default class BotDriver {
         s.intent?.recordPower(i);
         console.log('[BOT] used power slot', i, '->', s.runnerPowersSelected?.[i]);
       }
+    }
+
+    // A committed phase window outranks routing and reflexes: it is short, it
+    // is already paid for, and spending it drifting toward the objective
+    // instead of through the wall wastes it entirely.
+    if (this._phaseDrive && now < this._phaseDrive.until && s.runnerIsPhasing?.()) {
+      return this._driveOrCoast(me, this._phaseDrive.dir);
     }
 
     // Phase out of a lane before reaching for footwork: if the run is pinned
@@ -423,15 +437,26 @@ export default class BotDriver {
     );
     if (!closing) return false;
 
-    // Only if a wall is adjacent — phase is for going THROUGH something. With
-    // open ground on all sides, running is the better answer and keeps the
-    // power for a wall that matters.
-    const wallAdjacent = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-      .some(([dx, dy]) => !s.isWalkableCell?.(from.x + dx, from.y + dy));
-    if (!wallAdjacent) return false;
+    // There must be a wall thin enough to cross AND floor worth landing on
+    // beyond it. Checking only "is a wall next to me" is what stranded the
+    // runner inside thick geometry with the power already spent.
+    const goal = this.currentGoal();
+    const exit = phaseEscapeDir({
+      ...world,
+      from,
+      goal: goal ? s.toCell(goal.x, goal.y) : null,
+      maxWall: this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall
+    });
+    if (!exit) return false;
 
-    console.log('[BOT] phasing to break out of a firing lane');
+    console.log('[BOT] phasing out of a lane through', exit.dir, '-> landing', exit.landing);
     s.activateRunnerPowerByIndex?.(slot);
+
+    // Commit the window to the direction we picked. Without this the borrowed
+    // AI's phase steering aims at the distant objective instead, which is
+    // rarely the way through the wall we just paid for.
+    const ms = s.runnerPowerStats?.phase?.duration ?? 600;
+    this._phaseDrive = { dir: exit.dir, until: (this._now || 0) + ms };
     return true;
   }
 
@@ -603,6 +628,7 @@ export default class BotDriver {
     this._lastTick = tick;
 
     const now = performance.now();
+    this._now = now;
 
     if (now - this._startedAt > this.cfg.maxRunMs) {
       console.warn('[BOT] maxRunMs exceeded — abandoning run');

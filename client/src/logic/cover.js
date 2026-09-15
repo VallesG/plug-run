@@ -115,3 +115,57 @@ export function isExposedAt({ cols, rows, isWalkable, threats }, cell) {
   if (!cell) return false;
   return exposedCells({ cols, rows, isWalkable, threats }).has(key(cell.x, cell.y));
 }
+
+/**
+ * A direction worth spending phase on, or null.
+ *
+ * WHY THIS IS NOT JUST "IS A WALL NEXT TO ME"
+ * That was the first version, and it stranded the runner. Phase lasts 600ms
+ * and the runner covers 7 cells/sec (5.95 carrying the stash), so the window
+ * crosses about four cells at the absolute best and realistically three. Fire
+ * it at a wall thicker than that and the intangibility expires with the runner
+ * still inside the geometry — ensureUnstuck then teleports it somewhere
+ * arbitrary, and the power has been spent to go nowhere.
+ *
+ * So the wall has to be thin enough to cross AND have somewhere worth landing:
+ * a walkable cell immediately beyond, out of the firing lane the phase is
+ * escaping. Without all three, running is the better answer and the power
+ * keeps for a wall that matters.
+ *
+ * @param maxWall how many consecutive wall cells the window can clear
+ * @returns { dir, landing } or null
+ */
+export function phaseEscapeDir({ cols, rows, isWalkable, from, threats, goal, maxWall = 3 }) {
+  if (!from) return null;
+  const exposed = exposedCells({ cols, rows, isWalkable, threats });
+  if (!exposed.has(key(from.x, from.y))) return null;   // not pinned; nothing to escape
+
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    // Must actually start with a wall — phase is for going THROUGH something.
+    if (isWalkable(from.x + dx, from.y + dy)) continue;
+
+    for (let thickness = 1; thickness <= maxWall; thickness++) {
+      const lx = from.x + dx * (thickness + 1);
+      const ly = from.y + dy * (thickness + 1);
+      if (lx < 0 || ly < 0 || lx >= cols || ly >= rows) break;
+
+      // Still inside the wall: keep looking, up to the budget.
+      if (!isWalkable(lx, ly)) continue;
+
+      // Found floor. Only worth it if it is out of the lane we are stuck in.
+      if (exposed.has(key(lx, ly))) break;
+
+      const score = goal ? Math.abs(goal.x - lx) + Math.abs(goal.y - ly) : 0;
+      if (score < bestScore) {
+        bestScore = score;
+        best = { dir: { x: dx, y: dy }, landing: { x: lx, y: ly } };
+      }
+      break;
+    }
+  }
+
+  return best;
+}
