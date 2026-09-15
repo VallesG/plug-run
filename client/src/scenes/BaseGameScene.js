@@ -2156,10 +2156,16 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   /**
-   * Give the environment the grammar the characters now speak: ink line, hard
-   * shadow, contact darkening. Structural depth cues only — no wall or floor
-   * COLOUR is changed here; that is a taste retune to do with the game on
-   * screen, not blind.
+   * Give the environment the grammar the characters now speak: ink line and
+   * hard shadow. Structural depth cues only — no wall or floor COLOUR is
+   * changed here; that is a taste retune to do with the game on screen.
+   *
+   * There used to be a third cue: a contact shade on every floor cell touching
+   * a wall. It was wrong. A one-cell corridor touches a wall along its whole
+   * length, so corridors went dark while rooms stayed light, and the floor
+   * read as two different surfaces — "is that a different path?" It was also
+   * redundant: the drop shadow already gives contact shading, in one
+   * consistent direction, only a few px deep, so it cannot tint a corridor.
    *
    * Depth slots, from the existing draw: floor 1, wall fill 3, wall edge 4,
    * characters 10. Each layer is ONE Graphics object with alpha applied to the
@@ -2178,10 +2184,6 @@ export class BaseGameScene extends Phaser.Scene {
     grime.fillStyle(ink, 1);
     grime.fillRect(left(0), top(0), cols * cell, rows * cell);
 
-    // Ambient occlusion: floor cells touching a wall get a contact shade.
-    const ao = this.add.graphics().setDepth(1.6).setAlpha(0.12);
-    ao.fillStyle(ink, 1);
-
     // Hard drop shadow under every wall tile, offset down-right like the
     // characters' shadows so the light reads from one direction.
     const sx = Math.max(1, Math.round(cell * 0.10));
@@ -2199,12 +2201,7 @@ export class BaseGameScene extends Phaser.Scene {
     for (let y = 0; y < rows; y++){
       for (let x = 0; x < cols; x++){
         const lx = left(x), ty = top(y);
-        if (!isWall(x, y)){
-          if (isWall(x, y - 1) || isWall(x + 1, y) || isWall(x, y + 1) || isWall(x - 1, y)){
-            ao.fillRect(lx, ty, cell, cell);
-          }
-          continue;
-        }
+        if (!isWall(x, y)) continue;
         shadow.fillRect(lx + sx, ty + sy, cell, cell);
         if (!isWall(x, y - 1)) rim.fillRect(lx, ty, cell, px);
         if (!isWall(x, y + 1)) rim.fillRect(lx, ty + cell - px, cell, px);

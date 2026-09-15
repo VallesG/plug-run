@@ -294,8 +294,9 @@ clock is wall-time, so a backgrounded tab clocks out and the sweep stalls.
 - Objects: duffel stroke and the car now carry the same ink line weight; duffel
   has a hard shadow. Camera vignette (WebGL only).
 - Environment (`drawWallInk`): ink rim on exposed wall edges (cluster
-  silhouettes, not a grid), hard drop shadow under walls, contact AO on floor
-  cells touching walls, slight floor grime. Depth cues only — no wall or floor
+  silhouettes, not a grid), hard drop shadow under walls, slight floor grime.
+  A contact-AO layer was tried and removed: it darkened whole corridors (every
+  cell touches a wall) so the floor read as two surfaces. Depth cues only — no wall or floor
   colour changed. Each layer is one Graphics with object-level alpha so
   overlaps don't stack.
 - Cull: Kenney character images and g1/g2 gangster sheets deleted with their
