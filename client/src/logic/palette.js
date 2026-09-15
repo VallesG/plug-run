@@ -17,7 +17,8 @@ export const PALETTE = {
   // untinted, so the tint stays until someone looks at it. Identity now also
   // comes from the ring, so this can be softened later without losing the read.
   plugTint: 0xff6b6b,
-  dust: 0xe8dcc8
+  dust: 0xe8dcc8,
+  inkCss: '#0b0b12' // same ink, for text/stroke style strings
 };
 
 /** Character height in cells. The scale is derived from the texture, not assumed. */

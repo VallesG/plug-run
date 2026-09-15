@@ -1,10 +1,12 @@
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
+import { PALETTE } from '../logic/palette.js';
+import { PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID, ensureProvisionedIdentity, getRecoveryCode, hasProvisionedIdentity, restoreFromRecoveryCode } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores, getLeaderboard, getAllTimeLeaderboard, formatNumber } from '../utils/leaderboardManager.js';
-import { getSessionState } from '../utils/routeProgress.js';
+import { getSessionState, clearSessionState } from '../utils/routeProgress.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
@@ -73,12 +75,11 @@ export class MenuScene extends Phaser.Scene {
     const cardWidth = Math.min(520, Math.floor(W * 0.82));
     const signW = cardWidth; // Same width as cards
     const signH = logoSize * 2.2; // Taller for two lines
+    // Comic grammar, same as in-game: flat fill, ink line, hard offset shadow.
     const signBg = this.add.rectangle(W/2, logoY + signH/2, signW, signH, 0x0047AB, 1)
-      .setStrokeStyle(4, 0xffffff)
+      .setStrokeStyle(4, PALETTE.ink)
       .setDepth(4);
-
-    // Add subtle shadow for depth
-    const signShadow = this.add.rectangle(W/2 + 2, logoY + signH/2 + 2, signW, signH, 0x000000, 0.3)
+    const signShadow = this.add.rectangle(W/2 + 5, logoY + signH/2 + 6, signW, signH, PALETTE.ink, 0.55)
       .setDepth(3);
 
     // Emblem - circular logo on the left side of the sign
@@ -98,18 +99,20 @@ export class MenuScene extends Phaser.Scene {
       fontSize: logoSize + 'px',
       color: '#ffffff',
       fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 2
+      stroke: PALETTE.inkCss,
+      strokeThickness: 4
     }).setOrigin(0.5, 0.5).setDepth(5);
 
 
     this.signBg = signBg;
     this.signShadow = signShadow;
 
-    // Cards data - only show the two main game modes
+    // Plug mode is SHELVED, not removed: everything behind it still works, it
+    // just isn't offered until runner mode is good and people ask for it.
+    const SHOW_PLUG_MODE = false;
     const modes = [
-      { key:'runner', title:'Run the Block',      sub:'Grab the stash, escape before the Plug catches you.', showTimer: false },
-      { key:'plug',   title:'Defend the Block',   sub:'Stop the Runner before they get away.', showTimer: false }
+      { key:'runner', title:'Run the Block', sub:'Grab the stash, escape before the Plug catches you.', showTimer: false },
+      ...(SHOW_PLUG_MODE ? [{ key:'plug', title:'Defend the Block', sub:'Stop the Runner before they get away.', showTimer: false }] : [])
     ];
 
     // Carousel root container to keep z-order tidy
@@ -363,9 +366,11 @@ export class MenuScene extends Phaser.Scene {
     const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
     // Cards are not interactive - only buttons control navigation
 
-    // Dark panel body
-    const bg = this.add.rectangle(0, 0, cw, ch, 0x10131a, 0.92);
-    bg.setStrokeStyle(1, 0x2e3442, 1);
+    // Dark panel body with the in-game grammar: ink line, hard offset shadow.
+    const bgShadow = this.add.rectangle(6, 7, cw, ch, PALETTE.ink, 0.55);
+    cont.add(bgShadow);
+    const bg = this.add.rectangle(0, 0, cw, ch, 0x10131a, 0.96);
+    bg.setStrokeStyle(3, PALETTE.ink, 1);
     cont.add(bg);
 
     // Add animated sprite visuals (single line of sprites)
@@ -394,7 +399,7 @@ export class MenuScene extends Phaser.Scene {
     // Single-line bar: street name left, address right
     const titleBgHeight = Math.floor(titleSize * 1.7);
     const titleBg = this.add.rectangle(0, -ch * 0.5 + titleBgHeight/2, cw, titleBgHeight, signColor, 1)
-      .setStrokeStyle(3, 0xffffff)
+      .setStrokeStyle(3, PALETTE.ink)
       .setOrigin(0.5, 0.5);
 
     const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2, titleText, {
@@ -402,10 +407,9 @@ export class MenuScene extends Phaser.Scene {
       fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
       fontStyle: 'bold',
       fontSize: titleSize + 'px',
-      stroke: '#000000',
-      strokeThickness: 2
+      stroke: PALETTE.inkCss,
+      strokeThickness: 3
     }).setOrigin(0.5, 0.5);
-
 
     cont.add(titleBg);
     cont.add(titleObj);
@@ -426,7 +430,7 @@ export class MenuScene extends Phaser.Scene {
 
       const cols = [
         ["TODAY'S BEST", stats.daily ? formatNumber(stats.daily.stash ?? 0) : '—', '#f0f2f7'],
-        ['BEST ROUND',   String(stats.daily?.round ?? stats.alltime?.round ?? '—'), '#f0f2f7'],
+        ['BEST MAP',     String(stats.daily?.round ?? stats.alltime?.round ?? '—'), '#f0f2f7'],
         ['YOUR RANK',    '—', '#8a93a8']
       ];
       const colW = cw / cols.length;
@@ -462,28 +466,51 @@ export class MenuScene extends Phaser.Scene {
     const btnHeight = Math.max(38, Math.floor(ch * 0.18));
     const btnY = (ch / 2) - (btnHeight / 2) - 8; // Position at bottom edge with small padding
 
+    // Comic button: flat yellow, ink line, hard shadow underneath.
+    const startShadow = this.rexUI.add.roundRectangle(4, btnY + 5, btnWidth, btnHeight, 6, PALETTE.ink, 0.6);
     const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 6, 0xfbbf24, 1)
-      .setStrokeStyle(3, 0xf59e0b)
+      .setStrokeStyle(3, PALETTE.ink)
       .setInteractive({ cursor: 'pointer' });
 
-    // Set button text based on mode
+    // The button speaks in blocks and maps. A session past the end of the
+    // block is a leftover from the endless ladder and reads as a fresh start.
     let buttonText = 'START';
+    let resumable = false;
     if (modeKey === 'runner' || modeKey === 'plug') {
-      const base = modeKey === 'runner' ? 'PLAY AS RUNNER' : 'PLAY AS PLUG';
       let sess = null;
       try { sess = getSessionState(modeKey); } catch {}
-      buttonText = sess && sess.pveRound > 1 ? `${base} \u2014 ROUND ${sess.pveRound}` : base;
+      const n = sess?.pveRound ?? 1;
+      resumable = n > 1 && n <= PVE_BLOCK_MAPS;
+      buttonText = resumable ? `CONTINUE \u2014 MAP ${n} / ${PVE_BLOCK_MAPS}` : 'START BLOCK';
     }
 
     const startText = this.add.text(0, btnY, buttonText, {
       fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
       fontSize: Math.max(16, Math.floor(btnHeight * 0.42)) + 'px',
-      color: '#1e293b',
+      color: PALETTE.inkCss,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
+    cont.add(startShadow);
     cont.add(startBg);
     cont.add(startText);
+
+    // Mid-block? Offer a clean restart too. Clears the saved session and
+    // launches through the same path, so the game falls back to map 1.
+    if (resumable) {
+      const over = this.add.text(0, btnY - btnHeight / 2 - 11, 'start over from map 1', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#aab3c8'
+      }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+      over.on('pointerover', () => over.setColor('#ffffff'));
+      over.on('pointerout',  () => over.setColor('#aab3c8'));
+      over.on('pointerup', () => {
+        try { clearSessionState(modeKey); } catch {}
+        startText.setText('START BLOCK');
+        over.destroy();
+        this.launchCard(cont);
+      });
+      cont.add(over);
+    }
 
     // Store references
     cont._bg = bg;
@@ -497,14 +524,8 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Hover effects
-    startBg.on('pointerover', () => {
-      startBg.setFillStyle(0xfcd34d); // Lighter yellow
-      startBg.setStrokeStyle(3, 0xfbbf24);
-    });
-    startBg.on('pointerout', () => {
-      startBg.setFillStyle(0xfbbf24); // Original yellow
-      startBg.setStrokeStyle(3, 0xf59e0b);
-    });
+    startBg.on('pointerover', () => startBg.setFillStyle(0xfcd34d));
+    startBg.on('pointerout',  () => startBg.setFillStyle(0xfbbf24));
 
     return cont;
   }
@@ -1870,6 +1891,18 @@ export class MenuScene extends Phaser.Scene {
 
   cardSpacing(){ return Math.min(520, Math.floor(this.scale.width * 0.82)) + Math.max(28, Math.floor(this.scale.width * 0.06)); }
 
+  /**
+   * Where card i sits. Two cards stack from 34% down, as before. A lone card
+   * is dropped toward the middle of the space between the ticker and the
+   * dock — shelving plug mode must not leave the runner card hugging the
+   * header over a hole.
+   */
+  cardCenterY(i, cardHeight){
+    const H = this.scale.height;
+    if ((this.cards?.length || 1) === 1) return Math.floor(H * 0.46);
+    return H * 0.34 + i * (cardHeight + 8);
+  }
+
   layoutCards(shift = 0, tweenBack = false){
     // New layout: Show both cards stacked vertically (no carousel)
     const W = this.scale.width;
@@ -1886,7 +1919,7 @@ export class MenuScene extends Phaser.Scene {
     this.cards.forEach((card, i)=>{
       // Stack cards vertically
       const x = cx;
-      const y = topOffset + (i * (cardHeight + gap));
+      const y = this.cardCenterY(i, cardHeight);
 
       if (tweenBack){
         this.tweens.add({
@@ -2711,7 +2744,7 @@ export class MenuScene extends Phaser.Scene {
     const signH = logoSize * 2.2; // Updated for two-line sign
 
     // Reposition street sign elements
-    this.signShadow?.setPosition(W/2 + 2, logoY + signH/2 + 2);
+    this.signShadow?.setPosition(W/2 + 5, logoY + signH/2 + 6);
     this.signBg?.setPosition(W/2, logoY + signH/2);
 
     // Reposition emblem
@@ -2727,7 +2760,7 @@ export class MenuScene extends Phaser.Scene {
     // it never overlaps either (tall desktop windows compressed this gap)
     {
       const cardH0 = H > 900 ? Math.min(300, H * 0.38) : Math.min(265, H * 0.34);
-      const firstCardTop = H * 0.34 - cardH0 / 2;
+      const firstCardTop = this.cardCenterY(0, cardH0) - cardH0 / 2;
       const signBottom = logoY + signH;
       this.tickerChip?.setPosition(W/2, Math.min(signBottom + 18, (signBottom + firstCardTop) / 2));
     }
@@ -2748,7 +2781,7 @@ export class MenuScene extends Phaser.Scene {
     const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
     const gap = 8;
     const topOffset = H * 0.34;
-    const bottomCardY = topOffset + (1 * (cardHeight + gap)); // Second card position
+    const bottomCardY = this.cardCenterY((this.cards?.length || 1) - 1, cardHeight); // last card
     const bottomOfCard = bottomCardY + cardHeight/2; // Bottom edge of second card
 
     const tutorialBtnHeight = Math.max(36, Math.floor(H * 0.045));
