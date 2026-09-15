@@ -148,6 +148,52 @@ console.log('\nRun forensics\n');
   check('compares it against the optimal route', out.routeRatio === 1, String(out.routeRatio));
 }
 
+/* ---------------- snagging ---------------- */
+
+// "The AI runner gets caught in corners and walls a lot" was an impression
+// until it had a number. A runner pinned on a corner still has a heading and
+// still has speed — it just isn't going anywhere.
+{
+  const s = makeScene();
+  const f = new RunForensics(); f.begin(s);
+  f.tick(s);                                   // capture frame
+  for (let i = 1; i <= 5; i++) { s.attacker = at(1 + i, 1); s.simTick = i; f.tick(s); }
+  const moving = f.summary(s);
+  check('a run that keeps moving records no stall', moving.stalledTicks === 0);
+}
+
+{
+  const s = makeScene();
+  const f = new RunForensics(); f.begin(s);
+  f.tick(s);
+  // pinned: same position for 30 frames
+  for (let i = 1; i <= 30; i++) { s.simTick = i; f.tick(s); }
+  // then it frees itself and runs on
+  for (let i = 31; i <= 40; i++) { s.attacker = at(1 + (i - 30), 1); s.simTick = i; f.tick(s); }
+  const out = f.summary(s);
+  check('counts the ticks spent going nowhere', out.stalledTicks === 30, String(out.stalledTicks));
+  check('records the longest unbroken stall', out.longestStallTicks === 30);
+  check('and where it happened', out.stallAtCell.x === 1 && out.stallAtCell.y === 1);
+  check('reports it as a fraction of the run', out.stalledFrac === 0.73, String(out.stalledFrac));
+}
+
+// Two short snags are a different problem from one long one, so the longest
+// streak is tracked separately from the total.
+{
+  const s = makeScene();
+  const f = new RunForensics(); f.begin(s);
+  f.tick(s);
+  let x = 1;
+  for (const [stall, step] of [[5, 3], [12, 3]]) {
+    for (let i = 0; i < stall; i++) f.tick(s);
+    for (let i = 0; i < step; i++) { x++; s.attacker = at(x, 1); f.tick(s); }
+  }
+  const out = f.summary(s);
+  check('separates total stalling from the worst single snag',
+    out.stalledTicks === 17 && out.longestStallTicks === 12,
+    `${out.stalledTicks}/${out.longestStallTicks}`);
+}
+
 /* ---------------- powers ---------------- */
 {
   const s = makeScene();

@@ -33,6 +33,10 @@ export default class RunForensics {
     this.powers = [];
     this._distPx = 0;
     this._laneTicks = 0;
+    this._stallTicks = 0;   // ticks spent going nowhere
+    this._stallRun = 0;     // current unbroken stall
+    this._stallMax = 0;     // longest one
+    this._stallCell = null; // where the longest one happened
     this._ticks = 0;
     this._last = null;
   }
@@ -90,12 +94,38 @@ export default class RunForensics {
     const me = scene.attacker;
     if (!me) return;
 
-    if (!this._captured) this._capture(scene, me);
+    // The capture frame has no previous position to compare against, so it
+    // would otherwise read as a stalled tick on every single run.
+    const first = !this._captured;
+    if (first) this._capture(scene, me);
 
     this._ticks++;
 
-    if (this._last) this._distPx += dist(this._last, me);
+    const moved = this._last ? dist(this._last, me) : 0;
+    this._distPx += moved;
     this._last = { x: me.x, y: me.y };
+
+    // SNAGGING. A runner pinned against a corner still has a heading and still
+    // has speed; it just isn't going anywhere. Counting those ticks turns "it
+    // gets stuck on walls a lot" from an impression into a number, and it is
+    // the thing that turns a lost run into a 90-second clock-out.
+    //
+    // Worth measuring rather than assuming, because the three movement paths in
+    // this game have three different anti-snag aids: the AI runner gets
+    // applyCenterBias unconditionally, touch/bot input gets corridorAssist
+    // (weakened near a plug), and keyboard input gets nothing at all.
+    if (first) {
+      // nothing to say about movement yet
+    } else if (moved < scene.cell * 0.02) {
+      this._stallTicks++;
+      this._stallRun++;
+      if (this._stallRun > this._stallMax) {
+        this._stallMax = this._stallRun;
+        this._stallCell = cellOf(scene, me);
+      }
+    } else {
+      this._stallRun = 0;
+    }
 
     // Exposure: standing in a live plug's row or column with no wall between.
     // The fraction of a run spent here is the difference between a map that
@@ -181,6 +211,10 @@ export default class RunForensics {
 
       spawn: this.spawn,
       laneFrac: this._ticks ? round2(this._laneTicks / this._ticks) : null,
+      stalledTicks: this._stallTicks,
+      stalledFrac: this._ticks ? round2(this._stallTicks / this._ticks) : null,
+      longestStallTicks: this._stallMax,
+      stallAtCell: this._stallCell,
       walkedCells,
       optimalCells: this.optimalCells,
       // >1 means the maze forced detours; near 1 means a straight shot, which
