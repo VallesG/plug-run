@@ -87,17 +87,17 @@ export default class GameUI {
     const content = [rule];
     let y = titleTxt.y + 34;
     if (subtitle) {
-      content.push(this.scene.add.text(cx, y, subtitle, {
+      const subtitleText = this.scene.add.text(cx, y, subtitle, {
         fontFamily: loadout ? 'Arial, sans-serif' : 'Courier', color: loadout ? '#a5b5bc' : T.accentTxt, fontSize: '13px', wordWrap: { width: panelW - 32 }, align: 'center'
-      }).setOrigin(0.5).setDepth(Z).setScrollFactor(0));
-      y += 22;
+      }).setOrigin(0.5).setDepth(Z).setScrollFactor(0);
+      content.push(subtitleText);
+      y += fullScreen ? Math.max(22, subtitleText.height + 8) : 22;
     }
     for (const s of lines) {
-      content.push(
-        this.scene.add.text(cx, y, s, { color: T.body, fontSize: '14px', wordWrap: { width: panelW - 32 }, align: 'center' })
-          .setOrigin(0.5).setDepth(Z).setScrollFactor(0)
-      );
-      y += 19;
+      const lineText = this.scene.add.text(cx, y, s, { color: T.body, fontSize: '14px', wordWrap: { width: panelW - 32 }, align: 'center' })
+          .setOrigin(0.5).setDepth(Z).setScrollFactor(0);
+      content.push(lineText);
+      y += fullScreen ? Math.max(19, lineText.height + 8) : 19;
     }
 
     const btnObjs = [];

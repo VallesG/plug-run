@@ -10,16 +10,16 @@ const LAND = [0x424735,0x454a37,0x484d39,0x4a4e3b,0x464b38];
 const WARM = 0xffd78a;
 const ROOFS = [0x675e4e,0x505e60,0x736557,0x5c6150,0x685758];
 
-export function drawBlockMap(scene, modal, { cleared, maps, animate = true }) {
+export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true }) {
   if (!modal?.contentBounds || !modal.registerExtra) return null;
   const area = modal.contentBounds;
   // Reserve a caption outside the cartography, with no card around the map.
   const block = layoutBlock({
-    maps, cleared, width:area.width, height:Math.max(0,area.height-24),
+    maps, cleared, entering, layoutSeed: scene.worldBlock?.seed ?? 0, width:area.width, height:Math.max(0,area.height-24),
     x0:area.x, y0:area.y
   });
   if (!block.scale) return null;
-  const routeID = scene.currentRouteID ?? getCurrentRouteID();
+  const routeID = scene.worldBlock?.seed ?? scene.currentRouteID ?? getCurrentRouteID();
   const layers = [];
   const layer = depth => {
     const g = scene.add.graphics().setPosition(block.x,block.y)
@@ -49,7 +49,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, animate = true }) {
       line(0x9b9477,0.55,
         {x:street.a.x+(street.b.x-street.a.x)*t,y:street.a.y+(street.b.y-street.a.y)*t},
         {x:street.a.x+(street.b.x-street.a.x)*end,y:street.a.y+(street.b.y-street.a.y)*end},
-        street.index<=block.cleared ? 0.8 : 0.28);
+        street.index<=block.visibleThrough ? 0.8 : 0.28);
     }
     // A parked car on the curb, drawn from directly above.
     const vertical=street.a.x===street.b.x;
@@ -73,7 +73,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, animate = true }) {
   }
 
   for (const house of block.houses) {
-    const lit=house.index<=block.cleared;
+    const lit=house.index<=block.visibleThrough;
     const left=house.x-house.w/2, top=house.y-house.h/2;
     line(0x7b7764,2,house.road,{x:house.x,y:house.road.y});
     // Yard fence, roof silhouette and one hard shadow.
@@ -148,8 +148,8 @@ export function drawBlockMap(scene, modal, { cleared, maps, animate = true }) {
   // Merge adjacent tiles on each row to keep the mask inexpensive.
   for(let row=0;row<110;row++) {
     let start=0;
-    const kind=i=>tiles[i].unlock>block.cleared?1
-      :animate && tiles[i].unlock===block.cleared?2:0;
+    const kind=i=>tiles[i].unlock>block.visibleThrough?1
+      :animate && tiles[i].unlock===block.visibleThrough?2:0;
     for(let col=0;col<100;) {
       start=col;
       const type=kind(row*100+col);

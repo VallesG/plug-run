@@ -1,3 +1,5 @@
+import { advanceJourney } from '../logic/worldBlocks.js';
+import { saveJourneyProgress } from '../utils/journeyProgress.js';
 import RepTracker from '../utils/repTracker.js';
 import { getCurrentRouteID, getRouteSeed } from '../utils/seededRandom.js';
 import {
@@ -28,6 +30,15 @@ export default class ProgressionManager {
   constructor(scene) {
     this.scene = scene;
     this.repTracker = null;
+  }
+
+  saveProgress(data, completed = false) {
+    if (this.scene.runKind !== 'journey') return saveSessionState(this.scene.role, data);
+    const checkpoint = { ...data, blockIndex: this.scene.blockIndex,
+      swapSpawnCycle: data.swapSpawnCycle ?? this.scene.swapSpawnCycle ?? 0 };
+    return saveJourneyProgress(completed
+      ? advanceJourney({ ...checkpoint, pveRound: this.scene.pveRound })
+      : checkpoint);
   }
 
   /**
@@ -122,7 +133,9 @@ export default class ProgressionManager {
       }
 
       // Calculate rewards using new tracking system
-      const roundCompletion = recordRoundCompletion(this.scene.role, this.scene.pveRound);
+      const roundCompletion = this.scene.runKind === 'journey'
+        ? { earnedStash: true, repMultiplier: 1, completionCount: 1 }
+        : recordRoundCompletion(this.scene.role, this.scene.pveRound);
       const stashEarned = roundCompletion.earnedStash ? 1 : 0;
 
       // Calculate REP using RepTracker
@@ -155,6 +168,7 @@ export default class ProgressionManager {
       console.log('[PvE] Completion:', roundCompletion.completionCount, 'times, multiplier:', roundCompletion.repMultiplier);
 
       // Update user's total accumulated stash and REP
+      if (this.scene.runKind !== 'journey') {
       const user = getCurrentUser();
       updateUserStats({
         totalStash: (user.stats?.totalStash || 0) + stashEarned,
@@ -164,21 +178,23 @@ export default class ProgressionManager {
       // Track route progress for leaderboard
       updateRouteProgress(this.scene.role, this.scene.pveRound);
 
+      }
+
       // Save session state (for continue feature) - save next round since that's what they'll play
-      saveSessionState(this.scene.role, {
+      this.saveProgress({
         pveRound: this.scene.pveRound + 1,
         pveSessionStash: this.scene.pveSessionStash,
         pveSessionRep: this.scene.pveSessionRep,
               pveCleanStreak: this.scene.pveCleanStreak || 0,
               runId: this.scene.runId,
         pveBestRound: this.scene.pveBestRound
-      });
+      }, true);
 
       // Submit score to daily leaderboard (don't await - let it happen in background for smooth animation)
       // Stash = current round for both modes (you just completed this round successfully)
       const stashToSubmit = this.scene.pveRound;
 
-      (async () => {
+      if (this.scene.runKind !== 'journey') (async () => {
         try {
           // Submit SESSION rep (already cumulative across this run's rounds).
           // Previous logic added pveSessionRep to existingScore.rep, which
@@ -198,7 +214,7 @@ export default class ProgressionManager {
       })();
 
       // Log activity feed event: Runner extracted successfully
-      logRunnerExtract(this.scene.pveRound, stashEarned > 0);
+      if (this.scene.runKind !== 'journey') logRunnerExtract(this.scene.pveRound, stashEarned > 0);
 
       // Show floating numbers at extraction point (will stay visible during fade and next round's power modal)
       this.scene.vfx?.showFloatingRewards?.(stashEarned, repEarned);
@@ -252,6 +268,7 @@ export default class ProgressionManager {
             const newSeed = (Math.random() * 2 ** 32) | 0;
             const goNext = () => this.scene.scene.restart({
               mode: this.scene.mode,
+              runKind: this.scene.runKind, blockIndex: this.scene.blockIndex,
               role: this.scene.role,
               seed: newSeed,
               pveRound: this.scene.mode === 'pve' ? (this.scene.pveRound || 1) + 1 : undefined,
@@ -261,9 +278,8 @@ export default class ProgressionManager {
               runId: this.scene.runId,
               pveBestRound: this.scene.pveBestRound
             });
-            // PvE pauses on the block map between houses; PvP goes straight on.
-            if (this.scene.mode === 'pve') this.showBlockMap(goNext);
-            else goNext();
+            // The restarted PvE scene shows its entrance map before loadout.
+            goNext();
           }
         }
       });
@@ -355,7 +371,7 @@ export default class ProgressionManager {
       this.scene.pveCleanStreak = 0;
       // Persist the setback: same round, penalty applied, tough-spawn
       // bonus armed — survives a page close mid-grind.
-      saveSessionState(this.scene.role, {
+      this.saveProgress({
         pveRound: this.scene.pveRound,
         pveSessionStash: this.scene.pveSessionStash,
         pveSessionRep: this.scene.pveSessionRep,
@@ -416,26 +432,38 @@ export default class ProgressionManager {
   }
 
   /**
-   * Between houses: the overhead block so far, revealed up to here, next one marked.
+   * Before loadout: reveal the ready house without counting it as cleared.
    *
-   * This replaces a blank "ROUND N / Continue" modal, and it is the slot the
-   * old code annotated as the future ad spot. The screen is already black
-   * from the extraction veil, which suits a night street. The button owns the
-   * restart, so nothing advances until the player has seen the map.
+   * The scene is paused before recording, timers or controls start. Entering
+   * resumes startMatch; exiting leaves the saved checkpoint untouched.
    */
   showBlockMap(goNext) {
     const maps = PVE_BLOCK_MAPS;
-    const cleared = Math.min(maps, this.scene.pveRound || 1);
+    const house = Math.min(maps, this.scene.pveRound || 1);
+    const cleared = house - 1;
+    const block = this.scene.worldBlock;
     const modal = this.scene.gameUI?.showModal?.({
       fullScreen: true,
-      title: `House ${cleared} cleared`,
-      subtitle: 'Another light in the dark.',
-      lines: [],
-      buttons: [{ label: cleared + 1 >= maps ? 'HOUSE 15 · TWO PLUGS' : `HEAD TO HOUSE ${cleared + 1}`, variant: 'primary', onClick: goNext }]
+      title: block ? block.name : 'DAILY BLOCK',
+      subtitle: block
+        ? block.district + ' · Block #' + block.number
+        : 'House ' + house + ' of ' + maps + ' · Follow the light.',
+      lines: block && house === 1 ? [block.arrival] : [],
+      buttons: [
+        { label: house === maps ? 'ENTER HOUSE 15 · TWO PLUGS' : 'ENTER HOUSE ' + house, variant: 'primary', onClick: goNext },
+        ...(cleared && !block ? [{
+          label: 'Restart Daily Block', variant: 'secondary',
+          onClick: () => {
+            clearSessionState(this.scene.role);
+            this.scene.scene.restart({ mode: 'pve', role: 'runner', runKind: 'daily', pveRound: 1 });
+          }
+        }] : []),
+        { label: 'Back to Menu', variant: 'secondary', onClick: () => this.scene.scene.start('MENU') }
+      ]
     });
     if (!modal) { goNext(); return null; }
-    drawBlockMap(this.scene, modal, { cleared, maps });
-    if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
+    drawBlockMap(this.scene, modal, { cleared, maps, entering: true });
+    this.scene.gameUI.currentModal = modal;
     return modal;
   }
 
@@ -463,13 +491,20 @@ export default class ProgressionManager {
     const modal = this.scene.gameUI?.showModal?.({
       fullScreen: true,
       title: 'BLOCK CLEARED',
-      subtitle: `All ${maps} runs, start to finish.`,
+      subtitle: this.scene.worldBlock ? this.scene.worldBlock.departure : `All ${maps} runs, start to finish.`,
       lines: [
         ``,
         `Total Stash Collected: ${this.scene.pveSessionStash}`,
         `Total Rep Earned: ${this.scene.pveSessionRep}`
       ],
       buttons: [
+        ...(this.scene.runKind === 'journey' ? [{
+          label: 'ENTER NEXT BLOCK',
+          variant: 'primary', onClick: () => this.scene.scene.restart({
+            mode: 'pve', role: 'runner', runKind: 'journey',
+            blockIndex: this.scene.blockIndex + 1, pveRound: 1
+          })
+        }] : []),
         ...replayRow,
         { label: 'Back to Menu', variant: 'primary', onClick: () => this.scene.scene.start('MENU') }
       ]
@@ -519,7 +554,7 @@ export default class ProgressionManager {
     );
 
     // Track route progress for leaderboard
-    updateRouteProgress(this.scene.role, roundNumber);
+    if (this.scene.runKind !== 'journey') updateRouteProgress(this.scene.role, roundNumber);
 
     // Game over means you failed current round, so stash = last completed round
     // (current - 1). Example: Died on round 7 = completed round 6 = 6 stash.
@@ -554,6 +589,7 @@ export default class ProgressionManager {
         variant: 'primary',
         onClick: () => this.scene.scene.restart({
           mode: 'pve',
+          runKind: this.scene.runKind, blockIndex: this.scene.blockIndex,
           role,
           pveRound: roundNumber, // Same round
           pveSessionStash: this.scene.pveSessionStash,
@@ -577,18 +613,20 @@ export default class ProgressionManager {
           this.scene.pveCleanStreak = 0;
           // Swapping forfeits the tough-spawn bonus — different spawn,
           // different challenge. Persist the purchase.
-          saveSessionState(this.scene.role, {
+          this.saveProgress({
             pveRound: this.scene.pveRound,
             pveSessionStash: this.scene.pveSessionStash,
             pveSessionRep: this.scene.pveSessionRep,
             pveCleanStreak: 0,
             runId: this.scene.runId,
             pveBestRound: this.scene.pveBestRound,
-            retryAfterDeath: false
+            retryAfterDeath: false,
+            swapSpawnCycle: (this.scene.swapSpawnCycle || 0) + 1
           });
           // markSpawnSwapUsed(role); // TEMP: Don't mark as used
           this.scene.scene.restart({
             mode: 'pve',
+          runKind: this.scene.runKind, blockIndex: this.scene.blockIndex,
             role,
             pveRound: roundNumber, // Same round
             pveSessionStash: this.scene.pveSessionStash,
@@ -628,6 +666,8 @@ export default class ProgressionManager {
     } else {
       this.scene.currentModal = modal;
     }
+
+    if (this.scene.runKind === 'journey') return modal;
 
     // Scores go out only once the death screen exists. This used to be awaited
     // above, before a single button was built: with no backend reachable the

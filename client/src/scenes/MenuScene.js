@@ -356,23 +356,15 @@ export class MenuScene extends Phaser.Scene {
     const cont = this.add.container(0,0).setSize(a.menuW,a.rowH+a.rowGap).setDepth(3);
     cont.modeKey = 'runner';
     cont._resumable = state.resumable;
-    const start = this.makeTitleOption(state.label, () => this.launchCard(cont));
+    const start = this.makeTitleOption(state.resumable ? 'Continue Daily' : 'Daily Block', () => this.launchCard(cont));
     cont.add(start);
     cont._startBg = start._bg;
     cont._startText = start._text;
     this._titlePrimary = start;
     this.focusTitleOption(start);
-    if (state.resumable) {
-      const restart = this.makeTitleOption('Restart', () => {
-        // Same clear-and-launch path as the previous "start over" control.
-        // Respect the scene's transition guard before clearing the save.
-        if (this.cameras.main.fadeEffect?.isRunning) return;
-        try { clearSessionState('runner'); } catch {}
-        this.launchCard(cont);
-      }).setPosition(0, a.rowGap);
-      cont.add(restart);
-      cont._restart = restart;
-    }
+    const journey = this.makeTitleOption('Keep Running', () => this.launchCard({ modeKey: 'runner', runKind: 'journey' }))
+      .setPosition(0, a.rowGap);
+    cont.add(journey);
     return cont;
   }
 
@@ -2018,7 +2010,7 @@ export class MenuScene extends Phaser.Scene {
           target: 'RUNNER',
           duration: 250,
           moveBelow: true,
-          data: { mode: 'pve' }
+          data: { mode: 'pve', runKind: card.runKind || 'daily' }
         });
       });
     } else if (k === 'plug'){
@@ -2753,7 +2745,7 @@ export class MenuScene extends Phaser.Scene {
     // Bottom elements
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
 
-    const tutorialRow = this.cards?.[0]?._resumable ? 2 : 1;
+    const tutorialRow = 2;
     this.tutorialBtn?.setPosition(W/2, brand.menuY + tutorialRow * brand.rowGap);
     this.settingsBtn?.setPosition(W/2, brand.menuY + (tutorialRow + 1) * brand.rowGap);
 

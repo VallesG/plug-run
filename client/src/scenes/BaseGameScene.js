@@ -1,3 +1,5 @@
+import { worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
+import { getJourneyProgress } from '../utils/journeyProgress.js';
 import Phaser from 'phaser';
 import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
 import inv, { loadInv, saveInv } from '../state/inventory.js';
@@ -156,6 +158,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.fxBulletHighContrast = true;
 
     // PvE session tracking
+    this.runKind = initData?.runKind === 'journey' ? 'journey' : 'daily';
+    this._blockEntranceShown = false;
+    this.worldBlock = null;
     this.mode = initData?.mode || 'pvp'; // 'pve' or 'pvp'
     console.log('[BaseGameScene] mode:', this.mode, 'role:', this.role);
 
@@ -171,7 +176,11 @@ export class BaseGameScene extends Phaser.Scene {
       // storage is keyed by routeID, so a new day simply misses).
       const menuEntry = initData?.pveRound == null && !initData?.savedSession;
       const entryRole = initData?.role ?? (this.scene.key === 'PLUG' ? 'plug' : 'runner');
-      const sess = initData?.savedSession ?? (menuEntry ? getSessionState(entryRole) : null);
+      let sess = initData?.savedSession ?? (menuEntry
+        ? (this.runKind === 'journey' ? getJourneyProgress() : getSessionState(entryRole)) : null);
+      if (this.runKind === 'daily' && sess?.pveRound > 15) sess = null;
+      this.blockIndex = initData?.blockIndex ?? sess?.blockIndex ?? 1;
+      if (this.runKind === 'journey') this.worldBlock = worldBlock(this.blockIndex);
       this.savedSession = sess;
 
       // Continue session or start new
@@ -188,21 +197,23 @@ export class BaseGameScene extends Phaser.Scene {
       // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
       // opponent's spot, 2 = take the second opponent's spot (round 8+),
       // then wraps back to original. Boolean swapSpawns kept for compat.
-      this.swapSpawnCycle = initData?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0);
+      this.swapSpawnCycle = initData?.swapSpawnCycle ?? sess?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0);
       console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep, 'SpawnCycle:', this.swapSpawnCycle);
 
       // Use deterministic route seed for PvE (same daily route for all players globally, resets 12am PST)
       // Runner and plug modes get different seeds for balanced gameplay
       const routeID = getCurrentRouteID();
       this.currentRouteID = routeID;
-      this.seed = getRouteSeed(routeID, this.pveRound, this.role);
+      this.seed = this.runKind === 'journey'
+        ? worldHouseSeed(this.blockIndex, this.pveRound, 'runner')
+        : getRouteSeed(routeID, this.pveRound, this.role);
       console.log('[BaseGameScene] PvE Route ID:', routeID, 'Round:', this.pveRound, 'Role:', this.role, 'Seed:', this.seed);
 
       // Create seeded RNG for gameplay elements (AI targeting, etc.)
       this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01); // XOR to create different sequence from maze gen
 
       // Cleanup old route data periodically (every new route start)
-      if (this.pveRound === 1) {
+      if (this.pveRound === 1 && this.runKind !== 'journey') {
         cleanupOldRoutes();
       }
     } else {
@@ -598,8 +609,11 @@ export class BaseGameScene extends Phaser.Scene {
       clearTimeout(this._resizeTimer);
       this._resizeTimer = setTimeout(() => this.scene.restart({
         mode: this.mode,
+        runKind: this.runKind, blockIndex: this.blockIndex,
         role: this.role,
         seed: this.seed,
+        retryAfterDeath: this.retryAfterDeath,
+        swapSpawnCycle: this.swapSpawnCycle,
         pveRound: this.pveRound,
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
@@ -1125,6 +1139,13 @@ export class BaseGameScene extends Phaser.Scene {
 
   startMatch(role){
     this.role = role;
+    if (this.mode === 'pve' && role === 'runner' && !this._blockEntranceShown) {
+      this._blockEntranceShown = true;
+      this.roundPausedForMenu = true;
+      this.input.keyboard.enabled = false;
+      this.progressionManager.showBlockMap(() => this.startMatch(role));
+      return;
+    }
 
     // Start replay recording for this round (keeps the previous round's
     // finished replay intact until this one actually records something)
@@ -1707,6 +1728,7 @@ export class BaseGameScene extends Phaser.Scene {
       ticks: this.simTick | 0,
       role: this.role,
       mode: this.mode,
+        runKind: this.runKind, blockIndex: this.blockIndex,
       round: this.pveRound ?? null,
       routeID: this.currentRouteID ?? null,
       seed: this.seed ?? null,
@@ -2385,7 +2407,7 @@ export class BaseGameScene extends Phaser.Scene {
 
           // Log activity feed event: Player picked up bunk (only for human player)
           if (this.role === 'runner') {
-            logBunkPickup(this.pveRound || 1);
+            this.runKind !== 'journey' && logBunkPickup(this.pveRound || 1);
           }
 
           // Play pickup sounds (generic pickup + bunk stash pickup)

@@ -9,6 +9,38 @@ plan. This file is onboarding; that one is the research log.
 
 ---
 
+## Entrance flow and Keep Running — 2026-09-15
+
+- Runner PvE now pauses on the exterior block map BEFORE startMatch/loadout,
+  including first entry and resume. Cleared = current house minus one; visibleThrough
+  includes the ready house. Enter House resumes setup; no extra post-clear map.
+- Menu has four stable rows: Daily Block/Continue Daily, Keep Running, Tutorial,
+  Settings. Restart Daily moved to the entrance map for resumed daily blocks.
+- Keep Running uses mode=pve plus runKind=journey and blockIndex. House index
+  resets to 1 after each 15-house finale; existing difficulty stays bounded.
+- logic/worldBlocks.js has permanent versioned block/house seed domains, curated
+  names in four districts, numbered identities, short arrival/departure copy and
+  checkpoint transitions. Street names repeat, numbered block identities do not.
+  World geography currently uses the established street route with seeded
+  mirroring and seeded ground/fog; it is not a new arbitrary street generator.
+- utils/journeyProgress.js stores a device-local, account-scoped checkpoint under
+  pr_journey_v1_<userID>. No cloud sync. Clearing the browser's storage loses it.
+  Next-house/next-block checkpoint saves immediately on clear. Retry and swap
+  preserve journey identity; a new block resets its local stash/REP and streak.
+- Journey never calls daily completion/session/leaderboard or accumulated user
+  reward writes. Daily seed formula is unchanged. Journey rewards are local only.
+  Existing analytics still track PvE events; do not treat them as daily-only data.
+- 403 existing + 63 new behavioral assertions passed in the adapted V8 harness.
+  Stub checks covered Base init/resume/entrance pause, journey storage isolation,
+  extraction at houses 1/14/15, retry/swap isolation, and daily score submission.
+  Another 120 generated 16x35 world maps repeated deterministically. Modal geometry
+  stubs retained positive map space at 280x480, 390x844 and 1440x900 (not visual QA).
+  Edited modules passed adapted binding-aware syntax compilation. Native npm test,
+  .mjs syntax subprocess checks, Vite build and visual/touch/browser QA were NOT
+  run: local process creation still fails with Windows error 267. Run npm run verify
+  in client, then check menu -> house1 -> loadout, clear -> house2, resume, retries,
+  and house15 -> next block on the user's machine before merging/deploying.
+
 ## Codex continuation — 2026-09-15
 
 The block-map redirect below is implemented and the human approved its rendered

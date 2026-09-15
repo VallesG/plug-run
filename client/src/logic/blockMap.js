@@ -29,25 +29,28 @@ export function distanceToStreet(x, y, a, b) {
   return Math.hypot(x - a.x - t*dx, y - a.y - t*dy);
 }
 
-export function layoutBlock({ maps = 15, cleared = 0, width, height, x0 = 0, y0 = 0 }) {
+export function layoutBlock({ maps = 15, cleared = 0, entering = false, layoutSeed = 0, width, height, x0 = 0, y0 = 0 }) {
   const count = clamp(maps | 0, 1, ROUTE.length);
   const progress = clamp(cleared | 0, 0, count);
+  const visibleThrough = Math.min(count, progress + (entering ? 1 : 0));
+  const mirror = (layoutSeed & 1) !== 0;
+  const route = ROUTE.map(([x,y,side]) => [mirror ? 200-x : x,y,mirror ? -side : side]);
   const scale = Math.max(0, Math.min((Number(width)||0)/200, (Number(height)||0)/220));
-  const houses = ROUTE.slice(0, count).map(([x,y,side], i) => ({
+  const houses = route.slice(0, count).map(([x,y,side], i) => ({
     index: i+1, state: houseState(i+1, progress, count), finale: i+1 === count,
     road: { x,y }, lamp: { x:x+side*5, y:y+5 },
     x:x+side*13, y:y-1, w:11+(i%3), h:18+(i%4), side
   }));
-  const entrance = { x:32, y:214 };
+  const entrance = { x:mirror ? 168 : 32, y:214 };
   const streets = houses.map((house,i) => ({
     index:i+1, a:i ? houses[i-1].road : entrance, b:house.road
   }));
   return {
-    houses, streets, maps:count, cleared:progress, scale,
+    houses, streets, maps:count, cleared:progress, visibleThrough, scale,
     x:x0 + ((Number(width)||0)-200*scale)/2,
     y:y0 + ((Number(height)||0)-220*scale)/2,
     w:200*scale, h:220*scale,
-    marker: progress ? houses[progress-1].road : entrance
+    marker: visibleThrough ? houses[visibleThrough-1].road : entrance
   };
 }
 
