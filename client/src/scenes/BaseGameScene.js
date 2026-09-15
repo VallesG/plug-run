@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { drawInteriorDecor } from '../controllers/InteriorDecor.js';
 import inv, { loadInv, saveInv } from '../state/inventory.js';
 import {
   rectsOverlap,
@@ -11,7 +12,7 @@ import {
   randomCardinal
 } from '../utils/gameUtils.js';
 import { makeRunnerSprite, makePlugSprite, updateAvatarVisuals } from '../utils/spriteFactory.js';
-import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/mazeGenerator.js';
+import { T, THEMES, generateSquareMaze } from '../utils/mazeGenerator.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
@@ -487,29 +488,7 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   create(){
-    // Ensure furniture textures are available (load once lazily)
-    const furnIds = [132,133,134,447,448,449,450,451,474,475,476,477,478,501,502,503,505,528,537];
-    const furn2Ids = [506,507,508,509,510,529,530,531,532,533];
-    const furnKeys = furnIds.map(id=> 'furn_'+id).concat(furn2Ids.map(id=>'f2_'+id));
-    const missing = furnKeys.filter(k => !this.textures.exists(k));
-    if (missing.length){
-      // load both directories based on prefix
-      furnIds.forEach(id=> this.load.image('furn_'+id, `/tiles/furn/tile_${id}.png`));
-      furn2Ids.forEach(id=> this.load.image('f2_'+id, `/tiles/furn2/tile_${id}.png`));
-      this.load.once('complete', ()=> this.scene.restart({
-        mode: this.mode,
-        role: this.role,
-        seed: this.seed,
-        pveRound: this.pveRound,
-        pveSessionStash: this.pveSessionStash,
-        pveSessionRep: this.pveSessionRep,
-        pveCleanStreak: this.pveCleanStreak || 0,
-        runId: this.runId,
-        pveBestRound: this.pveBestRound
-      }));
-      this.load.start();
-      return;
-    }
+    // Interior furniture is drawn in code; no asynchronous texture-loading restart.
     // Characters are the td_* top-down set, animated by texture swap in
     // updateAvatarVisuals. The Kenney and gangster sheets that used to be
     // preloaded and wired into anims here were never drawn in play (every
@@ -1491,7 +1470,7 @@ export class BaseGameScene extends Phaser.Scene {
       if (!w) addEdge(270);
     };
 
-    decorateArenaFurniture(this, { cell, cols, rows, pad, isWall, isBorder, drawDefaultCell });
+    drawInteriorDecor(this, { cell, cols, rows, pad, isWall, drawDefaultCell });
 
     // Fill ALL margin space around the maze with border brick, so the
     // fixed 16x35 grid never leaves visible empty space on any screen.
@@ -1519,7 +1498,7 @@ export class BaseGameScene extends Phaser.Scene {
     // like this — this makes the effect deliberate and visible on ALL
     // themes, including dark/black ones.)
     const marks = this.add.graphics().setDepth(4);
-    marks.fillStyle(0xf5c542, 0.55);
+    marks.fillStyle(0x8d9489, 0.18);
     const mw = Math.max(3, Math.floor(cell * 0.16));
     const mh = Math.max(2, Math.floor(cell * 0.08));
     for (let y = -ringsY; y < rows + ringsY; y++){
@@ -1531,7 +1510,7 @@ export class BaseGameScene extends Phaser.Scene {
         const base = this.add.image(wx, wy, this._wallFillKey || 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
         base.setDisplaySize(cell, cell); this.walls.add(base);
         // one dash per tile, offset toward top-left like a reflector stud
-        marks.fillRect(wx - cell*0.28, wy - cell*0.22, mw, mh);
+        if (((x + y) & 3) === 0) marks.fillRect(wx - cell*0.28, wy - cell*0.22, mw, mh);
       }
     }
     this.walls.add(marks);

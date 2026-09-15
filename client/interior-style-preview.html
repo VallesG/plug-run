@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run — interior & loadout study</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10171b;color:#cad7d9;font:14px Arial,sans-serif}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #34434a}
+button,select{background:#202d34;color:inherit;border:1px solid #536771;border-radius:3px;padding:9px;cursor:pointer}
+#stage{width:390px;height:844px;margin:16px auto;max-width:100%}
+#status{padding:0 18px;text-align:center;font-size:12px;color:#90a6ae}canvas{display:block}
+</style></head><body>
+<header><strong>INTERIOR / MATERIAL STUDY</strong>
+<select id="theme"></select>
+<select id="viewport"><option value="390,844">Phone · 390×844</option><option value="320,568">Small phone · 320×568</option><option value="768,1024">Tablet · 768×1024</option></select>
+<button id="next">Next sample house</button><button id="loadout">Choose powers</button>
+</header>
+<p id="status">Actual game floor, wall, furniture and character renderers. This is a stationary art preview.</p>
+<div id="stage"></div>
+<script type="module">
+import Phaser from 'phaser';
+import { BaseGameScene } from './src/scenes/BaseGameScene.js';
+import { generateSquareMaze, THEMES } from './src/utils/mazeGenerator.js';
+import { makeRunnerSprite, makePlugSprite } from './src/utils/spriteFactory.js';
+import GameUI from './src/controllers/GameUI.js';
+const selector=document.querySelector('#theme');
+THEMES.forEach((theme,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=theme.key.replaceAll('_',' ');selector.append(o);});
+selector.value='3';
+let activeScene,game,sampleSeed=7319;
+function makeRng(seed){
+ let t=seed>>>0;
+ return ()=>{t+=0x6D2B79F5;let r=Math.imul(t^(t>>>15),1|t);r^=r+Math.imul(r^(r>>>7),61|r);return ((r^(r>>>14))>>>0)/4294967296;};
+}
+class ArtScene extends Phaser.Scene {
+ constructor(){super('ART');}
+ preload(){
+  for(const key of ['runner','runner_step','plug','plug_step'])this.load.image('td_'+key,'/sprites/td/'+key+'.png');
+  this.load.image('wall_fill','/tiles/kenney/walls/fill.png');
+  this.load.image('wall_edge','/tiles/kenney/walls/edge.png');
+  for(let i=96;i<=101;i++)this.load.image('wood_'+i,'/tiles/kenney/wood_'+i+'.png');
+  for(let i=11;i<=14;i++)this.load.image('check_'+i,'/tiles/checker/check_'+i+'.png');
+  this.load.image('car_blue','/cars/blue.png');
+ }
+ create(){
+  this.cols=16;this.rows=35;this.role='runner';this.mode='pve';this.pveRound=8;
+  this.seed=sampleSeed;this.theme=THEMES[Number(selector.value)];
+  this.vfx={hideCarBeacon(){}};
+  this.computeLayoutFromViewport();
+  const arena=generateSquareMaze(16,35,{rng:makeRng(this.seed),role:'runner',clusterScale:1});
+  this.grid=arena.grid;this.egress=arena.egress;
+  this.neutralizeWallTextures();this.drawNeonArena();this.drawWallInk();
+  this.makeObjectives(arena.objectives.stash,arena.objectives.extract);this.placeGetawayCar();
+  this._drawStashHalo?.();
+  makeRunnerSprite(this,this.toWorldX(arena.spawns.runner.x),this.toWorldY(arena.spawns.runner.y),this.cell);
+  makePlugSprite(this,this.toWorldX(arena.spawns.plug.x),this.toWorldY(arena.spawns.plug.y),this.cell);
+  this.gameUI=new GameUI(this);activeScene=this;
+ }
+ hideCarBeacon(){}
+}
+for(const name of ['computeLayoutFromViewport','toWorldX','toWorldY','neutralizeWallTextures',
+ 'drawNeonArena','drawNeonPerimeter','drawWallInk','makeObjectives','placeGetawayCar']){
+ ArtScene.prototype[name]=BaseGameScene.prototype[name];
+}
+class MenuReturn extends Phaser.Scene {
+ constructor(){super('MENU');}
+ create(){window.location.href='/';}
+}
+function restart(){
+ if(activeScene){activeScene.gameUI?.currentModal?.destroy();activeScene.scene.restart();}
+}
+selector.addEventListener('change',restart);
+document.querySelector('#next').addEventListener('click',()=>{sampleSeed++;restart();});
+document.querySelector('#loadout').addEventListener('click',()=>{
+ if(!activeScene)return;
+ activeScene.gameUI.currentModal?.destroy();
+ activeScene.gameUI.promptRunnerPowerSelection(()=>{
+  document.querySelector('#status').textContent='Selected: '+activeScene.runnerPowersSelected.join(' then ')+'. The game uses the same selection order.';
+ });
+});
+function start(){
+ activeScene=null;if(game)game.destroy(true);
+ const [width,height]=document.querySelector('#viewport').value.split(',').map(Number);
+ const stage=document.querySelector('#stage');stage.style.width=width+'px';stage.style.height=height+'px';
+ game=new Phaser.Game({type:Phaser.AUTO,parent:'stage',width,height,backgroundColor:'#10171b',
+  scene:[ArtScene,MenuReturn],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_HORIZONTALLY}});
+}
+document.querySelector('#viewport').addEventListener('change',start);start();
+</script></body></html>

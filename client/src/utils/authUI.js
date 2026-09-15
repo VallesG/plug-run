@@ -1,3 +1,4 @@
+import { drawPowerIcon } from '../controllers/PowerIcons.js';
 // In-game UI: settings button + settings modal + toasts
 // (Account/login UI removed — offline build)
 
@@ -43,10 +44,7 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
     .setScrollFactor(0)
     .setInteractive({ useHandCursor: true });
 
-  const settingsIcon = scene.add.text(settingsX, topEdge, '\u2699', {
-    color: '#cbd1ff',
-    fontSize: '14px'
-  }).setOrigin(0.5).setDepth(Z + 1).setScrollFactor(0);
+  const settingsIcon = drawPowerIcon(scene, settingsX, topEdge, 'settings', 16, 0xb7c6cf, Z + 1);
 
   settingsBg.on('pointerdown', () => {
     showInGameSettings(scene, Z + 10);
