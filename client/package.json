@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node test/botDriver.test.mjs && node test/threat.test.mjs && node test/runStats.test.mjs && node test/steering.test.mjs && node test/seedCursor.test.mjs && node test/evasion.test.mjs && node test/runForensics.test.mjs && node test/spawnChoice.test.mjs && node test/cover.test.mjs && node test/blockFormat.test.mjs",
+    "test": "node test/botDriver.test.mjs && node test/threat.test.mjs && node test/runStats.test.mjs && node test/steering.test.mjs && node test/seedCursor.test.mjs && node test/evasion.test.mjs && node test/runForensics.test.mjs && node test/spawnChoice.test.mjs && node test/cover.test.mjs && node test/blockFormat.test.mjs && node test/blockMap.test.mjs",
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview"

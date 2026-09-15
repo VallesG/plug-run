@@ -11,6 +11,7 @@ import {
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
+import { drawBlockStreet } from './BlockMap.js';
 import { SESSION_RULES, streakBonus } from '../utils/repTracker.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
@@ -249,7 +250,7 @@ export default class ProgressionManager {
           } else {
             // Restart with new seed (preserve mode for PvE)
             const newSeed = (Math.random() * 2 ** 32) | 0;
-            this.scene.scene.restart({
+            const goNext = () => this.scene.scene.restart({
               mode: this.scene.mode,
               role: this.scene.role,
               seed: newSeed,
@@ -260,6 +261,9 @@ export default class ProgressionManager {
               runId: this.scene.runId,
               pveBestRound: this.scene.pveBestRound
             });
+            // PvE pauses on the block map between houses; PvP goes straight on.
+            if (this.scene.mode === 'pve') this.showBlockMap(goNext);
+            else goNext();
           }
         }
       });
@@ -412,6 +416,29 @@ export default class ProgressionManager {
   }
 
   /**
+   * Between houses: the street so far, lit up to here, next one marked.
+   *
+   * This replaces a blank "ROUND N / Continue" modal, and it is the slot the
+   * old code annotated as the future ad spot. The screen is already black
+   * from the extraction veil, which suits a night street. The button owns the
+   * restart, so nothing advances until the player has seen the map.
+   */
+  showBlockMap(goNext) {
+    const maps = PVE_BLOCK_MAPS;
+    const cleared = Math.min(maps, this.scene.pveRound || 1);
+    const modal = this.scene.gameUI?.showModal?.({
+      title: `House ${cleared} cleared`,
+      subtitle: `${cleared} of ${maps} lit`,
+      lines: [],
+      buttons: [{ label: cleared + 1 >= maps ? 'THE LAST HOUSE' : 'NEXT HOUSE', variant: 'primary', onClick: goNext }]
+    });
+    if (!modal) { goNext(); return null; }
+    drawBlockStreet(this.scene, modal, { cleared, maps });
+    if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
+    return modal;
+  }
+
+  /**
    * The block is cleared — the run's ending.
    *
    * Deliberately a different screen from the death modal: this is the only
@@ -448,6 +475,9 @@ export default class ProgressionManager {
 
     if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
     else this.scene.currentModal = modal;
+
+    // The whole street lit. This is the image the night can be shared as.
+    if (modal) drawBlockStreet(this.scene, modal, { cleared: maps, maps });
 
     return modal;
   }
