@@ -1,7 +1,7 @@
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
-import { PALETTE } from '../logic/palette.js';
+import { PALETTE as INK } from '../logic/palette.js';
 import { PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID, ensureProvisionedIdentity, getRecoveryCode, hasProvisionedIdentity, restoreFromRecoveryCode } from '../utils/userManager.js';
@@ -77,9 +77,9 @@ export class MenuScene extends Phaser.Scene {
     const signH = logoSize * 2.2; // Taller for two lines
     // Comic grammar, same as in-game: flat fill, ink line, hard offset shadow.
     const signBg = this.add.rectangle(W/2, logoY + signH/2, signW, signH, 0x0047AB, 1)
-      .setStrokeStyle(4, PALETTE.ink)
+      .setStrokeStyle(4, INK.ink)
       .setDepth(4);
-    const signShadow = this.add.rectangle(W/2 + 5, logoY + signH/2 + 6, signW, signH, PALETTE.ink, 0.55)
+    const signShadow = this.add.rectangle(W/2 + 5, logoY + signH/2 + 6, signW, signH, INK.ink, 0.55)
       .setDepth(3);
 
     // Emblem - circular logo on the left side of the sign
@@ -99,7 +99,7 @@ export class MenuScene extends Phaser.Scene {
       fontSize: logoSize + 'px',
       color: '#ffffff',
       fontStyle: 'bold',
-      stroke: PALETTE.inkCss,
+      stroke: INK.inkCss,
       strokeThickness: 4
     }).setOrigin(0.5, 0.5).setDepth(5);
 
@@ -367,10 +367,10 @@ export class MenuScene extends Phaser.Scene {
     // Cards are not interactive - only buttons control navigation
 
     // Dark panel body with the in-game grammar: ink line, hard offset shadow.
-    const bgShadow = this.add.rectangle(6, 7, cw, ch, PALETTE.ink, 0.55);
+    const bgShadow = this.add.rectangle(6, 7, cw, ch, INK.ink, 0.55);
     cont.add(bgShadow);
     const bg = this.add.rectangle(0, 0, cw, ch, 0x10131a, 0.96);
-    bg.setStrokeStyle(3, PALETTE.ink, 1);
+    bg.setStrokeStyle(3, INK.ink, 1);
     cont.add(bg);
 
     // Add animated sprite visuals (single line of sprites)
@@ -399,7 +399,7 @@ export class MenuScene extends Phaser.Scene {
     // Single-line bar: street name left, address right
     const titleBgHeight = Math.floor(titleSize * 1.7);
     const titleBg = this.add.rectangle(0, -ch * 0.5 + titleBgHeight/2, cw, titleBgHeight, signColor, 1)
-      .setStrokeStyle(3, PALETTE.ink)
+      .setStrokeStyle(3, INK.ink)
       .setOrigin(0.5, 0.5);
 
     const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2, titleText, {
@@ -407,7 +407,7 @@ export class MenuScene extends Phaser.Scene {
       fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
       fontStyle: 'bold',
       fontSize: titleSize + 'px',
-      stroke: PALETTE.inkCss,
+      stroke: INK.inkCss,
       strokeThickness: 3
     }).setOrigin(0.5, 0.5);
 
@@ -467,9 +467,9 @@ export class MenuScene extends Phaser.Scene {
     const btnY = (ch / 2) - (btnHeight / 2) - 8; // Position at bottom edge with small padding
 
     // Comic button: flat yellow, ink line, hard shadow underneath.
-    const startShadow = this.rexUI.add.roundRectangle(4, btnY + 5, btnWidth, btnHeight, 6, PALETTE.ink, 0.6);
+    const startShadow = this.rexUI.add.roundRectangle(4, btnY + 5, btnWidth, btnHeight, 6, INK.ink, 0.6);
     const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 6, 0xfbbf24, 1)
-      .setStrokeStyle(3, PALETTE.ink)
+      .setStrokeStyle(3, INK.ink)
       .setInteractive({ cursor: 'pointer' });
 
     // The button speaks in blocks and maps. A session past the end of the
@@ -487,7 +487,7 @@ export class MenuScene extends Phaser.Scene {
     const startText = this.add.text(0, btnY, buttonText, {
       fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
       fontSize: Math.max(16, Math.floor(btnHeight * 0.42)) + 'px',
-      color: PALETTE.inkCss,
+      color: INK.inkCss,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
