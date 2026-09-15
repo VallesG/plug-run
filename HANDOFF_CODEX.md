@@ -52,23 +52,31 @@ preview inline modules into a temporary .mjs file and invokes native
 Vite still needs to pass. The new native syntax checker itself remains unrun in
 this restricted session.
 
-Landing/brand continuation:
-- The human approved the interior/loadout appearance, then requested a matching
-  landing page and reusable identity. The new identity is "Follow the light":
-  custom outlined ivory/blue wordmark, route-to-house gold marker, muted exterior
-  street illustration, warm primary action. Masters live in client/public/brand/.
-- MenuScene uses the SVG masters, a quieter card and drawn footer icons. Start,
-  continue, restart, daily stats, identity and tutorial keep their original paths.
-  The profile chip now fits beside the controls on narrow phones.
-- Import-free logic/landingLayout.js owns responsive bounds, covered by 44 new
-  assertions. /brand-preview.html shows the SVG masters and embeds the actual
-  game for phone/tablet/desktop review. The iframe is not a sandboxed fake game.
-- SVG favicon updated; legacy PNG/apple-touch fallbacks remain unchanged.
-- 293 behavior assertions passed under adapted V8, not native npm. Stubbed
-  Phaser checks covered 16 card viewport/session combinations and four restart
-  actions; launchCard was compared unchanged. Native ESM, Vite build, SVG loading,
-  font metrics, actual taps and the new landing appearance still need local review.
-  Windows process launch still fails with error 267. Run npm run verify locally.
+Landing/title-screen continuation:
+- The human approved the Plug Run wordmark but rejected the busy landing card,
+  then supplied a Nearly Dead title-screen reference. That supersedes the
+  earlier card and the uncommitted simplified gold-button draft.
+- MenuScene now presents Start Block / Continue, conditional Restart, Tutorial
+  and Settings as quiet vertical text options. Gold marks the selected option,
+  not a large filled button. The countdown remains beneath the unchanged SVG
+  wordmark. No title card, stats strip, street illustration or menu sidebars.
+- The background uses existing runner/plug sprites, faint blue/red tints and a
+  fixed vignette. Import-free titleBackdrop plans bounded edge positions and
+  excludes the logo and worst-case four-row menu. No RNG or gameplay changes.
+- Profile/recovery, help and leaderboard remain accessible in the footer.
+  Stats data is not removed; the leaderboard remains its destination.
+  launchCard is unchanged. Restart retains clear-and-launch, with a fade guard.
+- logic/landingLayout.js owns geometry, save labels and backdrop positions.
+  Its test suite now has 120 assertions, replacing the old 44 card-fit checks.
+  All 249 other assertions also passed under adapted V8 (369 total). Stubbed
+  Phaser checks covered 20 viewport/session scenarios, 10 restarts, hover
+  selection, tutorial transitions, settings callbacks and actual positioning.
+- This is NOT a native npm test or Vite build claim. Windows process creation
+  still fails with error 267. Actual sprite brightness, font metrics, taps,
+  native ESM imports and final composition need local review with npm run verify
+  and /brand-preview.html (which embeds the actual game, not a fake menu).
+- SVG logo/favicon assets are unchanged. The old night-block.svg is retained
+  as reusable art but is no longer loaded or shown on the title screen.
 
 The remaining sections preserve the earlier handoff and research context.
 
@@ -321,4 +329,3 @@ Still open, and deliberately left for someone with the game on screen:
 - The replay system records the display list. If you add visual objects to
   characters, they get recorded; per-frame offsets are fine, tweens fighting
   for the same property are not.
-
