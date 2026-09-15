@@ -18,6 +18,7 @@ import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundComple
 import RunForensics from '../logic/runForensics.js';
 import { chooseAlternateSpawn } from '../logic/spawnChoice.js';
 import { hasDualOpponent, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
+import { PALETTE } from '../logic/palette.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
@@ -56,20 +57,7 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   preload(){
-    // Legacy gangster sheets (leave for fallback)
-    this.load.spritesheet('g1_idle', '/sprites/g1/idle.png', { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g1_run',  '/sprites/g1/run.png',  { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g1_shot', '/sprites/g1/shot.png', { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g2_idle', '/sprites/g2/idle.png', { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g2_run',  '/sprites/g2/run.png',  { frameWidth: 128, frameHeight: 128 });
 
-    // Kenney replacements (smaller compact sprites): Runner=Player, Plug=Soldier
-    this.load.image('ken_player_idle',   '/sprites/kenney/player/idle.png');
-    this.load.image('ken_player_walk1',  '/sprites/kenney/player/walk1.png');
-    this.load.image('ken_player_walk2',  '/sprites/kenney/player/walk2.png');
-    this.load.image('ken_soldier_idle',  '/sprites/kenney/soldier/idle.png');
-    this.load.image('ken_soldier_walk1', '/sprites/kenney/soldier/walk1.png');
-    this.load.image('ken_soldier_walk2', '/sprites/kenney/soldier/walk2.png');
 
     // Direct top-down shooter sprites (final picks)
     this.load.image('td_runner', '/sprites/td/runner.png');
@@ -522,16 +510,10 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.start();
       return;
     }
-    // One-time animations for sprites
-    const mkOnce = (key, cfg) => { if (!this.anims.exists(key)) this.anims.create({ key, ...cfg }); };
-    // Runner (Kenney Player)   simple 2-frame walk
-    mkOnce('runner-idle', { frames: [{ key:'ken_player_idle' }], frameRate: 1, repeat: -1 });
-    mkOnce('runner-run',  { frames: [{ key:'ken_player_walk1' }, { key:'ken_player_walk2' }], frameRate: 8, yoyo: true, repeat: -1 });
-    // Plug (Kenney Soldier)
-    mkOnce('plug-idle', { frames: [{ key:'ken_soldier_idle' }], frameRate: 1, repeat: -1 });
-    mkOnce('plug-run',  { frames: [{ key:'ken_soldier_walk1' }, { key:'ken_soldier_walk2' }], frameRate: 8, yoyo: true, repeat: -1 });
-    // Keep old 'plug-shot' anim for fallback if g1_shot exists
-    mkOnce('plug-shot', { frames: this.textures.exists('g1_shot') ? this.anims.generateFrameNumbers('g1_shot', { start: 0, end: 3 }) : [{ key:'ken_soldier_idle' }], frameRate: 18, repeat: 0 });
+    // Characters are the td_* top-down set, animated by texture swap in
+    // updateAvatarVisuals. The Kenney and gangster sheets that used to be
+    // preloaded and wired into anims here were never drawn in play (every
+    // character is usesTD) — three art styles were shipping for one look.
     loadInv();
     this.roundOver = false;
 
@@ -2084,6 +2066,8 @@ export class BaseGameScene extends Phaser.Scene {
         if (!this.inBoundsCell(nx, ny) || !this.isWalkableCell(nx, ny)) break;
         cx = nx; cy = ny;
       }
+      // JUICE: dust where the dash launched from, so the jump reads as a jump.
+      this.spawnDust(this.toWorldX(start.x), this.toWorldY(start.y));
       this.attacker.x = this.toWorldX(cx);
       this.attacker.y = this.toWorldY(cy);
     } else if (power === 'decoy'){
@@ -2154,6 +2138,19 @@ export class BaseGameScene extends Phaser.Scene {
     return performance.now() < (this.phaseActiveUntil || 0);
   }
 
+  /** A puff of ground dust. Visual only — nothing here touches sim state. */
+  spawnDust(x, y, n = 6){
+    for (let i = 0; i < n; i++){
+      const a = Math.random() * Math.PI * 2;
+      const r = this.cell * (0.35 + Math.random() * 0.5);
+      const c = this.add.circle(x, y, this.cell * (0.06 + Math.random() * 0.06), PALETTE.dust, 0.7).setDepth(9);
+      this.tweens.add({
+        targets: c, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, alpha: 0, scale: 0.3,
+        duration: 220 + Math.random() * 120, ease: 'Quad.easeOut', onComplete: () => c.destroy()
+      });
+    }
+  }
+
   destroyDecoySprite(){
     if (!this.decoySprite) return;
     this.decoySprite.destroy();
@@ -2197,15 +2194,6 @@ export class BaseGameScene extends Phaser.Scene {
     // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
     const aim = this.playerController?.playerGunAim || { x: 1, y: 0 };
     this.combatSystem.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
-
-    // Play a quick shooting animation if available
-    if (this.defender?.sprite?.anims && !this.defender?.usesTD){
-      this.defender.sprite.play('plug-shot', true);
-      if (this.defender.outline){ for (const o of this.defender.outline) o.play('plug-shot', true); }
-      this.defender.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        // resume appropriate loop based on motion handled in updateAvatarVisuals
-      });
-    }
 
     if (this.totalRoundsLeft() === 0) this.meleeEnabled = true;
   }

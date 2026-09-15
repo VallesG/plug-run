@@ -41,6 +41,13 @@ export default class CombatSystem {
     const ax = aim?.x ?? 0;
     const ay = aim?.y ?? 0;
     const len = Math.hypot(ax, ay) || 1;
+
+    // JUICE: the figure kicks back along the shot and eases home over ~80ms.
+    // Consumed by updateAvatarVisuals as a decaying offset (see spriteFactory).
+    if (origin?.figure?.length) {
+      const k = this.scene.cell * 0.14;
+      origin._recoil = { x: -(ax / len) * k, y: -(ay / len) * k, t: 0.08, dur: 0.08 };
+    }
     const baseAngle = Math.atan2(ay / len, ax / len);
     const pellets = stats?.spreadAngles?.length ? stats.spreadAngles : [0];
 
@@ -524,17 +531,6 @@ export default class CombatSystem {
     // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
     const aim = this.scene.playerController?.playerGunAim || { x: 1, y: 0 };
     this.spawnWeaponBurst(this.scene.defender, aim, weapon, this.scene.bulletsD);
-
-    // Play a quick shooting animation if available
-    if (this.scene.defender?.sprite?.anims && !this.scene.defender?.usesTD) {
-      this.scene.defender.sprite.play('plug-shot', true);
-      if (this.scene.defender.outline) {
-        for (const o of this.scene.defender.outline) o.play('plug-shot', true);
-      }
-      this.scene.defender.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        // resume appropriate loop based on motion handled in updateAvatarVisuals
-      });
-    }
 
     if (this.scene.totalRoundsLeft() === 0) this.scene.meleeEnabled = true;
   }
