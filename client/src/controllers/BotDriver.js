@@ -29,11 +29,13 @@
 // existing tutorial AI already does this deliberately ("30% chance to pick a
 // random valid neighbor... makes it wander") — same instinct.
 
-// NO IMPORTS ON PURPOSE. Keeping this file free of the Phaser dependency
-// graph means the decision logic can be exercised under plain Node against a
-// stub scene — which matters here, because browser binaries can't be
+// NO PHASER IMPORTS ON PURPOSE. Keeping this file clear of the Phaser
+// dependency graph means the decision logic can be exercised under plain Node
+// against a stub scene — which matters here, because browser binaries can't be
 // downloaded in every environment this runs in. The prototype wrap that needs
 // BaseGameScene lives in installBotDriver.js.
+
+import { planDodge } from '../logic/evasion.js';
 
 export const DEFAULTS = {
   // How often the bot re-decides, in ms. Human reaction floor is ~200ms and
@@ -78,6 +80,15 @@ export const DEFAULTS = {
   // seeds put the runner in the plug's line of sight on frame one, and no
   // amount of skill beats that — a human reaches for the swap, so does this.
   swapAfterFails: 2,
+
+  // Evasion commitment. Dodging is re-decided on a timer, not every frame:
+  // with two plugs, leaving one's lane walks into the other's, and a
+  // per-frame decision oscillates until the round clock kills it. maxMs is
+  // the giving-up point — a dodge still running then is not working, so rest
+  // and let the pathfinder make progress instead of vibrating in place.
+  dodgeCommitMs: 220,
+  dodgeMaxMs: 1200,
+  dodgeRestMs: 600,
 
   // Pin the round number and sample a fresh MAP each time instead of climbing
   // the ladder. 0 = off.
@@ -125,6 +136,7 @@ export default class BotDriver {
     this._pathIdx = 0;
     this._borrowed = null;   // lazily-built AIController for the borrowed AI
     this._progressionApplied = false;
+    this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
     this._lastTick = 0;
   }
 
@@ -149,6 +161,9 @@ export default class BotDriver {
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._nextPowerCheckAt = 0;
+    // Evasion commitment state — cleared per round so a dodge can't carry
+    // across a restart.
+    this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
   }
 
   /** Should we be driving with the game's own runner AI? */
@@ -247,12 +262,20 @@ export default class BotDriver {
     // a firing lane. Layered on top rather than merged in, because the AI
     // cannot see defender2 at all (see firingLaneRisk) — from round 8 this
     // override is the only thing dodging the second plug.
+    //
+    // Committed, not per-frame: see planDodge. Two plugs make the naive
+    // version oscillate until the round timer ends the run.
     const risk = this.firingLaneRisk(me);
-    if (risk) {
-      const goal = this.currentGoal() || { x: me.x, y: me.y };
-      const out = this.dodge(me, risk, goal);
-      if (out) return this._driveOrCoast(me, out);
-    }
+    const candidate = risk
+      ? this.dodge(me, risk, this.currentGoal() || { x: me.x, y: me.y })
+      : null;
+    const plan = planDodge(this._dodge, now, risk, candidate, {
+      commitMs: this.cfg.dodgeCommitMs ?? DEFAULTS.dodgeCommitMs,
+      maxMs: this.cfg.dodgeMaxMs ?? DEFAULTS.dodgeMaxMs,
+      restMs: this.cfg.dodgeRestMs ?? DEFAULTS.dodgeRestMs
+    });
+    this._dodge = plan.state;
+    if (plan.dir) return this._driveOrCoast(me, plan.dir);
 
     const vx = this._borrowed._aiVX || 0;
     const vy = this._borrowed._aiVY || 0;
