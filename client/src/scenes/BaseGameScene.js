@@ -16,6 +16,7 @@ import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
 import RunForensics from '../logic/runForensics.js';
+import { chooseAlternateSpawn } from '../logic/spawnChoice.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
@@ -711,7 +712,8 @@ export class BaseGameScene extends Phaser.Scene {
       // Only spawn second AI opponent, not second player
       if (this.role === 'plug') {
         // Player is defender, spawn second runner (attacker)
-        const altRunnerSpawn = cycledOpp2Spawn || this.findAlternateSpawn(a, 'runner');
+        // Player is the plug here, so keep the second runner away from `d`.
+        const altRunnerSpawn = cycledOpp2Spawn || this.findAlternateSpawn(a, 'runner', d);
         this.attacker2 = makeRunnerSprite(this, this.toWorldX(altRunnerSpawn.x), this.toWorldY(altRunnerSpawn.y), this.cell).setVisible(false);
         // Full HP always — 1-HP enemies feel like popcorn, not opponents.
         // The ramp is SPEED instead: the second runner starts 20% slower
@@ -722,7 +724,8 @@ export class BaseGameScene extends Phaser.Scene {
         console.log('[DualAI] Round', this.pveRound, 'Plug Mode - Spawning second runner, children count:', this.attacker2.list.length);
       } else if (this.role === 'runner') {
         // Player is attacker, spawn second plug (defender)
-        const altPlugSpawn = cycledOpp2Spawn || this.findAlternateSpawn(d, 'plug');
+        // Player is the runner here, so keep the second plug away from `a`.
+        const altPlugSpawn = cycledOpp2Spawn || this.findAlternateSpawn(d, 'plug', a);
         this.defender2 = makePlugSprite(this, this.toWorldX(altPlugSpawn.x), this.toWorldY(altPlugSpawn.y), this.cell).setVisible(false);
         // Same philosophy for the second plug: full HP, speed ramp instead.
         this.defender2.hp = 3;
@@ -3174,43 +3177,40 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   /* -------------- Dual AI Helper -------------- */
-  findAlternateSpawn(originalSpawn, role) {
-    // DETERMINISTIC: Return cell in the opposite quadrant (consistent between retries)
-    const oppositeX = this.cols - 1 - originalSpawn.x;
-    const oppositeY = this.rows - 1 - originalSpawn.y;
+  /**
+   * Where the round-8 second opponent spawns.
+   *
+   * @param avoidCell the PLAYER's spawn. Optional, and its absence was the bug:
+   *   this used to weigh only the stash and the extraction, so across 227 runs
+   *   the second plug landed within 6 cells of the runner on 24% of rounds 8+,
+   *   once at a single cell. Not one of the 47 runs that started that close was
+   *   ever survived. The first plug has always respected a minimum distance;
+   *   the second simply was not asked to.
+   *
+   *   Left null by the spawn-cycle path, which is deliberately moving the
+   *   player onto a known spot rather than placing an opponent away from them.
+   */
+  findAlternateSpawn(originalSpawn, role, avoidCell = null) {
+    const cell = chooseAlternateSpawn({
+      cols: this.cols,
+      rows: this.rows,
+      origin: originalSpawn,
+      avoid: avoidCell,
+      stash: this.stashCell,
+      extract: this.extractCell,
+      isWalkable: (x, y) => this.isWalkableCell(x, y)
+    });
 
-    // Helper: check if cell is far enough from objectives
-    const isSafeSpawn = (cx, cy) => {
-      if (!this.isWalkableCell(cx, cy)) return false;
-
-      // Don't spawn within 3 cells of stash
-      const distToStash = Math.abs(cx - this.stashCell.x) + Math.abs(cy - this.stashCell.y);
-      if (distToStash < 3) return false;
-
-      // Don't spawn within 2 cells of extract/car
-      const distToExtract = Math.abs(cx - this.extractCell.x) + Math.abs(cy - this.extractCell.y);
-      if (distToExtract < 2) return false;
-
-      return true;
-    };
-
-    // Find nearest safe walkable cell to opposite corner (always same result for same map)
-    for (let radius = 0; radius < Math.max(this.cols, this.rows); radius++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        for (let dy = -radius; dy <= radius; dy++) {
-          const cx = oppositeX + dx;
-          const cy = oppositeY + dy;
-          if (isSafeSpawn(cx, cy)) {
-            console.log('[findAlternateSpawn] Spawning second', role, 'at', cx, cy, '(dist to stash:', Math.abs(cx - this.stashCell.x) + Math.abs(cy - this.stashCell.y), ')');
-            return { x: cx, y: cy };
-          }
-        }
-      }
+    if (cell) {
+      console.log('[findAlternateSpawn] Spawning second', role, 'at', cell.x, cell.y,
+        avoidCell ? `(${Math.abs(cell.x - avoidCell.x) + Math.abs(cell.y - avoidCell.y)} from player)` : '');
+      return cell;
     }
 
-    // Last resort: return original spawn (will stack on top, but won't crash)
-    console.warn('[findAlternateSpawn] Could not find safe spawn, using original');
-    return { ...originalSpawn };
+    // Nothing legal anywhere — fall back to the opposite corner and let the
+    // unstick pass sort it out rather than returning nothing.
+    console.warn('[findAlternateSpawn] no legal cell found; using opposite corner');
+    return { x: this.cols - 1 - originalSpawn.x, y: this.rows - 1 - originalSpawn.y };
   }
 
   /* -------------- Scene lifecycle cleanup -------------- */
