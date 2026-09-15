@@ -199,6 +199,74 @@ realistic starting point, not 60.9%.
 
 ---
 
+## The full sweep (227 runs, rounds 1-47, aiLevel 20, forensics on)
+
+One unattended session, `sweepFrom=1&sweepTo=120&mapsPerRound=5`. It reached
+round 47 before being stopped. One run discarded as a backgrounded tab.
+
+| rounds | runs | clear% | died carrying | by defender2 | laneFrac | spawn in lane |
+|---|---|---|---|---|---|---|
+| 1-7 (one plug) | 34 | **50%** | 41% | 0% | 0.07 | 6% |
+| 8-14 | 35 | 17% | 24% | 76% | 0.20 | 11% |
+| 15-24 | 47 | 4% | 24% | 56% | 0.26 | 9% |
+| 25-34 | 50 | **0%** | 18% | 68% | 0.22 | 2% |
+| 35-47 | 60 | **0%** | 20% | 63% | 0.26 | 17% |
+
+### The ladder ends at round 23
+
+Last clear anywhere in the sweep: **round 23**. The 115 runs after it produced
+zero. The README advertises "expert-level (Round 50+)"; for a fixed-skill
+runner that content does not exist. Rounds 24+ are not hard, they are closed.
+
+Caveat worth keeping straight: aiLevel pins the bot's own skill at round-20
+stats while the opposition keeps scaling. A human's mechanical skill does not
+scale with round either, so this is a fair proxy — but a human learns a map
+between attempts and the bot never does.
+
+### Spawn distance is very nearly deterministic
+
+| spawn distance to nearest plug | runs | cleared |
+|---|---|---|
+| <= 6 cells | 47 | **0%** |
+| 6-12 cells | 110 | 10% |
+| > 12 cells | 69 | 20% |
+
+**Not one of 47 runs starting within 6 cells of a plug was ever survived.** That
+is 21% of all runs beginning in a position with no recorded escape. Spawning
+already inside a clear firing lane clears 5% against 12% with cover.
+
+This closes the question the spawn-swap button was priced on: it is buying
+something real. The stronger conclusion is that spawn placement wants a
+minimum-distance constraint, so the purchase is rarely necessary.
+
+### Exposure is the mechanism behind the whole curve
+
+Cleared runs spend a median **0.03** of their time in a clear firing lane.
+Runs that died spend **0.23** — nearly eight times more. And laneFrac climbs
+with the rounds (0.07 at 1-7, 0.26 at 15-24) in step with the clear rate
+falling. The difficulty curve is an exposure curve: later rounds win by
+denying cover, not by out-shooting.
+
+That makes lane exposure the design lever, and a better one than difficulty
+numbers: it is a property of maps and plug placement, both of which are
+generated.
+
+### Snagging: real, but not what costs runs
+
+Watching the sweep suggested the runner was getting stuck on corners. It does,
+and it is now measured — and it is immaterial. Median stalledFrac is 0.01,
+only 1% of runs contain a snag of a second or longer, and cleared and died
+runs are identical at 0.01. The eye was right that it happens and wrong that
+it matters. The three-way asymmetry in movement aids is still real and still
+worth fixing for feel (see the commit), just not for outcomes.
+
+### The dodge-commitment fix is confirmed
+
+**Zero** runs hit the 90-second round clock, across all 227. In the round-8
+batch before that fix, 15% did.
+
+---
+
 ## Bugs fixed this session
 
 All four bugs the harness surfaced last session are fixed, one commit each.
