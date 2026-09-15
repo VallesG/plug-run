@@ -11,12 +11,12 @@ const POWERS = [
   {id:'decoy',name:'DECOY',description:'Send a double\nto draw fire',color:0x81adbf,css:'#9bc4d4'}
 ];
 
-export function showRunnerLoadout(ui,onDone) {
+export function showRunnerLoadout(ui,onDone,options = {}) {
   const scene=ui.scene;
   if(scene.role!=='runner'){onDone?.();return;}
   scene.roundPausedForMenu=true;
   const modal=ui.showModal({
-    loadout:true,title:scene.mode==='pve'?'HOUSE '+String(scene.pveRound||1).padStart(2,'0')+' / LOADOUT':'RUNNER / LOADOUT',
+    loadout:true,title:options.title ?? (scene.mode==='pve'?'HOUSE '+String(scene.pveRound||1).padStart(2,'0')+' / LOADOUT':'RUNNER / LOADOUT'),
     subtitle:'Choose two charges. Use them in order.',buttons:[]
   });
   const {panel,registerExtra}=modal;
@@ -59,7 +59,7 @@ export function showRunnerLoadout(ui,onDone) {
     start.bg.setFillStyle(ready?0xa8c9d7:0x202b34)
       .setStrokeStyle(1,ready?0xd4e5e9:0x3b4b58);
     start.text.setColor(ready?'#10202b':'#82939e')
-      .setText(ready?'ENTER HOUSE':'CHOOSE TWO CHARGES');
+      .setText(ready?(options.startLabel || 'ENTER HOUSE'):'CHOOSE TWO CHARGES');
     help.setText(ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.');
   };
   POWERS.forEach((power,i)=>{
@@ -95,7 +95,7 @@ export function showRunnerLoadout(ui,onDone) {
     scene.roundPausedForMenu=false;
     onDone?.();
   });
-  const hasReplay=ReplaySystem.hasReplay(scene.role);
+  const hasReplay=options.allowReplay!==false && ReplaySystem.hasReplay(scene.role);
   const navW=hasReplay?(layout.buttonW-10)/2:layout.buttonW;
   if(hasReplay){
     button(panel.x-(navW+10)/2,top+layout.navY,navW,32,'WATCH REPLAY',()=>{
@@ -107,7 +107,7 @@ export function showRunnerLoadout(ui,onDone) {
     modal.destroy();scene.scene.start('MENU');
   });
   // Keep account/settings access and register it with the same modal lifecycle.
-  registerExtra(...createBottomLeftButtons(scene,panel.x,panel.y,panel.width,panel.height,20005));
+  if(options.showAccount!==false) registerExtra(...createBottomLeftButtons(scene,panel.x,panel.y,panel.width,panel.height,20005));
   refresh();
   return modal;
 }

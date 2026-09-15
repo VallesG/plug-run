@@ -78,6 +78,35 @@ Landing/title-screen continuation:
 - SVG logo/favicon assets are unchanged. The old night-block.svg is retained
   as reusable art but is no longer loaded or shown on the title screen.
 
+Runner tutorial continuation:
+- The human approved the title screen, then requested removal of the final plug
+  lesson and tutorial visuals matching the runner game.
+- Tutorial flow is four lessons: movement, real/bunk stash, powers, escape the
+  AI defender. logic/tutorial.js owns the bounds, next-stage decision and copy.
+  Completion follows stage four; direct attempts to enter stage five clamp to
+  four. Shelved plug implementation remains unreachable, not removed from game.
+- Shared controllers/ArenaArt.js now owns the existing BaseGameScene arena
+  painting, brightened texture conversion and perimeter. Base methods delegate
+  to it. Tutorial uses the same renderer with no unnecessary wall geometry mask,
+  the existing loft_concrete checker theme, and existing overhead furniture.
+  Scene restart destroys tutorial-owned drawing groups and display objects.
+- Tutorial runner/AI defender use spriteFactory outlines, team rings and shadows.
+  Its original movement/step timing remains; outline copies follow the same
+  angle and texture. Trails and car beacon are quieter, stash outlines use ink.
+- Lesson/completion dialogs use GameUI. Tutorial loadout uses RunnerLoadout with
+  tutorial title/start copy, no saved replay and no account controls. The main
+  game defaults of that picker are unchanged. Keyboard/pause and click-through
+  suppression are restored when dismissing/starting.
+- 369 existing behavior assertions plus 34 tutorial assertions passed under
+  adapted V8 (403 total), not native npm. Eight renderer trace comparisons
+  matched the old Base renderer exactly; grids were unchanged. Tutorial map
+  generation, movement and power execution were compared unchanged.
+- Stub checks covered 12 lesson dialogs across viewport sizes, four transitions,
+  completion after four, duplicate-charge selection, single-fire Start and
+  unchanged normal-game picker defaults. Native ESM/build, actual text wrapping,
+  live movement/extraction and rendered tutorial still need human/local review.
+  Windows process launch remains unavailable; run npm run verify in client/.
+
 The remaining sections preserve the earlier handoff and research context.
 
 ---

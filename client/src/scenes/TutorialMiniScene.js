@@ -1,5 +1,10 @@
-// Tutorial scene built on PvP movement and controls
+// Runner tutorial: four lessons, sharing the main game's presentation.
 import Phaser from 'phaser';
+import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
+import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
+import GameUI from '../controllers/GameUI.js';
+import { showRunnerLoadout } from '../controllers/RunnerLoadout.js';
+import { tutorialStage, nextTutorialStage, tutorialLesson, TUTORIAL_STAGE_COUNT } from '../logic/tutorial.js';
 import AudioManager from '../audio/AudioManager.js';
 import { trackTutorial } from '../utils/analytics.js';
 import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateSocialFeed } from '../utils/desktopSidebars.js';
@@ -277,7 +282,7 @@ function makeDuffel(scene, x, y, w, h){
   const tape = 0x8B7355;
   const gloss = 0xE7D3B5;
   const rad = Math.max(4, Math.floor(scene.cell * 0.14));
-  g.fillStyle(tan, 1).lineStyle(Math.max(2, Math.floor(scene.cell * 0.05)), tanDark, 1);
+  g.fillStyle(tan, 1).lineStyle(Math.max(1.5, scene.cell * 0.07), 0x0b0b12, 1);
   g.fillRoundedRect(-w / 2, -h / 2, w, h, rad);
   g.strokeRoundedRect(-w / 2, -h / 2, w, h, rad);
   g.fillStyle(tape, 1).fillRect(-w / 2 + 4, -h * 0.28, w - 8, h * 0.56);
@@ -391,6 +396,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.pad = { x: 0, y: 0 };
     // Start at stage 1 by default
     this.stageIdx = 1;
+    this.role = 'runner';
+    this.mode = 'tutorial';
+    this._transitioning = false;
     this.tipObj = null;
     this.tipTween = null;
     this.pointer = null;
@@ -664,6 +672,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeCb);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      clearTimeout(this._resizeTimer);
+      this._tutorialModal?.destroy();
+      try { this.audio?.stopEngineLoop(); } catch {}
       if (this._onResizeCb){
         this.scale.off('resize', this._onResizeCb);
         this._onResizeCb = null;
@@ -761,6 +772,14 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   startStage(idx){
+    idx = tutorialStage(idx);
+    this._transitioning = false;
+    this._runnerLastTrailPos = null;
+    this._plugLastTrailPos = null;
+    this._tutorialModal?.destroy();
+    this._tutorialModal = null;
+    this.walls?.destroy(false);
+    this.floors?.destroy(false);
     this.tweens.killAll();
     this.time.removeAllEvents();
     if (this.tipTween){
@@ -771,12 +790,12 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.tipObj.destroy();
       this.tipObj = null;
     }
-    this.children.removeAll();
+    this.children.removeAll(true);
     this.stageIdx = idx;
 
     // Initialize RepTracker for this stage with correct role
-    // Stages 1-4: player is runner, Stage 5: player is plug
-    const role = (idx === 5) ? 'plug' : 'runner';
+    // All reachable lessons are runner lessons.
+    const role = 'runner';
     if (this.progressionManager) {
       // Create new RepTracker for this stage if it doesn't exist
       if (!this.progressionManager.repTracker) {
@@ -925,20 +944,14 @@ export class TutorialMiniScene extends Phaser.Scene {
       /* no-op: do not seal pockets */
     }
 
-    const themeRng = makeRng(((seed ^ 0x9E3779B9) >>> 0));
-    this.theme = THEMES[(themeRng() * THEMES.length) | 0];
-    this.floorKeySingle = (this.theme.floorSet === 'checker')
-      ? ['check_11','check_12','check_13','check_14'][(themeRng()*4)|0]
-      : null;
-
+    // A stable checker-floor lesson house in the existing approved palette.
+    // Lesson geometry and objectives remain the original tutorial's.
+    this.theme = THEMES.find(theme => theme.key === 'loft_concrete') || THEMES[1];
+    this.floorKeySingle = 'check_11';
     this.drawArena();
 
-    this.runner = this.add.container(this.toWorldX(this.spawnRunnerCell.x), this.toWorldY(this.spawnRunnerCell.y)).setDepth(8);
-    const sh = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
-    const rs = this.add.sprite(0, 0, 'td_runner').setOrigin(0.5);
-    rs.setScale((this.cell / 128) * 3.0);
-    this.runner.add([sh, rs]);
-    this.runner.sprite = rs;
+    this.runner = makeRunnerSprite(this,
+      this.toWorldX(this.spawnRunnerCell.x), this.toWorldY(this.spawnRunnerCell.y), this.cell);
     this.runner.hbRadius = this.hitboxRadius;
 
     this._dashUntil = 0;
@@ -952,214 +965,15 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.showStageModal(idx);
   }
 
-  neutralizeWallTextures(){
-    // Grayscale the wall textures at boot so theme neon tints render true.
-    // The source art is warm brown at ~38% brightness — Phaser tints MULTIPLY,
-    // so cool tints (blue/cyan/mint) hue-shifted into olive mud and could
-    // never render brighter than the base. Mirrors BaseGameScene's fix.
-    this._wallFillKey = 'wall_fill';
-    this._wallEdgeKey = 'wall_edge';
-    try {
-      for (const [srcKey, outKey] of [['wall_fill', 'wall_fill_neon'], ['wall_edge', 'wall_edge_neon']]) {
-        if (!this.textures.exists(srcKey)) continue;
-        if (!this.textures.exists(outKey)) {
-          const img = this.textures.get(srcKey).getSourceImage();
-          const cv = document.createElement('canvas');
-          cv.width = img.width; cv.height = img.height;
-          const ctx = cv.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          const data = ctx.getImageData(0, 0, cv.width, cv.height);
-          const px = data.data;
-          for (let i = 0; i < px.length; i += 4) {
-            const lum = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
-            const v = Math.min(255, lum * 2.6);
-            px[i] = px[i+1] = px[i+2] = v;
-          }
-          ctx.putImageData(data, 0, 0);
-          this.textures.addCanvas(outKey, cv);
-        }
-        if (srcKey === 'wall_fill') this._wallFillKey = outKey;
-        else this._wallEdgeKey = outKey;
-      }
-    } catch (e) {
-      console.warn('[Tutorial textures] neutralize failed, using originals', e);
-    }
-  }
-
+  neutralizeWallTextures(){ return neutralizeArenaTextures.call(this); }
+  drawNeonPerimeter(){ return drawArenaPerimeter.call(this); }
   drawArena(){
     this.neutralizeWallTextures();
-    const { cell, cols, rows } = this;
-    const width = Math.max(1, this.scale.width);
-    const height = Math.max(1, this.scale.height);
-    const padX = this.pad.x;
-    const padY = this.pad.y;
-    const theme = this.theme ?? {};
-    this.cameras.main.setBackgroundColor(theme.bg ?? 0x080a10);
-
-    const bg = this.add.rectangle(width / 2, height / 2, width, height, theme.bg ?? 0x080a10, 1);
-    bg.setDepth(0).setScrollFactor(0);
-
-    const wood = ['wood_96','wood_97','wood_98','wood_99','wood_100','wood_101'];
-    const checkerKeys = ['check_11','check_12','check_13','check_14'];
-    const checkerColors = (Array.isArray(theme.checkerColors) && theme.checkerColors.length >= 2)
-      ? theme.checkerColors
-      : null;
-    const useChecker = theme.floorSet === 'checker';
-
-    for (let y = 0; y < rows; y++){
-      for (let x = 0; x < cols; x++){
-        const wx = padX + x * cell + cell / 2;
-        const wy = padY + y * cell + cell / 2;
-        if (this.grid[y][x] === T.WALL){
-          this.add.image(wx, wy, this._wallFillKey || 'wall_fill')
-            .setDisplaySize(cell, cell)
-            .setDepth(5)
-            .setTint(theme.wallFillTint ?? 0xffffff);
-          const addEdge = (angle) => {
-            this.add.image(wx, wy, this._wallEdgeKey || 'wall_edge')
-              .setDisplaySize(cell, cell)
-              .setDepth(6)
-              .setAngle(angle)
-              .setTint(theme.wallEdgeTint ?? 0xffffff);
-          };
-          if (!this.isWallCell(x, y - 1)) addEdge(0);
-          if (!this.isWallCell(x + 1, y)) addEdge(90);
-          if (!this.isWallCell(x, y + 1)) addEdge(180);
-          if (!this.isWallCell(x - 1, y)) addEdge(270);
-        } else {
-          if (useChecker && checkerColors){
-            const color = ((x + y) & 1) === 0 ? checkerColors[0] : checkerColors[1];
-            this.add.rectangle(wx, wy, cell + 1, cell + 1, color, 1).setDepth(1);
-          } else {
-            let key;
-            if (useChecker){
-              key = this.floorKeySingle || checkerKeys[((x + y) & 1) % checkerKeys.length];
-            } else {
-              const idx = ((x % wood.length) + wood.length) % wood.length;
-              key = wood[idx];
-            }
-            this.add.image(wx, wy, key)
-              .setDisplaySize(cell, cell)
-              .setDepth(1)
-              .setTint(theme.floorTint ?? 0xffffff);
-          }
-        }
-      }
-    }
-
-    // MARGIN FILL: neutral wall-brick outside the maze grid, painted with
-    // amber reflector dashes on top. Skips the driveway mouth so the
-    // street reads as flowing off-map.
-    this.drawMarginFillAndDashes();
-
-    // NEON PLATEAU EDGE: theme-matched terraced perimeter with drop shadow.
-    this.drawNeonPerimeter();
+    this.cameras.main.setBackgroundColor(this.theme?.bg ?? 0x0b0f16);
+    // This tutorial uses cell collision, so it doesn't need a geometry mask.
+    drawArenaArt.call(this, { maskWalls: false });
   }
 
-  drawMarginFillAndDashes(){
-    const { cols, rows, cell, pad } = this;
-    const width = Math.max(1, this.scale.width);
-    const height = Math.max(1, this.scale.height);
-    const ringsX = Math.ceil(pad.x / cell) + 1;
-    const ringsY = Math.ceil(pad.y / cell) + 1;
-
-    const gapSide = this.egress?.side;
-    const gapW = this.egress?.width || 0;
-    const gapCenterX = this.egress?.entry?.x ?? 0;
-    const gapCenterY = this.egress?.entry?.y ?? 0;
-    const gapLoX = Math.max(0, gapCenterX - Math.floor(gapW / 2));
-    const gapHiX = Math.min(cols - 1, gapCenterX + Math.floor(gapW / 2));
-    const gapLoY = Math.max(0, gapCenterY - Math.floor(gapW / 2));
-    const gapHiY = Math.min(rows - 1, gapCenterY + Math.floor(gapW / 2));
-    const inDriveway = (x, y) => {
-      if (gapSide === 'N') return y < 0 && x >= gapLoX && x <= gapHiX;
-      if (gapSide === 'S') return y >= rows && x >= gapLoX && x <= gapHiX;
-      if (gapSide === 'W') return x < 0 && y >= gapLoY && y <= gapHiY;
-      if (gapSide === 'E') return x >= cols && y >= gapLoY && y <= gapHiY;
-      return false;
-    };
-
-    const marks = this.add.graphics().setDepth(4);
-    marks.fillStyle(0xf5c542, 0.55);
-    const mw = Math.max(3, Math.floor(cell * 0.16));
-    const mh = Math.max(2, Math.floor(cell * 0.08));
-
-    for (let y = -ringsY; y < rows + ringsY; y++) {
-      for (let x = -ringsX; x < cols + ringsX; x++) {
-        if (x >= 0 && x < cols && y >= 0 && y < rows) continue; // interior
-        if (inDriveway(x, y)) continue;
-        const wx = pad.x + x * cell + cell / 2;
-        const wy = pad.y + y * cell + cell / 2;
-        this.add.image(wx, wy, this._wallFillKey || 'wall_fill')
-          .setDisplaySize(cell, cell)
-          .setDepth(3)
-          .setTint(this.theme?.wallFillTint ?? 0xffffff);
-        marks.fillRect(wx - cell * 0.28, wy - cell * 0.22, mw, mh);
-      }
-    }
-  }
-
-  drawNeonPerimeter(){
-    const { cols, rows, cell, pad } = this;
-    const lighten = (c, t) => {
-      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
-      return ((r + (255 - r) * t) << 16 | (g + (255 - g) * t) << 8 | (b + (255 - b) * t)) >>> 0;
-    };
-    const darken = (c, t) => {
-      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
-      return ((r * (1 - t)) << 16 | (g * (1 - t)) << 8 | (b * (1 - t))) >>> 0;
-    };
-    const isGrayish = (c) => {
-      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
-      return Math.max(r, g, b) - Math.min(r, g, b) < 40;
-    };
-    const cA = this.theme?.wallEdgeTint ?? 0x00e5ff;
-    const rawB = this.theme?.carTint ?? 0xff4fd8;
-    const cB = isGrayish(rawB) ? 0xff4fd8 : rawB;
-    const cC = 0x333a48;
-
-    const x0 = pad.x, y0 = pad.y;
-    const x1 = pad.x + cols * cell, y1 = pad.y + rows * cell;
-
-    const side = this.egress?.side;
-    const gw = this.egress?.width || 0;
-    const gPad = cell * 0.4;
-    let gapLo = 0, gapHi = 0;
-    if (side === 'N' || side === 'S') {
-      const c0 = (this.egress?.entry?.x ?? 0) - Math.floor(gw / 2);
-      gapLo = pad.x + c0 * cell - gPad;
-      gapHi = pad.x + (c0 + gw) * cell + gPad;
-    } else if (side === 'W' || side === 'E') {
-      const c0 = (this.egress?.entry?.y ?? 0) - Math.floor(gw / 2);
-      gapLo = pad.y + c0 * cell - gPad;
-      gapHi = pad.y + (c0 + gw) * cell + gPad;
-    }
-
-    const g = this.add.graphics().setDepth(5);
-    const band = (a, b, color, alpha = 1) => {
-      g.fillStyle(color, alpha);
-      const spans = (lo, hi, isGapSide) => {
-        if (!isGapSide) return [[lo, hi]];
-        const out = [];
-        if (gapLo > lo) out.push([lo, Math.min(gapLo, hi)]);
-        if (gapHi < hi) out.push([Math.max(gapHi, lo), hi]);
-        return out;
-      };
-      for (const [s, e] of spans(x0 - b, x1 + b, side === 'N')) g.fillRect(s, y0 - b, e - s, b - a);
-      for (const [s, e] of spans(x0 - b, x1 + b, side === 'S')) g.fillRect(s, y1 + a, e - s, b - a);
-      for (const [s, e] of spans(y0 - b, y1 + b, side === 'W')) g.fillRect(x0 - b, s, b - a, e - s);
-      for (const [s, e] of spans(y0 - b, y1 + b, side === 'E')) g.fillRect(x1 + a, s, b - a, e - s);
-    };
-    const t = Math.max(8, Math.round(cell * 0.42));
-    band(0, 3, lighten(cA, 0.6));
-    band(3, 3 + t, cA);
-    band(3 + t, 3 + t * 2, darken(cB, 0.12));
-    band(3 + t * 2, 3 + t * 3, cC);
-    band(3 + t - 1, 3 + t + 1, 0x000000, 0.35);
-    band(3 + t * 2 - 1, 3 + t * 2 + 1, 0x000000, 0.35);
-    band(3 + t * 3, 3 + t * 3 + 7, 0x000000, 0.30);
-    band(3 + t * 3 + 7, 3 + t * 3 + 14, 0x000000, 0.14);
-  }
   setupInput(){
     if (!this.cursors) this.cursors = this.input.keyboard.createCursorKeys();
     if (!this.wasdKeys) this.wasdKeys = this.input.keyboard.addKeys({ W: 'W', A: 'A', S: 'S', D: 'D' });
@@ -1463,10 +1277,10 @@ export class TutorialMiniScene extends Phaser.Scene {
       const noseY = this.car.y + dy * (this.cell * 0.8);
       const c = this.add.container(noseX, noseY).setDepth(1300);
       const w = this.cell * 1.8, h = this.cell * 1.2;
-      const glow = this.add.ellipse(0, 0, w, h, 0x60a5fa, 0.55).setBlendMode(Phaser.BlendModes.ADD);
-      const inner = this.add.ellipse(0, 0, w*0.6, h*0.5, 0xffffff, 0.35).setBlendMode(Phaser.BlendModes.ADD);
+      const glow = this.add.ellipse(0, 0, w, h, 0x9ad1ff, 0.12).setBlendMode(Phaser.BlendModes.ADD);
+      const inner = this.add.ellipse(0, 0, w*0.6, h*0.5, 0xffd78a, 0.16).setBlendMode(Phaser.BlendModes.ADD);
       c.add([glow, inner]);
-      this.tweens.add({ targets: glow, alpha: 0.25, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: glow, alpha: 0.06, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       this.tweens.add({ targets: c, scaleX: 1.12, scaleY: 1.12, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       this.carBeacon = c;
     };
@@ -1647,90 +1461,11 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   showStageModal(idx){
-    const desktop = this.sys.game.device.os.desktop;
-    if (idx === 1){
-      const mobileLines = [
-        'Swipe to move — flick or hold + drag',
-        'Reach the Getaway Car',
-        '',
-        'Tip: Hold + drag to steer diagonally',
-        '',
-        'You are the RUNNER'
-      ];
-      const desktopLines = [
-        'Use arrow keys / WASD to move',
-        'Reach the Getaway Car',
-        '',
-        'You are the RUNNER'
-      ];
-      this.showModal('Learn movement', desktop ? desktopLines : mobileLines, 'Start', () => this.resumeFromModal());
-      // Add runner character preview with blue trail inline with text
-      this.time.delayedCall(250, () => this.showCharacterPreview('runner'));
-    } else if (idx === 2) {
-      // Stash tutorial: further shorten and wrap text for mobile devices.  The original
-      // copy wrapped off screen on some phones, so trim the wording and apply a
-      // smaller scale factor for compact layouts.  The message introduces the stash
-      // objective and warns about fakes.
-      const stashLines = [
-        'Get the stash and get to the getaway car.',
-        '',
-        'Tip: Bunk stashes wont start the getaway car'
-      ];
-      // Apply a smaller scale so the dialog fits comfortably on narrow screens.  A
-      // scale of around 0.65 trims the title and content sizes while retaining
-      // readability.  Should further adjustments be needed, update this value.
-      this.showModal('Stash & Bunk Stash', stashLines, 'Go', () => this.resumeFromModal(), { scale: 0.65, showReplay: true });
-    } else if (idx === 3){
-      // In the power-up stage, introduce the available abilities.  List phase, dash, and decoy
-      // with brief descriptions.  After closing the intro modal, present a choice modal.
-      const desktop = this.sys.game.device.os.desktop;
-      const introLines = [
-        desktop ? 'Click to activate' : 'Double Tap screen to activate',
-        '',
-        '',
-        '👻 PHASE: phase through walls',
-        '',
-        '⚡ DASH: quick dash in a direction',
-        '',
-        '🎭 DECOY: send out a decoy runner',
-        '',
-        '',
-        '*Tutorial: Use both powers to start getaway car',
-        '       (Optional in full game)'
-      ];
-      this.showModal('Runner Power-ups', introLines, 'Go', () => {
-        this.resumeFromModal();
-        this.showPowerSelectionModal();
-      }, { showReplay: true });
-    } else if (idx === 4) {
-      // Stage 4: Runner PvP tutorial - show runner power selection first, then intro modal
-      const runnerLines = [
-        'Now that you know the basics, try and take the stash from the plug while dodging his bullets.',
-        '',
-         'Get to the getaway car.',
-        '',
-        'Tip: Don\'t get hit more than once!'
-      ];
-      this.showModal('Run from the Plug', runnerLines, 'Go', () => {
-        this.resumeFromModal();
-        this.showPowerSelectionModal();
-      }, { scale: 0.70, showReplay: true });
-    } else if (idx === 5) {
-      // Stage 5: Plug PvP tutorial - show gun selection first, then start
-      const plugLines = [
-        'Great! Now you have the stashes.',
-        'Defend against runners.',
-        desktop ? 'Click to shoot, move mouse to aim.' : 'Tap to shoot. Hold + drag to aim AND move.',
-        '',
-        'You are now the PLUG'
-      ];
-      this.showModal('Defend the Block', plugLines, 'Go', () => {
-        this.resumeFromModal();
-        this.showGunSelectionModal();
-      }, { scale: 0.65, showReplay: true, extraBottomSpace: 28 });
-      // Add plug character preview with red trail inline with text
-      this.time.delayedCall(250, () => this.showCharacterPreview('plug'));
-    }
+    const lesson = tutorialLesson(idx, this.sys.game.device.os.desktop);
+    this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'Choose powers' : 'Start', () => {
+      this.resumeFromModal();
+      if (lesson.choosePowers) this.showPowerSelectionModal();
+    }, { showReplay:lesson.stage>1 });
   }
   showCharacterPreview(role){
     // Create character preview to the right of "You are the RUNNER/PLUG" text (like a tab indent)
@@ -1810,134 +1545,34 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
   showModal(title, lines, btn = 'Start', onStart, opts = {}){
     this.pausedForModal = true;
-    const veil = this.add.rectangle(
-      this.scale.width / 2,
-      this.scale.height / 2,
-      this.scale.width,
-      this.scale.height,
-      0x000000,
-      0.72
-    ).setScrollFactor(0).setDepth(9998).setInteractive();
-    // Determine font scale: allow a custom scale factor via opts.scale; otherwise,
-    // use 0.85 when opts.small is true, or 1.0 by default.
-    let scaleFac;
-    if (typeof opts.scale === 'number'){
-      scaleFac = opts.scale;
-    } else {
-      scaleFac = opts.small ? 0.85 : 1.0;
-    }
-    // Calculate max width to keep modal narrower and taller (prevents edge-to-edge borders)
-    const maxContentWidth = Math.floor(Math.min(this.scale.width * 0.75, 420));
-
-    // Replay button text - always use shorter version
-    const replayButtonText = 'Previous';
-
-    // Create dialog without action buttons (we'll add them manually outside)
-    const dlg = this.rexUI.add.dialog({
-      x: this.scale.width / 2,
-      y: this.scale.height * 0.42,
-      background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 10, 0x0f172a, 0.96).setStrokeStyle(2, 0x2f3650),
-      title: this.add.text(0, 0, title, {
-        color: '#cbd1ff',
-        fontSize: Math.max(22, Math.floor(this.scale.height * 0.036 * scaleFac)) + 'px',
-        fontStyle: 'bold',
-        wordWrap: { width: maxContentWidth }
-      }),
-      content: this.add.text(0, 0, lines.join('\n'), {
-        color: '#aab5ff',
-        fontSize: Math.max(15, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px',
-        wordWrap: { width: maxContentWidth },
-        lineSpacing: 4
-      }),
-      space: { title: 12, content: 16, action: 0, left: 20, right: 20, top: 18, bottom: opts.showReplay ? 80 : 70 }
-    }).layout().setDepth(9999).popUp(200);
-
-    // Store stage index before modal closes
-    const currentStageIdx = this.stageIdx;
-
-    // Calculate button positions INSIDE the dialog (at the bottom)
-    const dialogBottom = dlg.y + dlg.height / 2;
-    const buttonY = dialogBottom - 35; // Position buttons inside modal, near bottom
-
-    // Create buttons manually at higher depth to appear on top of dialog background
-    const buttons = [];
-
-    if (opts.showReplay) {
-      // Replay button (left side) - blue background, smaller for mobile
-      const replayBg = this.add.rectangle(
-        this.scale.width / 2 - 80,
-        buttonY,
-        140,
-        42,
-        0x3b82f6
-      ).setStrokeStyle(3, 0x60a5fa).setDepth(10000).setInteractive({ useHandCursor: true });
-
-      const replayText = this.add.text(
-        this.scale.width / 2 - 80,
-        buttonY,
-        replayButtonText,
-        {
-          color: '#ffffff',
-          fontSize: Math.max(14, Math.floor(this.scale.height * 0.024 * scaleFac)) + 'px',
-          fontStyle: 'bold'
-        }
-      ).setOrigin(0.5).setDepth(10001);
-
-      replayBg.on('pointerdown', () => {
-        // Keep everything covered/paused until stage restarts
-        dlg.scaleDownDestroy(140);
-        replayBg.destroy();
-        replayText.destroy();
-        if (mainBg) mainBg.destroy();
-        if (mainText) mainText.destroy();
-        const previousStage = Math.max(1, currentStageIdx - 1);
-        // Start stage immediately, then clean up veil after stage loads
-        // Note: pausedForModal stays true until the new stage's modal is dismissed
-        this.startStage(previousStage);
-        this.time.delayedCall(100, () => {
-          veil.destroy();
-        });
-      });
-
-      buttons.push(replayBg, replayText);
-    }
-
-    // Main button (right side or centered if no replay)
-    // Stage 1 START button is wider to accommodate character sprite on the right
-    const mainX = opts.showReplay ? this.scale.width / 2 + 80 : this.scale.width / 2;
-    const mainButtonWidth = opts.showReplay ? 140 : 180;  // Wider START button for stage 1
-    const mainBg = this.add.rectangle(
-      mainX,
-      buttonY,
-      mainButtonWidth,
-      42,
-      0xfbbf24
-    ).setStrokeStyle(4, 0xfde047).setDepth(10000).setInteractive({ useHandCursor: true });
-
-    const mainText = this.add.text(
-      mainX,
-      buttonY,
-      btn,
-      {
-        color: '#000000',
-        fontSize: Math.max(18, Math.floor(this.scale.height * 0.032 * scaleFac)) + 'px',
-        fontStyle: 'bold'
-      }
-    ).setOrigin(0.5).setDepth(10001);
-
-    mainBg.on('pointerdown', () => {
-      dlg.scaleDownDestroy(140);
-      veil.destroy();
-      mainBg.destroy();
-      mainText.destroy();
-      buttons.forEach(b => b.destroy());
+    this._tutorialModal?.destroy();
+    this.gameUI = this.gameUI || new GameUI(this);
+    const begin = () => {
       this.pausedForModal = false;
-      // Prevent power activation from this same click
+      this.input.keyboard.enabled = true;
       this._ignoreNextPowerClick = true;
-      onStart && onStart();
+      onStart?.();
+    };
+    const primary = { label:btn, variant:'primary', onClick:begin };
+    const actions = opts.showReplay ? [{
+      pair:[
+        {label:'Previous', variant:'secondary', onClick:() => this.startStage(this.stageIdx-1)},
+        primary
+      ]
+    }] : [primary];
+    const modal = this.gameUI.showModal({
+      loadout:true, title,
+      subtitle:opts.complete ? 'Runner training complete' : 'RUNNER TRAINING · '+this.stageIdx+' / '+TUTORIAL_STAGE_COUNT,
+      buttons:actions
     });
-
-    buttons.push(mainBg, mainText);
+    const area = modal.contentBounds;
+    const copy = this.add.text(modal.panel.x, area.y+8, lines.join('\n\n'), {
+      fontFamily:'Arial, sans-serif',fontSize:'15px',color:'#b7c7cc',
+      align:'center',lineSpacing:4,wordWrap:{width:area.width-16}
+    }).setOrigin(0.5,0).setScrollFactor(0).setDepth(20001);
+    modal.registerExtra(copy);
+    this._tutorialModal = modal;
+    return modal;
   }
   toast(msg, hold = 1000, color = '#cbd1ff', fontStyle = 'normal'){
     if (this.tipTween){
@@ -1989,187 +1624,18 @@ export class TutorialMiniScene extends Phaser.Scene {
    * to equip. Only Dash and Phase are selectable; Decoy is shown but disabled.
    */
   showPowerSelectionModal(){
-    // Custom modal that mimics the PvP power selection layout.  Players must pick two
-    // abilities; decoy is shown but disabled.  Once two picks are made, the modal
-    // disappears and the tutorial resumes.
     this.pausedForModal = true;
-    const width = this.scale.width;
-    const height = this.scale.height;
-    // Dark overlay to block game interactions
-    const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.72)
-      .setDepth(20000)
-      .setScrollFactor(0)
-      .setInteractive();
-    // Panel sizing
-    const panelW = Math.min(width * 0.80, 480);
-    const panelH = 380;
-    const panel = this.add.rectangle(width/2, height*0.40, panelW, panelH, 0x0f172a, 0.96)
-      .setStrokeStyle(2, 0x274060)
-      .setDepth(20001);
-    // Main title (matching PvE style)
-    const title = this.add.text(panel.x, panel.y - panelH/2 + 24,
-      'TUTORIAL',
-      { color: '#cbd1ff', fontSize: Math.max(22, Math.floor(height * 0.040)) + 'px', fontStyle:'bold' }
-    ).setOrigin(0.5).setDepth(20002);
-    // Subtitle
-    const subtitle = this.add.text(panel.x, panel.y - panelH/2 + 52,
-      'Pick 2 Power-Ups',
-      { color: '#94a3b8', fontSize: Math.max(16, Math.floor(height * 0.026)) + 'px', fontStyle:'normal' }
-    ).setOrigin(0.5).setDepth(20002);
-    // Options definition with emoji symbols and colors (matching PvE mode)
-    const opts = [
-      { key:'phase', label:'PHASE', symbol:'👻', color:'#a78bfa', disabled:false },
-      { key:'dash', label:'DASH', symbol:'⚡', color:'#fbbf24', disabled:false },
-      { key:'decoy', label:'DECOY', symbol:'🎭', color:'#60a5fa', disabled:false }
-    ];
-    const chosen = [];
-    const badges = new Map(); // Map of powerId -> { badge1, badge2 }
-
-    // Function to update all badges based on selection order
-    const updateAllBadges = () => {
-      // Hide all badges first
-      badges.forEach(badgeObjs => {
-        badgeObjs.badge1.setVisible(false);
-        badgeObjs.badge2.setVisible(false);
-      });
-
-      // Show badges based on selection order
-      chosen.forEach((powerId, index) => {
-        const badgeObjs = badges.get(powerId);
-        if (!badgeObjs) return;
-
-        if (index === 0) {
-          // First selection - show badge "1"
-          badgeObjs.badge1.setVisible(true);
-        } else if (index === 1) {
-          // Second selection - show badge "2"
-          badgeObjs.badge2.setVisible(true);
-        }
-      });
-    };
-
-    // Horizontal spacing
-    const btnW = panelW / opts.length;
-    const btnH = 80;
-    // Keep a list of UI elements for cleanup later
-    const elements = [];
-    opts.forEach((opt, idx) => {
-      const x = panel.x - panelW/2 + btnW * (idx + 0.5);
-      const y = panel.y - 20;
-      const rect = this.add.rectangle(x, y, btnW - 12, btnH, 0x14202f, 1)
-        .setStrokeStyle(2, parseInt(opt.color.replace('#', '0x')))
-        .setDepth(20002)
-        .setInteractive({ useHandCursor: true });
-
-      // Symbol (emoji) above name
-      const symbol = this.add.text(x, y - 15, opt.symbol, {
-        fontSize: '32px'
-      }).setOrigin(0.5).setDepth(20003);
-
-      // Power name below symbol
-      const txt = this.add.text(x, y + 20, opt.label, {
-        color: opt.color,
-        fontSize: Math.max(16, Math.floor(height * 0.028)) + 'px',
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(20003);
-
-      // Badge 1 - Green background (first selection, positioned on LEFT)
-      const badge1 = this.add.text(x + (btnW / 2) - 24, y - btnH*0.40, '1', {
-        color: '#ffffff',
-        fontSize: Math.max(14, Math.floor(height * 0.026)) + 'px',
-        fontStyle: 'bold',
-        backgroundColor: '#10b981',
-        padding: { x: 5, y: 3 }
-      }).setOrigin(0.5).setDepth(20004).setVisible(false);
-
-      // Badge 2 - Orange background (second selection, positioned on RIGHT)
-      const badge2 = this.add.text(x + (btnW / 2) - 8, y - btnH*0.40, '2', {
-        color: '#ffffff',
-        fontSize: Math.max(14, Math.floor(height * 0.026)) + 'px',
-        fontStyle: 'bold',
-        backgroundColor: '#f97316', // Orange color for second selection
-        padding: { x: 5, y: 3 }
-      }).setOrigin(0.5).setDepth(20004).setVisible(false);
-
-      badges.set(opt.key, { badge1, badge2 });
-      elements.push(rect, txt, symbol, badge1, badge2);
-
-      rect.on('pointerdown', () => {
-        // Count how many times this power is currently selected
-        const count = chosen.filter(id => id === opt.key).length;
-
-        if (count === 0) {
-          // Not selected yet - add first instance if we have room
-          if (chosen.length >= 2) return;
-          chosen.push(opt.key);
-        } else if (count === 1) {
-          // Selected once - toggle to either 2 selections or 0
-          if (chosen.length >= 2) {
-            // Already at max, cycle back to 0 (deselect completely)
-            const idx = chosen.indexOf(opt.key);
-            chosen.splice(idx, 1);
-          } else {
-            // Can add second instance
-            chosen.push(opt.key);
-          }
-        } else if (count === 2) {
-          // Selected twice - click removes last instance
-          const idx = chosen.lastIndexOf(opt.key);
-          chosen.splice(idx, 1);
-        }
-
-        updateAllBadges();
-
-        // Enable/disable Start Round button based on selection
-        if (chosen.length === 2) {
-          startBtn.setFillStyle(0xfbbf24); // Gold when ready
-          startBtn.setInteractive({ useHandCursor: true });
-          startTxt.setColor('#000000');
-        } else {
-          startBtn.setFillStyle(0x374151); // Gray when disabled
-          startBtn.removeInteractive();
-          startTxt.setColor('#6b7280');
-        }
-      });
+    this.gameUI = this.gameUI || new GameUI(this);
+    this._tutorialModal = showRunnerLoadout(this.gameUI, () => {
+      this.pausedForModal = false;
+      this._ignoreNextPowerClick = true;
+    }, {
+      title:'TUTORIAL / LOADOUT',startLabel:'START LESSON',
+      allowReplay:false,showAccount:false
     });
-
-    // START ROUND button
-    const startBtnY = panel.y + 90;
-    const startBtn = this.add.rectangle(panel.x, startBtnY, panelW - 40, 48, 0x374151, 1)
-      .setDepth(20002)
-      .setStrokeStyle(2, 0x4b5563);
-    const startTxt = this.add.text(panel.x, startBtnY, 'START ROUND', {
-      color: '#6b7280',
-      fontSize: Math.max(18, Math.floor(height * 0.030)) + 'px',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(20003);
-
-    startBtn.on('pointerdown', () => {
-      if (chosen.length === 2) {
-        // Persist the chosen power order
-        this.runnerPowersSelected = chosen.slice();
-        this.runnerPowersConsumed = [false, false];
-        // Clean up modal elements and resume the game
-        overlay.destroy();
-        panel.destroy();
-        title.destroy();
-        subtitle.destroy();
-        elements.forEach(el => el.destroy());
-        startBtn.destroy();
-        startTxt.destroy();
-        this.pausedForModal = false;
-        // Prevent power activation from this same click
-        this._ignoreNextPowerClick = true;
-      }
-    });
-
-    elements.push(startBtn, startTxt);
   }
 
-  /**
-   * Display gun selection modal for stage 5 (plug tutorial)
-   * Player must choose one weapon before starting
-   */
+  // Shelved plug-mode UI retained, but unreachable from the runner tutorial.
   showGunSelectionModal(){
     this.pausedForModal = true;
     const width = this.scale.width;
@@ -2429,8 +1895,8 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Stop engine loop when transitioning to next stage
     try { this.audio?.stopEngineLoop(); } catch {}
 
-    const next = this.stageIdx + 1;
-    if (next <= 5){
+    const next = nextTutorialStage(this.stageIdx);
+    if (next !== null){
       const cam = this.cameras.main;
       cam.fadeOut(200, 0, 0, 0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -2463,43 +1929,12 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.bulletsPlug = [];
       }
 
-      const veil = this.add.rectangle(
-        this.scale.width / 2,
-        this.scale.height / 2,
-        this.scale.width,
-        this.scale.height,
-        0x000000,
-        0.72
-      ).setScrollFactor(0).setDepth(9998).setInteractive();
-
-      // Calculate max width for modal content to prevent text cutoff on desktop
-      const maxContentWidth = Math.floor(Math.min(this.scale.width * 0.75, 420));
-
-      const dlg = this.rexUI.add.dialog({
-        x: this.scale.width / 2,
-        y: this.scale.height * 0.35,
-        background: this.rexUI.add.roundRectangle(0, 0, 0, 0, 8, 0x101522, 0.96).setStrokeStyle(2, 0x2f3650),
-        title: this.add.text(0, 0, "You're ready!", {
-          color: '#cbd1ff',
-          fontSize: Math.max(20, Math.floor(this.scale.height * 0.032)) + 'px',
-          fontStyle: 'bold',
-          wordWrap: { width: maxContentWidth }
-        }),
-        content: this.add.text(0, 0, 'Tutorial complete!\n\nTime to run the streets and defend the block.', {
-          color: '#aab5ff',
-          fontSize: Math.max(14, Math.floor(this.scale.height * 0.022)) + 'px',
-          align: 'center',
-          wordWrap: { width: maxContentWidth }
-        }),
-        actions: [ this.add.text(0, 0, 'Exit', { color: '#ef4444', fontStyle: 'bold' }) ],
-        space: { title: 10, content: 10, action: 8, left: 20, right: 20, top: 12, bottom: 12 }
-      }).layout().setDepth(9999).popUp(160);
-
-      dlg.on('button.click', () => {
-        dlg.scaleDownDestroy(140);
-        veil.destroy();
-        this.scene.transition({ target: 'MENU', duration: 200, moveBelow: true });
-      });
+      this.showModal("You're ready!", [
+        'You know how to move, find the real stash and escape the Plug.',
+        'The daily block has 15 houses. See how far you can get.'
+      ], 'Main Menu', () => {
+        this.scene.transition({ target:'MENU', duration:200, moveBelow:true });
+      }, { complete:true });
     }
   }
   queueDash(duration = 220){
@@ -2661,13 +2096,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     const wx = this.toWorldX(spawnCell.x);
     const wy = this.toWorldY(spawnCell.y);
 
-    this.aiPlug = this.add.container(wx, wy).setDepth(8);
-    const shadow = this.add.ellipse(0, this.cell * 0.48, this.cell * 0.90, this.cell * 0.30, 0x000000, 0.34).setScale(1, 0.8);
-    const sprite = this.add.sprite(0, 0, 'td_plug').setOrigin(0.5);
-    sprite.setScale((this.cell / 128) * 3.0);
-    sprite.setTint(0xff6b6b); // Apply red tint like in regular game mode
-    this.aiPlug.add([shadow, sprite]);
-    this.aiPlug.sprite = sprite;
+    this.aiPlug = makePlugSprite(this, wx, wy, this.cell);
     this.aiPlug.hbRadius = this.hitboxRadius;
     this.aiPlug.hp = 3;
 
@@ -3705,6 +3134,15 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (this.aiPlug) this.updatePlugTrail(dt);
     if (this.aiRunner) this.updateAIRunnerTrail(dt);
 
+    for (const actor of [this.runner, this.aiPlug]) {
+      if (!actor?.sprite) continue;
+      for (const outline of actor.outline || []) {
+        outline.setAngle(actor.sprite.angle);
+        if (outline.texture?.key !== actor.sprite.texture.key) {
+          outline.setTexture(actor.sprite.texture.key);
+        }
+      }
+    }
     this.lastPos = { x: this.runner.x, y: this.runner.y };
   }
   overlaps(a, b){
@@ -3758,9 +3196,9 @@ export class TutorialMiniScene extends Phaser.Scene {
           const trail = this.add.circle(
             baseX + perpX,
             baseY + perpY,
-            this.cell * 0.35,
+            this.cell * 0.12,
             color,
-            0.7
+            0.25
           ).setDepth(1);
 
           // Fade and shrink
@@ -3768,7 +3206,7 @@ export class TutorialMiniScene extends Phaser.Scene {
             targets: trail,
             alpha: 0,
             scale: 0.2,
-            duration: 500,
+            duration: 280,
             ease: 'Cubic.easeOut',
             onComplete: () => trail.destroy()
           });
@@ -3818,9 +3256,9 @@ export class TutorialMiniScene extends Phaser.Scene {
           const trail = this.add.circle(
             baseX + perpX,
             baseY + perpY,
-            this.cell * 0.35,
+            this.cell * 0.12,
             color,
-            0.7
+            0.25
           ).setDepth(1);
 
           // Fade and shrink
@@ -3828,7 +3266,7 @@ export class TutorialMiniScene extends Phaser.Scene {
             targets: trail,
             alpha: 0,
             scale: 0.2,
-            duration: 500,
+            duration: 280,
             ease: 'Cubic.easeOut',
             onComplete: () => trail.destroy()
           });
