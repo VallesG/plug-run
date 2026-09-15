@@ -36,6 +36,7 @@
 // BaseGameScene lives in installBotDriver.js.
 
 import { planDodge } from '../logic/evasion.js';
+import { coverAwareStep, isExposedAt } from '../logic/cover.js';
 
 export const DEFAULTS = {
   // How often the bot re-decides, in ms. Human reaction floor is ~200ms and
@@ -80,6 +81,26 @@ export const DEFAULTS = {
   // seeds put the runner in the plug's line of sight on frame one, and no
   // amount of skill beats that — a human reaches for the swap, so does this.
   swapAfterFails: 2,
+
+  // COVER-AWARE ROUTING. The borrowed AI routes by path length alone, so a
+  // corridor three cells shorter but fully in a plug's firing line wins every
+  // time and the runner strolls down it. Across 227 runs the runs that cleared
+  // spent a median 0.03 of their life in a clear lane; the runs that died
+  // spent 0.23.
+  //
+  // coverPenalty is how many extra cells of walking to accept to stay behind
+  // cover. 0 disables the whole thing and reproduces the old behaviour exactly,
+  // which makes it a clean A/B.
+  coverPenalty: 5,
+  // Carrying the stash you are slower (carrySlow) and you have something to
+  // lose, so cover is worth more. This multiplies coverPenalty after pickup —
+  // the "grab it and dip" instinct, priced.
+  coverCarryMul: 1.8,
+
+  // Spend phase to break out of a firing lane when a plug is closing and there
+  // is cover on the other side of a wall. The shipped AI only phases to shorten
+  // a route or to escape at 2-6 cells; neither says "I am pinned in the open".
+  phaseEscapeCells: 9,
 
   // Evasion commitment. Dodging is re-decided on a timer, not every frame:
   // with two plugs, leaving one's lane walks into the other's, and a
@@ -147,6 +168,9 @@ export default class BotDriver {
     this._borrowed = null;   // lazily-built AIController for the borrowed AI
     this._progressionApplied = false;
     this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
+    this._nextCoverAt = 0;
+    this._coverDir = null;
+    this._nextPhaseAt = 0;
     this._lastTick = 0;
   }
 
@@ -174,6 +198,9 @@ export default class BotDriver {
     // Evasion commitment state — cleared per round so a dodge can't carry
     // across a restart.
     this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
+    this._nextCoverAt = 0;
+    this._coverDir = null;
+    this._nextPhaseAt = 0;
   }
 
   /** Should we be driving with the game's own runner AI? */
@@ -268,6 +295,14 @@ export default class BotDriver {
       }
     }
 
+    // Phase out of a lane before reaching for footwork: if the run is pinned
+    // in the open, the wall is the way out. Throttled — activateRunnerPower
+    // is a one-shot, so this only needs to be asked occasionally.
+    if (now >= (this._nextPhaseAt || 0)) {
+      this._nextPhaseAt = now + 250;
+      this._phaseEscape(me);
+    }
+
     // Evasion overrides the AI's chosen direction when it has walked us into
     // a firing lane. Layered on top rather than merged in, because the AI
     // cannot see defender2 at all (see firingLaneRisk) — from round 8 this
@@ -287,9 +322,117 @@ export default class BotDriver {
     this._dodge = plan.state;
     if (plan.dir) return this._driveOrCoast(me, plan.dir);
 
+    // Routing: prefer a covered approach over a short exposed one. This runs
+    // on the replan tick rather than every frame — it is a route decision, not
+    // a reflex, and the dodge above is the reflex layer.
+    const routed = this._coverStep(me, now);
+    if (routed) return this._driveOrCoast(me, routed);
+
     const vx = this._borrowed._aiVX || 0;
     const vy = this._borrowed._aiVY || 0;
     return this._driveOrCoast(me, { x: vx, y: vy });
+  }
+
+  /* ---------------- cover-aware routing ---------------- */
+
+  /** Live plugs, as cells. Both of them — defender2 exists from round 8. */
+  _threatCells() {
+    const s = this.scene;
+    return [s.defender, s.defender2]
+      .filter((p) => p && p.active && p.visible)
+      .map((p) => s.toCell(p.x, p.y));
+  }
+
+  _world() {
+    const s = this.scene;
+    return {
+      cols: s.cols,
+      rows: s.rows,
+      isWalkable: (x, y) => !!s.isWalkableCell?.(x, y),
+      threats: this._threatCells()
+    };
+  }
+
+  /**
+   * A step toward the objective that weighs exposure, or null to leave the
+   * borrowed AI's choice alone.
+   *
+   * Only overrides while actually standing in a firing lane. Away from one the
+   * shipped AI's routing is well tuned and has corridor commitment and stuck
+   * recovery this does not; replacing it wholesale would trade a known-good
+   * router for a freshly written one.
+   */
+  _coverStep(me, now) {
+    const penalty = (this.cfg.coverPenalty ?? DEFAULTS.coverPenalty);
+    if (!(penalty > 0)) return null;
+
+    const s = this.scene;
+    const goal = this.currentGoal();
+    if (!goal || typeof s.isWalkableCell !== 'function') return null;
+
+    if (now < (this._nextCoverAt || 0)) return this._coverDir || null;
+    this._nextCoverAt = now + (this.cfg.replanMs ?? DEFAULTS.replanMs);
+
+    const world = this._world();
+    if (!world.threats.length) { this._coverDir = null; return null; }
+
+    const from = s.toCell(me.x, me.y);
+    if (!isExposedAt(world, from)) { this._coverDir = null; return null; }
+
+    const step = coverAwareStep({
+      ...world,
+      from,
+      goal: s.toCell(goal.x, goal.y),
+      penalty: s.hasStash
+        ? penalty * (this.cfg.coverCarryMul ?? DEFAULTS.coverCarryMul)
+        : penalty
+    });
+    if (!step) { this._coverDir = null; return null; }
+
+    this._coverDir = { x: step.x - from.x, y: step.y - from.y };
+    return this._coverDir;
+  }
+
+  /**
+   * Phase out of a firing lane.
+   *
+   * The shipped AI phases to shorten a route or to escape a plug at 2-6 cells.
+   * Neither of those is "I am pinned in the open with a gun lined up on me",
+   * which is the situation that actually kills runs. Burning the power to end
+   * up behind a wall is worth more than saving it for a shortcut.
+   */
+  _phaseEscape(me) {
+    const s = this.scene;
+    if (s.role !== 'runner' || s.runnerIsPhasing?.()) return false;
+
+    const sel = s.runnerPowersSelected || [];
+    const used = s.runnerPowersConsumed || [];
+    const slot = sel.findIndex((p, i) => p === 'phase' && !used[i]);
+    if (slot < 0) return false;
+
+    const world = this._world();
+    if (!world.threats.length) return false;
+
+    const from = s.toCell(me.x, me.y);
+    if (!isExposedAt(world, from)) return false;
+
+    // Only when something is close enough for the lane to be a real threat.
+    const range = s.cell * (this.cfg.phaseEscapeCells ?? DEFAULTS.phaseEscapeCells);
+    const closing = [s.defender, s.defender2].some(
+      (p) => p && p.active && p.visible && Math.hypot(p.x - me.x, p.y - me.y) <= range
+    );
+    if (!closing) return false;
+
+    // Only if a wall is adjacent — phase is for going THROUGH something. With
+    // open ground on all sides, running is the better answer and keeps the
+    // power for a wall that matters.
+    const wallAdjacent = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      .some(([dx, dy]) => !s.isWalkableCell?.(from.x + dx, from.y + dy));
+    if (!wallAdjacent) return false;
+
+    console.log('[BOT] phasing to break out of a firing lane');
+    s.activateRunnerPowerByIndex?.(slot);
+    return true;
   }
 
   /* ---------------- target selection ---------------- */

@@ -463,6 +463,86 @@ function borrowScene() {
   check('aiLevel 0 disables borrowing', bot.useBorrowedAI === false);
 }
 
+/* ---------------- cover routing + phase escape ---------------- */
+
+// 23. Standing in a plug's firing lane, routing should step out of it rather
+//     than take the shortest line. With coverPenalty 0 it must behave exactly
+//     as before, which is what makes this a clean A/B rather than a rewrite.
+{
+  // Row 2, not row 4: the stub's wall column (x=5, y=3..6) would break the
+  // lane and there would be nothing to route out of.
+  const lane = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 2.5, active: true, visible: true },
+    defender: { x: CELL * 8.5, y: CELL * 2.5, active: true, visible: true }
+  });
+  const bot = new BotDriver(lane, { coverPenalty: 6 });
+  const step = bot._coverStep(lane.attacker, 1000);
+  check('routes out of a firing lane it is standing in', !!step && step.y !== 0, JSON.stringify(step));
+
+  const off = new BotDriver(lane, { coverPenalty: 0 });
+  check('coverPenalty 0 leaves the AI routing untouched',
+    off._coverStep(lane.attacker, 1000) === null);
+}
+
+// 24. Out of any lane, leave the shipped router alone — it has corridor
+//     commitment and stuck recovery this layer does not.
+{
+  const safe = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true },
+    defender: { x: CELL * 7.5, y: CELL * 6.5, active: true, visible: true }
+  });
+  const bot = new BotDriver(safe, { coverPenalty: 6 });
+  check('does not override routing when already in cover',
+    bot._coverStep(safe.attacker, 1000) === null);
+}
+
+// 25. Phase gets spent to break out of a lane — but only with a wall to go
+//     through. In the open, running is the better answer and the power keeps.
+{
+  const pinned = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 2.5, active: true, visible: true },
+    defender: { x: CELL * 6.5, y: CELL * 2.5, active: true, visible: true }
+  });
+  let fired = -1;
+  pinned.runnerPowersSelected = ['phase', 'dash'];
+  pinned.runnerPowersConsumed = [false, false];
+  pinned.runnerIsPhasing = () => false;
+  pinned.activateRunnerPowerByIndex = (i) => { fired = i; };
+
+  const bot = new BotDriver(pinned, {});
+  const used = bot._phaseEscape(pinned.attacker);
+  check('phases out of a lane when a wall is adjacent', used === true && fired === 0);
+}
+
+{
+  const pinned = makeScene({
+    attacker: { x: CELL * 3.5, y: CELL * 2.5, active: true, visible: true }, // open ground
+    defender: { x: CELL * 8.5, y: CELL * 2.5, active: true, visible: true }
+  });
+  pinned.runnerPowersSelected = ['phase', 'dash'];
+  pinned.runnerPowersConsumed = [false, false];
+  pinned.runnerIsPhasing = () => false;
+  pinned.activateRunnerPowerByIndex = () => { throw new Error('should not fire'); };
+  const bot = new BotDriver(pinned, {});
+  let threw = false;
+  try { bot._phaseEscape(pinned.attacker); } catch { threw = true; }
+  check('does not waste phase with no wall to pass through', !threw);
+}
+
+{
+  const spent = makeScene({
+    attacker: { x: CELL * 1.5, y: CELL * 2.5, active: true, visible: true },
+    defender: { x: CELL * 6.5, y: CELL * 2.5, active: true, visible: true }
+  });
+  spent.runnerPowersSelected = ['phase', 'dash'];
+  spent.runnerPowersConsumed = [true, false];   // already used
+  spent.runnerIsPhasing = () => false;
+  spent.activateRunnerPowerByIndex = () => { throw new Error('should not fire'); };
+  let threw = false;
+  try { new BotDriver(spent, {})._phaseEscape(spent.attacker); } catch { threw = true; }
+  check('does not try to spend a phase it no longer has', !threw);
+}
+
 /* ---------------- report ---------------- */
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
