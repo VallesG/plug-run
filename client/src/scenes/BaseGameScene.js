@@ -674,6 +674,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.neutralizeWallTextures();
     this.drawNeonArena();
+    this.applyFrameVignette();
     this.makeObjectives(this.stashCell, this.extractCell);
     this.placeGetawayCar();
 
@@ -1651,6 +1652,15 @@ export class BaseGameScene extends Phaser.Scene {
     const car = this.add.image(cx, cy, 'car_blue').setDepth(1200);
     car.setDisplaySize(carLen, this.cell*1.4).setTint(this.theme?.carTint ?? 0xffffff);
     car.setAngle(ang);
+    // Ink outline, same treatment as the characters. Four copies is plenty at
+    // this size, and they sit one depth below so the tint never bleeds over.
+    const opx = Math.max(2, Math.round(this.cell * 0.09));
+    car._outline = [[opx, 0], [-opx, 0], [0, opx], [0, -opx]].map(([ox, oy]) =>
+      this.add.image(cx + ox, cy + oy, 'car_blue')
+        .setDisplaySize(carLen, this.cell * 1.4)
+        .setTint(PALETTE.ink)
+        .setAngle(ang)
+        .setDepth(1199));
     this.car = car;
     this.carOutDir = { x:dx, y:dy };
     // REAL / BUNK STASH PATCH: ensure car beacon starts off
@@ -1681,6 +1691,8 @@ export class BaseGameScene extends Phaser.Scene {
       const container = this.add.container(x, y).setDepth(1000);
       // Invisible sensor for consistent overlap bounds
       const sensor = this.add.rectangle(0, 0, w, h, 0x000000, 0.0001);
+      // Hard ground shadow, same treatment as the characters.
+      const shadow = this.add.ellipse(this.cell * 0.05, h * 0.55, w * 1.05, h * 0.5, PALETTE.ink, 0.45);
       // Graphics-based rounded rectangle + tape stripe
       const g = this.add.graphics();
       const tan = 0xC8A97E;    // duffel/package color
@@ -1689,7 +1701,9 @@ export class BaseGameScene extends Phaser.Scene {
       const gloss = 0xE7D3B5;  // soft highlight
       // Draw duffel body
       g.fillStyle(tan, 1);
-      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.05)), tanDark, 1);
+      // Ink outline, not a darker tan: the duffel reads with the same line
+      // weight as the people instead of as a softer object in a harder scene.
+      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
       const rad = Math.max(4, Math.floor(this.cell * 0.14 * baseScale));
       g.fillRoundedRect(-w/2, -h/2, w, h, rad);
       g.strokeRoundedRect(-w/2, -h/2, w, h, rad);
@@ -1704,7 +1718,7 @@ export class BaseGameScene extends Phaser.Scene {
       const mark = this.add.text(-w*0.18, -h*0.06, '$', { fontSize: `${Math.max(10, Math.floor(this.cell*0.30*baseScale))}px`, color: '#2b2b2b' })
         .setAlpha(0.25)
         .setOrigin(0.5);
-      container.add([sensor, g, mark]);
+      container.add([sensor, shadow, g, mark]);
       // Mark so our logic can identify the object type
       container.isPackage = true;
       container.sensor = sensor;
@@ -1797,7 +1811,9 @@ export class BaseGameScene extends Phaser.Scene {
       const tan = 0xC8A97E, tanDark = 0xA9885F, tape = 0x8B7355, gloss = 0xE7D3B5;
       const rad = Math.max(3, Math.floor(this.cell * 0.10));
       g.fillStyle(tan, 1);
-      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.05)), tanDark, 1);
+      // Ink outline, not a darker tan: the duffel reads with the same line
+      // weight as the people instead of as a softer object in a harder scene.
+      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
       g.fillRoundedRect(-w/2, -h/2, w, h, rad);
       g.strokeRoundedRect(-w/2, -h/2, w, h, rad);
       g.fillStyle(tape, 1);
@@ -2136,6 +2152,22 @@ export class BaseGameScene extends Phaser.Scene {
 
   runnerIsPhasing(){
     return performance.now() < (this.phaseActiveUntil || 0);
+  }
+
+  /**
+   * Darken the frame edges so the eye sits on the board. One line of post-FX,
+   * WebGL only (Phaser.AUTO picks WebGL everywhere that matters; on Canvas this
+   * is simply absent rather than faked). Flagged on the camera, not the scene:
+   * the scene instance survives restart() and the camera does not.
+   */
+  applyFrameVignette(){
+    try {
+      const cam = this.cameras?.main;
+      if (!cam || cam._hasVignette) return;
+      if (this.renderer?.type !== Phaser.WEBGL || !cam.postFX) return;
+      cam.postFX.addVignette(0.5, 0.5, 0.92, 0.32);
+      cam._hasVignette = true;
+    } catch {}
   }
 
   /** A puff of ground dust. Visual only — nothing here touches sim state. */

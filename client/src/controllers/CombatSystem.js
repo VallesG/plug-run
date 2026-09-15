@@ -332,6 +332,18 @@ export default class CombatSystem {
   /**
    * Apply damage to a character
    */
+  /** An expanding ring in the fallen one's colour. Visual only. */
+  deathRing(x, y, color = 0xffffff) {
+    const cell = this.scene.cell;
+    const ring = this.scene.add.circle(x, y, cell * 0.5, color, 0)
+      .setStrokeStyle(Math.max(2, cell * 0.1), color, 0.95)
+      .setDepth(12);
+    this.scene.tweens.add({
+      targets: ring, scale: 2.6, alpha: 0, duration: 320, ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    });
+  }
+
   hit(who) {
     if (!this.scene.canDamage(who)) return;
 
@@ -424,6 +436,10 @@ export default class CombatSystem {
             console.log('[DualAI] One attacker defeated, stashCarrier:', this.scene.stashCarrier);
 
             // Hide the dead attacker FIRST before any other operations
+            // JUICE: a death is a moment, not a disappearance.
+            this.scene.spawnDust?.(who.x, who.y, 10);
+            this.deathRing(who.x, who.y, who.accent);
+            this.scene.cameras.main.shake(140, 0.012);
             who.setVisible(false);
             who.setActive(false);
 
