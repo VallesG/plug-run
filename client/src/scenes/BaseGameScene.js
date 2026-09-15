@@ -17,6 +17,7 @@ import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seede
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
 import RunForensics from '../logic/runForensics.js';
 import { chooseAlternateSpawn } from '../logic/spawnChoice.js';
+import { hasDualOpponent, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
@@ -670,7 +671,7 @@ export class BaseGameScene extends Phaser.Scene {
     {
       const playerKey = this.role === 'plug' ? 'plug' : 'runner';
       const oppKey    = this.role === 'plug' ? 'runner' : 'plug';
-      const hasSecondAI = this.mode === 'pve' && this.pveRound >= 8;
+      const hasSecondAI = this.mode === 'pve' && hasDualOpponent(this.pveRound);
       const positions = hasSecondAI ? 3 : 2;
       const cycle = (this.swapSpawnCycle || 0) % positions;
       if (cycle === 1) {
@@ -703,12 +704,19 @@ export class BaseGameScene extends Phaser.Scene {
 
     console.log('[create] Round', this.pveRound, '- Created attacker, children count:', this.attacker.list.length);
 
-    // Dual AI: Spawn second opponent at round 8+ (PvE mode only).
-    // Rounds 8-12 the second AI spawns with reduced HP as a ramp;
-    // full HP from round 13 (the old dual-AI threshold).
+    // Dual AI: the second opponent is the FINALE, not a difficulty step.
+    //
+    // It used to arrive on every map from round 8 on, and that is precisely
+    // where the game stopped being winnable: per-map clear rate falls 50% ->
+    // 17% at that boundary, with defender2 taking 56-76% of the kills. It also
+    // changed what the game was — before it, 67% of deaths happen carrying the
+    // stash (a late flip); after it, 71% never reach the stash at all.
+    //
+    // Now it appears once, on the last map of the block, where the run is on
+    // the line and the spike is the point.
     this.attacker2 = null;
     this.defender2 = null;
-    if (this.mode === 'pve' && this.pveRound >= 8) {
+    if (this.mode === 'pve' && hasDualOpponent(this.pveRound)) {
       // Only spawn second AI opponent, not second player
       if (this.role === 'plug') {
         // Player is defender, spawn second runner (attacker)
@@ -719,7 +727,9 @@ export class BaseGameScene extends Phaser.Scene {
         // The ramp is SPEED instead: the second runner starts 20% slower
         // than the main one at round 8 and reaches full speed by round 13.
         this.attacker2.hp = 2;
-        this.attacker2._speedMul = Math.min(1, 0.8 + (this.pveRound - 8) * 0.04);
+        // The old 0.8 -> 1.0 ramp existed to soften rounds 8-13. There is only
+        // one dual map now and it is the finale, so it arrives at full speed.
+        this.attacker2._speedMul = 1;
         if (this.wallMask) this.attacker2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Plug Mode - Spawning second runner, children count:', this.attacker2.list.length);
       } else if (this.role === 'runner') {
@@ -729,7 +739,8 @@ export class BaseGameScene extends Phaser.Scene {
         this.defender2 = makePlugSprite(this, this.toWorldX(altPlugSpawn.x), this.toWorldY(altPlugSpawn.y), this.cell).setVisible(false);
         // Same philosophy for the second plug: full HP, speed ramp instead.
         this.defender2.hp = 3;
-        this.defender2._speedMul = Math.min(1, 0.8 + (this.pveRound - 8) * 0.04);
+        // Full speed: see the note on attacker2 above.
+        this.defender2._speedMul = 1;
         if (this.wallMask) this.defender2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Runner Mode - Spawning second plug');
       }

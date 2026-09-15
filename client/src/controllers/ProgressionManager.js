@@ -10,6 +10,7 @@ import {
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
+import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import { SESSION_RULES, streakBonus } from '../utils/repTracker.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
@@ -238,6 +239,13 @@ export default class ProgressionManager {
           } else if (this.scene.tutorialStage === 5) {
             // Completed plug tutorial, show completion
             this.scene.scene.start('TUTORIAL_MINI', { continueToStage: 6 });
+          } else if (this.scene.mode === 'pve' && isBlockComplete(this.scene.pveRound || 1)) {
+            // The block is finished. The ladder used to run forever, which the
+            // data says was a fiction — nothing cleared past round 23, so every
+            // player's run ended by hitting a wall rather than by finishing.
+            // A run that ENDS is one that can be scored, shared and beaten
+            // tomorrow, which is the whole point of a daily.
+            this.showBlockComplete();
           } else {
             // Restart with new seed (preserve mode for PvE)
             const newSeed = (Math.random() * 2 ** 32) | 0;
@@ -401,6 +409,47 @@ export default class ProgressionManager {
     } else {
       this.scene.currentModal = modal;
     }
+  }
+
+  /**
+   * The block is cleared — the run's ending.
+   *
+   * Deliberately a different screen from the death modal: this is the only
+   * moment the game has ever had that says "you finished", and it is what a
+   * daily leaderboard entry and a shared replay hang off.
+   */
+  showBlockComplete() {
+    const maps = PVE_BLOCK_MAPS;
+    this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, maps);
+
+    const replayRow = ReplaySystem.hasReplay(this.scene.role) ? [{
+      label: '\u25B6 Watch Replay',
+      variant: 'secondary',
+      keepOpen: true,
+      onClick: (m) => {
+        m.setVisible(false);
+        ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
+      }
+    }] : [];
+
+    const modal = this.scene.gameUI?.showModal?.({
+      title: 'BLOCK CLEARED',
+      subtitle: `All ${maps} runs, start to finish.`,
+      lines: [
+        ``,
+        `Total Stash Collected: ${this.scene.pveSessionStash}`,
+        `Total Rep Earned: ${this.scene.pveSessionRep}`
+      ],
+      buttons: [
+        ...replayRow,
+        { label: 'Back to Menu', variant: 'primary', onClick: () => this.scene.scene.start('MENU') }
+      ]
+    });
+
+    if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
+    else this.scene.currentModal = modal;
+
+    return modal;
   }
 
   /**
