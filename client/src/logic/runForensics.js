@@ -23,6 +23,7 @@ export default class RunForensics {
 
   reset() {
     this.started = false;
+    this._captured = false;
     this.spawn = null;
     this.optimalCells = null;
     this.pickupTick = null;
@@ -39,21 +40,32 @@ export default class RunForensics {
   /* ---------------- recording ---------------- */
 
   /**
-   * Round start. Captures the geometry a player judges a spawn by: how close
-   * the nearest gun is, and whether it already has a clear line on you.
+   * Arm the recorder. The spawn snapshot is deliberately NOT taken here.
    *
-   * "Some seeds drop the runner inside the plug's opening line of fire" is the
-   * premise the spawn-swap button was built on, and it has never been measured.
-   * Now every run says whether it was one of those.
+   * startMatch() calls this before it makes the plugs visible and before the
+   * stash pair is placed, so anything read at this point sees an empty board:
+   * the first run of this recorder came back with plugDistCells null and
+   * inLaneAtStart false on all 63 rows, which is not a measurement, it is a
+   * recording of the setup order. Capturing on the first frame instead is
+   * immune to that ordering, and is arguably the truer moment anyway — it is
+   * the board as it exists when control begins.
    */
   begin(scene) {
     this.reset();
-    const me = scene.attacker;
-    if (!me) return;
-
+    if (!scene.attacker) return;
     this.started = true;
-    this._last = { x: me.x, y: me.y };
+    this._captured = false;
+  }
 
+  /**
+   * Captures the geometry a player judges a spawn by: how close the nearest
+   * gun is, and whether it already has a clear line on you.
+   *
+   * "Some seeds drop the runner inside the plug's opening line of fire" is the
+   * premise the spawn-swap button was built on, and it has never been
+   * measured. Now every run says whether it was one of those.
+   */
+  _capture(scene, me) {
     const plugs = livePlugs(scene);
     const nearest = nearestBy(plugs, me);
 
@@ -65,9 +77,11 @@ export default class RunForensics {
       inLaneAtStart: plugs.some((p) => sharesLane(scene, p, me) && clearLine(scene, p, me))
     };
 
-    // Optimal route, for comparing against the one actually walked. Two BFS at
-    // round start only — never per frame.
+    // Optimal route, for comparing against the one actually walked. Two BFS
+    // once per round — never per frame.
     this.optimalCells = optimalRoute(scene, me);
+    this._last = { x: me.x, y: me.y };
+    this._captured = true;
   }
 
   /** Per frame. Must stay O(1): this runs for every player, not just the bot. */
@@ -75,6 +89,8 @@ export default class RunForensics {
     if (!this.started || this.end) return;
     const me = scene.attacker;
     if (!me) return;
+
+    if (!this._captured) this._capture(scene, me);
 
     this._ticks++;
 
