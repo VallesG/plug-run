@@ -1,5 +1,28 @@
 # Plug Run — handoff for a new agent
 
+## Contact location artwork prepared (2026-09-16)
+
+Codex has now created six portrait 1024x1536 contact backdrops and a six-object
+1536x1024 RGBA job-prop sheet. They live under
+client/public/art/the-window/contacts/; manifest.json and README.md explain
+atlas reuse, provisional placement, foreground occlusion and optimization.
+Open /contact-art-preview.html under Vite to review existing portraits over
+their new locations and short sample dialogue. This review page is not gameplay.
+
+The settings/art preparation step is now available: Claude should review,
+compress/lazy-load and integrate it rather than regenerate the six rooms.
+Character dossiers, full dialogue variants, final portrait positioning and
+gameplay contact/mission logic remain next work. Job objects are proposed
+briefing/inventory illustrations, not ready-to-use floor sprites or final jobs.
+
+Seven source images total 18,370,368 bytes (17.52 MiB), approximately 42 MiB
+decoded as RGBA together before overhead. Do not preload all of them in gameplay.
+Use one contact setting at a time and optimize before production loading.
+The art-contract suite adds 80 adapted metadata assertions and is registered
+in npm test. Actual composite rendering, alpha edges, occlusion, asset
+performance, native npm/Vite and other suites remain unverified. No gameplay
+source, race bank or reward rules changed in this art pass.
+
 ## Next Claude assignment — gameplay gang contacts and Cash (2026-09-16)
 
 Read CLAUDE_GAMEPLAY_CONTACTS_HANDOFF.md for the consolidated shipped-state

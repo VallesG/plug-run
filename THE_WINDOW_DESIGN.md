@@ -33,6 +33,13 @@ every later economy/content phase below as unimplemented.
 
 ## Next requested gameplay-contact slice (2026-09-16)
 
+Six location backdrops, a proposed six-object sheet and a composition review
+page are prepared under client/public/art/the-window/contacts/. See that
+folder’s README.md/manifest.json and /contact-art-preview.html. Runtime contact
+missions remain unimplemented; existing characters should be composited over
+these settings rather than re-created. Source PNG compression, alpha/occlusion
+review and lazy loading remain required before production integration.
+
 See CLAUDE_GAMEPLAY_CONTACTS_HANDOFF.md for implementation sequencing.
 The human wants the selected gang's primary to check in every three houses
 of Run the Block, tease a secondary-contact job around house 6, and have that
