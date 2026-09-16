@@ -1,5 +1,9 @@
 # Plug Run — handoff for a new agent
 
+> Block Rivals recording continuation: read `RIVALS_CLAUDE_HANDOFF.md` after
+> this file. It freezes the proposed seven-course pool and details BotDriver
+> recording, portable replay bundles, opponent selection and verification.
+
 Written 2026-09-15 at the end of a long Claude Code session. Branch:
 `claude/input-intent-layer`. 38 commits ahead of `master`; `master` is
 untouched and still deploys the old build.

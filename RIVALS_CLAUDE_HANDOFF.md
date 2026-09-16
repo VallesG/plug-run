@@ -1,0 +1,401 @@
+# Claude handoff: Block Rivals recorded opponents
+
+Written 2026-09-15 after Codex commit `de35c373eeb005995c9a6d5a8079fdad64954d65`.
+Work only on `claude/input-intent-layer`. Do not touch `master`.
+
+Read `HANDOFF_CODEX.md` end to end before changing code. It contains the
+architecture, test history and six build traps. This file is the focused next
+assignment for Block Rivals.
+
+## Product decision
+
+The title menu is now:
+
+1. Run the Block
+2. Block Rivals
+3. Tutorial
+4. Settings
+
+Run the Block is the persistent city game. Fifteen first-time stash clears
+finish a named block and unlock the next block. REP is competitive scoring,
+not the city unlock currency.
+
+Block Rivals is a short asynchronous race:
+
+- one opening two-charge loadout;
+- seven deterministic houses;
+- the same seven houses and rules for player and opponent;
+- race clock continues through fast transitions and retries;
+- two segmented progress bars; no synchronized opponent sprite during play;
+- first seven-house finish wins;
+- after the race, the player can watch the opponent's recorded run, especially
+  to understand how they were beaten.
+
+The first opponent population should be honest bot-driver recordings. Do not
+label them as live players or silently fabricate human identities. Later, the
+same record format can accept compatible real-player runs.
+
+## What exists now
+
+Commit `de35c37` contains a playable prototype:
+
+- `logic/rivals.js`: pure seven-house course/timing/outcome/record rules.
+- `utils/rivalSession.js`: creates a random course and a fixed simulated pace
+  from generated-maze path distances; saves a bounded local result history.
+- `controllers/RivalsRace.js`: one loadout, countdown, HUD, race clock,
+  quick next-house/retry restart, result modal and rematch.
+- `BaseGameScene`: `runKind === 'rivals'`, seeded house generation,
+  top-HUD arena reservation, seeded defender decisions and Rivals-only
+  pixel-to-cell balance scaling.
+- `ProgressionManager`: Rivals exits before Daily/Journey rewards, saves,
+  activity feed and leaderboards.
+- Tests: 466 pre-existing assertions + 67 Rival rules + 41 adapter-flow
+  assertions = 574 in the adapted V8 harness.
+
+The current opponent is deliberately labeled **Simulated AI pace**. It is not a
+combat-bot replay. The fixed progress timestamps are based on path length and
+hesitation and do not rubber-band. In a 100-course sample the target finishes
+were 1:09–1:44, mean 1:21. Those are generated targets, not human measurements.
+
+## The next assignment
+
+Replace the temporary generated pace opponent with a curated bank of actual
+BotDriver seven-house race recordings, and add **Watch Rival Replay** to the
+result screen.
+
+Do this in phases so a bad recording cannot break the playable race.
+
+### Phase 1: freeze a seven-course pool
+
+A “course” means one complete race containing seven houses. It does not mean
+seven alternate seeds for one house.
+
+Add an import-free manifest in `logic/` and tests. Recommended fixed v1 pool:
+
+| slot | name | root seed | current course ID |
+|---:|---|---:|---|
+| 1 | Low End Rush | 2722422571 | rivals-v1-2722422571 |
+| 2 | Copper Climb | 2917822448 | rivals-v1-2917822448 |
+| 3 | Freight Run | 1245351574 | rivals-v1-1245351574 |
+| 4 | Afterglow Mile | 2476136539 | rivals-v1-2476136539 |
+| 5 | Switchyard Seven | 2143714553 | rivals-v1-2143714553 |
+| 6 | Lastlight Loop | 2077357177 | rivals-v1-2077357177 |
+| 7 | Blacktop Crown | 2334749748 | rivals-v1-2334749748 |
+
+These seeds were derived from
+`rivalHash('plug-run/rivals/course-pool/v1/' + slug)`; put that derivation in
+a test so the numbers cannot drift silently.
+
+Each manifest entry should contain at least:
+
+```js
+{
+  slot, name, seed, courseID,
+  rulesVersion: RIVAL_RULES_VERSION,
+  enabled: true
+}
+```
+
+Use the manifest for New Race/course selection instead of
+`Math.random()`. Rematch keeps the same slot. Decide explicitly whether New
+Race rotates to the next slot or offers a course picker; either is acceptable,
+but it must be deterministic and tested. Do not reuse Daily seed arithmetic.
+
+Before recording, run all seven courses through map generation and assert:
+
+- exactly seven 16x35 houses per course;
+- every house is reachable runner -> both stash pockets -> driveway;
+- identical root seed reproduces identical grids, spawns, objectives, egress,
+  real/bunk choice and defender weapon;
+- no duplicate house seed inside the pool;
+- no rules/version mismatch.
+
+Bump `RIVAL_RULES_VERSION` whenever maze generation, combat balance, loadout,
+stash assignment, transitions or race timing changes. A version mismatch must
+make an old opponent ineligible rather than “close enough.”
+
+### Phase 2: define the recording contract before running bots
+
+Keep two artifacts separate.
+
+#### A. RivalRunRecord — authoritative race comparison
+
+This is small and determines the progress bar and winner:
+
+```js
+{
+  schemaVersion: 1,
+  rulesVersion: 'rivals-v2',        // whatever the recording build uses
+  courseID,
+  courseSlot,
+  courseSeeds: [/* exactly 7 */],
+  opponent: {
+    id, displayName, kind: 'bot',
+    driverVersion, skillPreset
+  },
+  orderedPowers: ['phase', 'dash'],
+  attempts: [
+    // every success and retry in chronological order
+    { house: 1, attempt: 1, startedMs, endedMs, outcome, clearMs: null },
+    { house: 1, attempt: 2, startedMs, endedMs, outcome: 'extracted', clearMs },
+    // ...
+  ],
+  clearTimes: [/* 7 strictly increasing race-clock timestamps */],
+  elapsedMs: clearTimes[6],
+  retries,
+  recordingID,
+  payloadHash
+}
+```
+
+The seven clear timestamps—not replay frame duration—drive opponent progress
+and race outcome. Validate all fields. Client-side validation is corruption
+checking, not anti-cheat; keep `verified: false` until a trusted build/server
+signs records.
+
+#### B. RivalReplayBundle — portable spectator data
+
+This exists only for “Watch Rival Replay”:
+
+```js
+{
+  schemaVersion: 1,
+  recordingID,
+  rulesVersion,
+  courseID,
+  segments: [
+    // one segment for every attempt, including deaths/timeouts
+    { house, attempt, startedMs, durationMs, outcome, replay: /* portable */ }
+  ]
+}
+```
+
+The result screen should still work if this bundle is missing or corrupt.
+A timing record can be eligible without replay only as an explicit fallback;
+prefer selecting an opponent with both artifacts.
+
+### Critical replay warning
+
+`controllers/ReplaySystem.js` cannot simply be JSON-stringified and shipped:
+
+- it stores only one `lastReplay`, so each new house replaces the previous;
+- it caps a segment around 45 seconds;
+- keyframes use `Map` objects;
+- baked graphics use runtime texture keys and a live Phaser texture manager;
+- `getMeta()` only exposes role/round/cell;
+- there is no export/import API for a portable seven-house bundle.
+
+Do not pretend the existing “Watch Replay” button solves this. Extend it
+deliberately.
+
+Recommended first implementation:
+
+1. Add a portable per-attempt export immediately after `ReplaySystem.finalize()`
+   and before the next restart.
+2. Store seven-house attempts in the race recorder, not the global single
+   `lastReplay` slot.
+3. Regenerate the static arena from the course/house seed during playback.
+4. Record only portable dynamic state at ~15Hz: runner and defender transforms,
+   active stash/carry state, bullets, power/decoy events, car/extraction state,
+   sounds and attempt outcome. Use semantic object kinds/IDs, not live Phaser
+   object references or baked texture keys.
+5. Playback concatenates attempt segments with short HOUSE N / RETRY cards.
+6. Add `ReplaySystem.playPortableRace(scene,bundle,{onDone})` or a dedicated
+   `RivalReplayPlayer`; do not overload `play()` with ambiguous object shapes.
+7. Test missing assets, malformed frames, old rules versions, retries,
+   segments longer than 45 seconds, and cleanup when the player exits midway.
+
+An intent-trace-only replay is attractive but risky today. BotDriver records
+human-path input events, yet game combat is still frame-stepped and not
+deterministic lockstep across machines. Seeded Rivals decisions help, but input
+resimulation can still diverge. Use intent traces as audit/debug data, not the
+only player-facing replay, unless a cross-frame-rate reproduction test proves
+the final clear times and outcomes match.
+
+Pre-rendered video is a possible temporary fallback, but it is much larger,
+harder to generate reliably in browsers and less reusable for future human
+ghosts. Prefer portable dynamic-state segments.
+
+### Phase 3: make BotDriver record real seven-house races
+
+Existing harness entry:
+
+```
+?bot=1&aiLevel=20&sweepFrom=1&sweepTo=15&mapsPerRound=5
+```
+
+Existing helpers:
+
+```js
+__plugRunSummary()
+__plugRunDownload()       // includes intent traces by default
+__plugRunDownload(false)
+__plugRunReset()
+```
+
+The current installer is written for Daily/sweep rounds. Its modal auto-clicker
+takes the first actionable button and explicitly skips replay buttons. Do not
+point it at Rivals and assume the export is valid. Add a dedicated recording
+mode, for example:
+
+```
+?rivalsRecord=1&courseSlot=1&skillPreset=bronze&powers=phase,dash&runs=10
+```
+
+Recording mode should:
+
+- enter `runKind: 'rivals'` directly;
+- select the requested fixed course and ordered power pair;
+- use the same Rivals timing, quick transitions and retry rules as a player;
+- preserve one race ID across all seven houses;
+- collect every failed attempt and successful clear;
+- stop only after seven clears or a hard race timeout;
+- export RivalRunRecord + RivalReplayBundle + intent traces + config;
+- never auto-click Watch Replay during batch capture;
+- clearly report incomplete/invalid races rather than including them.
+
+Do not let BotDriver cheat on the real/bunk choice. Its current objective logic
+deliberately cannot inspect which visually identical stash is real before
+pickup; preserve that.
+
+For the first bank, record multiple opponents per course and pace tier. Avoid
+one magically perfect bot. Suggested initial minimum:
+
+- 7 fixed courses;
+- 3 honest skill presets (e.g. Street, Hustler, Ace);
+- 3 valid complete recordings per course/preset;
+- total minimum: 63 full races.
+
+Power fairness needs an explicit decision:
+
+- **Recommended for first shipping bank:** each course/preset declares one
+  fixed ordered loadout and the player receives that same loadout. This keeps
+  the first bank small and the comparison legible.
+- If player-selected powers remain, record compatible opponents for all nine
+  ordered two-power combinations (duplicates included). That is 7 courses x
+  9 loadouts x 3 tiers x at least 3 recordings = 567 full races.
+
+Do not use the current `compatibleRivalRecord()` exact-power check and then
+silently fall back to an incompatible recording. Either supply a matching bank
+or deliberately change and document the fairness rule.
+
+Store curated assets initially as static versioned JSON under something like:
+
+```
+client/public/rivals/v2/manifest.json
+client/public/rivals/v2/courses/<courseID>/opponents.json
+client/public/rivals/v2/replays/<recordingID>.json
+```
+
+Keep one small manifest loaded up front; fetch the selected replay bundle only
+when Watch Rival Replay is pressed. Validate sizes and reject oversized or
+malformed payloads. Vite/Netlify will serve these without a new backend.
+
+### Phase 4: opponent selection and results UX
+
+At race creation:
+
+1. choose one enabled course from the fixed pool;
+2. filter records by rules version, course ID, course seeds and fairness rule;
+3. filter by requested pace tier;
+4. choose deterministically enough that Rematch keeps the same opponent;
+5. write the selected `recordingID` into race state;
+6. drive the opponent bar from that record's seven clear timestamps.
+
+During the race retain the current low-sync presentation:
+
+- YOU and opponent-name segmented bars;
+- exact race clock;
+- optional status words such as SEARCHING / STASH / ESCAPED only if they come
+  from recorded events, never inferred to look dramatic;
+- no opponent character in the player's live house.
+
+Result modal:
+
+- WIN/LOSS/DRAW, player time, rival time, retries;
+- **WATCH RIVAL REPLAY** when the bundle exists;
+- replay opens without destroying the result state;
+- replay can be exited and returns to the result modal;
+- label bot opponents as BOT or AI RIVAL;
+- Rematch preserves course + opponent; New Race chooses through pool policy.
+
+“Watch how I got beat” should play the rival's entire race by default, with a
+simple house timeline. A useful second pass can add “Jump to decisive house”
+(the first house where the opponent moved ahead), but do not make that required
+for v1.
+
+### Phase 5: real-player recordings later
+
+The bot and human record schemas should be the same except opponent metadata.
+A completed local player race already saves seven clear times in
+`rivalRecord()`, but this is not enough for public matching.
+
+Before accepting real players:
+
+- server-side authenticated upload and immutable recording IDs;
+- game/rules build hash and course manifest version;
+- bounds validation on timestamps, attempts, positions and power use;
+- replay payload size/rate limits;
+- quarantine instead of accepting records with impossible events;
+- privacy-safe display names;
+- moderation/removal path;
+- never call an asynchronous replay race “live PvP.”
+
+## Current isolation requirements
+
+Rivals must continue to avoid:
+
+- Daily route/session writes;
+- Journey block/stash progression;
+- Daily and all-time leaderboard submissions until a Rivals leaderboard is
+  intentionally designed;
+- activity feed success events;
+- accumulated user stash/REP mutation;
+- inventory stakes.
+
+A missing opponent manifest or replay fetch must produce a playable, honest
+fallback: either the current **Simulated AI pace** label or an unavailable
+message. Never disguise simulation as a recorded rival.
+
+## Verification required
+
+Pure logic belongs in `client/src/logic/` with no imports and headless tests.
+Keep every existing assertion green.
+
+Run from `client/`:
+
+```powershell
+npm run verify
+```
+
+Then manually verify:
+
+1. all seven fixed courses start and reproduce on Rematch;
+2. bot recorder completes and exports a race with retries;
+3. record timestamps equal the live opponent progress transitions;
+4. result appears if replay fetch fails;
+5. Watch Rival Replay plays all attempts/houses and returns to results;
+6. opponent replay never mutates the live player's result;
+7. backgrounding does not pause the race clock;
+8. mobile 280x480-ish layout retains HUD and playable arena;
+9. Run the Block resume is unchanged;
+10. no Daily/Journey/leaderboard/storage leakage.
+
+The prior Codex environment could not launch Windows processes because Carbon
+Black blocked the sandbox. The user explicitly requested no sandbox attempts
+until whitelisting is available. The 574-assertion claim was from an adapted
+in-memory V8 harness, not native npm/Vite/browser execution. Do not overstate it.
+
+## Suggested commit sequence
+
+1. Freeze fixed seven-course manifest + reachability/determinism tests.
+2. Define/validate RivalRunRecord and RivalReplayBundle schemas.
+3. Add portable single-attempt ReplaySystem export/import.
+4. Aggregate race attempts and build full-race playback.
+5. Add dedicated Rivals BotDriver recording/export mode.
+6. Record, inspect and curate the first opponent bank.
+7. Replace simulated opponent selection and add Watch Rival Replay.
+8. Only then consider uploads and real-player ghosts.
+
+Each commit message should explain why, what was measured, and what remains
+unverified. Match the prose style in `git log`.
