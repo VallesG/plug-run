@@ -1,5 +1,24 @@
 # Claude handoff: Block Rivals recorded opponents
 
+## Player-selected mixes supersede matched loadouts (2026-09-16)
+
+The human explicitly chose same-course competition with independent powers:
+choose your own pair once before each race (including Rematch), then refill
+that pair each house/retry. Do not restore the matched-loadout lock or require
+the bank to cover all nine player mixes. Rival powers remain exactly as
+recorded and are shown in the opening picker; WATCH still plays the original
+bundle. Normal opponent resolution never writes `race.fixedPowers`.
+Explicit recording/play harness powers remain fixed and are not overridden by
+the selected opponent. Bank hashes, seeds, effects, timing, refill mechanics
+and rules version are unchanged; this is a matching/UI-policy change only.
+
+Selection/tutorial wording uses powers. Run the Block becomes compact after
+house 3; Rivals keeps its single full opening picker. Slot taps clear a choice.
+See the top of HANDOFF_CODEX.md for 546 targeted adapted-harness assertions and
+the native/build/device checks still blocked by the Carbon Black restriction.
+All older recommendations below for matching the player's ordered pair are
+historical and superseded by this product decision.
+
 ## The Window / Store Credit boundary (2026-09-15)
 
 A future social wrapper is specified in `THE_WINDOW_DESIGN.md`; it is

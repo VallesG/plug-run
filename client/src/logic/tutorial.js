@@ -21,9 +21,9 @@ export function tutorialLesson(index, desktop = false) {
       'Only the real stash starts the car.'
     ]},
     {title:'Use your powers', lines:[
-      'Choose two charges: Phase, Dash or Decoy.',
-      desktop ? 'Click to use the next charge.' : 'Double-tap to use the next charge.',
-      'For this lesson, collect the real stash and use both charges before escaping. Powers are optional in the daily block.'
+      'Choose two powers: Phase, Dash or Decoy.',
+      desktop ? 'Click to use the next power.' : 'Double-tap to use the next power.',
+      'For this lesson, collect the real stash and use both powers before escaping. Powers are optional in Run the Block.'
     ]},
     {title:'Escape the defender', lines:[
       'The Plug guards this house. Grab the real stash and get to the car.',

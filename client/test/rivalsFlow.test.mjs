@@ -51,7 +51,7 @@ check('countdown lasts full three seconds',state.status==='countdown');
 now=4000;run.controller.update();
 check('GO starts race once',state.status==='racing' && state.startedAt===4000 && run.starts()===1);
 check('GO enables controls',run.scene.input.keyboard.enabled && !run.scene.roundPausedForMenu);
-check('charges fresh at GO',JSON.stringify(run.scene.runnerPowersConsumed)==='[false,false]');
+check('powers fresh at GO',JSON.stringify(run.scene.runnerPowersConsumed)==='[false,false]');
 now=9000;run.controller.clearHouse();
 state=run.scene.rivalRace;
 check('first escape timestamp exact',state.clearTimes[0]===5000);
@@ -125,23 +125,31 @@ state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:[
 now=5001;run.controller.update();
 check('hard limit forfeits an endless race',state.status==='finished' && state.result==='forfeit');
 
-// --- recorded opponent: async lookup, fixed loadout, honest labels, watch button ---
+// --- recorded opponent: async lookup, independent loadout, replay, watch button ---
 const opponentRecord={recordingID:'rec-x',clearTimes:[9000,18000,27000,36000,45000,54000,63000],retries:1,elapsedMs:63000,
   opponent:{kind:'bot',displayName:'BOT \u00b7 Street',skillPreset:'street'},orderedPowers:['dash','phase']};
 resolver=(race)=>Promise.resolve().then(()=>{
   race.rivalTimes=opponentRecord.clearTimes.slice();race.opponentKind='recorded-bot';race.opponentRecord=opponentRecord;
-  race.opponent={recordingID:'rec-x',kind:'bot',displayName:'BOT \u00b7 Street',retries:1,replayURL:'/rivals/v2/replays/rec-x.json'};
-  race.fixedPowers=['dash','phase'];race.opponentResolved=true;return true;
+  race.opponent={recordingID:'rec-x',kind:'bot',displayName:'BOT \u00b7 Street',retries:1,orderedPowers:opponentRecord.orderedPowers.slice(),replayURL:'/rivals/v2/replays/rec-x.json'};
+  race.opponentResolved=true;return true;
 });
 now=0;state=rules.newRivalRace(course,splits);
 const modalsBefore=(run=setup(state)).modals.length;
 check('loadout waits for the opponent lookup',run.modals.length===modalsBefore && run.controller.notice.text==='FINDING RIVAL');
 await new Promise(r=>setTimeout(r,0));
-check('recorded opponent gets the illustrated fixed loadout screen',JSON.stringify(lastPicker.options.fixedPowers)==='["dash","phase"]' && lastPicker.options.subtitle.includes('RIVAL') && !/AI|BOT/i.test(lastPicker.options.subtitle));
+check('recorded opponent opens an editable picker',lastPicker.options.fixedPowers===undefined && lastPicker.options.subtitle.includes('RIVAL') && !/AI|BOT/i.test(lastPicker.options.subtitle));
+check('picker shows the rival mix without copying it',lastPicker.options.helpText.includes('DASH → PHASE') && state.powers.length===0 && state.fixedPowers==null);
+run.scene.runnerPowersSelected=['decoy','decoy'];
 check('opponent timeline replaced the simulated pace',JSON.stringify(state.rivalTimes)===JSON.stringify(opponentRecord.clearTimes));
 lastPicker.done();now=rules.RIVAL_COUNTDOWN_MS;run.controller.update();
+check('chosen powers survive GO independently',state.powers.join()==='decoy,decoy' && run.scene.runnerPowersSelected.join()==='decoy,decoy' && opponentRecord.orderedPowers.join()==='dash,phase');
 check('HUD names the opponent only as RIVAL',run.controller.rows[1].label.text.startsWith('RIVAL'));
 resolver=()=>null;
+now=8000;run.controller.clearHouse();state=run.scene.rivalRace;
+run.events[0].fn();data=run.restarts[0];now=8180;run=setup(data.rivalRace,2);
+check('recorded match preserves player mix on next house',run.scene.runnerPowersSelected.join()==='decoy,decoy' && state.fixedPowers==null);
+now=9000;run.controller.retryHouse();run.events[0].fn();data=run.restarts[0];now=9650;run=setup(data.rivalRace,2);
+check('recorded match refills player mix on retry',run.scene.runnerPowersSelected.join()==='decoy,decoy' && run.scene.runnerPowersConsumed.join()==='false,false');
 now=70000;run.controller.update();
 check('recorded rival finishing first is a loss at its recorded time',state.result==='loss' && state.finishedMs===63000);
 const result=run.modals.at(-1);
@@ -245,4 +253,23 @@ check('failed download stays retryable',await attempt===null && failed.replayCac
 const retry=fetchReplay(failed);
 finishDownload({ok:true,text:async()=>JSON.stringify({segments:[]})});
 check('a later watch can recover from offline',!!(await retry) && downloads===3);
-console.log(passed+' rival flow assertions passed');
+
+// Use the actual opponent loader, not just the adapter's resolver stub: picking
+// a record must never populate fixedPowers or alter either runner's pair.
+const bankSnapshot=JSON.stringify(opponentRecord);
+const chooseBindings={...rules,...presets,console,setTimeout,clearTimeout,
+  getUserID:()=> 'test-runner',localStorage:{getItem:()=> '[]'},
+  validateRivalRunRecord:()=>({ok:true}),rivalRecordMatchesCourse:()=>true,
+  fetch:async()=>({ok:true,text:async()=>JSON.stringify({schemaVersion:1,rulesVersion:rules.RIVAL_RULES_VERSION,
+    opponents:[{record:opponentRecord,replay:'replays/rec-x.json'}]})})};
+const chooseOpponent=new Function(...Object.keys(chooseBindings),sessionSource+'\nreturn resolveRivalOpponent;')(...Object.values(chooseBindings));
+const independent={...rules.newRivalRace(course,splits),powers:['decoy','decoy'],fixedPowers:null,wantRecordingID:'rec-x'};
+check('actual loader selects recording',await chooseOpponent(independent)===true);
+check('actual loader never locks human powers',independent.fixedPowers===null && independent.powers.join()==='decoy,decoy');
+check('rival metadata retains original pair',independent.opponent.orderedPowers.join()==='dash,phase' && independent.opponentRecord.orderedPowers.join()==='dash,phase');
+check('record eligibility still preserves seeds and timestamps',independent.rivalTimes.join()===opponentRecord.clearTimes.join() && independent.opponent.recordingID==='rec-x');
+check('bank input is not decorated',JSON.stringify(opponentRecord)===bankSnapshot);
+const explicit={...rules.newRivalRace(course,splits),fixedPowers:['phase','phase']};
+await chooseOpponent(explicit);
+check('actual loader preserves explicit harness pair',explicit.fixedPowers.join()==='phase,phase' && explicit.opponent.orderedPowers.join()==='dash,phase');
+console.log(passed+' total rival flow assertions passed');

@@ -31,8 +31,8 @@ export default class RivalsRace {
     this.scene.roundPausedForMenu = true;
     this.scene.input.keyboard.enabled = false;
     if (this.race.status === 'countdown') return;
-    // A recorded opponent is looked up before the loadout is shown, because
-    // the loadout depends on it. Synchronous null means nothing to wait for.
+    // Resolve the rival first so the picker can show their actual mix.
+    // The player chooses independently; synchronous null needs no wait.
     const pending = resolveRivalOpponent(this.race);
     if (pending && typeof pending.then === 'function') {
       this.notice?.setText('FINDING RIVAL');
@@ -51,15 +51,14 @@ export default class RivalsRace {
       this.scene.input.keyboard.enabled = false;
       this.scene.suspendTouchUI?.(true);
     };
-    // A recorded rival ran one fixed ordered loadout; the player gets the same
-    // two charges so the comparison is like for like. Only the generated pace
-    // fallback (no loadout of its own) still opens the picker.
+    // Only explicit harness powers bypass selection. A bank recording never
+    // supplies the player's loadout: competing mixes are part of the race.
     if (this.race.fixedPowers) {
       this.scene.runnerPowersSelected=this.race.fixedPowers.slice();
       this.race.powers=this.race.fixedPowers.slice();
       showRunnerLoadout(this.scene.gameUI,armCountdown,{
         title:'BLOCK RIVALS',subtitle:this.opponentSubtitle(),startLabel:'READY TO RACE',
-        helpText:'Matched loadout. Same two charges, same order.',
+        helpText:'Harness loadout. Refills each house.',
         fixedPowers:this.race.fixedPowers,allowReplay:false,showAccount:false
       });
       return;
@@ -69,8 +68,11 @@ export default class RivalsRace {
       armCountdown();
     }, {
       title:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
-      startLabel:'READY TO RACE', helpText:'Two charges refill each house and retry.',
-      allowReplay:false, showAccount:false
+      startLabel:'READY TO RACE',
+      helpText:this.race.opponent?.orderedPowers
+        ? 'Rival: '+this.race.opponent.orderedPowers.map(id=>id.toUpperCase()).join(' → ')+'\nYour powers refill each house.'
+        : 'Your powers refill each house and retry.',
+      allowReplay:false, showAccount:false, compact:false
     });
   }
   opponentSubtitle() {

@@ -50,7 +50,7 @@ export default class GameUI {
     };
   }
 
-  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false, loadout = false }) {
+  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false, loadout = false, compactLoadout = false }) {
     // block world input + hide touch controls
     this.scene.input.keyboard.enabled = false;
     this.scene.suspendTouchUI?.(true);
@@ -71,7 +71,7 @@ export default class GameUI {
     const btnGap = 10;
     const rowCount = buttons.length; // pairs count as one row
     const btnAreaH = rowCount * btnH + Math.max(0, rowCount - 1) * btnGap + 40;
-    const panelH = fullScreen ? H - 16 : Math.min(loadout ? 480 : baseH + btnAreaH, H - 40);
+    const panelH = fullScreen ? H - 16 : Math.min(loadout ? (compactLoadout ? 360 : 480) : baseH + btnAreaH, H - 40);
     const panel = this.scene.add.rectangle(cx, cy, panelW, panelH, fullScreen ? 0x07090b : loadout ? 0x101821 : T.panelBg, 0.97)
       .setStrokeStyle(fullScreen || loadout ? 1 : 2, fullScreen ? 0x34382d : loadout ? 0x52616a : T.accent, 0.9).setScrollFactor(0).setDepth(Z);
 

@@ -1,5 +1,42 @@
 # Plug Run — handoff for a new agent
 
+## Independent Rivals powers and compact block picker (2026-09-16)
+
+**Explicit product decision: both runners choose their own mix.** This
+supersedes all fixed/matched-player-loadout recommendations below. A normal
+Block Rivals match opens an editable, empty two-power picker once, before GO.
+The opponent still resolves first; its real ordered mix is shown beneath the
+player's slots. Those choices refill each house/retry, with no between-house
+picker. Rematch keeps the recording but allows a new player mix.
+
+`resolveRivalOpponent` no longer writes `race.fixedPowers`. Opponent powers
+stay on `race.opponent.orderedPowers` and the untouched hashed bank record.
+Only explicit recording/play harness powers use the fixed confirm path;
+a found opponent no longer overrides that harness pair. The fairness policy is
+now same course, seeds and gameplay rules, not identical power choice.
+No record is altered or passed through a legacy exact-power matcher.
+The bank's rules version is retained because two ordered powers, duplicates,
+power effects, refill behavior, combat, seeds and race timing are unchanged:
+this removes the UI/matchmaking restriction, not simulation compatibility.
+
+Player-facing selection and tutorial vocabulary is now **powers**, not charges.
+Run the Block houses 1–3 retain teaching copy; house 4 onward uses a 360px-max
+compact panel with icons/names, two slots and actions, no description/subtitle
+or help paragraphs. Both pickers let a user tap a slot to clear it and replace
+the power. Invalid harness input falls back to an editable picker.
+
+Measured in adapted in-memory V8: 99 race-flow/loader assertions, 75 real picker
+callback assertions (all nine ordered mixes, three viewports, slot edits,
+cleanup and replay return), 38 interior/layout assertions, plus 94 race rules,
+68 records, 70 replay, 42 capture, 26 presets and 34 tutorial: **546 total**.
+Eight edited sources pass adapted import-binding parsing. The original 89
+race-flow assertions passed before edits. No bank payload or recording changed.
+
+Native `npm run verify`, .mjs subprocess checks, Vite, all other suites and
+live phone/desktop rendering were **not run**: the user's Carbon Black
+process restriction still applies. Run verify locally and review the compact
+picker, independent Rivals choice, retry/refill and WATCH return before deploy.
+
 ## Gang starter cosmetics (2026-09-16)
 
 Saved gang identity now selects three runner clothing palettes and matching car

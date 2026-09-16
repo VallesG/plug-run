@@ -1,4 +1,4 @@
-// Preserve the existing two-charge selection rules, including repeated powers.
+// Preserve the existing two-power selection rules, including repeated powers.
 // Return a fresh list so rendering and ordered slots never share mutable state.
 export function choosePower(chosen, id) {
   const next=chosen.slice();
@@ -11,14 +11,21 @@ export function choosePower(chosen, id) {
   } else next.splice(next.lastIndexOf(id),1);
   return next;
 }
-export function loadoutLayout(width,height) {
+// The first three houses teach the powers; later block pickers stay terse.
+export function compactLoadout(mode,house) {
+  return mode==='pve' && Number(house)>3;
+}
+export function removePowerAt(chosen,index) {
+  return chosen.filter((_,i)=>i!==index);
+}
+export function loadoutLayout(width,height,compact=false) {
   const gap=10, inset=20;
   const cardW=(width-inset*2-gap*2)/3;
-  const cardH=Math.max(80,Math.min(132,height-322));
-  const cardTop=94;
+  const cardH=Math.max(80,Math.min(compact?88:132,height-322));
+  const cardTop=compact?78:94;
   return {
     cards:[0,1,2].map(i=>({x:inset+i*(cardW+gap),y:cardTop,w:cardW,h:cardH})),
     slotsY:cardTop+cardH+29, startY:height-92, navY:height-42,
-    buttonW:width-40, showHelp:height>=370
+    buttonW:width-40, showHelp:!compact && height>=370
   };
 }

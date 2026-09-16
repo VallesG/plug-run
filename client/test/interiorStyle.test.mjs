@@ -1,7 +1,7 @@
 // New visual decisions stay pure. These checks protect routes, determinism,
-// repeated charges and phone fit, rather than snapshotting drawing calls.
+// repeated powers and phone fit, rather than snapshotting drawing calls.
 import { planInterior } from '../src/logic/interior.js';
-import { choosePower, loadoutLayout } from '../src/logic/powerSelection.js';
+import { choosePower, removePowerAt, compactLoadout, loadoutLayout } from '../src/logic/powerSelection.js';
 let passed=0;const failures=[];
 const check=(name,ok)=>{if(ok){passed++;console.log('  ok  '+name);}else{failures.push(name);console.log('  FAIL '+name);}};
 const grid=(w,h,cells=[])=>{
@@ -33,11 +33,11 @@ check('empty floor gives no props',planInterior(grid(10,10),1).length===0);
 check('empty grid is accepted',planInterior([],1).length===0);
 let choice=[];
 choice=choosePower(choice,'phase');
-check('first tap chooses first charge',choice.join(',')==='phase');
+check('first tap chooses first power',choice.join(',')==='phase');
 choice=choosePower(choice,'phase');
-check('same power may occupy both charges',choice.join(',')==='phase,phase');
+check('same power may occupy both powers',choice.join(',')==='phase,phase');
 choice=choosePower(choice,'phase');
-check('third repeated tap removes last charge',choice.join(',')==='phase');
+check('third repeated tap removes last power',choice.join(',')==='phase');
 choice=choosePower(choice,'dash');
 check('mixed powers retain tap order',choice.join(',')==='phase,dash');
 check('full loadout refuses a third unselected power',choosePower(choice,'decoy').join(',')==='phase,dash');
@@ -49,5 +49,19 @@ for(const [w,h]of [[280,480],[350,480],[520,480],[280,350]]){
  check('cards and actions fit '+w+'x'+h,l.cards.every(r=>r.x>=0&&r.y>=0&&r.x+r.w<=w&&r.y+r.h<l.slotsY-18)
    && l.slotsY+18<l.startY-22 && l.startY+22<l.navY-16 && l.navY+16<h);
 }
-console.log(passed+' passed, '+failures.length+' failed');
-if(failures.length)process.exit(1);
+
+const original=['phase','dash'];
+check('clear first slot retains second power',removePowerAt(original,0).join()==='dash');
+check('clear second slot retains first power',removePowerAt(original,1).join()==='phase');
+check('empty or invalid slot is harmless',removePowerAt([],0).length===0 && removePowerAt(original,9).join()==='phase,dash');
+check('clearing slots never mutates source',original.join()==='phase,dash');
+check('first three block houses keep descriptions',[1,2,3].every(h=>!compactLoadout('pve',h)));
+check('later houses become compact',[4,5,15].every(h=>compactLoadout('pve',h)));
+check('tutorial and other modes keep teaching',!compactLoadout('tutorial',5) && !compactLoadout('pvp',5));
+for(const [w,h]of [[240,350],[310,360],[520,360],[240,440]]) {
+ const l=loadoutLayout(w,h,true);
+ check('compact cards and actions fit '+w+'x'+h,l.cards.every(r=>r.x>=0 && r.x+r.w<=w && r.y+r.h<l.slotsY-18)
+   && l.slotsY+18<l.startY-22 && l.startY+22<l.navY-16 && l.navY+16<h && !l.showHelp);
+}
+if(failures.length)throw new Error(failures.join(','));
+console.log(passed+' total interior/loadout assertions passed');

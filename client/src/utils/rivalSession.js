@@ -49,7 +49,7 @@ export function createRivalSession(selection = {}) {
     ? Array.from({ length: 7 }, (_, i) => (hardLimitMs || 3_600_000) + 1000 * (i + 1))
     : simulatedRivalTimes(metrics,course.seed);
   const race = newRivalRace(course,times);
-  // Harness/recorded-opponent options. fixedPowers replaces the picker with
+  // Explicit harness options only. fixedPowers replaces the picker with
   // the given ordered pair; hardLimitMs ends a race that will never finish.
   race.fixedPowers = validRivalPowers(selection.powers) ? selection.powers.slice() : null;
   race.hardLimitMs = hardLimitMs;
@@ -134,7 +134,8 @@ export function resolveRivalOpponent(race) {
       skillPreset: pick.opponent.skillPreset, retries: pick.retries, elapsedMs: pick.elapsedMs,
       orderedPowers: pick.orderedPowers.slice(), replayURL: replay ? RIVALS_ASSET_ROOT + replay : null
     };
-    race.fixedPowers = pick.orderedPowers.slice();
+    // Keep their ordered powers on opponent metadata only. The live runner
+    // chooses a separate mix; never mutate hashed bank records to match it.
     return true;
   }).catch(e => { console.warn('[Rivals] opponent resolution failed', e); return false; });
 }

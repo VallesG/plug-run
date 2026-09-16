@@ -55,7 +55,7 @@ export function rivalTierForHistory(history, courseID) {
   return Math.max(1, Math.min(3, 1 + wins - Math.floor(losses / 3)));
 }
 // The first bank records one fixed ordered loadout per course and preset, and
-// the player racing that recording gets the same two charges. Phase and dash
+// players choose their own mix independently. Phase and dash
 // only: the shipped runner AI spends those well; decoy is left for a later
 // bank once its use by the bot has been watched.
 const BANK_LOADOUTS = [['phase', 'dash'], ['dash', 'phase'], ['phase', 'phase'], ['dash', 'dash']];

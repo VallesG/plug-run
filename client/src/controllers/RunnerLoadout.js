@@ -1,6 +1,6 @@
-// Runner selection panel. The existing ordered, repeatable two-charge rules
+// Runner selection panel. The existing ordered, repeatable two-power rules
 // are kept in pure logic; this module owns only presentation and callbacks.
-import { choosePower, loadoutLayout } from '../logic/powerSelection.js';
+import { choosePower, removePowerAt, compactLoadout, loadoutLayout } from '../logic/powerSelection.js';
 import { drawPowerIcon } from './PowerIcons.js';
 import ReplaySystem from './ReplaySystem.js';
 import { createBottomLeftButtons } from '../utils/authUI.js';
@@ -15,19 +15,20 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
   const scene=ui.scene;
   if(scene.role!=='runner'){onDone?.();return;}
   scene.roundPausedForMenu=true;
+  const compact=options.compact ?? compactLoadout(scene.mode,scene.pveRound);
   const modal=ui.showModal({
-    loadout:true,title:options.title ?? (scene.mode==='pve'?'HOUSE '+String(scene.pveRound||1).padStart(2,'0')+' / LOADOUT':'RUNNER / LOADOUT'),
-    subtitle:options.subtitle ?? 'Choose two charges. Use them in order.',buttons:[]
+    loadout:true,compactLoadout:compact,title:options.title ?? (scene.mode==='pve'?'HOUSE '+String(scene.pveRound||1).padStart(2,'0')+' / LOADOUT':'RUNNER / LOADOUT'),
+    subtitle:options.subtitle ?? (compact ? null : 'Pick two powers. Use them in order.'),buttons:[]
   });
   const {panel,registerExtra}=modal;
   const left=panel.x-panel.width/2,top=panel.y-panel.height/2;
-  const layout=loadoutLayout(panel.width,panel.height);
+  const layout=loadoutLayout(panel.width,panel.height,compact);
   const objects=[];
   const add=o=>{registerExtra(o);objects.push(o);return o;};
   const text=(x,y,value,size=12,color='#c3cccf',bold=false)=>add(
     scene.add.text(x,y,value,{
       fontFamily:'Arial, sans-serif',fontSize:size+'px',fontStyle:bold?'bold':'normal',
-      color,align:'center'
+      color,align:'center',wordWrap:{width:panel.width-40}
     }).setOrigin(0.5).setDepth(20005).setScrollFactor(0));
   const rectangle=(x,y,w,h,fill,line=0x39434c)=>add(
     scene.add.rectangle(x,y,w,h,fill,1).setStrokeStyle(1,line)
@@ -38,9 +39,10 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     bg.setInteractive({useHandCursor:true}).on('pointerdown',callback);
     return {bg,text:labelObject};
   };
-  const fixedPowers=Array.isArray(options.fixedPowers)
-    ? options.fixedPowers.filter(id=>POWERS.some(power=>power.id===id)).slice(0,2) : null;
-  let chosen=fixedPowers?.length===2 ? fixedPowers.slice() : [];
+  const fixedPowers=Array.isArray(options.fixedPowers) && options.fixedPowers.length===2 &&
+    options.fixedPowers.every(id=>POWERS.some(power=>power.id===id))
+    ? options.fixedPowers.slice() : null;
+  let chosen=fixedPowers ? fixedPowers.slice() : [];
   let started=false;
   const cards=[];
   const slots=[];
@@ -61,17 +63,17 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     start.bg.setFillStyle(ready?0xa8c9d7:0x202b34)
       .setStrokeStyle(1,ready?0xd4e5e9:0x3b4b58);
     start.text.setColor(ready?'#10202b':'#82939e')
-      .setText(ready?(options.startLabel || 'ENTER HOUSE'):'CHOOSE TWO CHARGES');
-    help.setText(options.helpText ?? (fixedPowers?'Matched loadout. Same two charges, same order.':(ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.')));
+      .setText(ready?(options.startLabel || 'ENTER HOUSE'):'PICK TWO POWERS');
+    help.setText(options.helpText ?? (fixedPowers?'Harness loadout.':(ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.')));
   };
   POWERS.forEach((power,i)=>{
     const r=layout.cards[i],x=left+r.x+r.w/2,y=top+r.y;
     // A small hard shadow gives cards the same cut-paper weight as the board.
     rectangle(x+2,y+r.h/2+3,r.w,r.h,0x080d13,0x080d13);
     const bg=rectangle(x,y+r.h/2,r.w,r.h,0x151e26);
-    add(drawPowerIcon(scene,x,y+r.h*0.32,power.id,Math.min(36,r.w*0.5),power.color));
-    text(x,y+r.h*0.63,power.name,r.w<80?11:13,power.css,true);
-    text(x,y+r.h*0.84,power.description,r.w<80?9:11,'#98a7ac');
+    add(drawPowerIcon(scene,x,y+r.h*(compact?0.38:0.32),power.id,Math.min(36,r.w*0.5),power.color));
+    text(x,y+r.h*(compact?0.76:0.63),power.name,r.w<80?11:13,power.css,true);
+    if(!compact) text(x,y+r.h*0.84,power.description,r.w<80?9:11,'#98a7ac');
     const badge=text(x+r.w/2-14,y+11,'',9,power.css,true).setVisible(false);
     cards.push({power,bg,badge});
     if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',()=>{
@@ -85,9 +87,12 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     text(x-slotW/2+15,y,String(i+1).padStart(2,'0'),10,'#7c8f9a',true);
     const label=text(x+8,y,'EMPTY',11,'#6f808b',true);
     slots.push({bg,label});
+    if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',()=>{
+      chosen=removePowerAt(chosen,i);refresh();
+    });
   }
   const help=text(panel.x,top+layout.slotsY+37,'',11,'#879a9f').setVisible(layout.showHelp);
-  const start=button(panel.x,top+layout.startY,layout.buttonW,44,'CHOOSE TWO CHARGES',()=>{
+  const start=button(panel.x,top+layout.startY,layout.buttonW,44,'PICK TWO POWERS',()=>{
     if(started||chosen.length!==2)return;
     started=true;
     scene.runnerPowersSelected=chosen.slice();

@@ -478,7 +478,7 @@ export function rivalsRecordConfig() {
     if (typeof window === 'undefined') return null;
     const p = new URLSearchParams(window.location.search);
     // rivalsPlay=1 races the bot against the shipped opponent bank like a
-    // player would (opponent lookup, fixed loadout from the record, WATCH
+    // player would (opponent lookup, independent harness loadout, WATCH
     // button) and exports nothing. Used to check the player-facing path.
     const mode = p.get('rivalsRecord') === '1' ? 'record' : p.get('rivalsPlay') === '1' ? 'play' : null;
     if (!mode) return null;
@@ -512,7 +512,7 @@ function installRivalsRecorder(rec, cfg) {
     console.log('[RIVALS-REC] launching', entry.name, 'preset', rec.preset.key, 'powers', rec.powers.join(','), 'run', store.races.length + 1, '/', rec.runs);
     // Play mode still passes a loadout: if no recorded opponent is eligible
     // the race falls back to the picker, which the auto-clicker cannot drive.
-    // A found opponent replaces it with the recording's loadout.
+    // A found opponent keeps its own recorded loadout; the bot uses rec.powers.
     this.scene.start('RUNNER', rec.mode === 'play'
       ? { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers }
       : { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers, rivalHardLimitMs: rec.hardLimitMs, rivalRecording: true });
