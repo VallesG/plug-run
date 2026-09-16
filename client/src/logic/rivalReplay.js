@@ -23,8 +23,10 @@ export const RIVAL_REPLAY_MAX_BULLETS = 40;
 
 // frame = [t, runnerX, runnerY, runnerFlags, plugs, bullets, decoy]
 export const FRAME = Object.freeze({ T: 0, RX: 1, RY: 2, RF: 3, PLUGS: 4, BULLETS: 5, DECOY: 6 });
-// runner / plug flag bits
+// runner / plug flag bits. The characters rotate rather than flip, so the
+// facing angle (0..359 degrees) rides in the bits above the five flags.
 export const FLAG = Object.freeze({ FLIP: 1, PHASE: 2, CARRY: 4, HIDDEN: 8, HIT: 16 });
+const ANGLE_SHIFT = 5;
 export const REPLAY_EVENT_KINDS = Object.freeze([
   'pickup', 'bunk', 'power', 'shot', 'hit', 'death', 'extract', 'timeout', 'sound'
 ]);
@@ -41,18 +43,19 @@ export function newReplaySegment({ house, attempt, houseSeed, cols, rows, scale,
   return {
     v: RIVAL_REPLAY_SCHEMA, house, attempt, houseSeed, cols, rows, scale,
     stashes: stashes.map(s => ({ x: q(s.x), y: q(s.y) })),
-    car: { x: q(car.x), y: q(car.y) },
+    car: { x: q(car.x), y: q(car.y), side: car.side ?? null },
     spawn: { r: { x: q(runnerSpawn.x), y: q(runnerSpawn.y) }, p: { x: q(plugSpawn.x), y: q(plugSpawn.y) } },
     weapon,
     frames: [], events: [], durationMs: 0, sealed: false
   };
 }
 
-export function packFlags({ flip = false, phase = false, carry = false, hidden = false, hit = false } = {}) {
-  return (flip ? FLAG.FLIP : 0) | (phase ? FLAG.PHASE : 0) | (carry ? FLAG.CARRY : 0) | (hidden ? FLAG.HIDDEN : 0) | (hit ? FLAG.HIT : 0);
+export function packFlags({ flip = false, phase = false, carry = false, hidden = false, hit = false, angle = 0 } = {}) {
+  const deg = finite(angle) ? ((Math.round(angle) % 360) + 360) % 360 : 0;
+  return (flip ? FLAG.FLIP : 0) | (phase ? FLAG.PHASE : 0) | (carry ? FLAG.CARRY : 0) | (hidden ? FLAG.HIDDEN : 0) | (hit ? FLAG.HIT : 0) | (deg << ANGLE_SHIFT);
 }
 export function unpackFlags(bits) {
-  return { flip: !!(bits & FLAG.FLIP), phase: !!(bits & FLAG.PHASE), carry: !!(bits & FLAG.CARRY), hidden: !!(bits & FLAG.HIDDEN), hit: !!(bits & FLAG.HIT) };
+  return { flip: !!(bits & FLAG.FLIP), phase: !!(bits & FLAG.PHASE), carry: !!(bits & FLAG.CARRY), hidden: !!(bits & FLAG.HIDDEN), hit: !!(bits & FLAG.HIT), angle: (bits >> ANGLE_SHIFT) % 360 };
 }
 
 /**

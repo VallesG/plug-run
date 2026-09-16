@@ -11,7 +11,10 @@ function check(name, value) { if (!value) throw new Error(name); passed++; }
 const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
 
 check('15Hz step is 67ms', RIVAL_REPLAY_STEP_MS === 67);
-check('flags round-trip', JSON.stringify(unpackFlags(packFlags({ flip: true, carry: true }))) === JSON.stringify({ flip: true, phase: false, carry: true, hidden: false, hit: false }));
+check('flags round-trip', JSON.stringify(unpackFlags(packFlags({ flip: true, carry: true }))) === JSON.stringify({ flip: true, phase: false, carry: true, hidden: false, hit: false, angle: 0 }));
+check('angle rides above the flags', unpackFlags(packFlags({ angle: 270, hit: true })).angle === 270 && unpackFlags(packFlags({ angle: 270, hit: true })).hit);
+check('negative and wrapped angles normalise', unpackFlags(packFlags({ angle: -90 })).angle === 270 && unpackFlags(packFlags({ angle: 359.6 })).angle === 0);
+check('NaN angle is zero', unpackFlags(packFlags({ angle: NaN })).angle === 0);
 check('flag bits distinct', new Set(Object.values(FLAG)).size === 5 && (FLAG.FLIP | FLAG.PHASE | FLAG.CARRY | FLAG.HIDDEN | FLAG.HIT) === 31);
 
 const meta = { house: 2, attempt: 2, houseSeed: 123456, cols: 16, rows: 35, scale: 0.75,
@@ -74,7 +77,7 @@ check('state at start', near(st.runner.x, 2.5) && st.plugs.length === 1 && st.bu
 st = replayStateAt(seg, 533.5);
 check('positions lerp between samples', near(st.runner.x, 2.57 + (3.5 - 2.57) * ((533.5 - 67) / (1000 - 67)), 1e-3));
 check('bullets step, not lerp', st.bullets.length === 2 && st.bullets[0].x === 5);
-check('flags step from earlier frame', st.runner.flags === 0);
+check('flags step from earlier frame', st.runner.flags === packFlags({ flip: false }));
 st = replayStateAt(seg, 1000);
 check('decoy appears at its frame', st.decoy && st.decoy.x === 4);
 check('state past the end holds last frame', replayStateAt(seg, 1e6).runner.x === 1);

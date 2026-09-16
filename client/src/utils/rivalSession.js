@@ -1,4 +1,7 @@
-import { rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, nextRivalSlot } from '../logic/rivals.js';
+import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, nextRivalSlot, validRivalPowers } from '../logic/rivals.js';
+import { validateRivalRunRecord, rivalRecordMatchesCourse, validateRivalReplayBundle, RIVAL_MAX_BUNDLE_BYTES } from '../logic/rivalRecords.js';
+import { validateReplaySegment } from '../logic/rivalReplay.js';
+import { chooseRivalOpponent, rivalTierForHistory } from '../logic/rivalPresets.js';
 import { generateSquareMaze } from './mazeGenerator.js';
 import { createSeededRNG } from './seededRandom.js';
 import { getUserID } from './userManager.js';
@@ -38,17 +41,121 @@ export function createRivalSession(selection = {}) {
       (realAtPrimary ? 0 : rivalPathSteps(arena.grid,primary,secondary));
     return { searchSteps, carrySteps:rivalPathSteps(arena.grid,real,arena.egress.entry) };
   });
-  return newRivalRace(course,simulatedRivalTimes(metrics,course.seed));
+  const hardLimitMs = Number.isFinite(selection.hardLimitMs) && selection.hardLimitMs > 0 ? selection.hardLimitMs : 0;
+  // Recording mode: the bot must not be able to lose to an opponent, so the
+  // placeholder opponent finishes only after the hard limit would have ended
+  // the race. Nothing about it is shown as a rival.
+  const times = selection.recording
+    ? Array.from({ length: 7 }, (_, i) => (hardLimitMs || 3_600_000) + 1000 * (i + 1))
+    : simulatedRivalTimes(metrics,course.seed);
+  const race = newRivalRace(course,times);
+  // Harness/recorded-opponent options. fixedPowers replaces the picker with
+  // the given ordered pair; hardLimitMs ends a race that will never finish.
+  race.fixedPowers = validRivalPowers(selection.powers) ? selection.powers.slice() : null;
+  race.hardLimitMs = hardLimitMs;
+  race.recording = !!selection.recording;
+  race.wantRecordingID = typeof selection.recordingID === 'string' ? selection.recordingID : null;
+  race.opponentResolved = race.recording;
+  return race;
+}
+
+// ---------------------------------------------------------------------------
+// Recorded opponents: static JSON under /rivals/v2/, served by Vite/Netlify.
+// One small per-course file is fetched at race creation; a replay bundle is
+// fetched only when Watch Rival Replay is pressed. Every payload is validated
+// as corruption checking; a failure leaves the race on the labeled simulated
+// pace rather than presenting anything as a recording.
+// ---------------------------------------------------------------------------
+export const RIVALS_ASSET_ROOT = '/rivals/v2/';
+const FETCH_TIMEOUT_MS = 3500;
+const opponentCache = new Map();
+async function fetchJSON(url, { timeoutMs = FETCH_TIMEOUT_MS, maxBytes = 512 * 1024 } = {}) {
+  if (typeof fetch !== 'function') throw new Error('fetch unavailable');
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => ctrl?.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl?.signal, cache: 'default' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (text.length > maxBytes) throw new Error('payload too large');
+    return JSON.parse(text);
+  } finally { clearTimeout(timer); }
+}
+/** Valid, course-matching records for a course. Empty on any failure. */
+export async function loadRivalOpponents(course) {
+  if (!course?.id) return [];
+  if (opponentCache.has(course.id)) return opponentCache.get(course.id);
+  const task = (async () => {
+    try {
+      const data = await fetchJSON(RIVALS_ASSET_ROOT + 'courses/' + encodeURIComponent(course.id) + '/opponents.json');
+      if (data?.schemaVersion !== 1 || data.rulesVersion !== RIVAL_RULES_VERSION || !Array.isArray(data.opponents)) return [];
+      return data.opponents.filter(r => validateRivalRunRecord(r).ok && rivalRecordMatchesCourse(r, course, RIVAL_RULES_VERSION)
+        && r.opponent?.kind === 'bot' && (r.replay == null || typeof r.replay === 'string'));
+    } catch (e) {
+      console.warn('[Rivals] opponents unavailable for', course.id, e?.message || e);
+      return [];
+    }
+  })();
+  opponentCache.set(course.id, task);
+  return task;
+}
+function rivalHistory() {
+  try { const h = JSON.parse(localStorage.getItem(historyKey()) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; }
+}
+/**
+ * Replace the simulated pace with a recorded bot when one is eligible. Returns
+ * null synchronously when there is nothing to do (already resolved, or a
+ * recording run), otherwise a promise that settles once the race is final.
+ * The race object is mutated in place before the countdown can start.
+ */
+export function resolveRivalOpponent(race) {
+  if (!race || race.opponentResolved || race.status !== 'ready') return null;
+  race.opponentResolved = true;
+  return loadRivalOpponents(race.course).then(records => {
+    if (!records.length || race.status !== 'ready') return false;
+    const history = rivalHistory();
+    const played = history.filter(r => r?.courseID === race.course.id).length;
+    const pick = chooseRivalOpponent(records, {
+      recordingID: race.wantRecordingID,
+      tier: rivalTierForHistory(history, race.course.id),
+      salt: getUserID() + '/' + race.course.id + '/' + played
+    });
+    if (!pick) return false;
+    race.rivalTimes = pick.clearTimes.slice();
+    race.opponentKind = 'recorded-bot';
+    race.opponentRecord = pick;
+    race.opponent = {
+      recordingID: pick.recordingID, kind: pick.opponent.kind, displayName: pick.opponent.displayName,
+      skillPreset: pick.opponent.skillPreset, retries: pick.retries, elapsedMs: pick.elapsedMs,
+      orderedPowers: pick.orderedPowers.slice(), replayURL: pick.replay ? RIVALS_ASSET_ROOT + pick.replay : null
+    };
+    race.fixedPowers = pick.orderedPowers.slice();
+    return true;
+  }).catch(e => { console.warn('[Rivals] opponent resolution failed', e); return false; });
+}
+/** Fetch and validate the replay bundle for the race's opponent. null on any failure. */
+export async function loadRivalReplay(race) {
+  const url = race?.opponent?.replayURL, record = race?.opponentRecord;
+  if (!url || !record) return null;
+  try {
+    const bundle = await fetchJSON(url, { timeoutMs: 12000, maxBytes: RIVAL_MAX_BUNDLE_BYTES });
+    const check = validateRivalReplayBundle(bundle, record, { validateSegment: validateReplaySegment });
+    if (!check.ok) { console.warn('[Rivals] replay rejected:', check.errors[0]); return null; }
+    return bundle;
+  } catch (e) {
+    console.warn('[Rivals] replay unavailable', e?.message || e);
+    return null;
+  }
 }
 
 // Keep evidence locally for future ghost ingestion. No leaderboard/reward writes.
 // This is not a public opponent pool, account sync or anti-cheat validation.
-export function saveRivalResult(result, record) {
+export function saveRivalResult(result, record, runRecord = null) {
   try {
     const key = historyKey();
     const stored = JSON.parse(localStorage.getItem(key) || '[]');
     const history = Array.isArray(stored) ? stored : [];
-    history.unshift({ savedAt:Date.now(), ...result, record });
+    history.unshift({ savedAt:Date.now(), ...result, record, runRecord });
     localStorage.setItem(key,JSON.stringify(history.slice(0,20)));
     return true;
   } catch (error) { console.warn('[Rivals] Result could not be saved',error); return false; }

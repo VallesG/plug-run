@@ -1,14 +1,17 @@
 // Exercise the scene adapter without loading Phaser or the browser dependency graph.
 import { readFileSync } from 'node:fs';
 import * as rules from '../src/logic/rivals.js';
+import * as presets from '../src/logic/rivalPresets.js';
+import * as capture from '../src/controllers/RivalReplayCapture.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
-let now=1000, loadouts=0, saved=[], lastPicker;
+let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null;
 const source=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const bindings={
-  ...rules, performance:{now:()=>now}, clearTimeout:()=>{},
-  saveRivalResult:(result,record)=>{saved.push({result,record});return true;},
+  ...rules, ...presets, ...capture, performance:{now:()=>now}, clearTimeout:()=>{},
+  saveRivalResult:(result,record,runRecord)=>{saved.push({result,record,runRecord});return true;},
+  resolveRivalOpponent:(race)=>resolver(race), loadRivalReplay:async()=>null, playRivalReplay:(scene,opts)=>{played.push(opts);return {end(){}};},
   showRunnerLoadout:(ui,done,options)=>{loadouts++;lastPicker={ui,done,options};},
   ReplaySystem:{finalize(){}}
 };
@@ -61,7 +64,7 @@ now=9180;run=setup(data.rivalRace,data.pveRound);
 check('no between-house picker',loadouts===1 && run.starts()===1);
 check('clock includes transition',rules.rivalElapsed(state,now)===5180);
 check('powers carry into next house',JSON.stringify(run.scene.runnerPowersSelected)==='["phase","dash"]');
-now=12000;run.controller.retryHouse();
+now=12000;run.scene.attacker={hp:0};run.controller.retryHouse();
 check('death does not erase clears',state.clearTimes.length===1 && state.retries===1);
 check('retry delay bounded',run.events[0].delay===rules.RIVAL_RETRY_MS);
 run.events[0].fn();data=run.restarts[0];
@@ -79,6 +82,8 @@ check('result saved exactly once',saved.length===1);
 run.controller.update();run.controller.finish('win',now);
 check('late callbacks cannot change result',saved.length===1 && state.result==='loss');
 check('partial race not offered as ghost',saved[0].record===null);
+check('partial race has no exported run record',saved[0].runRecord===null);
+check('death attempt captured as caught, resize as abandoned',state.capture.attempts.map(a=>a.outcome).join()==='extracted,caught,abandoned');
 check('results expose simulated opponent',run.modals.at(-1).subtitle.includes('not a live player'));
 
 now=1000;state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash']};
@@ -92,6 +97,10 @@ check('no eighth-house transition',run.events.length===0);
 check('actual clear splits recorded',saved.at(-1).record.clearTimes.length===7 && saved.at(-1).record.elapsedMs===63000);
 check('race controls stay frozen on result',run.scene.roundOver && !run.scene.input.keyboard.enabled);
 check('record not treated as server verified',saved.at(-1).record.verified===false);
+check('own race exported in the shared record format',saved.at(-1).runRecord && saved.at(-1).runRecord.opponent.kind==='human' && saved.at(-1).runRecord.clearTimes.length===7);
+check('own record clears equal race clock',JSON.stringify(saved.at(-1).runRecord.clearTimes)===JSON.stringify(state.clearTimes) && saved.at(-1).runRecord.retries===0);
+check('capture holds one segment per attempt',state.capture.segments.length===7 && state.capture.attempts.every(a=>a.outcome==='extracted'));
+check('result names the simulated opponent honestly',run.modals.at(-1).title==='YOU WIN' && run.modals.at(-1).lines.some(l=>l.startsWith('AI target')));
 run.modals.at(-1).buttons[0].onClick();
 check('rematch keeps seed, drops old clock',run.restarts.at(-1).rivalSeed===77 && !run.restarts.at(-1).rivalRace);
 run.modals.at(-1).buttons[1].onClick();
@@ -101,6 +110,55 @@ check('new race asks for the next pool slot',run.restarts.at(-1).rivalSlot===rul
 now=1000;state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['phase','phase'],clearTimes:[1,2,3,4,5,6]};
 run=setup(state,7);now=70000;run.controller.clearHouse();
 check('same-millisecond direct finish is a draw',run.scene.rivalRace.result==='draw');
+
+now=0;state={...rules.newRivalRace(course,splits),fixedPowers:['dash','decoy']};
+const beforeLoadouts=loadouts;run=setup(state);
+check('fixed loadout skips the picker',loadouts===beforeLoadouts && run.modals.at(-1).lines[0]==='Loadout: DASH \u2192 DECOY');
+check('fixed loadout already on the scene',JSON.stringify(run.scene.runnerPowersSelected)==='["dash","decoy"]' && JSON.stringify(state.powers)==='["dash","decoy"]');
+run.modals.at(-1).buttons[0].onClick();
+check('ready arms the countdown',state.status==='countdown' && state.countdownEndsAt===rules.RIVAL_COUNTDOWN_MS);
+now=rules.RIVAL_COUNTDOWN_MS;run.controller.update();
+check('GO with fixed loadout starts capture',state.status==='racing' && state.capture && state.capture.current && state.capture.current.house===1);
+state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['phase','dash'],hardLimitMs:5000};run=setup(state);
+now=5001;run.controller.update();
+check('hard limit forfeits an endless race',state.status==='finished' && state.result==='forfeit');
+
+// --- recorded opponent: async lookup, fixed loadout, honest labels, watch button ---
+const opponentRecord={recordingID:'rec-x',clearTimes:[9000,18000,27000,36000,45000,54000,63000],retries:1,elapsedMs:63000,
+  opponent:{kind:'bot',displayName:'BOT \u00b7 Street',skillPreset:'street'},orderedPowers:['dash','phase']};
+resolver=(race)=>Promise.resolve().then(()=>{
+  race.rivalTimes=opponentRecord.clearTimes.slice();race.opponentKind='recorded-bot';race.opponentRecord=opponentRecord;
+  race.opponent={recordingID:'rec-x',kind:'bot',displayName:'BOT \u00b7 Street',retries:1,replayURL:'/rivals/v2/replays/rec-x.json'};
+  race.fixedPowers=['dash','phase'];race.opponentResolved=true;return true;
+});
+now=0;state=rules.newRivalRace(course,splits);
+const modalsBefore=(run=setup(state)).modals.length;
+check('loadout waits for the opponent lookup',run.modals.length===modalsBefore && run.controller.notice.text==='FINDING RIVAL');
+await new Promise(r=>setTimeout(r,0));
+check('recorded opponent gets the fixed loadout screen',run.modals.at(-1).lines[0]==='Loadout: DASH \u2192 PHASE' && run.modals.at(-1).subtitle.includes('BOT \u00b7 Street') && run.modals.at(-1).subtitle.includes('recorded'));
+check('opponent timeline replaced the simulated pace',JSON.stringify(state.rivalTimes)===JSON.stringify(opponentRecord.clearTimes));
+run.modals.at(-1).buttons[0].onClick();now=rules.RIVAL_COUNTDOWN_MS;run.controller.update();
+check('HUD names the rival as AI RIVAL',run.controller.rows[1].label.text.startsWith('AI RIVAL'));
+resolver=()=>null;
+now=70000;run.controller.update();
+check('recorded rival finishing first is a loss at its recorded time',state.result==='loss' && state.finishedMs===63000);
+const result=run.modals.at(-1);
+check('result names the recorded bot honestly',result.title==='BOT \u00b7 STREET WINS' && result.subtitle.includes('Recorded bot run') && result.lines.some(l=>l.startsWith('BOT \u00b7 Street: 1:03.0')));
+check('watch button offered and keeps the modal',result.buttons[0].label.includes('WATCH RIVAL REPLAY') && result.buttons[0].keepOpen===true);
+check('saved result records the opponent',saved.at(-1).result.opponentKind==='recorded-bot' && saved.at(-1).result.recordingID==='rec-x');
+const vis=[];const fakeModal={setVisible:v=>vis.push(v)};
+state.opponentBundle={segments:[{house:1,attempt:1,startedMs:0,durationMs:1000,outcome:'extracted',replay:{durationMs:1000}}]};
+result.buttons[0].onClick(fakeModal);
+check('watch hides the modal and plays the bundle',vis.join()==='false' && played.length===1 && played[0].bundle===state.opponentBundle && played[0].opponentName==='BOT \u00b7 Street');
+result.buttons[0].onClick(fakeModal);
+check('second tap while watching ignored',played.length===1);
+played[0].onDone();
+check('leaving the replay restores the modal and the result',vis.join()==='false,true' && state.result==='loss' && state.status==='finished');
+check('rematch carries the opponent id',(result.buttons[1].onClick(),run.restarts.at(-1).rivalOpponentID==='rec-x' && run.restarts.at(-1).rivalSeed===77));
+check('new race drops the opponent id',(result.buttons[2].onClick(),run.restarts.at(-1).rivalOpponentID===undefined && run.restarts.at(-1).rivalRecording===undefined));
+// resize while the lookup is pending does not double-open
+state=rules.newRivalRace(course,splits);state.opponentResolved=true;run=setup(state);
+check('already-resolved race opens the picker at once',loadouts>0 && run.modals.length===0);
 
 now=0;state=rules.newRivalRace(course,splits);run=setup(state);
 run.controller.finish('forfeit',now);

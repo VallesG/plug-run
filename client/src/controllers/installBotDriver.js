@@ -13,6 +13,11 @@ import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } 
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
 import { mapStats } from '../logic/runStats.js';
 import { advanceCursor, advanceSweep } from '../logic/seedCursor.js';
+import { MenuScene } from '../scenes/MenuScene.js';
+import RivalsRace from './RivalsRace.js';
+import { exportRaceCapture } from './RivalReplayCapture.js';
+import { rivalPoolEntry, validRivalPowers } from '../logic/rivals.js';
+import { RIVAL_BOT_DRIVER_VERSION, rivalPreset, rivalBotDisplayName, rivalBankLoadout, rivalRecordingID } from '../logic/rivalPresets.js';
 
 // Injected rather than imported by BotDriver so that file stays clear of the
 // Phaser dependency graph and its logic remains runnable under plain Node.
@@ -153,6 +158,9 @@ function installGameOverBypass(cfg) {
 
   ProgressionManager.prototype.showPvEGameOver = function () {
     const s = this.scene;
+    // Rivals owns its own retry rules (race clock keeps running, same house
+    // again after 650ms). The daily restart below would drop the race.
+    if (s.runKind === 'rivals') return s.rivals?.retryHouse();
     const round = s.pveRound || 1;
     const role = s.role === 'plug' ? 'plug' : 'runner';
 
@@ -315,13 +323,17 @@ function installRoundLock(cfg) {
  */
 export function installBotDriver() {
   if (BaseGameScene.prototype.__botInstalled) return false;
-  const cfg = botConfig();
+  const rec = rivalsRecordConfig();
+  // Recording mode drives the bot at a named preset; ?bot=1 knobs still win
+  // when both are given so a preset can be probed without editing it.
+  const cfg = rec ? { ...rec.preset.knobs, modalDelayMs: 300, ...(botConfig() || {}) } : botConfig();
   if (!cfg) return false;
 
   BaseGameScene.prototype.__botInstalled = true;
   activeConfig = { ...DEFAULTS, ...cfg };
   installModalAutoDismiss(cfg);
   installRoundLock(cfg);
+  if (rec) installRivalsRecorder(rec, cfg);
   const origUpdate = BaseGameScene.prototype.update;
 
   BaseGameScene.prototype.update = function (time, delta) {
@@ -332,6 +344,7 @@ export function installBotDriver() {
       if (!this._bot || this._bot.scene !== this) {
         this._bot = new BotDriver(this, cfg, AI_HOOKS);
       }
+      window.__plugRunLiveScene = this; // harness-only handle for inspection
       this._bot.update(delta);
     } catch (e) {
       console.error('[BOT] update error:', e);
@@ -446,6 +459,122 @@ function installSummaryHelper() {
     seedCursor.attempts = seedCursor.repeats;
     console.log('[BOT] telemetry cleared');
   };
+}
+
+/* ---------------- Block Rivals recording mode ---------------- */
+
+/**
+ * ?rivalsRecord=1&courseSlot=1&skillPreset=street&powers=phase,dash&runs=3
+ *
+ * A dedicated capture mode rather than pointing the sweep harness at Rivals:
+ * the race needs one fixed course, one fixed ordered loadout, the real race
+ * clock and retry rules, and an export that refuses anything short of seven
+ * clears. None of that is what the daily sweep does.
+ *
+ * Returns null unless the flag is set, which is the only path players take.
+ */
+export function rivalsRecordConfig() {
+  try {
+    if (typeof window === 'undefined') return null;
+    const p = new URLSearchParams(window.location.search);
+    // rivalsPlay=1 races the bot against the shipped opponent bank like a
+    // player would (opponent lookup, fixed loadout from the record, WATCH
+    // button) and exports nothing. Used to check the player-facing path.
+    const mode = p.get('rivalsRecord') === '1' ? 'record' : p.get('rivalsPlay') === '1' ? 'play' : null;
+    if (!mode) return null;
+    const slot = Math.max(1, Math.round(Number(p.get('courseSlot') || 1)));
+    const preset = rivalPreset(p.get('skillPreset') || 'street');
+    if (!rivalPoolEntry(slot) || !preset) { console.error('[RIVALS-REC] bad courseSlot or skillPreset'); return null; }
+    const powersParam = (p.get('powers') || '').split(',').map(x => x.trim()).filter(Boolean);
+    const powers = validRivalPowers(powersParam) ? powersParam : rivalBankLoadout(slot, preset.key);
+    return {
+      mode,
+      slot, preset: { key: preset.key, knobs: { aiLevel: preset.aiLevel, coverPenalty: preset.coverPenalty, phaseEscapeCells: preset.phaseEscapeCells, dangerCells: preset.dangerCells } },
+      powers,
+      runs: Math.max(1, Math.round(Number(p.get('runs') || 3))),
+      // A race that will not finish is not a race. 12 minutes is ~4x a slow clear.
+      hardLimitMs: Math.max(60_000, Math.round(Number(p.get('hardLimitMs') || 12 * 60_000))),
+      indexBase: Math.max(1, Math.round(Number(p.get('opponentIndex') || 1)))
+    };
+  } catch { return null; }
+}
+
+function installRivalsRecorder(rec, cfg) {
+  const entry = rivalPoolEntry(rec.slot);
+  const store = (window.__plugRunRivals = { config: { ...rec, driver: { ...DEFAULTS, ...cfg } }, course: entry, races: [], done: false });
+
+  // Straight into the race: no menu tap, no picker (fixed loadout), and the
+  // placeholder opponent cannot finish before the hard limit.
+  const origCreate = MenuScene.prototype.create;
+  MenuScene.prototype.create = function () {
+    origCreate.call(this);
+    if (store.done) return;
+    console.log('[RIVALS-REC] launching', entry.name, 'preset', rec.preset.key, 'powers', rec.powers.join(','), 'run', store.races.length + 1, '/', rec.runs);
+    this.scene.start('RUNNER', rec.mode === 'play'
+      ? { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot }
+      : { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers, rivalHardLimitMs: rec.hardLimitMs, rivalRecording: true });
+  };
+
+  // Export after every finish. The auto-clicker then presses REMATCH (the
+  // first actionable button; WATCH buttons are keepOpen and skipped), which
+  // carries the recording options through harnessRestartData().
+  const origFinish = RivalsRace.prototype.finish;
+  RivalsRace.prototype.finish = function (result, now) {
+    const already = this.race.status === 'finished';
+    origFinish.call(this, result, now);
+    if (already) return;
+    if (!this.race.recording) {
+      // play mode: keep the outcome, never export
+      store.races.push({ ok: false, reason: 'play mode', result: this.race.result, houses: this.race.clearTimes.length,
+        retries: this.race.retries, elapsedMs: this.race.finishedMs, opponent: this.race.opponent ?? null, opponentKind: this.race.opponentKind });
+      console.log('[RIVALS-REC] play race ' + store.races.length + '/' + rec.runs + ': ' + this.race.result + ' vs ' + (this.race.opponent?.displayName || this.race.opponentKind));
+      if (store.races.length >= rec.runs) store.done = true;
+      return;
+    }
+    const index = rec.indexBase + store.races.length;
+    const out = exportRaceCapture(this.race, {
+      opponent: {
+        id: 'bot-' + rec.preset.key + '-' + entry.slug + '-' + index, displayName: rivalBotDisplayName(rec.preset.key),
+        kind: 'bot', driverVersion: RIVAL_BOT_DRIVER_VERSION, skillPreset: rec.preset.key
+      },
+      recordingID: rivalRecordingID(entry.slug, rec.preset.key, index, this.race.clearTimes),
+      recordedAt: new Date().toISOString(),
+      driverConfig: { aiLevel: cfg.aiLevel, coverPenalty: cfg.coverPenalty, phaseEscapeCells: cfg.phaseEscapeCells, dangerCells: cfg.dangerCells }
+    });
+    const traces = (window.__plugRunTraces || []).slice(store._traceMark || 0);
+    store._traceMark = (window.__plugRunTraces || []).length;
+    store.races.push({
+      ok: out.ok, reason: out.ok ? null : out.reason, result: this.race.result,
+      houses: this.race.clearTimes.length, retries: this.race.retries, elapsedMs: this.race.finishedMs,
+      record: out.record ?? null, bundle: out.bundle ?? null, traces
+    });
+    console.log('[RIVALS-REC] race ' + store.races.length + '/' + rec.runs + (out.ok ? ' OK ' + Math.round(this.race.finishedMs / 1000) + 's, ' + this.race.retries + ' retries'
+      : ' REJECTED: ' + out.reason + ' (' + this.race.result + ', ' + this.race.clearTimes.length + '/7)'));
+    if (store.races.length >= rec.runs) {
+      store.done = true;
+      console.log('[RIVALS-REC] done. window.__plugRunRivals holds ' + store.races.filter(r => r.ok).length + ' valid races; __plugRunRivalsDownload() saves them.');
+    }
+  };
+
+  // Stop the auto-clicker from starting a race past the requested count.
+  const origShowModal = GameUI.prototype.showModal;
+  GameUI.prototype.showModal = function (opts) {
+    if (store.done && this.scene.runKind === 'rivals') {
+      const buttons = (opts?.buttons || []).map(b => (b.label === 'REMATCH' || b.label === 'NEW RACE') ? { ...b, disabled: true } : b);
+      return origShowModal.call(this, { ...opts, buttons });
+    }
+    return origShowModal.call(this, opts);
+  };
+
+  window.__plugRunRivalsDownload = function () {
+    const blob = new Blob([JSON.stringify(store, null, 1)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'plugrun-rivals-' + entry.slug + '-' + rec.preset.key + '-' + Date.now() + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+  console.log('[RIVALS-REC] installed for', entry.name, JSON.stringify({ preset: rec.preset.key, powers: rec.powers, runs: rec.runs, hardLimitMs: rec.hardLimitMs }));
 }
 
 export default installBotDriver;

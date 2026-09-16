@@ -162,7 +162,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // PvE session tracking
     this.runKind = ['journey','rivals'].includes(initData?.runKind) ? initData.runKind : 'daily';
-    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot })) : null;
+    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID })) : null;
     this.rivals = null;
     this._blockEntranceShown = false;
     this.worldBlock = null;
