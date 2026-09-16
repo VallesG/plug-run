@@ -17,9 +17,10 @@ The initial phase-one/phase-two seam now exists on `claude/input-intent-layer`:
 - a permanent THE WINDOW main-menu entry after onboarding
 
 The runtime deliberately does **not** grant Store Credit, advance missions,
-sell/equip cosmetics, switch gangs or show shared standings yet. The PNG concept
-sheets remain unreferenced until they are sliced and optimized. Treat every
-later phase below as unimplemented.
+sell/equip cosmetics, switch gangs or show shared standings yet. The approved
+PNG art is now exposed through named production atlas frames, while dialogue
+and controls remain live Phaser layers. Compression is still pending. Treat
+every later economy/content phase below as unimplemented.
 
 
 ## Product goal
@@ -210,14 +211,19 @@ A real shared gang contest will need a backend and trusted accounting. Local sta
 
 ## Visual direction and source assets
 
-The concept art lives under `client/public/art/the-window/concepts/`:
+The archived source art lives under `client/public/art/the-window/concepts/`.
+The approved runtime aliases live one directory higher:
 
-- `switch-expression-sheet.png`
-- `faction-lineup.png`
-- `auntie-ro-expression-sheet.png`
-- `the-window-bodega-background.png`
+- `bodega-night.png`
+- `auntie-ro.png`
+- `switch.png`
+- `cast.png`
 
-These are **generated raster PNG concept sheets**, not SVGs and not production-ready sprites. They intentionally establish the comic-book lighting, silhouettes, palette and expressions. Before runtime use they need human review, consistent crops, transparent-edge cleanup, mobile-resolution sizing, compression and attribution/provenance metadata as required by the project.
+These are **generated raster PNGs**, not SVGs. The runtime treats the character
+files as deterministic atlases and declares every source dimension/frame bound
+in `logic/window.js`. Portrait view uses a deliberate bodega crop; dialogue,
+names and controls remain live Phaser layers. The files still need a later
+WebP/atlas compression and load-time measurement pass for mobile.
 
 The faction lineup was created while character roles were still moving. The role assignments in this document supersede any older captions or implied faction grouping inside the artwork.
 
@@ -295,4 +301,4 @@ Before declaring any phase complete:
 - no fake global gang totals
 - no mandatory long daily modal
 - no replacement of stash or REP with Store Credit
-- no runtime use of unsliced concept sheets
+- no ad-hoc runtime crop numbers outside the tested WINDOW_ART atlas contract

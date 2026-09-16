@@ -1,5 +1,26 @@
 # Plug Run — handoff for a new agent
 
+## The Window production-art pass (2026-09-15)
+
+The human verified that the first-contact flow works but correctly rejected the
+code-drawn placeholder look. The approved bodega, Auntie Ro, Switch and cast
+art are now promoted under `client/public/art/the-window/` and loaded by
+`WindowScene`. Portrait phones use a deliberate counter/shelves crop instead
+of squeezing the 16:9 room; wider screens use the full bodega. Auntie Ro's
+three atlas frames follow the introduction mood, and gang selection uses named
+Switch, Brick and Vee frames. Dialogue, buttons and labels remain live Phaser
+layers, never baked into the illustrations. Missing textures fall back to the
+old simple shapes instead of blocking onboarding.
+
+The source PNGs are still large. They share Git blobs with the archived concept
+sources, so the repository is not duplicated, but network transfer is roughly
+the four original rasters until a later WebP/atlas compression pass. Exact
+atlas dimensions and frame bounds live in import-free `WINDOW_ART` and have
+five headless invariants. The Window suite now has 59 adapted-harness
+assertions. Native `npm run verify`, load-time measurement, GPU texture-memory
+measurement and real-phone cropping remain unverified under the Carbon Black
+process restriction.
+
 ## The Window initial implementation — onboarding and state only (2026-09-15)
 
 The first safe vertical slice from `THE_WINDOW_DESIGN.md` is now implemented.

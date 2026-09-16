@@ -1,6 +1,25 @@
 // Pure state, economy and layout for The Window. No imports.
 export const WINDOW_STATE_VERSION = 1;
 
+export const WINDOW_ART = Object.freeze({
+  bodega: Object.freeze({
+    width: 1672, height: 941,
+    portrait: Object.freeze({ x: 0, y: 0, width: 700, height: 941 })
+  }),
+  ro: Object.freeze({ frameWidth: 724, frameHeight: 724, frames: 3 }),
+  switch: Object.freeze({ frameWidth: 724, frameHeight: 724, frames: 3 }),
+  cast: Object.freeze({
+    width: 1983, height: 793,
+    frames: Object.freeze({
+      brick: Object.freeze({ x: 0, width: 397 }),
+      vee: Object.freeze({ x: 397, width: 397 }),
+      sol: Object.freeze({ x: 794, width: 397 }),
+      mags: Object.freeze({ x: 1191, width: 396 }),
+      rook: Object.freeze({ x: 1587, width: 396 })
+    })
+  })
+});
+
 export const WINDOW_GANGS = Object.freeze([
   Object.freeze({
     id: 'crossline',

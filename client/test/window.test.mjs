@@ -1,5 +1,5 @@
 import {
-  WINDOW_GANGS, WINDOW_INTRO, createWindowState, chooseWindowGang,
+  WINDOW_GANGS, WINDOW_INTRO, WINDOW_ART, createWindowState, chooseWindowGang,
   windowGang, markWindowVisit, grantStoreCredit, spendStoreCredit, windowLayout
 } from '../src/logic/window.js';
 
@@ -10,6 +10,13 @@ check('three gangs', WINDOW_GANGS.length === 3);
 check('gang ids unique', new Set(WINDOW_GANGS.map(g => g.id)).size === 3);
 check('every gang has two distinct contacts', WINDOW_GANGS.every(g => g.primary && g.jobs && g.primary !== g.jobs));
 check('intro is deliberately short', WINDOW_INTRO.length === 3 && WINDOW_INTRO.every(line => line.length < 100));
+
+const castFrames=Object.values(WINDOW_ART.cast.frames);
+check('cast atlas has all five contacts', castFrames.length === 5);
+check('cast frames stay inside the source', castFrames.every(f => f.x >= 0 && f.x+f.width <= WINDOW_ART.cast.width));
+check('cast frames cover the atlas once', castFrames.reduce((sum,f)=>sum+f.width,0) === WINDOW_ART.cast.width);
+check('expression sheets divide evenly', WINDOW_ART.ro.frameWidth*WINDOW_ART.ro.frames === 2172 && WINDOW_ART.switch.frameWidth*WINDOW_ART.switch.frames === 2172);
+check('portrait crop stays inside bodega', WINDOW_ART.bodega.portrait.x+WINDOW_ART.bodega.portrait.width <= WINDOW_ART.bodega.width);
 check('known gang resolves', windowGang('crossline')?.primary === 'Switch');
 check('unknown gang rejected', windowGang('not-real') === null);
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  WINDOW_GANGS, WINDOW_INTRO, windowGang, windowLayout
+  WINDOW_GANGS, WINDOW_INTRO, WINDOW_ART, windowGang, windowLayout
 } from '../logic/window.js';
 import {
   getWindowState, selectWindowGang, recordWindowVisit
@@ -24,6 +24,13 @@ const COLORS = {
 export class WindowScene extends Phaser.Scene {
   constructor() { super('WINDOW'); }
 
+  preload() {
+    this.load.image('window_bodega', '/art/the-window/bodega-night.png');
+    this.load.spritesheet('window_ro', '/art/the-window/auntie-ro.png', { frameWidth: WINDOW_ART.ro.frameWidth, frameHeight: WINDOW_ART.ro.frameHeight });
+    this.load.spritesheet('window_switch', '/art/the-window/switch.png', { frameWidth: WINDOW_ART.switch.frameWidth, frameHeight: WINDOW_ART.switch.frameHeight });
+    this.load.image('window_cast', '/art/the-window/cast.png');
+  }
+
   init(data = {}) {
     this._firstVisit = Boolean(data.firstVisit);
     this._view = [];
@@ -32,6 +39,7 @@ export class WindowScene extends Phaser.Scene {
 
   create() {
     this.state = recordWindowVisit(getCurrentRouteID());
+    this.prepareArtFrames();
     this.drawBodega();
     this.events.once('shutdown', () => this.clearView());
     createPortraitOverlay(this);
@@ -65,85 +73,80 @@ export class WindowScene extends Phaser.Scene {
     this._view = [];
   }
 
-  drawBodega() {
-    const a = windowLayout(this.scale.width, this.scale.height);
-    this.add.rectangle(a.cx, a.cy, a.w, a.h, COLORS.night).setDepth(0);
-    const g = this.add.graphics().setDepth(1);
-    g.fillStyle(COLORS.wall, 1);
-    g.fillRect(a.cx-a.panelW/2, a.panelTop, a.panelW, a.panelH);
-    g.lineStyle(3, COLORS.ink, 1);
-    g.strokeRect(a.cx-a.panelW/2, a.panelTop, a.panelW, a.panelH);
-
-    const backTop = a.panelTop + a.headerH;
-    const shelfH = Math.max(70, a.panelH * 0.18);
-    g.fillStyle(0x101719, 1);
-    g.fillRect(a.cx-a.panelW/2+10, backTop+8, a.panelW-20, shelfH);
-    g.lineStyle(4, COLORS.shelf, 1);
-    for (let row=1; row<3; row++) {
-      const y = backTop+8+shelfH*row/3;
-      g.lineBetween(a.cx-a.panelW/2+14,y,a.cx+a.panelW/2-14,y);
+  prepareArtFrames() {
+    const cast=this.textures.get('window_cast');
+    if(cast&&!cast.has('brick')){
+      for(const [name,frame] of Object.entries(WINDOW_ART.cast.frames)){
+        cast.add(name,0,frame.x,0,frame.width,WINDOW_ART.cast.height);
+      }
     }
-    const bottleColors=[0x6f8053,0x9c663f,0x486f7b,0xb19550];
-    for(let i=0;i<18;i++){
-      const x=a.cx-a.panelW/2+20+(i%9)*(a.panelW-48)/8;
-      const y=backTop+22+Math.floor(i/9)*shelfH/3;
-      g.fillStyle(bottleColors[i%bottleColors.length],0.72);
-      g.fillRect(x,y,8+(i%3)*2,18+(i%4)*3);
+    const bodega=this.textures.get('window_bodega');
+    const crop=WINDOW_ART.bodega.portrait;
+    if(bodega&&!bodega.has('counter-portrait')){
+      bodega.add('counter-portrait',0,crop.x,crop.y,crop.width,crop.height);
     }
-
-    const counterY = a.panelBottom - Math.max(92, a.panelH*0.16);
-    g.fillStyle(COLORS.ink,0.55);
-    g.fillRect(a.cx-a.panelW/2+18,counterY+8,a.panelW-36,70);
-    g.fillStyle(COLORS.counter,1);
-    g.fillRect(a.cx-a.panelW/2+14,counterY,a.panelW-28,68);
-    g.lineStyle(3,COLORS.ink,1);
-    g.strokeRect(a.cx-a.panelW/2+14,counterY,a.panelW-28,68);
-    for(let x=a.cx-a.panelW/2+30;x<a.cx+a.panelW/2-20;x+=28){
-      g.lineBetween(x,counterY+10,x,counterY+60);
-    }
-
-    const signW=Math.min(220,a.panelW-40);
-    g.fillStyle(0x0d1517,1);
-    g.fillRoundedRect(a.cx-signW/2,a.panelTop+12,signW,44,4);
-    g.lineStyle(2,COLORS.gold,1);
-    g.strokeRoundedRect(a.cx-signW/2,a.panelTop+12,signW,44,4);
-    this.add.text(a.cx,a.panelTop+34,'THE WINDOW',{
-      fontFamily:'Georgia, serif',fontSize:'22px',fontStyle:'bold',
-      color:'#f1dfb0',letterSpacing:3,stroke:'#080b0d',strokeThickness:3
-    }).setOrigin(0.5).setDepth(2);
-    this.add.text(a.cx,a.panelTop+61,'GROCERIES · COFFEE · WORD ON THE STREET',{
-      fontFamily:'monospace',fontSize:'8px',color:'#829193',letterSpacing:1
-    }).setOrigin(0.5).setDepth(2);
   }
 
-  drawRo(x, y, scale = 1) {
-    const g = this.add.graphics({ x, y }).setDepth(10);
-    g.fillStyle(COLORS.ink,0.55); g.fillEllipse(5,49,92*scale,24*scale);
-    g.fillStyle(0x263438,1); g.fillRoundedRect(-38*scale,-2*scale,76*scale,70*scale,12*scale);
-    g.fillStyle(COLORS.teal,1); g.fillRoundedRect(-30*scale,2*scale,60*scale,55*scale,10*scale);
-    g.lineStyle(3*scale,COLORS.ink,1); g.strokeRoundedRect(-30*scale,2*scale,60*scale,55*scale,10*scale);
-    g.fillStyle(0x8b5a43,1); g.fillCircle(0,-25*scale,29*scale);
-    g.lineStyle(3*scale,COLORS.ink,1); g.strokeCircle(0,-25*scale,29*scale);
-    g.fillStyle(0x202426,1);
-    g.fillEllipse(-14*scale,-48*scale,19*scale,28*scale);
-    g.fillEllipse(4*scale,-53*scale,22*scale,30*scale);
-    g.fillEllipse(20*scale,-43*scale,16*scale,25*scale);
-    g.lineStyle(3*scale,0xb9b4a8,1);
-    g.lineBetween(-18*scale,-52*scale,-8*scale,-61*scale);
-    g.lineBetween(7*scale,-58*scale,13*scale,-67*scale);
-    g.lineStyle(2*scale,0x1a2022,1);
-    g.strokeCircle(-10*scale,-27*scale,8*scale);
-    g.strokeCircle(10*scale,-27*scale,8*scale);
-    g.lineBetween(-2*scale,-27*scale,2*scale,-27*scale);
-    g.fillStyle(0x171b1c,1);
-    g.fillCircle(-10*scale,-27*scale,2*scale);
-    g.fillCircle(10*scale,-27*scale,2*scale);
-    g.lineStyle(2*scale,0x4b2d27,1);
-    g.beginPath(); g.arc(0,-14*scale,8*scale,0.15,Math.PI-0.15); g.strokePath();
-    const key=this.add.text(x+23*scale,y+31*scale,'◆',{fontSize:12*scale+'px',color:'#e2b45f'})
-      .setOrigin(0.5).setDepth(11);
-    this.keep(g,key);
-    return g;
+  drawBodega() {
+    const a=windowLayout(this.scale.width,this.scale.height);
+    this.add.rectangle(a.cx,a.cy,a.w,a.h,COLORS.night).setDepth(0);
+    const portrait=a.panelW/a.panelH<0.92;
+    if(this.textures.exists('window_bodega')){
+      this.add.image(a.cx,a.cy,'window_bodega',portrait?'counter-portrait':'__BASE')
+        .setDepth(1).setDisplaySize(a.panelW,a.panelH);
+    }else{
+      this.add.rectangle(a.cx,a.cy,a.panelW,a.panelH,COLORS.wall,1).setDepth(1);
+    }
+    this.add.rectangle(a.cx,a.cy,a.panelW,a.panelH,0x061014,0.34).setDepth(2);
+    for(let i=0;i<5;i++){
+      const h=a.panelH*(0.12+i*0.045);
+      this.add.rectangle(a.cx,a.panelBottom-h/2,a.panelW,h,0x020506,0.055).setDepth(2);
+    }
+    const frame=this.add.graphics().setDepth(3);
+    frame.lineStyle(3,COLORS.ink,1);
+    frame.strokeRect(a.cx-a.panelW/2,a.panelTop,a.panelW,a.panelH);
+    frame.lineStyle(1,COLORS.gold,0.38);
+    frame.strokeRect(a.cx-a.panelW/2+6,a.panelTop+6,a.panelW-12,a.panelH-12);
+    const signW=Math.min(230,a.panelW-36);
+    this.add.rectangle(a.cx+4,a.panelTop+33,signW,48,COLORS.ink,0.72).setDepth(3);
+    this.add.rectangle(a.cx,a.panelTop+28,signW,46,0x0c1112,0.94).setStrokeStyle(2,COLORS.gold).setDepth(4);
+    this.add.text(a.cx,a.panelTop+25,'THE WINDOW',{
+      fontFamily:'Georgia, serif',fontSize:'22px',fontStyle:'bold',color:'#f1dfb0',
+      letterSpacing:3,stroke:'#080b0d',strokeThickness:3
+    }).setOrigin(0.5).setDepth(5);
+    this.add.text(a.cx,a.panelTop+46,'GROCERIES · COFFEE · WORD ON THE STREET',{
+      fontFamily:'monospace',fontSize:'7px',color:'#b8b29f',letterSpacing:1
+    }).setOrigin(0.5).setDepth(5);
+  }
+
+  drawRo(x,y,scale=1,expression=0) {
+    const size=176*scale;
+    const shadow=this.add.ellipse(x+5,y+size*0.42,size*0.72,size*0.16,COLORS.ink,0.7).setDepth(9);
+    if(!this.textures.exists('window_ro')){
+      const fallback=this.add.graphics({x,y}).setDepth(10);
+      fallback.fillStyle(COLORS.teal,1).fillRoundedRect(-size*0.2,-size*0.05,size*0.4,size*0.48,size*0.08);
+      fallback.fillStyle(0x8b5a43,1).fillCircle(0,-size*0.16,size*0.16);
+      this.keep(shadow,fallback);
+      return fallback;
+    }
+    const sprite=this.add.image(x,y,'window_ro',Math.max(0,Math.min(2,expression))).setDepth(10).setScale(size/WINDOW_ART.ro.frameHeight);
+    this.keep(shadow,sprite);
+    return sprite;
+  }
+
+  drawGangPortrait(gangID,x,y,height) {
+    const source=gangID==='crossline'?['window_switch',0]:['window_cast',gangID==='iron-row'?'brick':'vee'];
+    if(!this.textures.exists(source[0])){
+      const gang=windowGang(gangID);
+      const fallback=this.add.circle(x,y,height*0.3,gang?.color||COLORS.teal,0.9).setDepth(10);
+      const initial=this.add.text(x,y,gang?.name?.[0]||'?',{fontFamily:'Georgia, serif',fontSize:height*0.32+'px',fontStyle:'bold',color:'#0b1012'}).setOrigin(0.5).setDepth(11);
+      this.keep(fallback,initial);
+      return fallback;
+    }
+    const image=this.add.image(x,y,source[0],source[1]).setDepth(10);
+    image.setScale(height/(source[0]==='window_cast'?WINDOW_ART.cast.height:WINDOW_ART.switch.frameHeight));
+    this.keep(image);
+    return image;
   }
 
   addButton(x,y,w,label,onClick,accent=COLORS.gold) {
@@ -189,7 +192,7 @@ export class WindowScene extends Phaser.Scene {
     this.clearView();
     this._introIndex=Math.max(0,Math.min(WINDOW_INTRO.length-1,index));
     const a=windowLayout(this.scale.width,this.scale.height);
-    this.drawRo(a.cx,a.panelTop+a.headerH+Math.max(105,a.portrait*0.72),Math.min(1.25,a.portrait/125));
+    this.drawRo(a.cx,a.panelTop+a.headerH+Math.max(105,a.portrait*0.72),Math.min(1.25,a.portrait/125),this._introIndex===1?1:0);
     const box=this.addDialogue(WINDOW_INTRO[this._introIndex]);
     const last=this._introIndex===WINDOW_INTRO.length-1;
     this.addButton(a.cx,box.y+box.h/2-28,Math.min(200,box.w-36),last?'MEET THE CREWS':'KEEP LISTENING',
@@ -213,12 +216,11 @@ export class WindowScene extends Phaser.Scene {
     WINDOW_GANGS.forEach((gang,i)=>{
       const y=sub.y+32+cardH/2+i*(cardH+8);
       this.addPanel(a.cx,y,a.contentW,cardH,gang.color);
-      const badge=this.add.rectangle(a.cx-a.contentW/2+28,y,34,cardH-18,gang.color,0.85)
-        .setStrokeStyle(2,COLORS.ink).setDepth(8);
-      const initial=this.add.text(badge.x,badge.y,gang.name[0],{
-        fontFamily:'Georgia, serif',fontSize:'22px',fontStyle:'bold',color:'#0b1012'
-      }).setOrigin(0.5).setDepth(9);
-      const name=this.add.text(a.cx-a.contentW/2+54,y-cardH/2+13,gang.name.toUpperCase(),{
+      const portraitH=cardH-8;
+      const portraitX=a.cx-a.contentW/2+Math.min(42,portraitH*0.42);
+      this.drawGangPortrait(gang.id,portraitX,y+4,portraitH);
+      const textX=a.cx-a.contentW/2+Math.min(88,portraitH*0.86);
+      const name=this.add.text(textX,y-cardH/2+11,gang.name.toUpperCase(),{
         fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',color:gang.css,letterSpacing:1
       }).setOrigin(0,0).setDepth(9);
       const contacts=this.add.text(name.x,y-cardH/2+32,gang.primary+' · '+gang.jobs,{
@@ -226,14 +228,14 @@ export class WindowScene extends Phaser.Scene {
       }).setOrigin(0,0).setDepth(9);
       const pitch=this.add.text(name.x,y-cardH/2+48,gang.pitch,{
         fontFamily:'Georgia, serif',fontSize:'11px',color:'#e9dfc7',
-        wordWrap:{width:a.contentW-112},lineSpacing:2
+        wordWrap:{width:a.contentW-(textX-(a.cx-a.contentW/2))-10},lineSpacing:2
       }).setOrigin(0,0).setDepth(9);
       const hit=this.add.rectangle(a.cx,y,a.contentW,cardH,gang.color,0.001).setDepth(12)
         .setInteractive({cursor:'pointer'})
         .on('pointerover',()=>hit.setFillStyle(gang.color,0.12))
         .on('pointerout',()=>hit.setFillStyle(gang.color,0.001))
         .on('pointerup',()=>this.confirmGang(gang.id));
-      this.keep(badge,initial,name,contacts,pitch,hit);
+      this.keep(name,contacts,pitch,hit);
     });
     this.addButton(a.cx,a.panelBottom-a.pad-22,Math.min(180,a.contentW),'BACK TO RO',()=>this.showIntro(WINDOW_INTRO.length-1),COLORS.dim);
   }
@@ -300,7 +302,7 @@ export class WindowScene extends Phaser.Scene {
 
   renderCounter(a,gang) {
     const portraitY=a.panelTop+a.headerH+Math.max(82,a.portrait*0.55);
-    this.drawRo(a.cx,portraitY,Math.min(0.92,a.portrait/155));
+    this.drawRo(a.cx,portraitY,Math.min(0.92,a.portrait/155),2);
     const panelH=Math.min(126,Math.max(100,a.panelH*0.18));
     const y=Math.min(a.panelBottom-a.pad-150,portraitY+104);
     this.addPanel(a.cx,y,a.contentW,panelH,COLORS.gold);
