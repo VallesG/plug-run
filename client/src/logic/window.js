@@ -36,8 +36,8 @@ export const WINDOW_GANGS = Object.freeze([
     id: 'iron-row',
     name: 'Iron Row',
     motto: 'Finish clean. Stand your ground.',
-    color: 0xb85f45,
-    css: '#b85f45',
+    color: 0xd2c66a,
+    css: '#d2c66a',
     primary: 'Brick',
     jobs: 'Rook',
     pitch: 'No wasted motion. No excuses. Get in, get out, and look after your people.'

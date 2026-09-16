@@ -1,5 +1,29 @@
 # Plug Run — handoff for a new agent
 
+## Iron Row gameplay palette — industrial olive (2026-09-16)
+
+Iron Row's rust/red starter colors competed with the red Plug. Its runner now
+uses olive #67734c and safety-yellow #d2c66a; getaway paint is dark olive
+#596744 with cream #eee3c5 stripes. Brick/crew UI uses the same yellow and
+Rook uses pale olive #a7b58a. Existing UI/contact/celebration renderers consume
+these definitions, so no per-screen tint patches are needed.
+
+Iron Row generated texture keys are v2; other crews keep v1. Source pixel
+selection, shading/alpha preservation, cyan runner ring and red defender stay
+unchanged. Portrait/room WebPs are deliberately unchanged: Brick's painted
+rust wardrobe is not the tiny gameplay silhouette. A future wardrobe art pass
+must edit only the clothing, not tint skin or the whole shared cast atlas.
+Do not put source PNGs back in public/.
+
+Measured: 57 gang-skin, 61 Window and 993 contact assertions passed in adapted
+V8 (1111 total), including UI/skin consistency, cache revision and shaded
+olive/yellow/cream samples. Native npm run verify, ESM/Vite resolution, actual
+source-pixel coverage and phone/desktop appearance are unverified. No sandbox
+process attempts, simulation/RNG/storage/reward changes or Rivals bank edits.
+Review with /gang-skins-preview.html and /?skin=iron-row (review override only).
+Master is untouched.
+
+
 ## Crew job items are mandatory at the house exit — Codex (2026-09-16)
 
 Latest user decision supersedes ALL optional-job/story wording below:

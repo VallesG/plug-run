@@ -1,3 +1,26 @@
+## Iron Row gameplay palette — industrial olive (2026-09-16)
+
+Iron Row's rust/red starter colors competed with the red Plug. Its runner now
+uses olive #67734c and safety-yellow #d2c66a; getaway paint is dark olive
+#596744 with cream #eee3c5 stripes. Brick/crew UI uses the same yellow and
+Rook uses pale olive #a7b58a. Existing UI/contact/celebration renderers consume
+these definitions, so no per-screen tint patches are needed.
+
+Iron Row generated texture keys are v2; other crews keep v1. Source pixel
+selection, shading/alpha preservation, cyan runner ring and red defender stay
+unchanged. Portrait/room WebPs are deliberately unchanged: Brick's painted
+rust wardrobe is not the tiny gameplay silhouette. A future wardrobe art pass
+must edit only the clothing, not tint skin or the whole shared cast atlas.
+Do not put source PNGs back in public/.
+
+Measured: 57 gang-skin, 61 Window and 993 contact assertions passed in adapted
+V8 (1111 total), including UI/skin consistency, cache revision and shaded
+olive/yellow/cream samples. Native npm run verify, ESM/Vite resolution, actual
+source-pixel coverage and phone/desktop appearance are unverified. No sandbox
+process attempts, simulation/RNG/storage/reward changes or Rivals bank edits.
+Review with /gang-skins-preview.html and /?skin=iron-row (review override only).
+Master is untouched.
+
 # The Window — gangs, contacts and Cash design
 
 Status: **initial onboarding/state slice implemented; rewards and commerce remain unimplemented**  
@@ -158,7 +181,7 @@ Example Switch introduction:
 
 Discipline, survival and finishing the job cleanly.
 
-- **Brick — primary contact.** Black woman mechanic in rust red; direct, protective and grounded.
+- **Brick — primary contact.** Black woman mechanic; existing portrait wears rust red, while crew branding/gameplay uses industrial olive and safety yellow; direct, protective and grounded.
 - **Rook — job contact.** Mixed white/Middle Eastern man in a steel-blue maintenance jacket with keys. Issues clean-escape, survival and REP missions.
 
 ### Afterlight
