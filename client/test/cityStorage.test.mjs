@@ -1,6 +1,6 @@
 // Real storage adapter, account isolation, retention and denied-storage fallback.
 import { readFileSync } from 'node:fs';
-import { createCityState, beginCityBlock, claimCityBlock } from '../src/logic/city.js';
+import { createCityState, beginCityBlock, claimCityBlock, claimCityIntro } from '../src/logic/city.js';
 let passed=0;
 function check(name,ok){if(!ok)throw Error(name);passed++;}
 const source=readFileSync(new URL('../src/utils/cityProgress.js',import.meta.url),'utf8')
@@ -9,12 +9,14 @@ let user='a',deny=false;
 const storage=new Map(),writes=[];
 const localStorage={getItem:key=>{if(deny)throw Error('denied');return storage.get(key)||null;},
  setItem:(key,value)=>{if(deny)throw Error('denied');storage.set(key,value);writes.push(key);}};
-const api=new Function('createCityState','beginCityBlock','claimCityBlock','getUserID','localStorage','console',
- source+'\nreturn {getCityProgress,startCityBlock,completeCityBlock};')(
- createCityState,beginCityBlock,claimCityBlock,()=>user,localStorage,{warn(){}});
+const api=new Function('createCityState','beginCityBlock','claimCityBlock','claimCityIntro','getUserID','localStorage','console',
+ source+'\nreturn {getCityProgress,startCityBlock,completeCityBlock,startCityIntro};')(
+ createCityState,beginCityBlock,claimCityBlock,claimCityIntro,()=>user,localStorage,{warn(){}});
 const event=blockIndex=>({blockIndex,gangID:'afterlight',mode:'pve',runKind:'journey',role:'runner',clearedHouses:15,hasStash:true});
 check('empty user starts empty',api.getCityProgress().completedThrough===0);
 check('legacy migrates without owner',api.getCityProgress({blockIndex:8}).completedThrough===7&&Object.keys(api.getCityProgress({blockIndex:8}).owners).length===0);
+check('first intro saved before animation',api.startCityIntro({blockIndex:1,pveRound:1}));
+check('saved intro cannot replay',!api.startCityIntro({blockIndex:1,pveRound:1}));
 check('start freezes crew',api.startCityBlock({blockIndex:1},'iron-row')==='iron-row');
 check('restart keeps crew',api.startCityBlock({blockIndex:1},'crossline')==='iron-row');
 check('complete retains actual crew',api.completeCityBlock(event(1)).state.owners[1]==='iron-row');
@@ -24,6 +26,8 @@ check('only own key',writes.every(key=>key==='pr_city_v1_a'));
 user='b';
 check('account isolation',api.getCityProgress().completedThrough===0);
 deny=true;
+check('other account intro independent',api.startCityIntro({blockIndex:1,pveRound:1}));
+check('denied storage intro stays silent this session',!api.startCityIntro({blockIndex:1,pveRound:1}));
 api.startCityBlock({blockIndex:1},'afterlight');
 check('denied storage remembers crew this session',api.startCityBlock({blockIndex:1},'crossline')==='afterlight');
 check('denied storage clear still applied',api.completeCityBlock(event(1)).applied);

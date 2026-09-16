@@ -1,78 +1,71 @@
-# Run the Block — personal city map
+# Run the Block — automatic city arrival
 
-## Personal city map above the block loop — Codex (2026-09-16)
+## Automatic GPS-style city arrival — Codex (2026-09-16)
 
-Run the Block now groups permanent global block indices into ten-block cities:
-10 blocks x 15 houses = 150 stashes. REP does not unlock cities. City grouping
-is permanent v1 presentation/progression identity; do not change CITY_BLOCKS
-in-place after shipping without migrating city identities. World block/house
-seed formulas and the Journey checkpoint shape are untouched.
+This supersedes the user-controlled serpentine city overview below. The user
+rejected its level-ladder look: city geography must look like the existing
+overhead street and zoom automatically, not offer another navigation menu.
 
-Flow: menu/resume -> city -> 380ms district focus -> scheduled crew consultation
--> existing exterior street -> ENTER HOUSE -> powers. Normal house/retry
-restarts omit the city; the street has a CITY inspection action. House 15's
-approved duo celebration -> city pull-back/new claim -> next block. Block 10
-shows 150/150 and NEW CITY UNLOCKED, then the next city before block 11.
-The latest completion city replaces Journey's old fully-lit street result.
-WATCH LAST HOUSE still returns to the intact city; daily result is unchanged.
-Older cities are viewable, not selectable for replaying old gameplay/checkpoints.
+Fresh Journey block house 1 -> city overview -> neighborhood zoom -> actual
+exterior block -> scheduled crew consultation -> entrance -> powers.
+The approximately 2.75-second intro is autonomous: no CITY/VIEW/previous-city
+buttons, parcel taps, panning or selectable districts. Normal resumes, retries,
+partial legacy saves and scene resizes skip it. House 15 retains the duo
+celebration, then the fully revealed block/result with replay and next-block
+actions; starting that next block plays its own arrival. Ten blocks/150 stashes
+per city, permanent global seeds, frozen crew ownership and progression stay
+unchanged. Rival Turf/server accounting is still not implemented.
 
-Import-free logic/city.js owns permanent city identity, ten-node connected
-layout, stash progress, migration, entry eligibility and claims. CityMap.js
-draws exterior neighborhoods/roads/lights/fog/crew flags in the existing night
-grammar; no floor plans or raster downloads. Tiny labels use CL/IR/AL with a
-legend. city-map-preview.html at the client root reviews actual GameUI + city
-renderer at 280x480, 390x844 and 1440x900, including mixed claims and legacy
-saves; dev-only, no saves. Native moduleSyntax checks this preview too.
+CityMap now renders a two-dimensional road network with waterfront, rail
+corridor, parks and small exterior roofs, not ten cards connected in unlock
+order. Every parcel embeds drawBlockMap with that global worldBlock's seed:
+the camera zooms the SAME geometry through overview/neighborhood/block scales,
+without fading the map away. Floors/interiors are never shown. Claimed blocks
+carry personal crew colors; unexplored parcels are dark. Embedded rendering
+opts out of labels/caption, uses cheaper ground for distant parcels, and never
+changes normal block renderer defaults.
 
-Personal ownership writes only pr_city_v1_<user>, version 1:
-completedThrough (monotonic), owners (nontruncated block -> gang), active
-(frozen block crew). startCityBlock freezes the crew on entry; consultations,
-mission selection, story finish and claim use that scene snapshot. Switching
-gangs is still not enabled: any future switch must also use that snapshot for
-cosmetics/UI. The final extraction save seam claims a block only for runner/
-pve/Journey, house 15, carrying the stash, in order. Duplicate or skipped claims
-cannot change ownership; taps, partial clears, deaths, Rivals and Tutorial do
-not claim. No new currency, REP reward, leaderboard or shared gang total.
+pr_city_v1_<user> gains monotonic introThrough. startCityIntro claims before
+showing; duplicate calls do not write or replay. Existing partial checkpoint
+house >1 infers that block already seen; historical completed blocks imply seen
+but NEVER invent owners. Denied-storage fallback remains account-isolated and
+session-only. No reset button or query changes real player progression.
 
-Legacy checkpoint block N proves prior N-1 clears, NOT their gang: migrated
-territory is neutral/unknown. No invented retrospective ownership or story
-grants. Account-isolated in-memory fallback preserves claims during denied
-storage this session only; a reload cannot recover unsaved writes. The separate
-Journey/City keys are not a cross-key transaction: checkpoint migration can
-recover a clear without ownership if territory persistence is lost. Claims/
-owners are personal device data, not trusted/server scoring. Ownership history
-is not a 200-entry ledger and grows with completed blocks.
+Cinematic owns an opaque input blocker, containers, timers and tweens. Shutdown
+cancels without invoking the next screen; normal completion cleans before
+consultation. Keyboard/world/touch stay suspended across the handoff. Rendering
+construction errors clean up and continue to consultation. Base init determines
+eligibility only after adopting the real saved house/retry checkpoint; obsolete
+showCityMap flags cannot force a replay. Resizing a completed Journey result
+adopts the next checkpoint only with persisted completion proof; death at house
+15 stays at that house.
 
-City modals keep world/keyboard/touch paused, retain GameUI's input grace, and
-cancel the touch rebind on teardown before the next consultation/entrance.
-City resize requests the same map; resizing the completed-city result adopts
-the already-earned next checkpoint rather than replaying house 15. Zoom and
-claim-flare tweens are bounded and killed on map teardown.
+city-map-preview.html is a no-save review surface: choose 280x480, 390x844 or
+1440x900 and arrivals at blocks 1/7/11/24, then Review. It automatically zooms
+and lands on the same exterior; its review controls do not exist in gameplay.
 
-Measured in adapted V8: 1333 city, 267 real storage-adapter, 62 manager/GameUI/
-renderer lifecycle, 12 actual Base init, 63 unchanged world, 993 contacts,
-4343 story, 71 contact-flow, 42 panel, 242 mobile steering and 62 mission-exit
-assertions: 7490 targeted assertions. 250 sequential claims retain the first
-owner after the old 200-entry threshold, JSON/account/denial cases pass, seeded
-global identity stays intact, and city entry/finish/boundary/watch/browse paths
-pass. Negative controls reject pre-city manager and scene init.
-Five adapted source import/binding parses plus preview parse pass.
+Validation: prior city suites passed 1,674 adapted assertions before edits.
+After edits: 1,465 city, 271 storage, 77 actual renderer/GameUI/manager, 28 actual
+Base init/resize, 30 unchanged block geometry, 71 contacts flow, 62 mission exit and
+242 touch lifecycle = 2,246 targeted adapted V8 assertions. These prove callback
+ordering, once-only persistence, actual embedded renderer execution, no fade,
+shutdown/error cleanup, viewport fitting, account isolation, unchanged ownership
+and mission/touch behavior. Native npm run verify, native ESM/.mjs, Vite and the
+untouched 55-record rivalBank were NOT run: user prohibits sandbox/process use
+under Carbon Black. Actual Phaser pixels, zoom smoothness/performance, text and
+phone/desktop appearance require allowed local verification and visual review.
+No master, rival recording, gameplay RNG, currency or reward edits.
 
-UNVERIFIED: native npm run verify/.mjs/Vite, other suites including the untouched
-55-record rivalBank, actual Phaser font/touch/cartography/zoom/occlusion and
-phone/desktop visual review. No sandbox/process attempts under Carbon Black.
-Run verify in an allowed environment, inspect the preview, then manually test
-menu resume, CITY/back, normal house 2, later POC steering, complete block and
-resize result, city-10 unlock and watch return. No master or bank edits.
-Shared live Rival Turf is deliberately NOT built: it needs server win
-accounting/duplicate protection, not fabricated client standings.
+## Stable city sequence
 
+Duskport, Copper Bay, Railhaven, Neon Vale, Greybridge and Northwake cycle with
+unique city numbers/IDs. Ten blocks remain one city. City visual layout is
+presentation only; changing grouping requires a version migration.
 
-## City sequence
+## Phone review
 
-Duskport, Copper Bay, Railhaven, Neon Vale, Greybridge and Northwake, then the names cycle with unique city numbers/IDs. Streets retain their permanent world names/seeds. This is an extensible city sequence, not a hard end to progression.
-
-## Next visual review
-
-Ten neighborhoods are readable abstractions of blocks, not exact fifteen-house footprints. The current model is a shared serpentine arterial layout with a water edge/rail corridor. Future city-specific landmarks and silhouettes can vary in a separate cosmetic seed domain without changing playable house seeds. Review pacing for 150 stashes per city before adding more objectives; changing the cap after shipping requires a v2 grouping migration.
+Check the 800ms initial hold, two 850ms camera moves and 250ms landing hold.
+Confirm the first-house light remains readable, unknown parcels are sufficiently
+dark, the city reads as geography rather than cards, and performance is adequate.
+Do not reset saves to review: use the no-save preview. A player already partway
+through a block correctly waits until their next new block to see this intro.

@@ -10,12 +10,12 @@ const LAND = [0x424735,0x454a37,0x484d39,0x4a4e3b,0x464b38];
 const WARM = 0xffd78a;
 const ROOFS = [0x675e4e,0x505e60,0x736557,0x5c6150,0x685758];
 
-export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true }) {
+export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true, caption = true, labels = true, overview = false, fog = true, marker = true }) {
   if (!modal?.contentBounds || !modal.registerExtra) return null;
   const area = modal.contentBounds;
   // Reserve a caption outside the cartography, with no card around the map.
   const block = layoutBlock({
-    maps, cleared, entering, layoutSeed: scene.worldBlock?.seed ?? 0, width:area.width, height:Math.max(0,area.height-24),
+    maps, cleared, entering, layoutSeed: scene.worldBlock?.seed ?? 0, width:area.width, height:Math.max(0,area.height-(caption ? 24 : 0)),
     x0:area.x, y0:area.y
   });
   if (!block.scale) return null;
@@ -36,8 +36,9 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
 
   rect(BLACK,0,0,200,220);
   // Muted, deterministic ground variation; no texture downloads or world RNG.
-  for (let y=0;y<220;y+=2) for (let x=0;x<200;x+=2) {
-    rect(LAND[Math.floor(blockNoise(x,y,routeID)*LAND.length)],x,y,2,2);
+  const groundStep = overview ? 6 : 2;
+  for (let y=0;y<220;y+=groundStep) for (let x=0;x<200;x+=groundStep) {
+    rect(LAND[Math.floor(blockNoise(x,y,routeID)*LAND.length)],x,y,Math.min(groundStep,200-x),Math.min(groundStep,220-y));
   }
   for (const street of block.streets) {
     line(PALETTE.ink,11,street.a,street.b,0.55);
@@ -128,7 +129,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
     rect(0x77725c,lamp.x-0.5,lamp.y-0.5,1,1);
     if(lit) rect(0xffe5a2,lamp.x-0.7,lamp.y-0.7,1.4,1.4);
 
-    if(lit) {
+    if(lit && labels) {
       const label=scene.add.text(
         block.x+(left+house.w/2)*block.scale,
         block.y+(top-4)*block.scale,
@@ -142,40 +143,47 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
 
   // Two disjoint opaque masks. Existing exploration never dims again.
   // The newly cleared road and property emerge together over 900ms.
-  const fog=layer(20003), reveal=layer(20003);
-  fog.fillStyle(BLACK,1);reveal.fillStyle(BLACK,1);
-  const tiles=buildFog(block,routeID);
-  // Merge adjacent tiles on each row to keep the mask inexpensive.
-  for(let row=0;row<110;row++) {
-    let start=0;
-    const kind=i=>tiles[i].unlock>block.visibleThrough?1
-      :animate && tiles[i].unlock===block.visibleThrough?2:0;
-    for(let col=0;col<100;) {
-      start=col;
-      const type=kind(row*100+col);
-      while(col<100 && kind(row*100+col)===type) col++;
-      if(type) (type===1?fog:reveal).fillRect(start*2,row*2,(col-start)*2,2);
+  if(fog) {
+    const fog=layer(20003), reveal=layer(20003);
+    fog.fillStyle(BLACK,1);reveal.fillStyle(BLACK,1);
+    const tiles=buildFog(block,routeID);
+    // Merge adjacent tiles on each row to keep the mask inexpensive.
+    for(let row=0;row<110;row++) {
+      let start=0;
+      const kind=i=>tiles[i].unlock>block.visibleThrough?1
+        :animate && tiles[i].unlock===block.visibleThrough?2:0;
+      for(let col=0;col<100;) {
+        start=col;
+        const type=kind(row*100+col);
+        while(col<100 && kind(row*100+col)===type) col++;
+        if(type) (type===1?fog:reveal).fillRect(start*2,row*2,(col-start)*2,2);
+      }
     }
-  }
-  if(animate) {
-    scene.tweens.add({targets:reveal,alpha:0,duration:900,ease:'Sine.easeOut'});
-    reveal.once('destroy',()=>scene.tweens.killTweensOf(reveal));
+    if(animate) {
+      scene.tweens.add({targets:reveal,alpha:0,duration:900,ease:'Sine.easeOut'});
+      reveal.once('destroy',()=>scene.tweens.killTweensOf(reveal));
+    }
+
   }
 
   // Marker stays at the end of the lit road. Future streets and houses remain
   // hidden; the button explains the next destination.
-  const pin=layer(20004);
-  const {x,y}=block.marker;
-  pin.fillStyle(PALETTE.ink,1);pin.fillTriangle(x-3.6,y-7,x+3.6,y-7,x,y);
-  pin.fillRect(x-3.6,y-11,7.2,5);
-  pin.fillStyle(WARM,1);pin.fillTriangle(x-2.5,y-7,x+2.5,y-7,x,y-1.5);
-  pin.fillRect(x-2.5,y-10,5,4);
-  pin.fillStyle(PALETTE.ink,1);pin.fillRect(x-0.7,y-9,1.4,2);
-  const caption=scene.add.text(area.x+area.width/2,area.y+area.height-7,
-    block.cleared>=block.maps?'THE WHOLE BLOCK IS AWAKE'
-      :block.cleared+' / '+block.maps+' CLEARED  ·  FOLLOW THE LIGHT', {
-      color:'#afa991',fontFamily:'monospace',fontSize:'10px'
-    }).setOrigin(0.5).setDepth(20004).setScrollFactor(0);
-  modal.registerExtra(caption);
+  if(marker) {
+    const pin=layer(20004);
+    const {x,y}=block.marker;
+    pin.fillStyle(PALETTE.ink,1);pin.fillTriangle(x-3.6,y-7,x+3.6,y-7,x,y);
+    pin.fillRect(x-3.6,y-11,7.2,5);
+    pin.fillStyle(WARM,1);pin.fillTriangle(x-2.5,y-7,x+2.5,y-7,x,y-1.5);
+    pin.fillRect(x-2.5,y-10,5,4);
+    pin.fillStyle(PALETTE.ink,1);pin.fillRect(x-0.7,y-9,1.4,2);
+  }
+  if(caption) {
+    const caption=scene.add.text(area.x+area.width/2,area.y+area.height-7,
+      block.cleared>=block.maps?'THE WHOLE BLOCK IS AWAKE'
+        :block.cleared+' / '+block.maps+' CLEARED  ·  FOLLOW THE LIGHT', {
+        color:'#afa991',fontFamily:'monospace',fontSize:'10px'
+      }).setOrigin(0.5).setDepth(20004).setScrollFactor(0);
+    modal.registerExtra(caption);
+  }
   return g;
 }

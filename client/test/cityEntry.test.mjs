@@ -20,7 +20,7 @@ const Host=new Function(...Object.keys(bindings),'class Host { '+source.slice(st
 function init(data){const host=new Host();host.scene={settings:{data:{}},key:'RUNNER'};host.init(data);return host;}
 const entry=init({mode:'pve',role:'runner',runKind:'journey'});
 check('menu resume adopts old checkpoint',entry.blockIndex===24&&entry.pveRound===6&&entry.pveSessionStash===5);
-check('menu resume shows city first',entry._showCityOnEntry);
+check('partial menu resume skips city',!entry._showCityOnEntry);
 check('menu resume retains exact house seed',entry.seed===worldHouseSeed(24,6,'runner'));
 check('entry freezes crew',entry.blockGangID==='iron-row'&&atlas.active.gangID==='iron-row');
 owner='afterlight';
@@ -28,7 +28,7 @@ const retry=init({mode:'pve',role:'runner',runKind:'journey',blockIndex:24,pveRo
 check('retry keeps frozen crew',retry.blockGangID==='iron-row');
 check('retry no extra city',!retry._showCityOnEntry&&retry.retryAfterDeath);
 const resized=init({mode:'pve',role:'runner',runKind:'journey',blockIndex:24,pveRound:6,showCityMap:true});
-check('city resize preserves entry presentation',resized._showCityOnEntry&&resized.seed===entry.seed);
+check('obsolete show flag cannot force replay',!resized._showCityOnEntry&&resized.seed===entry.seed);
 const count=starts;
 const rivals=init({mode:'pve',role:'runner',runKind:'rivals'});
 check('rivals no city/crew writes',!rivals._showCityOnEntry&&starts===count&&rivals.seed===999);
@@ -36,5 +36,29 @@ const daily=init({mode:'pve',role:'runner',runKind:'daily'});
 check('daily no city/crew writes',!daily._showCityOnEntry&&starts===count);
 const plug=init({mode:'pve',role:'plug',runKind:'journey'});
 check('shelved plug does not claim crew entry',!plug._showCityOnEntry&&starts===count);
-check('city completion resize has next-checkpoint branch',source.includes("this._cityMapOpen && this.roundOver && this.pveRound === PVE_BLOCK_MAPS")&&source.includes("...advanceJourney({ blockIndex: this.blockIndex, pveRound: PVE_BLOCK_MAPS }), showCityMap: true"));
+const fresh=init({mode:'pve',role:'runner',runKind:'journey',blockIndex:25,pveRound:1});
+check('next fresh block eligible without menu flag',fresh._showCityOnEntry&&fresh.seed===worldHouseSeed(25,1,'runner'));
+const firstRetry=init({mode:'pve',role:'runner',runKind:'journey',blockIndex:25,pveRound:1,retryAfterDeath:true});
+check('first house retry skips intro',!firstRetry._showCityOnEntry);
+check('no resize presentation flag',!source.includes("this._cityMapOpen && this.roundOver"));
+check('completed resize guard proves earned finale',source.includes("getCityProgress().completedThrough >= this.blockIndex"));
+const resizeStart=source.indexOf('        // A completed result may resize;');
+const resizeEnd=source.indexOf('        this.scene.restart({\n        mode:',resizeStart);
+check('real resize guard seam found',resizeStart>=0&&resizeEnd>resizeStart);
+const resize=new Function('getCityProgress','advanceJourney','PVE_BLOCK_MAPS',
+ source.slice(resizeStart,resizeEnd)+'\nthis.normalRestart=true;');
+for(const fixture of [
+ {runKind:'journey',role:'runner',roundOver:true,pveRound:15,completed:2,next:true},
+ {runKind:'journey',role:'runner',roundOver:true,pveRound:15,completed:1,next:false},
+ {runKind:'journey',role:'runner',roundOver:false,pveRound:15,completed:2,next:false},
+ {runKind:'journey',role:'runner',roundOver:true,pveRound:14,completed:2,next:false},
+ {runKind:'daily',role:'runner',roundOver:true,pveRound:15,completed:2,next:false},
+ {runKind:'journey',role:'plug',roundOver:true,pveRound:15,completed:2,next:false}
+]) {
+ const restarts=[],host={...fixture,blockIndex:2,scene:{restart:data=>restarts.push(data)}};
+ resize.call(host,()=>({completedThrough:fixture.completed}),advanceJourney,15);
+ check('resize only advances proven completion '+JSON.stringify(fixture),Boolean(restarts.length)===fixture.next);
+ check('resize checkpoint/normal path '+JSON.stringify(fixture),fixture.next
+  ?restarts[0].blockIndex===3&&restarts[0].pveRound===1:host.normalRestart);
+}
 console.log('city entry: '+passed+' assertions passed');

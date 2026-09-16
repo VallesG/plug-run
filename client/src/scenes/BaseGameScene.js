@@ -1,5 +1,5 @@
 import { shouldShowCity } from '../logic/city.js';
-import { startCityBlock } from '../utils/cityProgress.js';
+import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
 import { RIVAL_HUD_HEIGHT, rivalPixels } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
@@ -189,8 +189,6 @@ export class BaseGameScene extends Phaser.Scene {
       // and you're retrying it. Resets when the route rolls over (session
       // storage is keyed by routeID, so a new day simply misses).
       const menuEntry = initData?.pveRound == null && !initData?.savedSession;
-      this._showCityOnEntry = shouldShowCity({ mode: this.mode, runKind: this.runKind,
-        role: this.role, menuEntry, requested: initData?.showCityMap });
       const entryRole = initData?.role ?? (this.scene.key === 'PLUG' ? 'plug' : 'runner');
       let sess = this.runKind === 'rivals' ? null : initData?.savedSession ?? (menuEntry
         ? (this.runKind === 'journey' ? getJourneyProgress() : getSessionState(entryRole)) : null);
@@ -208,6 +206,8 @@ export class BaseGameScene extends Phaser.Scene {
       this.pveSessionRep = initData?.pveSessionRep ?? sess?.pveSessionRep ?? 0;
       this.pveCleanStreak = initData?.pveCleanStreak ?? sess?.pveCleanStreak ?? 0;
       this.retryAfterDeath = initData?.retryAfterDeath ?? sess?.retryAfterDeath ?? false;
+      this._showCityOnEntry = shouldShowCity({ mode:this.mode, runKind:this.runKind,
+        role:entryRole, pveRound:this.pveRound, retryAfterDeath:this.retryAfterDeath });
       // One id per run, minted fresh when no restart data carries one —
       // the leaderboard uses it to scope write semantics to the run.
       this.runId = initData?.runId ?? this.savedSession?.runId
@@ -631,9 +631,12 @@ export class BaseGameScene extends Phaser.Scene {
       clearTimeout(this._resizeTimer);
       this._resizeTimer = setTimeout(() => {
         if (this.rivals) { this.rivals.resize(); return; }
-        if (this.runKind === 'journey' && this._cityMapOpen && this.roundOver && this.pveRound === PVE_BLOCK_MAPS) {
-          this.scene.restart({ mode: 'pve', role: 'runner', runKind: 'journey',
-            ...advanceJourney({ blockIndex: this.blockIndex, pveRound: PVE_BLOCK_MAPS }), showCityMap: true });
+        // A completed result may resize; never replay the already-earned finale.
+        // Death at house 15 cannot satisfy the persisted completion guard.
+        if (this.runKind === 'journey' && this.role === 'runner' && this.roundOver
+          && this.pveRound === PVE_BLOCK_MAPS && getCityProgress().completedThrough >= this.blockIndex) {
+          this.scene.restart({ mode:'pve', role:'runner', runKind:'journey',
+            ...advanceJourney({ blockIndex:this.blockIndex, pveRound:PVE_BLOCK_MAPS }) });
           return;
         }
         this.scene.restart({
@@ -641,7 +644,6 @@ export class BaseGameScene extends Phaser.Scene {
         runKind: this.runKind, blockIndex: this.blockIndex,
         role: this.role,
         seed: this.seed,
-        showCityMap: this._cityMapOpen || this._showCityOnEntry,
         retryAfterDeath: this.retryAfterDeath,
         swapSpawnCycle: this.swapSpawnCycle,
         pveRound: this.pveRound,

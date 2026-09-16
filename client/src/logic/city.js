@@ -37,7 +37,9 @@ export function createCityState(value = {}, checkpoint = {}) {
   }
   const active = v.active && int(v.active.blockIndex, 0) && gang(v.active.gangID)
     ? { blockIndex: v.active.blockIndex, gangID: v.active.gangID } : null;
-  return { version: CITY_VERSION, completedThrough, owners,
+  const introThrough = Math.max(nonnegative(v.introThrough), completedThrough,
+    int(checkpoint?.pveRound) > 1 ? int(checkpoint?.blockIndex) : 0);
+  return { version: CITY_VERSION, completedThrough, introThrough, owners,
     active: active && active.blockIndex > completedThrough ? active : null };
 }
 export function beginCityBlock(value, blockIndex, gangID, checkpoint = {}) {
@@ -55,7 +57,7 @@ export function claimCityBlock(value, event = {}) {
     || event.clearedHouses !== CITY_HOUSES || event.hasStash !== true
     || !block || block !== state.completedThrough + 1) return { state, applied: false };
   const owner = state.active?.blockIndex === block ? state.active.gangID : gang(event.gangID);
-  return { state: { ...state, completedThrough: block,
+  return { state: { ...state, completedThrough: block, introThrough: Math.max(state.introThrough, block),
     owners: owner ? { ...state.owners, [block]: owner } : state.owners, active: null }, applied: true };
 }
 export function cityView(value, checkpoint = {}, cityIndex) {
@@ -76,20 +78,36 @@ export function cityView(value, checkpoint = {}, cityIndex) {
         status: complete ? 'cleared' : blockIndex === currentBlock ? 'current' : 'locked' };
     }) };
 }
-export function shouldShowCity({ mode, runKind, role, menuEntry, requested } = {}) {
-  return mode === 'pve' && runKind === 'journey' && role === 'runner' && Boolean(menuEntry || requested);
+export function shouldShowCity({ mode, runKind, role, pveRound, retryAfterDeath } = {}) {
+  return mode === 'pve' && runKind === 'journey' && role === 'runner'
+    && pveRound === 1 && !retryAfterDeath;
+}
+// Claim before presentation; a monotonic watermark survives arbitrarily many cities.
+export function claimCityIntro(value, checkpoint = {}) {
+  const state = createCityState(value, checkpoint);
+  const block = int(checkpoint.blockIndex, 0);
+  if (!block || checkpoint.pveRound !== 1 || block !== state.completedThrough + 1
+    || block <= state.introThrough) return { state, applied: false };
+  return { state: { ...state, introThrough: block }, applied: true };
 }
 export function cityMapLayout(area = {}) {
   const width = Math.max(0, Number.isFinite(area.width) ? area.width : 0);
   const height = Math.max(0, Number.isFinite(area.height) ? area.height : 0);
-  const scale = Math.min(width / 320, height / 390);
-  const x = (Number.isFinite(area.x) ? area.x : 0) + (width - 320 * scale) / 2;
-  const y = (Number.isFinite(area.y) ? area.y : 0) + (height - 390 * scale) / 2;
-  const nodes = Array.from({ length: CITY_BLOCKS }, (_, i) => {
-    const row = Math.floor(i / 2);
-    // A snaking arterial road, not ten unrelated menu cards.
-    return { local: i + 1, x: (row % 2 ? 1 - i % 2 : i % 2) ? 237 : 83,
-      y: 42 + row * 76, w: 116, h: 58 };
-  });
-  return { x, y, scale, width: 320, height: 390, nodes };
+  const scale = Math.min(width / 760, height / 920);
+  // Spatial order is deliberately unrelated to progression order.
+  const centers = [[150,359],[616,642],[378,132],[136,603],[626,388],
+    [136,126],[382,612],[616,156],[390,363],[374,826]];
+  return { x: (Number.isFinite(area.x) ? area.x : 0) + (width - 760 * scale) / 2,
+    y: (Number.isFinite(area.y) ? area.y : 0) + (height - 920 * scale) / 2,
+    scale, width: 760, height: 920,
+    nodes: centers.map(([x,y],i) => ({ local: i + 1, x,y,w:144,h:158.4 })) };
+}
+export function cityZoomFrames(area, node) {
+  const overview = cityMapLayout(area);
+  const scale = Math.min(area.width / node.w, area.height / node.h);
+  const focus = factor => ({ scale: factor,
+    x: area.x + area.width / 2 - node.x * factor,
+    y: area.y + area.height / 2 - node.y * factor });
+  return { overview, neighborhood: focus(Math.min(scale, overview.scale * 2.8)),
+    block: focus(scale) };
 }

@@ -1,6 +1,6 @@
 import {
   CITY_BLOCKS, CITY_HOUSES, cityForBlock, cityIdentity, createCityState,
-  beginCityBlock, claimCityBlock, cityView, shouldShowCity, cityMapLayout
+  beginCityBlock, claimCityBlock, cityView, shouldShowCity, cityMapLayout, cityZoomFrames, claimCityIntro
 } from '../src/logic/city.js';
 import { worldHouseSeed, advanceJourney, worldBlock } from '../src/logic/worldBlocks.js';
 let passed = 0;
@@ -66,9 +66,33 @@ for(const dims of [[248,200],[248,150],[358,550],[1200,650],[0,0]]){
  check('map fits '+dims,a.width*a.scale<=dims[0]+1e-9&&a.height*a.scale<=dims[1]+1e-9);
  check('nodes within map',a.nodes.every(n=>n.x-n.w/2>=0&&n.x+n.w/2<=a.width&&n.y-n.h/2>=0&&n.y+n.h/2<=a.height));
 }
-check('menu entry shows city',shouldShowCity({mode:'pve',runKind:'journey',role:'runner',menuEntry:true}));
-check('explicit resize/entry shows city',shouldShowCity({mode:'pve',runKind:'journey',role:'runner',requested:true}));
+check('first house eligible',shouldShowCity({mode:'pve',runKind:'journey',role:'runner',pveRound:1}));
+check('partial resume excluded',!shouldShowCity({mode:'pve',runKind:'journey',role:'runner',pveRound:6,menuEntry:true,requested:true}));
+check('first house retry excluded',!shouldShowCity({mode:'pve',runKind:'journey',role:'runner',pveRound:1,retryAfterDeath:true}));
 check('ordinary house does not show city',!shouldShowCity({mode:'pve',runKind:'journey',role:'runner'}));
 for(const patch of [{mode:'pvp'},{runKind:'rivals'},{runKind:'daily'},{role:'plug'}])
- check('other modes never show city',!shouldShowCity({mode:'pve',runKind:'journey',role:'runner',menuEntry:true,...patch}));
+ check('other modes never show city',!shouldShowCity({mode:'pve',runKind:'journey',role:'runner',pveRound:1,...patch}));
+const intro = claimCityIntro({}, {blockIndex:1,pveRound:1});
+check('first intro claimed',intro.applied && intro.state.introThrough===1);
+check('intro claim is immutable',original.introThrough===0);
+check('duplicate intro silent',!claimCityIntro(intro.state,{blockIndex:1,pveRound:1}).applied);
+check('partial legacy skips intro',!claimCityIntro({}, {blockIndex:24,pveRound:6}).applied
+ && createCityState({}, {blockIndex:24,pveRound:6}).introThrough===24);
+check('legacy next fresh block has intro',claimCityIntro({}, {blockIndex:24,pveRound:1}).applied);
+check('invalid intro cannot claim',!claimCityIntro({}, {blockIndex:0,pveRound:1}).applied);
+// A checkpoint intentionally migrates the frontier, whereas a raw skip does not.
+check('new block after completion eligible',claimCityIntro(won.state,{blockIndex:2,pveRound:1}).applied);
+check('no 200 intro truncation',!claimCityIntro({...state,introThrough:251},{blockIndex:251,pveRound:1}).applied);
+for(const [width,height] of [[244,324],[354,688],[1404,744]]) {
+ const area={x:18,y:94,width,height}, a=cityMapLayout(area);
+ for(const node of a.nodes) {
+  const f=cityZoomFrames(area,node);
+  check('nested scales ordered',f.neighborhood.scale>=a.scale && f.block.scale>=f.neighborhood.scale);
+  check('zoom centers actual block',Math.abs(f.block.x+node.x*f.block.scale-(area.x+width/2))<1e-8
+   && Math.abs(f.block.y+node.y*f.block.scale-(area.y+height/2))<1e-8);
+  check('same exterior aspect',Math.abs(node.w/node.h-200/220)<1e-8);
+  check('final block fills usable area',Math.abs(Math.max(node.w*f.block.scale/width,node.h*f.block.scale/height)-1)<1e-8);
+ }
+ check('geography is not monotonic ladder',a.nodes.some((n,i)=>i>0&&n.y<a.nodes[i-1].y));
+}
 console.log('city: '+passed+' assertions passed');

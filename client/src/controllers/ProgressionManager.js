@@ -1,5 +1,5 @@
 import { CITY_BLOCKS, cityForBlock, cityView } from '../logic/city.js';
-import { getCityProgress, completeCityBlock } from '../utils/cityProgress.js';
+import { getCityProgress, completeCityBlock, startCityIntro } from '../utils/cityProgress.js';
 import { drawCityMap } from './CityMap.js';
 import { missionExitAllowed } from '../logic/missionItem.js';
 import { advanceJourney } from '../logic/worldBlocks.js';
@@ -578,79 +578,41 @@ export default class ProgressionManager {
 
   showBlockMap(goNext) {
     const consult = () => this.showContactCheckIn(() => this.showBlockEntranceMap(goNext));
-    if (this.scene._showCityOnEntry && this.scene.runKind === 'journey' && this.scene.role === 'runner') {
-      this.scene._showCityOnEntry = false;
-      return this.showCityOverview(consult);
+    const scene = this.scene;
+    const checkpoint = { blockIndex: scene.blockIndex || 1, pveRound: scene.pveRound || 1 };
+    if (scene._showCityOnEntry && scene.mode === 'pve' && scene.runKind === 'journey'
+      && scene.role === 'runner' && startCityIntro(checkpoint)) {
+      scene._showCityOnEntry = false;
+      return this.showCityIntro(consult, checkpoint);
     }
+    scene._showCityOnEntry = false;
     return consult();
   }
 
-  // Presentation only. Checkpoints/extraction, not taps, unlock cities.
-  showCityOverview(next, { completedBlock = null, cityIndex } = {}) {
+  showCityIntro(next, checkpoint) {
     const scene = this.scene;
-    if (scene.runKind !== 'journey' || scene.role !== 'runner') { next?.(); return null; }
     scene.roundPausedForMenu = true;
     if (scene.input?.keyboard) scene.input.keyboard.enabled = false;
     scene.suspendTouchUI?.(true);
     scene._cityMapOpen = true;
-    const checkpoint = completedBlock
-      ? advanceJourney({ ...scene, blockIndex: completedBlock, pveRound: PVE_BLOCK_MAPS })
-      : { blockIndex: scene.blockIndex || 1, pveRound: scene.pveRound || 1 };
-    const homeCity = cityForBlock(completedBlock || checkpoint.blockIndex).number;
-    const view = cityView(getCityProgress(checkpoint), checkpoint, cityIndex ?? homeCity);
-    let cartography = null, modal = null, leaving = false;
-    const enter = () => {
-      if (leaving) return;
-      leaving = true;
-      const done = () => {
-        modal?.destroy?.();
-        scene._cityMapOpen = false;
-        // Destroying a GameUI modal rebinds touch; cancel it before the next
-        // dialogue/entrance, including the raw DOM transport.
-        scene.suspendTouchUI?.(true);
-        next?.();
-      };
-      if (cartography) cartography.focus(checkpoint.blockIndex, done);
-      else done();
-    };
-    const navigate = number => {
-      if (leaving) return;
-      leaving = true;
-      modal?.destroy?.();
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      scene._cityMapOpen = false;
+      // Never rebind touch between cinematic, contact and entrance.
       scene.suspendTouchUI?.(true);
-      return this.showCityOverview(next, { completedBlock, cityIndex: number });
+      next?.();
     };
-    const cityDone = view.clearedBlocks === CITY_BLOCKS;
-    const frontierHere = cityForBlock(checkpoint.blockIndex).number === view.city.number;
-    modal = scene.gameUI?.showModal?.({
-      fullScreen: true, title: view.city.name,
-      // Only final extraction calls this completion presentation.
-
-      subtitle: 'CITY ' + view.city.number + ' · ' + view.stashes + ' / ' + view.stashGoal + ' STASHES',
-      lines: [],
-      buttons: [
-        { label: !frontierHere
-            ? cityDone && view.city.number === homeCity ? 'NEW CITY UNLOCKED  >>' : 'RETURN TO CURRENT CITY'
-            : completedBlock ? 'HEAD TO BLOCK ' + ((checkpoint.blockIndex - view.city.firstBlock) + 1)
-              : 'VIEW BLOCK ' + ((checkpoint.blockIndex - view.city.firstBlock) + 1),
-          variant: 'primary', keepOpen: true,
-          onClick: () => frontierHere ? enter() : navigate(cityForBlock(checkpoint.blockIndex).number) },
-        ...(completedBlock && ReplaySystem.hasReplay(scene.role) ? [{
-          label: 'WATCH LAST HOUSE', variant: 'secondary', keepOpen: true,
-          onClick: () => { if (leaving) return; modal?.setVisible?.(false); ReplaySystem.play(scene, { onDone: () => modal?.setVisible?.(true) }); }
-        }] : []),
-        { pair: [
-          { label: '<< CITY', disabled: view.city.number <= 1, variant: 'secondary', keepOpen: true,
-            onClick: () => navigate(view.city.number - 1) },
-          { label: 'MENU', variant: 'secondary',
-            onClick: () => { scene._cityMapOpen = false; scene.scene.start('MENU'); } }
-        ] }
-      ]
-    });
-    if (!modal) { scene._cityMapOpen = false; next?.(); return null; }
-    cartography = drawCityMap(scene, modal, { view, focusBlock: checkpoint.blockIndex, claimedBlock: completedBlock, onSelect: enter });
-    scene.gameUI.currentModal = modal;
-    return modal;
+    try {
+      return drawCityMap(scene, {
+        view: cityView(getCityProgress(checkpoint), checkpoint), checkpoint, onDone: done
+      });
+    } catch (error) {
+      console.warn('[City] Intro failed', error);
+      done();
+      return null;
+    }
   }
 
   showBlockEntranceMap(goNext) {
@@ -676,10 +638,7 @@ export default class ProgressionManager {
             this.scene.scene.restart({ mode: 'pve', role: 'runner', runKind: 'daily', pveRound: 1 });
           }
         }] : []),
-        ...(this.scene.runKind === 'journey' ? [{ pair: [
-          { label: 'CITY', variant: 'secondary', onClick: () => this.showCityOverview(() => this.showBlockEntranceMap(goNext)) },
-          { label: 'BACK TO MENU', variant: 'secondary', onClick: () => this.scene.scene.start('MENU') }
-        ] }] : [{ label: 'Back to Menu', variant: 'secondary', onClick: () => this.scene.scene.start('MENU') }])
+        { label: 'Back to Menu', variant: 'secondary', onClick: () => this.scene.scene.start('MENU') }
       ]
     });
     if (!modal) { goNext(); return null; }
@@ -714,7 +673,7 @@ export default class ProgressionManager {
             { text: story.secondaryFinish, contact: pair.secondary }
           ],
           chapterLabel: 'CHAPTER ' + story.number + ' COMPLETE · ' + story.title.toUpperCase(),
-          action: 'VIEW THE CITY  >>'
+          action: 'SEE THE BLOCK  >>'
         };
         try { return showContactPanel(this.scene, cue, () => this.showBlockCompleteResult()); }
         catch (error) { console.warn('[Contacts] Celebration failed', error); }
@@ -724,12 +683,6 @@ export default class ProgressionManager {
   }
 
   showBlockCompleteResult() {
-    if (this.scene.runKind === 'journey' && this.scene.role === 'runner') {
-      return this.showCityOverview(() => this.scene.scene.restart({
-        mode: 'pve', role: 'runner', runKind: 'journey',
-        blockIndex: this.scene.blockIndex + 1, pveRound: 1
-      }), { completedBlock: this.scene.blockIndex });
-    }
     const maps = PVE_BLOCK_MAPS;
     this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, maps);
 
