@@ -1,5 +1,19 @@
 # Plug Run — handoff for a new agent
 
+## Next Claude assignment — gameplay gang contacts and Cash (2026-09-16)
+
+Read CLAUDE_GAMEPLAY_CONTACTS_HANDOFF.md for the consolidated shipped-state
+summary and the human's next direction: primary-contact check-ins every three
+Run the Block houses, a secondary-job tease around house 6, then a pre-house
+special-item briefing and proposed bonus REP/+1 Cash on mission success.
+**Cash supersedes the name Store Credit.** It is not earned/used in gameplay yet;
+existing credit-named state/helpers remain unchanged by this docs-only pass.
+No contact/mission/reward code is added here. Start with character settings,
+backdrops, voice and reusable short dialogue; keep Rivals free of blocking
+story panels and reward changes. Exact mission target, bonus REP and repeat
+policy still need decisions. Inspect the 200-entry ledger retention before
+connecting recurring rewards.
+
 ## Independent Rivals powers and compact block picker (2026-09-16)
 
 **Explicit product decision: both runners choose their own mix.** This

@@ -1,10 +1,18 @@
-# The Window — gangs, contacts and Store Credit design
+# The Window — gangs, contacts and Cash design
 
 Status: **initial onboarding/state slice implemented; rewards and commerce remain unimplemented**  
 Written: 2026-09-15  
 Target branch: `claude/input-intent-layer`
 
 This document freezes the product direction agreed in the design conversation before implementation begins. Nothing described here should be treated as shipped until its implementation phase and acceptance checks are complete.
+
+## Currency naming clarification (2026-09-16)
+
+The human renamed the proposed currency to **Cash**. No Cash earning/spending
+is currently wired to gameplay. Existing runtime credit-named helpers/state
+are unchanged by this documentation update; preserve/migrate saved data
+deliberately when implementing Cash. Older handoffs using Store Credit refer
+to the previous name, not a separate currency.
 
 ## Current implementation status
 
@@ -16,12 +24,25 @@ The initial phase-one/phase-two seam now exists on `claude/input-intent-layer`:
 - a code-drawn responsive Window shell with read-only section previews
 - a permanent THE WINDOW main-menu entry after onboarding
 
-The runtime deliberately does **not** grant Store Credit, advance missions,
+The runtime deliberately does **not** grant Cash, advance missions,
 sell/equip cosmetics, switch gangs or show shared standings yet. The approved
 PNG art is now exposed through named production atlas frames, while dialogue
 and controls remain live Phaser layers. Compression is still pending. Treat
 every later economy/content phase below as unimplemented.
 
+
+## Next requested gameplay-contact slice (2026-09-16)
+
+See CLAUDE_GAMEPLAY_CONTACTS_HANDOFF.md for implementation sequencing.
+The human wants the selected gang's primary to check in every three houses
+of Run the Block, tease a secondary-contact job around house 6, and have that
+secondary brief a special-item-plus-real-stash objective before a coming house.
+Successful mission-level extraction should earn bonus REP and +1 Cash.
+This is a future slice, not active behavior; target house, bonus REP amount
+and repeat/expiry policy are not finalized. Character locations, voice,
+portrait settings and short Ro-style dialogue come first.
+Do not add blocking contact panels or these rewards to Block Rivals.
+These milestone missions are distinct from the unimplemented daily Jobs Board.
 
 ## Product goal
 
@@ -63,7 +84,7 @@ Ro's responsibilities:
 - explain new systems once, in very short panels
 - provide citywide announcements and standings updates
 - host The Window and its cosmetic Shelf
-- explain Store Credit rewards
+- explain Cash rewards
 - remain neutral; she does **not** issue ordinary gang missions
 
 Opening tone examples:
@@ -148,7 +169,7 @@ Shared gang totals and weekly cross-player competition require trusted server ac
 
 ### The Shelf
 
-A Store Credit shop for cosmetics only:
+A Cash shop for cosmetics only:
 
 - character and car colorways
 - trails and extraction effects
@@ -158,16 +179,16 @@ A Store Credit shop for cosmetics only:
 
 Nothing sold here may change movement speed, weapons, powers, vision, map rules, opponent selection, rewards or completion time.
 
-## Store Credit economy
+## Cash economy
 
-Store Credit is a new account-scoped currency. It is separate from:
+Cash is a new account-scoped currency. It is separate from:
 
 - **stash**, which advances block progression
 - **REP**, which remains competitive/leaderboard score
 
 Proposed earning rules:
 
-| action | Store Credit |
+| action | Cash |
 |---|---:|
 | daily visit and claim at The Window | +1 |
 | finish one complete 15-house Run the Block block | +1 |
@@ -200,7 +221,7 @@ At minimum, persistence needs:
 - selected gang and selection timestamp
 - onboarding-complete flag
 - last daily greeting/claim date key
-- Store Credit balance and an append-only or idempotent reward ledger
+- Cash balance and an append-only or idempotent reward ledger
 - owned/equipped cosmetics
 - mission definitions, progress and claimed state
 - gang-switch eligibility
@@ -253,7 +274,7 @@ Approve this spec, split and optimize the concept sheets, decide the gang-switch
 
 ### Phase 1 — pure state and data
 
-Add faction/roster definitions, onboarding state, route-day helpers, missions and an idempotent Store Credit ledger as pure modules with headless tests.
+Add faction/roster definitions, onboarding state, route-day helpers, missions and an idempotent Cash ledger as pure modules with headless tests.
 
 ### Phase 2 — The Window shell
 
@@ -300,5 +321,5 @@ Before declaring any phase complete:
 - no territory map or gang combat simulation
 - no fake global gang totals
 - no mandatory long daily modal
-- no replacement of stash or REP with Store Credit
+- no replacement of stash or REP with Cash
 - no ad-hoc runtime crop numbers outside the tested WINDOW_ART atlas contract
