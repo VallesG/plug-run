@@ -4,6 +4,26 @@ Written 2026-09-16. Repository: VallesG/plug-run.
 Work only on `claude/input-intent-layer`. **Never touch master: live deploy.**
 Gameplay implementation checkpoint: `08e45597d89c0fc446e8076d7b427704fbca3fc7`.
 
+## Status: stages 1 and 2 implemented (2026-09-16)
+
+See the top section of HANDOFF_CODEX.md for what shipped and how it was
+verified. Stage 1 (art review/compression and reusable contact dialogue) and
+stage 2 (milestone check-ins with persisted, duplicate-safe IDs) are done and
+pushed; stages 3-6 (mission definition, special item, completion seam, bonus
+REP and +1 Cash) are untouched. The 200-entry ledger hazard this document
+flagged was inspected and confirmed real — it drops balance AND duplicate
+protection together — and must be fixed before stage 6.
+
+Decisions taken, so they are not re-litigated:
+- beats at houses 4, 7, 9, 10, 13; house 1 is never interrupted and house 15
+  keeps its existing block-complete finale
+- one panel per house, never stacked; the clear-6 check-in carries the tease
+- a beat is claimed before it is shown, so a reload during the panel costs
+  the line rather than looping it
+- praise is indexed by milestone, not chosen at random
+- Rook, Sol, Brick and Vee get no foreground crop; only The Dispatch and The
+  Map Room have full-width furniture at body height
+
 ## Contact location artwork prepared (2026-09-16)
 
 Codex has now created six portrait 1024x1536 contact backdrops and a six-object

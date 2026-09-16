@@ -1,5 +1,60 @@
 # Plug Run — handoff for a new agent
 
+## Gang contacts in Run the Block — implemented (2026-09-16)
+
+Two slices are on `claude/input-intent-layer` and pushed. `npm run verify` is
+green natively (this container allows execution; the Carbon Black restriction
+is the user's machine, so verify was run for real, not adapted).
+
+**Art is now shippable.** Runtime art is WebP; the PNG originals moved to
+`client/art-sources/the-window/`, outside the served tree. Six backdrops
+15.4MB -> 892KB, props 2.2MB -> 249KB, the four Window rasters 8.6MB -> 1.15MB
+at identical dimensions with alpha intact. `dist` went 69MB -> 37MB, because
+everything under `public/` — including the archived concept sheets — was being
+deployed. Do not put source rasters back under `public/`.
+
+**`logic/contacts.js`** is the content authority: six dossiers (gang, role,
+setting, voice, accent, portrait frame, backdrop, placement), the beat
+schedule and the panel geometry. No randomness: praise lines are indexed by
+milestone because the copy is written for a specific number of clears.
+`contactArt.test.mjs` asserts the module and the art manifest never drift.
+
+**`controllers/ContactPanel.js`** renders one cue in Auntie Ro's grammar and
+loads exactly one room at a time, releasing the texture on teardown. A missing
+or slow image falls back after 2.5s; the advance arms 360ms late so the tap
+that cleared the entrance map cannot skip the panel. The dialogue box is sized
+from its own copy — a fixed height put the button on top of the text at
+280x480.
+
+**Beats** fire on the existing pre-house entrance seam via
+`ProgressionManager.showContactCheckIn`, which the overhead map's ENTER button
+routes through: primary praises at house 4, teases at 7, the job contact
+briefs at 9, the primary debriefs at 10, praises at 13. Everything else is
+silent, and Rivals, Tutorial, the daily route, the bot harness and the plug
+role fall straight through.
+
+**Duplicate safety:** a beat is claimed before it is shown.
+`logic/contactProgress.js` groups seen IDs by block and prunes to the current
+block and the one before, which is bounded without being lossy because Run the
+Block only moves forward. It deliberately does not copy the Cash ledger shape.
+
+Verified in a real browser: block 1 house 4 as Crossline shows Switch at The
+Dispatch behind the desk; a genuine reload goes straight to the loadout with
+no repeat; `contact-preview.html` (client root, dev only) renders all three
+gangs and all five beats at 390x844, 280x480 and 900x640.
+
+**Not built:** no mission, no special item, no REP, no Cash. The debrief beat
+never claims an outcome because none can happen yet. `CONTACT_TARGET_HOUSE`
+is 9 and provisional. The two desk occlusion fractions want a phone review.
+
+### The Cash ledger hazard, still unfixed
+
+`createWindowState` does `ledger.slice(-200)` and derives **both** the balance
+and the duplicate guard from the survivors. Past 200 entries, old grants stop
+counting and the balance silently drops, and a dropped event ID can be granted
+a second time. Fix this before wiring +1 Cash — a retention/migration test
+first, not a reward on top of the existing seam.
+
 ## Contact location artwork prepared (2026-09-16)
 
 Codex has now created six portrait 1024x1536 contact backdrops and a six-object
