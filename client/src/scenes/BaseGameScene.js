@@ -1,3 +1,4 @@
+import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
 import { RIVAL_HUD_HEIGHT, rivalPixels } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
 import RivalsRace from '../controllers/RivalsRace.js';
@@ -1414,16 +1415,17 @@ export class BaseGameScene extends Phaser.Scene {
     cx = ex + dx * forward;
     cy = ey + dy * forward;
 
-    // Use blue car sprite
+    // Cosmetic paint/stripe textures preserve the original car silhouette.
+    const carKey = ensureGangSkin(this).car;
     const carLen = this.cell*2.6; // larger silhouette
-    const car = this.add.image(cx, cy, 'car_blue').setDepth(1200);
-    car.setDisplaySize(carLen, this.cell*1.4).setTint(this.theme?.carTint ?? 0xffffff);
+    const car = this.add.image(cx, cy, carKey).setDepth(1200);
+    car.setDisplaySize(carLen, this.cell*1.4).setTint(carKey === 'car_blue' ? (this.theme?.carTint ?? 0xffffff) : 0xffffff);
     car.setAngle(ang);
     // Ink outline, same treatment as the characters. Four copies is plenty at
     // this size, and they sit one depth below so the tint never bleeds over.
     const opx = Math.max(2, Math.round(this.cell * 0.09));
     car._outline = [[opx, 0], [-opx, 0], [0, opx], [0, -opx]].map(([ox, oy]) =>
-      this.add.image(cx + ox, cy + oy, 'car_blue')
+      this.add.image(cx + ox, cy + oy, carKey)
         .setDisplaySize(carLen, this.cell * 1.4)
         .setTint(PALETTE.ink)
         .setAngle(ang)

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run — gang skin review</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:24px;background:#070b0d;color:#f1dfb0;font:14px monospace}
+h1{font:700 28px Georgia,serif}p{color:#98a4a4;max-width:680px;line-height:1.6}
+.grid{display:flex;flex-wrap:wrap;gap:16px}.card{width:280px;border:2px solid #526164;background:#111719;padding:16px}
+canvas{image-rendering:pixelated;display:block;margin:12px auto;background:repeating-conic-gradient(#2a303c 0% 25%,#343b47 0% 50%) 0/32px 32px}
+h2{font:700 20px Georgia,serif}.label{font-size:11px;color:#a7b3b0}a{color:#e2b45f}
+</style>
+<h1>Gang starter looks</h1><p>Actual gameplay sizes on the checker floor, then a 3× inspection view. Cyan identifies the runner; gang color belongs in the outfit and getaway car. No simulation parameters differ.</p>
+<div class="grid" id="grid"></div>
+<script type="module">
+import {GANG_SKINS,skinPixel} from './src/logic/gangSkins.js';
+const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src;});
+const [runner,step,car]=await Promise.all([load('/sprites/td/runner.png'),load('/sprites/td/runner_step.png'),load('/cars/blue.png')]);
+function recolor(image,skin,kind){
+ const c=document.createElement('canvas');c.width=image.width;c.height=image.height;
+ const ctx=c.getContext('2d');ctx.drawImage(image,0,0);
+ const data=ctx.getImageData(0,0,c.width,c.height);
+ for(let i=0;i<data.data.length;i+=4){
+  const n=i/4,p=skinPixel(...data.data.slice(i,i+4),skin,kind,(n%c.width)/Math.max(1,c.width-1),Math.floor(n/c.width)/Math.max(1,c.height-1));
+  data.data.set(p,i);
+ }ctx.putImageData(data,0,0);return c;
+}
+for(const [id,skin] of Object.entries(GANG_SKINS)){
+ const card=document.createElement('section');card.className='card';
+ card.innerHTML='<h2>'+skin.name+'</h2><div class="label">24px runner · 62 × 34px car</div>';
+ for(const zoom of [1,3]){
+  const c=document.createElement('canvas');c.width=248;c.height=zoom===1?88:180;
+  const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+  const cy=c.height/2,sz=24*zoom;
+  [runner,step].forEach((im,index)=>{
+   const x=zoom===1?44+index*48:44+index*80;
+   ctx.strokeStyle='#4db2ff';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,cy+sz*.4,sz*.53,sz*.21,0,0,Math.PI*2);ctx.stroke();
+   const art=recolor(im,skin,'runner');ctx.drawImage(art,x-sz*art.width/art.height/2,cy-sz/2,sz*art.width/art.height,sz);
+  });
+  if(zoom===1)ctx.drawImage(recolor(car,skin,'car'),158,cy-17,62,34);
+  else ctx.drawImage(recolor(car,skin,'car'),146,cy+40,90,49);
+  card.append(c);
+ }
+ const link=document.createElement('a');link.href='/?skin='+id;link.textContent='Play-test '+skin.name+' >>';card.append(link);
+ document.querySelector('#grid').append(card);
+}
+</script></html>

@@ -1,5 +1,28 @@
 # Plug Run — handoff for a new agent
 
+## Gang starter cosmetics (2026-09-16)
+
+Saved gang identity now selects three runner clothing palettes and matching car
+paint/center stripes. Crossline uses indigo/gold, Iron Row charcoal/rust/cream,
+Afterlight violet/pale/amber. Import-free `logic/gangSkins.js` remaps only
+chromatic blue fabric/paint pixels and preserves alpha, skin, ink, neutral glass
+and shading. `GangSkinTextures` generates cached Canvas textures from the
+existing sources; no extra download or collision/silhouette changes. Texture
+cache is owned by Phaser's texture manager, not a surviving scene flag.
+
+Live idle/step swaps use per-avatar keys, including decoys. Cyan/red ground
+rings and defender art remain unchanged. Recorded rival replay actors explicitly
+retain the original default appearance because bank records have no gang
+identity. No bank, seed, timing, powers or recording contracts changed.
+
+`/gang-skins-preview.html` shows all starters at 24px gameplay size and enlarged.
+Review-only `?skin=crossline|iron-row|afterlight` selects a palette without
+saving or switching gangs. The new headless suite passes 30 assertions in the
+adapted harness; modified sources parse there. Native `npm run verify`, actual
+source-pixel coverage, Canvas texture upload, low-resolution visual readability
+and car stripe orientation remain unverified under Carbon Black. This is free
+starter identity, not a Store Credit purchase.
+
 ## The Board runner-only cleanup (2026-09-16)
 
 The leaderboard still exposed the shelved Plug role, used hard-coded desktop

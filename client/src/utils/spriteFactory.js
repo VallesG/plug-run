@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
 import { PALETTE, CHAR_HEIGHT_CELLS, outlinePx } from '../logic/palette.js';
 
 // Eight-direction offsets for the outline copies.
@@ -63,8 +64,13 @@ function makeCharacter(scene, x, y, cell, { key, kind, accent, tint = null }) {
   return container;
 }
 
-export function makeRunnerSprite(scene, x, y, cell) {
-  return makeCharacter(scene, x, y, cell, { key: 'td_runner', kind: 'runner', accent: PALETTE.runner });
+export function makeRunnerSprite(scene, x, y, cell, options = {}) {
+  const keys = ensureGangSkin(scene, options.gangID);
+  const character = makeCharacter(scene, x, y, cell, {
+    key: keys.runner, kind: 'runner', accent: PALETTE.runner
+  });
+  character.textureKeys = { base: keys.runner, step: keys.step };
+  return character;
 }
 
 export function makePlugSprite(scene, x, y, cell) {
@@ -103,8 +109,8 @@ export function updateAvatarVisuals(scene, dt) {
     }
 
     if (who.usesTD) {
-      const keyBase = who.kind === 'plug' ? 'td_plug' : 'td_runner';
-      const keyStep = who.kind === 'plug' ? 'td_plug_step' : 'td_runner_step';
+      const keyBase = who.textureKeys?.base || (who.kind === 'plug' ? 'td_plug' : 'td_runner');
+      const keyStep = who.textureKeys?.step || (who.kind === 'plug' ? 'td_plug_step' : 'td_runner_step');
       const rate = 0.14;
       who._stepT = (who._stepT || 0) + dt;
 

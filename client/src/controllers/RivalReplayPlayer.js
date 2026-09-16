@@ -146,7 +146,7 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
       c.halo = halo;
       return add(c, 7);
     });
-    const runner = add(makeRunnerSprite(scene, wx(rep.spawn.r.x), wy(rep.spawn.r.y), cell), 10);
+    const runner = add(makeRunnerSprite(scene, wx(rep.spawn.r.x), wy(rep.spawn.r.y), cell, { gangID: null }), 10);
     const plug = add(makePlugSprite(scene, wx(rep.spawn.p.x), wy(rep.spawn.p.y), cell), 10);
     const carry = scene.add.rectangle(0, -cell * 0.25, cell * 0.45, cell * 0.30, 0xC8A97E, 1).setStrokeStyle(2, PALETTE.ink).setVisible(false);
     runner.add(carry);
