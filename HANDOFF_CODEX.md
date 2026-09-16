@@ -1,10 +1,122 @@
 # Plug Run — handoff for a new agent
 
-> Block Rivals recorded opponents (2026-09-16): implemented on this branch.
-> `RIVALS_CLAUDE_HANDOFF.md` opens with a status table of what shipped, how the
-> bank is recorded, and what is still unverified. Read that section before
-> touching `logic/rivals*.js`, `controllers/RivalsRace.js`,
-> `controllers/RivalReplay*.js` or `client/public/rivals/`.
+> **Start here (2026-09-16).** The section below, "Block Rivals recorded
+> opponents", is the current state of the branch. `RIVALS_CLAUDE_HANDOFF.md`
+> has the same material in more depth (status table, asset layout, recording
+> procedure, what is unverified). Everything under it is older context.
+
+## Block Rivals recorded opponents — handoff to Codex, 2026-09-16
+
+Branch `claude/input-intent-layer`, 12 commits since Codex's `0e7114e`, all
+pushed. `master` untouched. `npm run verify` (tests + Vite build) passes
+natively; the last run: 21 suites, ES-module check on 75 files, 402 bank
+assertions over 55 recordings.
+
+### What changed, in one paragraph
+
+Block Rivals no longer races a generated pace by default. Seven fixed courses
+(`RIVAL_COURSE_POOL` in `logic/rivals.js`) each have a bank of complete
+seven-house races recorded from the game's own BotDriver under the real race
+rules; a race picks one (tier from local wins on that course, deterministic by
+user/course/races played, rematch by recordingID), the player gets the
+recording's ordered loadout through a confirm screen instead of the picker,
+the opponent bar runs off the recording's seven clear timestamps, and the
+result modal offers WATCH RIVAL REPLAY, which plays the rival's whole race
+(every attempt, deaths included) on top of the intact result. When no
+recording is eligible or the fetch fails, the race is the old labeled
+"Simulated AI pace" and nothing generated is ever shown as a recording.
+
+### Files to know
+
+| file | role |
+|---|---|
+| `logic/rivals.js` | course pool, rotation (`nextRivalSlot`), race rules (unchanged core) |
+| `logic/rivalRecords.js` | `RivalRunRecord` / `RivalReplayBundle` build + validate; payload hash; course/rules eligibility |
+| `logic/rivalReplay.js` | portable 15Hz segment format (grid cells, frame arrays, events), seeking, timeline |
+| `logic/rivalPresets.js` | Street / Hustler / Ace bot presets, tier ladder, opponent choice, bank loadouts |
+| `controllers/RivalReplayCapture.js` | Phaser-free live capture into segments; `exportRaceCapture` |
+| `controllers/RivalReplayPlayer.js` | full-race playback overlay (regenerates each house from its seed) |
+| `controllers/RivalsRace.js` | race adapter: opponent lookup before loadout, capture hooks, WATCH button, honest labels |
+| `utils/rivalSession.js` | course selection, `loadRivalOpponents`, `resolveRivalOpponent`, `loadRivalReplay`, local history |
+| `controllers/installBotDriver.js` | `?rivalsRecord=1` recording mode, `?rivalsPlay=1` play mode, `window.__plugRunLiveScene` |
+| `client/public/rivals/v2/` | the bank: `manifest.json`, `courses/<courseID>/opponents.json` (`{record, replay}` entries), `replays/<recordingID>.json` |
+| `test/rival*.test.mjs` | courses (668), records (68), replay (70), presets (26), capture (42), flow (67), bank (402) |
+
+### Rules that must keep holding
+
+- Rivals writes only `pr_rivals_results_v1_<user>`. No Daily/Journey, REP,
+  stash, activity feed, inventory stake or leaderboard writes. Unchanged.
+- A bank record is stored byte-for-byte as recorded (`{record, replay}`);
+  decorating it breaks its payload hash and the loader drops it silently.
+  This bit us once.
+- Bump `RIVAL_RULES_VERSION` when maze generation, combat balance, loadout
+  rules, stash assignment, transitions or race timing change, and re-record;
+  old recordings become ineligible by design. Bump
+  `RIVAL_BOT_DRIVER_VERSION` when the bot or presets change.
+- Replays are spectator data. Validation is corruption checking, not
+  anti-cheat; `verified` stays false on every client record.
+- Bot opponents are labeled BOT / AI RIVAL everywhere. Keep it that way.
+
+### How to record more (or re-record)
+
+```
+cd client && npm run build && npx http-server dist -p 4173 -s
+# one job = one course x one preset x N complete races:
+http://127.0.0.1:4173/?rivalsRecord=1&courseSlot=5&skillPreset=ace&runs=3
+# then in the console: __plugRunRivalsDownload()   (or read window.__plugRunRivals)
+```
+
+Use Chromium's Canvas renderer for headless capture (`--disable-gpu`): WebGL
+through swiftshader ran at 9-18fps and crippled the bot. Assemble with a
+script that re-validates every record and bundle with the logic modules
+(mine lived outside the repo; `test/rivalBank.test.mjs` is the contract it
+must satisfy). Missing from the 63-race target, all 12-minute forfeits: two
+Ace on Switchyard Seven, two Hustler on Blacktop Crown, one Hustler each on
+Copper Climb and Afterglow Mile, one Street on Switchyard Seven.
+
+### What was measured, and what it means for the game
+
+- Bot race times across the bank: 1:14 to 11:58, 2 to 108 retries.
+  Switchyard Seven is the hard course; Freight Run the easy one.
+- The level-20 sweep bot cannot be the Ace: from level 6 the runner AI has
+  zero wander/hesitation, takes the identical route every retry and dies in
+  the identical lane (55-72 deaths on Low End Rush house 4). Level 5 keeps
+  6%/5% imperfection and completes. Ace is level 5 with cover routing and
+  phase escape on. Details in the `rivalPresets.js` comment and commit
+  `a9d76d9`.
+- Low End Rush house 4 spawn-kills a straight-line runner from the first
+  second. Worth a look as a level-design fact, not only a bot fact.
+- Two samples in one millisecond produced duplicate replay timestamps in
+  five of the first six recordings; fixed in `pushReplayFrame`. Existing
+  bundles were deduped (16 frames total).
+
+### Verified and not
+
+Verified headless (screenshots and state reads): opponent lookup picks a
+recorded bot, HUD row "AI RIVAL", fixed-loadout confirm, result copy
+"Recorded bot run · not a live player", WATCH creates the overlay (arena,
+duffels, sprites, clock, house strip, EXIT/NEXT), EXIT destroys it and the
+result is unchanged; a bot playing against the bank won in 2:33.
+
+Not verified by anyone on a real device: how any of it looks and feels,
+280x480 layout with the replay HUD, background/return during a race,
+Rematch/New Race by hand across all seven courses, Run the Block resume
+after a Rivals session. The replay player draws walls as flat fills with
+ink rim and shadow (no wall texture) — judge it on screen.
+
+### Suggested next work
+
+1. Play it. Then fill the eight missing recordings and decide whether the
+   12-minute forfeit should be longer for Ace.
+2. "Jump to decisive house" in the replay (`decisiveHouse()` in
+   `logic/rivalReplay.js` already computes it).
+3. Watch-my-race: the player's own race is already captured and exported as
+   `runRecord` in the local history; the bundle is in memory as
+   `race.capture` but is not persisted (100KB+ per race).
+4. Only after all of that: uploads and human ghosts (Phase 5 in
+   `RIVALS_CLAUDE_HANDOFF.md`). Not before a server can validate.
+
+---
 
 Written 2026-09-15 at the end of a long Claude Code session. Branch:
 `claude/input-intent-layer`. 38 commits ahead of `master`; `master` is
