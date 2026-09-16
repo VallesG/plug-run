@@ -1,3 +1,4 @@
+import { cityForBlock } from '../src/logic/city.js';
 // The entrance seam: who speaks, once, and what must never trigger one.
 // Exercises the real ProgressionManager source against a stub scene, the same
 // way the Rivals adapter is tested — no Phaser, no browser, no storage.
@@ -62,7 +63,7 @@ let store = createContactProgress();
 let gangID = 'crossline';
 let shownPanels = [];
 let panelFailure = false;
-const bindings = {
+const bindings = { cityForBlock,
   contactCue, gangContacts, crewChapter, crewConsultationPages, crewStoryProgress,
   finishCrewStory: (id, block, cleared) => {
     const result = completeCrewStory(store, { gangID: id, blockIndex: block, clearedHouses: cleared });

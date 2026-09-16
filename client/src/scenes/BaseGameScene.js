@@ -1,8 +1,10 @@
+import { shouldShowCity } from '../logic/city.js';
+import { startCityBlock } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
 import { RIVAL_HUD_HEIGHT, rivalPixels } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
 import RivalsRace from '../controllers/RivalsRace.js';
-import { worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
+import { advanceJourney, worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
 import { getJourneyProgress } from '../utils/journeyProgress.js';
 import Phaser from 'phaser';
 import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
@@ -169,6 +171,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID })) : null;
     this.rivals = null;
     this._blockEntranceShown = false;
+    this._showCityOnEntry = false;
+    this._cityMapOpen = false;
+    this.blockGangID = null;
     this.worldBlock = null;
     this.mode = initData?.mode || 'pvp'; // 'pve' or 'pvp'
     console.log('[BaseGameScene] mode:', this.mode, 'role:', this.role);
@@ -184,12 +189,17 @@ export class BaseGameScene extends Phaser.Scene {
       // and you're retrying it. Resets when the route rolls over (session
       // storage is keyed by routeID, so a new day simply misses).
       const menuEntry = initData?.pveRound == null && !initData?.savedSession;
+      this._showCityOnEntry = shouldShowCity({ mode: this.mode, runKind: this.runKind,
+        role: this.role, menuEntry, requested: initData?.showCityMap });
       const entryRole = initData?.role ?? (this.scene.key === 'PLUG' ? 'plug' : 'runner');
       let sess = this.runKind === 'rivals' ? null : initData?.savedSession ?? (menuEntry
         ? (this.runKind === 'journey' ? getJourneyProgress() : getSessionState(entryRole)) : null);
       if (this.runKind === 'daily' && sess?.pveRound > 15) sess = null;
       this.blockIndex = initData?.blockIndex ?? sess?.blockIndex ?? 1;
-      if (this.runKind === 'journey') this.worldBlock = worldBlock(this.blockIndex);
+      if (this.runKind === 'journey') {
+        this.worldBlock = worldBlock(this.blockIndex);
+        if (entryRole === 'runner') this.blockGangID = startCityBlock({ blockIndex: this.blockIndex }, getWindowState().gangID);
+      }
       this.savedSession = sess;
 
       // Continue session or start new
@@ -621,11 +631,17 @@ export class BaseGameScene extends Phaser.Scene {
       clearTimeout(this._resizeTimer);
       this._resizeTimer = setTimeout(() => {
         if (this.rivals) { this.rivals.resize(); return; }
+        if (this.runKind === 'journey' && this._cityMapOpen && this.roundOver && this.pveRound === PVE_BLOCK_MAPS) {
+          this.scene.restart({ mode: 'pve', role: 'runner', runKind: 'journey',
+            ...advanceJourney({ blockIndex: this.blockIndex, pveRound: PVE_BLOCK_MAPS }), showCityMap: true });
+          return;
+        }
         this.scene.restart({
         mode: this.mode,
         runKind: this.runKind, blockIndex: this.blockIndex,
         role: this.role,
         seed: this.seed,
+        showCityMap: this._cityMapOpen || this._showCityOnEntry,
         retryAfterDeath: this.retryAfterDeath,
         swapSpawnCycle: this.swapSpawnCycle,
         pveRound: this.pveRound,
@@ -1592,7 +1608,7 @@ export class BaseGameScene extends Phaser.Scene {
     if (this.mode !== 'pve' || this.runKind !== 'journey' || this.role !== 'runner') return;
 
     let who = null;
-    try { who = activeMissionContact(getWindowState().gangID, this.pveRound); } catch { who = null; }
+    try { who = activeMissionContact(this.blockGangID ?? getWindowState().gangID, this.pveRound); } catch { who = null; }
     if (!who) return;
     const object = missionObject(who.id);
     if (!object) return;
