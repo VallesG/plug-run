@@ -2,6 +2,12 @@
 
 **A fast-paced arcade game set in the streets of LA. Run from AI plugs, defend stashes, and climb the leaderboards.**
 
+## Design documents
+
+- [The Window — gangs, contacts and Store Credit](THE_WINDOW_DESIGN.md) — approved direction and concept-art inventory; not yet implemented
+- [Current engineering handoff](HANDOFF_CODEX.md)
+- [Block Rivals recorded-opponents handoff](RIVALS_CLAUDE_HANDOFF.md)
+
 ## Game Modes
 
 ### 🏃 Run the Block (PvE Runner)

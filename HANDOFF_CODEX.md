@@ -1,5 +1,20 @@
 # Plug Run — handoff for a new agent
 
+## The Window design checkpoint — documentation and concept art only (2026-09-15)
+
+The human approved the direction for a neutral bodega hub, Auntie Ro onboarding,
+three two-contact gangs, cosmetic Store Credit and short daily gang updates.
+The authoritative product spec is `THE_WINDOW_DESIGN.md`. Four generated PNG
+concept sheets are stored under `client/public/art/the-window/concepts/`.
+
+**Nothing in that spec is implemented yet.** The assets are raster PNG concepts,
+not SVGs or production sprites; they still need slicing, cleanup, optimization
+and mobile review. Do not award Store Credit, persist a gang, show shared gang
+standings or alter Run the Block / Block Rivals until implementing the staged
+plan with tests. In particular, the proposed +2 Store Credit for a Rival win
+(first three wins per route day) is a future safeguard requiring final product
+confirmation, not current race behavior.
+
 ## Current HUD follow-up — floor clock and pickup progress
 
 This section supersedes the older HUD and player-facing opponent-label notes below.

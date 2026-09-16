@@ -1,5 +1,15 @@
 # Claude handoff: Block Rivals recorded opponents
 
+## The Window / Store Credit boundary (2026-09-15)
+
+A future social wrapper is specified in `THE_WINDOW_DESIGN.md`; it is
+documentation and concept art only. The proposed economy gives a qualifying
+Block Rivals win +2 Store Credit, with a recommended first-three-wins-per-route-
+day cap. Do not add that award to the current Rivals result pipeline until the
+dedicated idempotent ledger and tests exist. Replay, rematch, watch and fallback
+opponent paths must never become reward events. Preserve all existing mode and
+recording isolation.
+
 Written 2026-09-15 after Codex commit `de35c373eeb005995c9a6d5a8079fdad64954d65`.
 Work only on `claude/input-intent-layer`. Do not touch `master`.
 
