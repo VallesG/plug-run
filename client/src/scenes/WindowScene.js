@@ -215,7 +215,9 @@ export class WindowScene extends Phaser.Scene {
     else this.drawRo(a.cx,a.panelTop+a.headerH+Math.max(105,a.portrait*0.72),roScale,this._introIndex===1?1:0);
     const box=this.addDialogue(WINDOW_INTRO[this._introIndex]);
     const last=this._introIndex===WINDOW_INTRO.length-1;
-    this.addButton(a.cx,box.y+box.h/2-28,Math.min(200,box.w-36),last?'MEET THE CREWS':'KEEP LISTENING',
+    const actionW=Math.min(164,box.w-28);
+    const actionX=a.cx+box.w/2-actionW/2-14;
+    this.addButton(actionX,box.y+box.h/2-28,actionW,last?'MEET THE CREWS  >>':'KEEP LISTENING  >>',
       ()=>last?this.showGangChoice():this.showIntro(this._introIndex+1));
   }
 
