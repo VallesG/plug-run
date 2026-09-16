@@ -33,7 +33,7 @@ function themeForSeed(seed) {
   return { theme, floorKeySingle };
 }
 
-export function playRivalReplay(scene, { bundle, record = null, opponentName = 'BOT', playerTimes = [], onDone } = {}) {
+export function playRivalReplay(scene, { bundle, record = null, opponentName = 'RIVAL', playerTimes = [], onDone } = {}) {
   if (!bundle?.segments?.length) { onDone?.(); return null; }
   const W = scene.scale.gameSize.width, H = scene.scale.gameSize.height;
   const timeline = raceReplayTimeline(bundle);
@@ -49,7 +49,7 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
   }).setOrigin(origin[0], origin[1]).setDepth(DEPTH + 901));
   const w = Math.min(W, 480), left = (W - w) / 2;
   hudText(left + 12, 16, '● RIVAL REPLAY', '#ff5b5b', 11);
-  hudText(left + 12, 34, opponentName.toUpperCase() + '  ·  not a live player', '#e5dec8', 11);
+  hudText(left + 12, 34, 'RIVAL  ·  recorded run', '#e5dec8', 11);
   // EXIT / NEXT occupy the right 70px of the strip; everything else stops short.
   const BTN_W = 70;
   const clock = hudText(left + w - BTN_W - 10, 16, '0:00.0', '#e5dec8', 12, [1, 0.5]);

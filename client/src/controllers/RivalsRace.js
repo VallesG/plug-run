@@ -1,8 +1,7 @@
 import {
   RIVAL_HOUSES, RIVAL_COUNTDOWN_MS, RIVAL_TRANSITION_MS, RIVAL_RETRY_MS,
-  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot
+  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout
 } from '../logic/rivals.js';
-import { rivalOpponentLabel } from '../logic/rivalPresets.js';
 import { saveRivalResult, resolveRivalOpponent, loadRivalReplay } from '../utils/rivalSession.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
@@ -51,18 +50,12 @@ export default class RivalsRace {
     // two charges so the comparison is like for like. Only the generated pace
     // fallback (no loadout of its own) still opens the picker.
     if (this.race.fixedPowers) {
-      this.scene.runnerPowersSelected = this.race.fixedPowers.slice();
-      this.race.powers = this.race.fixedPowers.slice();
-      this.scene.gameUI.showModal({
-        title:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
-        lines:[
-          'Loadout: ' + this.race.powers.map(p => p.toUpperCase()).join(' \u2192 '),
-          'Same two charges as your rival. They refill each house and retry.'
-        ],
-        buttons:[
-          {label:'READY TO RACE',variant:'primary',onClick:armCountdown},
-          {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
-        ]
+      this.scene.runnerPowersSelected=this.race.fixedPowers.slice();
+      this.race.powers=this.race.fixedPowers.slice();
+      showRunnerLoadout(this.scene.gameUI,armCountdown,{
+        title:'BLOCK RIVALS',subtitle:this.opponentSubtitle(),startLabel:'READY TO RACE',
+        helpText:'Matched loadout. Same two charges, same order.',
+        fixedPowers:this.race.fixedPowers,allowReplay:false,showAccount:false
       });
       return;
     }
@@ -75,13 +68,11 @@ export default class RivalsRace {
       allowReplay:false, showAccount:false
     });
   }
-  /** Who the player is racing, stated honestly: a recording of a bot, or a generated pace. */
   opponentSubtitle() {
-    const course = this.race.course.name ? this.race.course.name + ' \u00b7 ' : '';
-    if (this.race.opponentKind === 'recorded-bot') return course + '7 houses \u00b7 vs ' + (this.race.opponent?.displayName || 'BOT') + ' (recorded)';
-    return course + '7 houses \u00b7 Simulated AI pace trial';
+    const course=this.race.course.name ? this.race.course.name+' · ' : '';
+    return course+'7 houses · RIVAL';
   }
-  opponentShort() { return this.race.opponentKind === 'recorded-bot' ? rivalOpponentLabel(this.race.opponent) : 'AI PACE'; }
+  opponentShort() { return 'RIVAL'; }
   resumeHouse() {
     if (this.update()) return;
     const scene = this.scene;
@@ -100,40 +91,37 @@ export default class RivalsRace {
     beginAttemptCapture(scene, this.race, performance.now());
   }
   drawHUD() {
-    const scene = this.scene, width = scene.scale.gameSize.width;
-    const w = Math.min(width,480), left = (width-w)/2;
-    const add = o => { this.objects.push(o); return o.setScrollFactor(0).setDepth(15000); };
-    add(scene.add.rectangle(width/2,42,width,84,0x0a1118,0.98));
-    const text = (x,y,value,color='#adbdc5',size=11) => add(scene.add.text(x,y,value,{
-      fontFamily:'monospace',fontSize:size+'px',color
-    }).setOrigin(0,0.5));
-    text(left+12,16,this.race.course.name ? this.race.course.name.toUpperCase() : 'BLOCK RIVALS','#e5dec8',12);
-    this.clock = text(left+w-124,16,'0:00.0','#e5dec8',12);
-    const quit = add(scene.add.rectangle(left+w-28,18,48,32,0x141e28,1)).setInteractive({useHandCursor:true});
-    text(left+w-45,18,'QUIT','#aeb9c1',10);
-    quit.on('pointerdown', () => this.finish('forfeit',performance.now()));
-    this.rows = [0,1].map(row => {
-      const y = 44+row*22;
-      const label = text(left+12,y,row?this.opponentShort()+' 0/7':'YOU 0/7',row?'#dec386':'#9bcae5',10);
-      const gap=4, start=left+90, usable=w-102, seg=(usable-gap*6)/7;
-      const bars = Array.from({length:7},(_,i) => add(
-        scene.add.rectangle(start+i*(seg+gap)+seg/2,y,seg,10,0x23313a)
-          .setStrokeStyle(1,0x3a4c58)));
-      return {label,bars};
+    const scene=this.scene,width=scene.scale.gameSize.width,height=scene.scale.gameSize.height;
+    const layout=rivalHudLayout(width,height);
+    const add=o=>{this.objects.push(o);return o.setScrollFactor(0).setDepth(15000);};
+    const text=(x,y,value,color='#adbdc5',size=10,origin=[.5,.5])=>add(scene.add.text(x,y,value,{
+      fontFamily:'monospace',fontSize:size+'px',fontStyle:'bold',color,stroke:'#071018',strokeThickness:3
+    }).setOrigin(origin[0],origin[1]));
+    const chip=(x,y,w,h)=>add(scene.add.rectangle(x,y,w,h,0x09121a,.86).setStrokeStyle(1,0x344650,.9));
+    const courseName=this.race.course.name?this.race.course.name.toUpperCase():'BLOCK RIVALS';
+    const titleW=Math.min(width-130,Math.max(112,courseName.length*7+18));
+    chip(8+titleW/2,18,titleW,28);text(16,18,courseName,'#e5dec8',10,[0,.5]);
+    chip(width/2,50,76,26);this.clock=text(width/2,50,'0:00.0','#e5dec8',12);
+    const quit=chip(width-30,18,52,28).setInteractive({useHandCursor:true});
+    text(width-30,18,'QUIT','#aeb9c1',9);quit.on('pointerdown',()=>this.finish('forfeit',performance.now()));
+    this.rows=[0,1].map(row=>{
+      const x=row?layout.rightX:layout.leftX,color=row?0xc6ac70:0x86bad5;
+      const label=text(row?width-7:7,layout.startY-20,row?'RIVAL 0/7':'YOU 0/7',
+        row?'#dec386':'#9bcae5',9,row?[1,.5]:[0,.5]);
+      const bars=layout.segmentYs.map(y=>add(scene.add.rectangle(x,y,layout.railW,layout.segmentH,0x17232c,.9).setStrokeStyle(1,0x42525c,.95)));
+      return {label,bars,color};
     });
-    this.notice = add(scene.add.text(width/2,scene.scale.gameSize.height/2,'',{
-      fontFamily:'monospace',fontSize:'24px',fontStyle:'bold',
-      color:'#f0d294',stroke:'#071018',strokeThickness:5,align:'center'
-    }).setOrigin(0.5));
+    this.notice=add(scene.add.text(width/2,height/2,'',{fontFamily:'monospace',fontSize:'24px',fontStyle:'bold',
+      color:'#f0d294',stroke:'#071018',strokeThickness:5,align:'center'}).setOrigin(.5));
   }
   paint(now) {
-    const elapsed = this.race.status === 'finished' ? this.race.finishedMs : rivalElapsed(this.race,now);
+    const elapsed=this.race.status==='finished'?this.race.finishedMs:rivalElapsed(this.race,now);
     this.clock?.setText(rivalTimeLabel(elapsed));
-    const counts = [this.race.clearTimes.length,rivalProgress(this.race.rivalTimes,elapsed)];
-    this.rows?.forEach((row,i) => {
-      row.label.setText((i?this.opponentShort()+' ':'YOU ')+counts[i]+'/7');
-      row.bars.forEach((bar,j) => bar.setFillStyle(j<counts[i] ? (i?0xc6ac70:0x86bad5) : 0x23313a)
-        .setStrokeStyle(1,j===counts[i] ? (i?0xc6ac70:0x86bad5) : 0x3a4c58));
+    const counts=[this.race.clearTimes.length,rivalProgress(this.race.rivalTimes,elapsed)];
+    this.rows?.forEach((row,i)=>{
+      row.label.setText((i?'RIVAL ':'YOU ')+counts[i]+'/7');
+      row.bars.forEach((bar,j)=>bar.setFillStyle(j<counts[i]?row.color:0x17232c,.92)
+        .setStrokeStyle(j===counts[i]?2:1,j===counts[i]?row.color:0x42525c,.98));
     });
   }
   update() {
@@ -245,15 +233,15 @@ export default class RivalsRace {
   }
   showResult() {
     const recorded = this.race.opponentKind === 'recorded-bot';
-    const who = recorded ? (this.race.opponent?.displayName || 'BOT') : 'AI PACE';
+    const who = 'RIVAL';
     this.scene.gameUI.showModal({
       title:({win:'YOU WIN',loss:who.toUpperCase()+' WINS',draw:'PHOTO FINISH',forfeit:'RACE ENDED'})[this.race.result] || 'RACE ENDED',
-      subtitle:recorded ? 'Recorded bot run \u00b7 not a live player' : 'Simulated AI pace \u00b7 not a live player',
+      subtitle:recorded ? 'Recorded rival run · not live' : 'Rival pace trial',
       lines:[
         ...(this.race.course.name ? ['Course: '+this.race.course.name] : []),
         'You: '+this.race.clearTimes.length+'/7 houses \u00b7 '+this.race.retries+' retries',
         'Race time: '+rivalTimeLabel(this.race.finishedMs),
-        (recorded ? who+': ' : 'AI target: ')+rivalTimeLabel(this.race.rivalTimes[RIVAL_HOUSES-1])
+        'Rival: '+rivalTimeLabel(this.race.rivalTimes[RIVAL_HOUSES-1])
           +(recorded && Number.isFinite(this.race.opponent?.retries) ? ' \u00b7 '+this.race.opponent.retries+' retries' : ''),
         ...(this.saved===false ? ['Local result could not be saved.'] : [])
       ],
@@ -291,7 +279,7 @@ export default class RivalsRace {
       if (this.disposed) return;
       if (!bundle) { back('REPLAY UNAVAILABLE'); return; }
       playRivalReplay(this.scene,{
-        bundle, record:this.race.opponentRecord, opponentName:this.race.opponent?.displayName || 'BOT',
+        bundle, record:this.race.opponentRecord, opponentName:'RIVAL',
         playerTimes:this.race.clearTimes, onDone:()=>back('')
       });
     };

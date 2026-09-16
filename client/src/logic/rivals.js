@@ -5,7 +5,20 @@ export const RIVAL_HOUSES = 7;
 export const RIVAL_COUNTDOWN_MS = 3000;
 export const RIVAL_TRANSITION_MS = 180;
 export const RIVAL_RETRY_MS = 650;
-export const RIVAL_HUD_HEIGHT = 84;
+// Rivals chrome overlays the perimeter so phones keep the full 16x35 arena.
+export const RIVAL_HUD_HEIGHT = 0;
+export function rivalHudLayout(width, height) {
+  const w=Math.max(240,Number(width)||240), h=Math.max(360,Number(height)||360);
+  const margin=Math.max(7,Math.min(12,Math.floor(w*.025)));
+  const railW=Math.max(7,Math.min(11,Math.floor(w*.024)));
+  const gap=Math.max(4,Math.min(7,Math.floor(h*.007)));
+  const available=Math.max(168,h-128);
+  const segmentH=Math.max(18,Math.min(52,Math.floor((available-gap*(RIVAL_HOUSES-1))/RIVAL_HOUSES)));
+  const totalH=segmentH*RIVAL_HOUSES+gap*(RIVAL_HOUSES-1);
+  const startY=Math.max(70,Math.floor((h-totalH)/2));
+  const segmentYs=Array.from({length:RIVAL_HOUSES},(_,i)=>startY+totalH-segmentH/2-i*(segmentH+gap));
+  return {leftX:margin+railW/2,rightX:w-margin-railW/2,railW,segmentH,gap,startY,totalH,segmentYs};
+}
 // Existing combat balance is authored at a 24px cell. Race distances must
 // scale with the arena so a narrower viewport does not make bullets faster.
 export function rivalPixels(value, cell) { return value * cell / 24; }

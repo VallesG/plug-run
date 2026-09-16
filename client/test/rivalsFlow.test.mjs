@@ -38,7 +38,7 @@ function setup(state,house=1){
 const course=rules.rivalCourse(77),splits=[10000,20000,30000,40000,50000,60000,70000];
 let state=rules.newRivalRace(course,splits), run=setup(state);
 check('single opening picker',loadouts===1);
-check('AI identity visible',lastPicker.options.subtitle.includes('Simulated AI'));
+check('rival identity visible without implementation labels',lastPicker.options.subtitle.includes('RIVAL') && !/AI|BOT/i.test(lastPicker.options.subtitle));
 check('no replay/account detours',lastPicker.options.allowReplay===false && lastPicker.options.showAccount===false);
 check('opening freezes gameplay',run.scene.roundPausedForMenu && !run.scene.input.keyboard.enabled);
 run.scene.runnerPowersSelected=['phase','dash'];lastPicker.done();
@@ -84,7 +84,7 @@ check('late callbacks cannot change result',saved.length===1 && state.result==='
 check('partial race not offered as ghost',saved[0].record===null);
 check('partial race has no exported run record',saved[0].runRecord===null);
 check('death attempt captured as caught, resize as abandoned',state.capture.attempts.map(a=>a.outcome).join()==='extracted,caught,abandoned');
-check('results expose simulated opponent',run.modals.at(-1).subtitle.includes('not a live player'));
+check('results expose only the rival label',run.modals.at(-1).subtitle==='Rival pace trial');
 
 now=1000;state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash']};
 run=setup(state);
@@ -113,9 +113,9 @@ check('same-millisecond direct finish is a draw',run.scene.rivalRace.result==='d
 
 now=0;state={...rules.newRivalRace(course,splits),fixedPowers:['dash','decoy']};
 const beforeLoadouts=loadouts;run=setup(state);
-check('fixed loadout skips the picker',loadouts===beforeLoadouts && run.modals.at(-1).lines[0]==='Loadout: DASH \u2192 DECOY');
+check('fixed loadout uses the illustrated loadout screen',loadouts===beforeLoadouts+1 && JSON.stringify(lastPicker.options.fixedPowers)==='["dash","decoy"]');
 check('fixed loadout already on the scene',JSON.stringify(run.scene.runnerPowersSelected)==='["dash","decoy"]' && JSON.stringify(state.powers)==='["dash","decoy"]');
-run.modals.at(-1).buttons[0].onClick();
+lastPicker.done();
 check('ready arms the countdown',state.status==='countdown' && state.countdownEndsAt===rules.RIVAL_COUNTDOWN_MS);
 now=rules.RIVAL_COUNTDOWN_MS;run.controller.update();
 check('GO with fixed loadout starts capture',state.status==='racing' && state.capture && state.capture.current && state.capture.current.house===1);
@@ -135,21 +135,21 @@ now=0;state=rules.newRivalRace(course,splits);
 const modalsBefore=(run=setup(state)).modals.length;
 check('loadout waits for the opponent lookup',run.modals.length===modalsBefore && run.controller.notice.text==='FINDING RIVAL');
 await new Promise(r=>setTimeout(r,0));
-check('recorded opponent gets the fixed loadout screen',run.modals.at(-1).lines[0]==='Loadout: DASH \u2192 PHASE' && run.modals.at(-1).subtitle.includes('BOT \u00b7 Street') && run.modals.at(-1).subtitle.includes('recorded'));
+check('recorded opponent gets the illustrated fixed loadout screen',JSON.stringify(lastPicker.options.fixedPowers)==='["dash","phase"]' && lastPicker.options.subtitle.includes('RIVAL') && !/AI|BOT/i.test(lastPicker.options.subtitle));
 check('opponent timeline replaced the simulated pace',JSON.stringify(state.rivalTimes)===JSON.stringify(opponentRecord.clearTimes));
-run.modals.at(-1).buttons[0].onClick();now=rules.RIVAL_COUNTDOWN_MS;run.controller.update();
-check('HUD names the rival as AI RIVAL',run.controller.rows[1].label.text.startsWith('AI RIVAL'));
+lastPicker.done();now=rules.RIVAL_COUNTDOWN_MS;run.controller.update();
+check('HUD names the opponent only as RIVAL',run.controller.rows[1].label.text.startsWith('RIVAL'));
 resolver=()=>null;
 now=70000;run.controller.update();
 check('recorded rival finishing first is a loss at its recorded time',state.result==='loss' && state.finishedMs===63000);
 const result=run.modals.at(-1);
-check('result names the recorded bot honestly',result.title==='BOT \u00b7 STREET WINS' && result.subtitle.includes('Recorded bot run') && result.lines.some(l=>l.startsWith('BOT \u00b7 Street: 1:03.0')));
+check('result uses only the rival label',result.title==='RIVAL WINS' && result.subtitle.includes('Recorded rival run') && result.lines.some(l=>l.startsWith('Rival: 1:03.0')));
 check('watch button offered and keeps the modal',result.buttons[0].label.includes('WATCH RIVAL REPLAY') && result.buttons[0].keepOpen===true);
 check('saved result records the opponent',saved.at(-1).result.opponentKind==='recorded-bot' && saved.at(-1).result.recordingID==='rec-x');
 const vis=[];const fakeModal={setVisible:v=>vis.push(v)};
 state.opponentBundle={segments:[{house:1,attempt:1,startedMs:0,durationMs:1000,outcome:'extracted',replay:{durationMs:1000}}]};
 result.buttons[0].onClick(fakeModal);
-check('watch hides the modal and plays the bundle',vis.join()==='false' && played.length===1 && played[0].bundle===state.opponentBundle && played[0].opponentName==='BOT \u00b7 Street');
+check('watch hides the modal and plays the bundle',vis.join()==='false' && played.length===1 && played[0].bundle===state.opponentBundle && played[0].opponentName==='RIVAL');
 result.buttons[0].onClick(fakeModal);
 check('second tap while watching ignored',played.length===1);
 played[0].onDone();

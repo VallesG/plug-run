@@ -1,5 +1,5 @@
 import {
-  RIVAL_HOUSES, RIVAL_RULES_VERSION, RIVAL_HUD_HEIGHT, rivalCourse, validRivalPowers,
+  RIVAL_HOUSES, RIVAL_RULES_VERSION, RIVAL_HUD_HEIGHT, rivalHudLayout, rivalCourse, validRivalPowers,
   rivalPixels, rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel,
   rivalPathSteps, simulatedRivalTimes, newRivalRace, compatibleRivalRecord, rivalRecord
 } from '../src/logic/rivals.js';
@@ -15,7 +15,13 @@ check('different race has different maps',!same(course.seeds,rivalCourse(12346).
 check('house seeds unique in sample',new Set(course.seeds).size===7);
 check('same fixed grid as gameplay',course.cols===16 && course.rows===35);
 check('early difficulty curve explicit',same(course.scales,[0.6,0.75,0.9,0.95,1,1,1]));
-check('HUD reserves room',RIVAL_HUD_HEIGHT>=80);
+check('HUD overlays instead of shrinking the arena',RIVAL_HUD_HEIGHT===0);
+for (const [w,h] of [[280,480],[390,844],[1024,768]]) {
+  const hud=rivalHudLayout(w,h);
+  check('HUD has seven vertical steps at '+w,hud.segmentYs.length===7 && hud.segmentYs.every(Number.isFinite));
+  check('HUD rails stay on opposite edges at '+w,hud.leftX<30 && hud.rightX>w-30);
+  check('HUD steps stay on screen at '+w,Math.min(...hud.segmentYs)-hud.segmentH/2>=0 && Math.max(...hud.segmentYs)+hud.segmentH/2<=h);
+}
 check('duplicate powers valid',validRivalPowers(['phase','phase']));
 check('unknown power invalid',!validRivalPowers(['phase','teleport']));
 check('exactly two powers',!validRivalPowers(['dash']) && !validRivalPowers([]));

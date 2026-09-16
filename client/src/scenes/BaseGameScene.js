@@ -476,8 +476,9 @@ export class BaseGameScene extends Phaser.Scene {
   computeLayoutFromViewport(){
     const { cols, rows } = this;
     const { width, height } = this.scale.gameSize;
-    const hudHeight = this.runKind === 'rivals' ? RIVAL_HUD_HEIGHT : 0;
-    const arenaHeight = Math.max(1,height-hudHeight);
+    // Rival progress lives over the outer border; it does not tax arena height.
+    const hudHeight = 0;
+    const arenaHeight = Math.max(1,height);
     const cellFit = Math.floor(Math.min(width / cols, arenaHeight / rows));
     const MIN_CELL = this.runKind === 'rivals' ? 8 : 12;
     const cell = Math.max(MIN_CELL, cellFit);

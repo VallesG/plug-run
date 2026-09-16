@@ -38,7 +38,9 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     bg.setInteractive({useHandCursor:true}).on('pointerdown',callback);
     return {bg,text:labelObject};
   };
-  let chosen=[];
+  const fixedPowers=Array.isArray(options.fixedPowers)
+    ? options.fixedPowers.filter(id=>POWERS.some(power=>power.id===id)).slice(0,2) : null;
+  let chosen=fixedPowers?.length===2 ? fixedPowers.slice() : [];
   let started=false;
   const cards=[];
   const slots=[];
@@ -60,7 +62,7 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
       .setStrokeStyle(1,ready?0xd4e5e9:0x3b4b58);
     start.text.setColor(ready?'#10202b':'#82939e')
       .setText(ready?(options.startLabel || 'ENTER HOUSE'):'CHOOSE TWO CHARGES');
-    help.setText(options.helpText ?? (ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.'));
+    help.setText(options.helpText ?? (fixedPowers?'Matched loadout. Same two charges, same order.':(ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.')));
   };
   POWERS.forEach((power,i)=>{
     const r=layout.cards[i],x=left+r.x+r.w/2,y=top+r.y;
@@ -72,7 +74,7 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     text(x,y+r.h*0.84,power.description,r.w<80?9:11,'#98a7ac');
     const badge=text(x+r.w/2-14,y+11,'',9,power.css,true).setVisible(false);
     cards.push({power,bg,badge});
-    bg.setInteractive({useHandCursor:true}).on('pointerdown',()=>{
+    if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',()=>{
       chosen=choosePower(chosen,power.id);refresh();
     });
   });
