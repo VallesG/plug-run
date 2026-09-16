@@ -4,6 +4,7 @@ import { RunnerScene } from './scenes/RunnerScene.js';
 import { PlugScene } from './scenes/PlugScene.js';
 import { TutorialMiniScene } from './scenes/TutorialMiniScene.js';
 import LeaderboardScene from './scenes/LeaderboardScene.js';
+import { WindowScene } from './scenes/WindowScene.js';
 // import { PvpScene } from './scenes/PvpScene.js'; // Future multiplayer
 import rexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
 import { installBotDriver } from './controllers/installBotDriver.js';
@@ -42,7 +43,7 @@ const config = {
     height: window.innerHeight
   },
   // Start at Menu, include tutorial and game scenes
-  scene: [MenuScene, RunnerScene, PlugScene, TutorialMiniScene, LeaderboardScene]
+  scene: [MenuScene, WindowScene, RunnerScene, PlugScene, TutorialMiniScene, LeaderboardScene]
 };
 
 const game = new Phaser.Game(config);

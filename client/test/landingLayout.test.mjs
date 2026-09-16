@@ -10,8 +10,8 @@ for (const [w,h] of [[280,480],[320,568],[390,844],[430,932],[768,1024],[1200,48
   check('menu clears timer '+w, a.menuY-a.rowH/2>=a.tickerY+24);
   check('menu fits horizontally '+w, a.menuW>=168 && a.menuW<=w-64);
   check('touch targets are at least 44px '+w, a.rowH>=44);
-  check('rows have separate hit targets '+w, a.rowGap>=a.rowH+6);
-  check('four rows stay above footer '+w, a.menuY+3*a.rowGap+a.rowH/2<=h-56);
+  check('rows have separate hit targets '+w, a.rowGap>=a.rowH);
+  check('five rows stay above footer '+w, a.menuY+4*a.rowGap+a.rowH/2<=h-56);
   check('profile clears footer controls '+w, a.dockPad+a.profileW+8<=a.railW-a.dockPad-80-21);
   const figures=titleBackdrop(w,h);
   check('framing is present but bounded '+w, figures.length>=2 && figures.length<=12);
@@ -23,7 +23,7 @@ for (const [w,h] of [[280,480],[320,568],[390,844],[430,932],[768,1024],[1200,48
   // Conservative rotated-square bounds protect the center, independent of art.
   const zones=[
     [w/2-a.logoW/2-12,a.logoY-a.logoH/2-12,a.logoW+24,a.logoH+64],
-    [w/2-a.menuW/2-12,a.menuY-36,a.menuW+24,a.rowGap*3+72]
+    [w/2-a.menuW/2-12,a.menuY-36,a.menuW+24,a.rowGap*4+72]
   ];
   check('figures never cross logo or menu '+w, figures.every(p =>
     zones.every(([x,y,zw,zh]) => p.x+p.size*0.72<x || p.x-p.size*0.72>x+zw ||

@@ -1,5 +1,29 @@
 # Plug Run — handoff for a new agent
 
+## The Window initial implementation — onboarding and state only (2026-09-15)
+
+The first safe vertical slice from `THE_WINDOW_DESIGN.md` is now implemented.
+`logic/window.js` owns import-free gang definitions, state normalization,
+one-time gang choice, visit tracking and an idempotent Store Credit
+grant/spend ledger. `utils/windowProgress.js` persists that state under an
+account-scoped versioned key. `WindowScene.js` supplies a code-drawn bodega
+fallback, the three-panel Auntie Ro introduction, gang selection, a read-only
+hub and compact previews for Counter, Jobs, Your Gang and Shelf. First-time
+accounts enter the Window before the menu; after choosing, THE WINDOW is the
+third main-menu row.
+
+**No Store Credit source, mission progress, purchase, gang switch or shared
+standing is connected to gameplay.** Opening the Window only records the
+route-day visit; it does not claim currency. The unsliced PNG concepts remain
+unreferenced. Run the Block and Block Rivals result paths were not changed.
+
+The new pure test has 54 assertions; the adapted five-row landing test has 120
+viewport assertions and keeps all five 44px rows above the footer at 280×480.
+Both passed in the available in-memory JavaScript harness, and all edited
+sources parsed as modules after import/export adaptation. Carbon Black still
+prevents the requested native sandbox process, so `npm run verify`, Vite
+resolution, real Phaser rendering and phone touch/crop review remain unverified.
+
 ## The Window design checkpoint — documentation and concept art only (2026-09-15)
 
 The human approved the direction for a neutral bodega hub, Auntie Ro onboarding,

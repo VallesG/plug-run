@@ -9,8 +9,10 @@ export function landingLayout(width, height) {
   const logoH = logoW * 0.32;
   const logoY = h * 0.20;
   const tickerY = logoY + logoH / 2 + 24;
-  const menuY = Math.max(tickerY + 60, h * 0.43);
-  const rowGap = Math.min(56, Math.max(50, h * 0.065));
+  // Five title rows now include The Window. The compact minimum keeps all
+  // 44px targets above the footer even at the 280x480 contract.
+  const menuY = Math.max(tickerY + 46, h * 0.40);
+  const rowGap = Math.min(54, Math.max(44, h * 0.064));
   return {
     logoW, logoH, logoY, tickerY, menuY, rowGap,
     menuW: Math.min(260, w - 112), rowH: 44,
@@ -30,7 +32,7 @@ export function landingSession(round, mapCount = 15) {
 }
 
 // Fixed framing, not a generated game world. Keep silhouettes clear of both
-// the title lockup and the worst-case four-row menu, including their margins.
+// the title lockup and the worst-case five-row menu, including their margins.
 export function titleBackdrop(width, height) {
   const w = Math.max(280, Number.isFinite(width) ? width : 390);
   const h = Math.max(480, Number.isFinite(height) ? height : 844);
@@ -42,7 +44,7 @@ export function titleBackdrop(width, height) {
   ];
   const clear = [
     {x:w/2-a.logoW/2-12,y:a.logoY-a.logoH/2-12,w:a.logoW+24,h:a.logoH+64},
-    {x:w/2-a.menuW/2-12,y:a.menuY-36,w:a.menuW+24,h:a.rowGap*3+72}
+    {x:w/2-a.menuW/2-12,y:a.menuY-36,w:a.menuW+24,h:a.rowGap*4+72}
   ];
   return points.map(([nx,ny],i) => ({
     x:w*nx,y:h*ny,

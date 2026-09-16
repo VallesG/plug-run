@@ -1,10 +1,26 @@
 # The Window — gangs, contacts and Store Credit design
 
-Status: **approved direction; documentation and concept art only**  
+Status: **initial onboarding/state slice implemented; rewards and commerce remain unimplemented**  
 Written: 2026-09-15  
 Target branch: `claude/input-intent-layer`
 
 This document freezes the product direction agreed in the design conversation before implementation begins. Nothing described here should be treated as shipped until its implementation phase and acceptance checks are complete.
+
+## Current implementation status
+
+The initial phase-one/phase-two seam now exists on `claude/input-intent-layer`:
+
+- pure gang, state, visit and idempotent credit-ledger logic
+- account-scoped versioned persistence
+- automatic first-contact introduction and one-time gang choice
+- a code-drawn responsive Window shell with read-only section previews
+- a permanent THE WINDOW main-menu entry after onboarding
+
+The runtime deliberately does **not** grant Store Credit, advance missions,
+sell/equip cosmetics, switch gangs or show shared standings yet. The PNG concept
+sheets remain unreferenced until they are sliced and optimized. Treat every
+later phase below as unimplemented.
+
 
 ## Product goal
 

@@ -1,4 +1,5 @@
 import { getJourneyProgress } from '../utils/journeyProgress.js';
+import { hasWindowOnboarding } from '../utils/windowProgress.js';
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
@@ -67,6 +68,12 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(){
+    // First contact is a one-time account-scoped gate. Returning from The
+    // Window cannot loop because gang choice persists before leaving it.
+    if (!hasWindowOnboarding()) {
+      this.scene.start('WINDOW', { firstVisit: true });
+      return;
+    }
     const W = this.scale.width, H = this.scale.height;
     // Night street background: asphalt road, curbs, scrolling lane dashes
     this.drawStreetBackground();
@@ -109,6 +116,13 @@ export class MenuScene extends Phaser.Scene {
 
     // Help button — explains the premise/leaderboard/replays for newcomers
     this.helpBtn = this.makeIconButton('?', () => this.openHelp());
+
+    // The Window is the neutral story/economy hub. Phase one only exposes
+    // onboarding and read-only previews; rewards are not wired here.
+    this.windowBtn = this.makeTitleOption('The Window', () => {
+      trackNavigation('the_window');
+      this.scene.start('WINDOW');
+    });
 
     // Tutorial shares the quiet title-menu treatment
     this.tutorialBtn = this.makeTutorialButton();
@@ -2744,9 +2758,10 @@ export class MenuScene extends Phaser.Scene {
     // Bottom elements
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
 
-    const tutorialRow = 2;
-    this.tutorialBtn?.setPosition(W/2, brand.menuY + tutorialRow * brand.rowGap);
-    this.settingsBtn?.setPosition(W/2, brand.menuY + (tutorialRow + 1) * brand.rowGap);
+    const windowRow = 2;
+    this.windowBtn?.setPosition(W/2, brand.menuY + windowRow * brand.rowGap);
+    this.tutorialBtn?.setPosition(W/2, brand.menuY + (windowRow + 1) * brand.rowGap);
+    this.settingsBtn?.setPosition(W/2, brand.menuY + (windowRow + 2) * brand.rowGap);
 
     // Bottom widgets — anchored to the ROAD STRIP, not the screen edges,
     // so on wide desktop monitors the chip and buttons stay together
