@@ -1,5 +1,23 @@
 # Plug Run — handoff for a new agent
 
+## The Board runner-only cleanup (2026-09-16)
+
+The leaderboard still exposed the shelved Plug role, used hard-coded desktop
+columns and let top-20 rows fall below short phone screens. It is now a focused
+runner board with TODAY / ALL-TIME tabs, STASH / REP sorting, a personal-rank
+chip, responsive columns, alternating/highlighted rows, explicit offline and
+empty states, and screen-sized pagination. The blue utility styling is replaced
+with the Window-era ink, cream, gold and teal grammar. Desktop social/stat
+sidebars were removed from this scene so the board owns one hierarchy.
+
+`logic/leaderboard.js` keeps viewport geometry and paging import-free. Its new
+headless test has 53 assertions across six viewports, including proof that the
+maximum row count fits and the next row does not. The rewritten scene parses in
+the adapted harness. Native `npm run verify`, real API population, page taps
+and phone/desktop rendering remain unverified under the Carbon Black process
+restriction. Leaderboard storage/query semantics were not changed; the scene
+still asks the existing global APIs for at most 20 runner entries.
+
 ## Landing wordmark and current-rules help (2026-09-15)
 
 The human reported that the PLUG RUN lettering looked pixelated and that HOW IT
