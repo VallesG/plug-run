@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-16T04:40:04.241Z",
+ "generatedAt": "2026-09-16T04:43:19.033Z",
  "courses": [
   {
    "slot": 1,
@@ -93,12 +93,14 @@
    "slot": 5,
    "name": "Switchyard Seven",
    "courseID": "rivals-v1-2143714553",
-   "opponents": 4,
+   "opponents": 5,
    "tiers": {
+    "ace": 1,
     "hustler": 2,
     "street": 2
    },
    "elapsedMs": [
+    150728.59999999963,
     327624.7000000002,
     221026,
     447671.2999999998,
