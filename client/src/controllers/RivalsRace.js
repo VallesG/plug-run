@@ -1,6 +1,6 @@
 import {
   RIVAL_HOUSES, RIVAL_COUNTDOWN_MS, RIVAL_TRANSITION_MS, RIVAL_RETRY_MS,
-  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord
+  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot
 } from '../logic/rivals.js';
 import { saveRivalResult } from '../utils/rivalSession.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
@@ -59,7 +59,7 @@ export default class RivalsRace {
     const text = (x,y,value,color='#adbdc5',size=11) => add(scene.add.text(x,y,value,{
       fontFamily:'monospace',fontSize:size+'px',color
     }).setOrigin(0,0.5));
-    text(left+12,16,'BLOCK RIVALS','#e5dec8',12);
+    text(left+12,16,this.race.course.name ? this.race.course.name.toUpperCase() : 'BLOCK RIVALS','#e5dec8',12);
     this.clock = text(left+w-124,16,'0:00.0','#e5dec8',12);
     const quit = add(scene.add.rectangle(left+w-28,18,48,32,0x141e28,1)).setInteractive({useHandCursor:true});
     text(left+w-45,18,'QUIT','#aeb9c1',10);
@@ -172,7 +172,7 @@ export default class RivalsRace {
     this.paint(now);
     const record=rivalRecord(this.race);
     this.saved=saveRivalResult({
-      courseID:this.race.course.id,result,elapsedMs:this.race.finishedMs,
+      courseID:this.race.course.id,courseSlot:this.race.course.slot ?? null,result,elapsedMs:this.race.finishedMs,
       houses:this.race.clearTimes.length,retries:this.race.retries,opponentKind:'simulated-ai'
     },record);
     this.showResult();
@@ -182,6 +182,7 @@ export default class RivalsRace {
       title:({win:'YOU WIN',loss:'AI PACE WINS',draw:'PHOTO FINISH',forfeit:'RACE ENDED'})[this.race.result] || 'RACE ENDED',
       subtitle:'Simulated AI pace · not a live player',
       lines:[
+        ...(this.race.course.name ? ['Course: '+this.race.course.name] : []),
         'You: '+this.race.clearTimes.length+'/7 houses · '+this.race.retries+' retries',
         'Race time: '+rivalTimeLabel(this.race.finishedMs),
         'AI target: '+rivalTimeLabel(this.race.rivalTimes[RIVAL_HOUSES-1]),
@@ -192,7 +193,7 @@ export default class RivalsRace {
           mode:'pve',role:'runner',runKind:'rivals',rivalSeed:this.race.course.seed
         })},
         {label:'NEW RACE',variant:'secondary',onClick:()=>this.scene.scene.restart({
-          mode:'pve',role:'runner',runKind:'rivals'
+          mode:'pve',role:'runner',runKind:'rivals',rivalSlot:nextRivalSlot(this.race.course.slot)
         })},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]

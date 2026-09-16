@@ -26,6 +26,45 @@ export function rivalCourse(seed) {
     scales: [0.6, 0.75, 0.9, 0.95, 1, 1, 1]
   };
 }
+// FIXED COURSE POOL. One course is one complete seven-house race, never seven
+// alternate seeds for a single house. Root seeds are rivalHash(DOMAIN + slug)
+// and are pinned here as literals: if the hash, the domain or a name ever
+// drifts, the test that recomputes them fails instead of every recorded
+// opponent silently becoming ineligible. This is independent of the Daily
+// route/seed arithmetic on purpose.
+export const RIVAL_COURSE_POOL_DOMAIN = 'plug-run/rivals/course-pool/v1/';
+export function rivalSlug(name) { return String(name).trim().toLowerCase().replace(/\s+/g, '-'); }
+const POOL_V1 = [
+  ['Low End Rush', 2722422571], ['Copper Climb', 2917822448], ['Freight Run', 1245351574],
+  ['Afterglow Mile', 2476136539], ['Switchyard Seven', 2143714553], ['Lastlight Loop', 2077357177],
+  ['Blacktop Crown', 2334749748]
+];
+export const RIVAL_COURSE_POOL = Object.freeze(POOL_V1.map(([name, seed], i) => Object.freeze({
+  slot: i + 1, name, slug: rivalSlug(name), seed, courseID: RIVAL_RULES_VERSION + '-' + seed,
+  rulesVersion: RIVAL_RULES_VERSION, enabled: true
+})));
+export function enabledRivalCourses(pool = RIVAL_COURSE_POOL) { return pool.filter(c => c.enabled); }
+export function rivalPoolEntry(slot, pool = RIVAL_COURSE_POOL) {
+  return pool.find(c => c.slot === slot && c.enabled) ?? null;
+}
+export function rivalPoolEntryBySeed(seed, pool = RIVAL_COURSE_POOL) {
+  return pool.find(c => c.seed === (seed >>> 0) && c.enabled) ?? null;
+}
+// New Race policy: rotate to the next enabled slot after the one just raced,
+// wrapping at the end. Unknown or missing history starts at the first enabled
+// slot. Deterministic so a test can predict it and a player learns the order.
+export function nextRivalSlot(afterSlot, pool = RIVAL_COURSE_POOL) {
+  const enabled = enabledRivalCourses(pool);
+  if (!enabled.length) return null;
+  const idx = enabled.findIndex(c => c.slot === afterSlot);
+  return enabled[idx < 0 ? 0 : (idx + 1) % enabled.length].slot;
+}
+// A course built from the pool carries its slot and display name; a course
+// built from a bare seed (legacy rematch data) does not.
+export function rivalPoolCourse(slot, pool = RIVAL_COURSE_POOL) {
+  const entry = rivalPoolEntry(slot, pool);
+  return entry ? { ...rivalCourse(entry.seed), slot: entry.slot, name: entry.name } : null;
+}
 export function validRivalPowers(powers) {
   return Array.isArray(powers) && powers.length === 2 && powers.every(p => POWERS.includes(p));
 }

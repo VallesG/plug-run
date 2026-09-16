@@ -96,6 +96,7 @@ run.modals.at(-1).buttons[0].onClick();
 check('rematch keeps seed, drops old clock',run.restarts.at(-1).rivalSeed===77 && !run.restarts.at(-1).rivalRace);
 run.modals.at(-1).buttons[1].onClick();
 check('new race has no pinned seed',run.restarts.at(-1).rivalSeed===undefined);
+check('new race asks for the next pool slot',run.restarts.at(-1).rivalSlot===rules.nextRivalSlot(course.slot));
 
 now=1000;state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['phase','phase'],clearTimes:[1,2,3,4,5,6]};
 run=setup(state,7);now=70000;run.controller.clearHouse();
