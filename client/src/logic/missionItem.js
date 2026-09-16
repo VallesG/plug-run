@@ -117,3 +117,40 @@ export function missionObject(contactID) {
 export function missionSucceeded({ tookItem, tookRealStash, extracted } = {}) {
   return Boolean(tookItem && tookRealStash && extracted);
 }
+
+/** Mandatory-job policy is confined to Journey; race recordings stay unchanged. */
+export function missionExitAllowed({ mode, runKind, role, required, tookItem, hasStash } = {}) {
+  if (mode !== 'pve' || runKind !== 'journey' || role !== 'runner' || !required) return true;
+  return Boolean(tookItem && hasStash);
+}
+
+/** Normal seeded placement first; a tiny valid room must not become unwinnable. */
+export function placeRequiredMissionItem(options = {}) {
+  const placed = placeMissionItem(options);
+  if (placed) return placed;
+  const { grid, spawn } = options;
+  if (!spawn || !Array.isArray(grid) || grid[spawn.y]?.[spawn.x] !== FLOOR) return null;
+  return { x: spawn.x, y: spawn.y, fromSpawn: 0, version: MISSION_ITEM_VERSION };
+}
+
+// Stylized item foley, not random tones or downloaded samples. Seconds/Hz.
+const tone = (type, hz, endHz, delay, duration, volume) =>
+  Object.freeze({ type, hz, endHz, delay, duration, volume });
+const PICKUP_SOUNDS = Object.freeze({
+  keys: Object.freeze([
+    tone('sine', 2400, 1800, 0, 0.08, 0.3),
+    tone('sine', 3100, 2200, 0.035, 0.07, 0.2),
+    tone('sine', 1800, 1300, 0.07, 0.1, 0.25)
+  ]),
+  marker: Object.freeze([
+    tone('square', 650, 190, 0, 0.025, 0.25),
+    tone('triangle', 1700, 900, 0.04, 0.045, 0.22)
+  ]),
+  tube: Object.freeze([
+    tone('triangle', 210, 100, 0, 0.075, 0.55),
+    tone('triangle', 440, 180, 0.025, 0.09, 0.2)
+  ])
+});
+export function missionPickupSound(objectID) {
+  return Object.prototype.hasOwnProperty.call(PICKUP_SOUNDS, objectID) ? PICKUP_SOUNDS[objectID] : null;
+}

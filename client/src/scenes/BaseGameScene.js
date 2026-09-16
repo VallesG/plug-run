@@ -25,7 +25,7 @@ import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundComple
 import RunForensics from '../logic/runForensics.js';
 import { chooseAlternateSpawn } from '../logic/spawnChoice.js';
 import { hasDualOpponent, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
-import { placeMissionItem, missionItemSeed, missionObject, MISSION_ITEM_COLOR } from '../logic/missionItem.js';
+import { placeRequiredMissionItem, missionExitAllowed, missionItemSeed, missionObject, MISSION_ITEM_COLOR } from '../logic/missionItem.js';
 import { activeMissionContact } from '../logic/contacts.js';
 import { getWindowState } from '../utils/windowProgress.js';
 import { PALETTE } from '../logic/palette.js';
@@ -1445,10 +1445,17 @@ export class BaseGameScene extends Phaser.Scene {
   // REAL / BUNK STASH PATCH: car beacon to guide extraction after pickup
   // REAL / BUNK STASH PATCH: car beacon to guide extraction after pickup (delegated to VFX controller)
   showCarBeacon(){
+    if (!this.canLeaveMissionHouse()) return;
     this.vfx.showCarBeacon();
   }
   hideCarBeacon(){
     this.vfx.hideCarBeacon();
+  }
+
+  canLeaveMissionHouse(){
+    return missionExitAllowed({ mode: this.mode, runKind: this.runKind, role: this.role,
+      required: this.requiresMissionItem || Boolean(this.missionObject),
+      tookItem: this.hasMissionItem, hasStash: this.hasStash });
   }
 
   startExtractionSequence(){
@@ -1579,6 +1586,8 @@ export class BaseGameScene extends Phaser.Scene {
     this.missionHalo = null;
     this._drawMissionHalo = null;
     this.hasMissionItem = false;
+    this.requiresMissionItem = false;
+    this._missionExitHintAt = -Infinity;
     this.missionObject = null;
     if (this.mode !== 'pve' || this.runKind !== 'journey' || this.role !== 'runner') return;
 
@@ -1588,14 +1597,17 @@ export class BaseGameScene extends Phaser.Scene {
     const object = missionObject(who.id);
     if (!object) return;
 
-    const cell = placeMissionItem({
+    // Set the requirement before placement: missing art can never waive a job.
+    this.requiresMissionItem = true;
+    this.missionObject = object;
+    const cell = placeRequiredMissionItem({
       grid: this.grid,
       spawn: this.runnerSpawnCell,
       stash: this.stashCell, extract: this.extractCell,
       egress: this.egress?.entry,
       seed: missionItemSeed(this.seed, this.blockIndex || 1, this.pveRound || 1)
     });
-    if (!cell) return;
+    if (!cell) { console.warn('[Mission] No valid runner floor for required item'); return; }
 
     this.missionObject = object;
     this.missionCell = cell;
@@ -1637,15 +1649,15 @@ export class BaseGameScene extends Phaser.Scene {
   /** Pickup. Additive: it never touches hasStash, the bag or the stash count. */
   checkMissionItemPickup(){
     const item = this.missionItem;
-    if (!item || this.hasMissionItem || this.roundOver) return;
+    if (!item || this.hasMissionItem || this.roundOver || this.roundPausedForMenu) return;
     const runner = this.attacker;
     if (!runner || !runner.active || runner.visible === false) return;
     if (!rectsOverlap(runner, item)) return;
     this.hasMissionItem = true;
     this.missionHalo?.clear?.();
     this._drawMissionHalo = null;
-    try { this.audio?.play('pickup', { volume: 0.85, rateRand: 0.04 }); } catch {}
-    const label = this.add.text(item.x, item.y - this.cell * 0.65, this.missionObject.short, {
+    try { this.audio?.playMissionItemPickup?.(this.missionObject.id); } catch {}
+    const label = this.add.text(item.x, item.y - this.cell * 0.65, this.missionObject.short + ' COLLECTED', {
       fontSize: Math.max(13, Math.floor(this.cell * 0.5)) + 'px',
       color: '#c9a6f5', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(2000);
@@ -1653,7 +1665,28 @@ export class BaseGameScene extends Phaser.Scene {
       ease: 'Cubic.easeOut', onComplete: () => label.destroy() });
     this.tweens.add({ targets: item, alpha: 0, scale: 0.7, duration: 260, ease: 'Cubic.easeIn',
       onComplete: () => { item.destroy(); this.missionItem = null; } });
-    this.spawnDust?.(item.x, item.y, 6);
+    const pulse = this.add.circle(item.x, item.y, this.cell * 0.45, MISSION_ITEM_COLOR, 0)
+      .setStrokeStyle(2, MISSION_ITEM_COLOR, 0.9).setDepth(2000);
+    this.tweens.add({ targets: pulse, scale: 1.8, alpha: 0, duration: 360,
+      onComplete: () => pulse.destroy() });
+    if (this.hasStash) this.showCarBeacon();
+  }
+
+  /** A quiet, throttled hint; no modal, no pause, no extraction side effects. */
+  showMissionExitHint(){
+    const now = this.time?.now ?? performance.now();
+    if (now - this._missionExitHintAt < 1600) return;
+    this._missionExitHintAt = now;
+    const label = this.add.text(this.cameras.main.centerX,
+      Math.max(this.cell * 2, (this.extract?.y ?? this.attacker?.y ?? this.cameras.main.centerY) - this.cell * 2),
+      this.hasMissionItem ? 'GRAB THE STASH BEFORE YOU LEAVE' :
+        (this.missionObject?.label || 'JOB ITEM') + ' REQUIRED\nFind the violet case', {
+        fontFamily: 'Arial, sans-serif', fontSize: '13px', fontStyle: 'bold',
+        color: '#d5b2ff', stroke: '#080b0d', strokeThickness: 3, align: 'center',
+        wordWrap: { width: Math.min(240, this.scale.gameSize.width - 40) }
+      }).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({ targets: label, alpha: 0, duration: 1400, ease: 'Cubic.easeIn',
+      onComplete: () => label.destroy() });
   }
 
   addCarryPackage(){
@@ -2557,12 +2590,14 @@ export class BaseGameScene extends Phaser.Scene {
         // The other runner can wait at the car but doesn't need to be there
         const carrier = this.stashCarrier;
         if (carrier && carrier.active && carrier.hp > 0 && overlaps(carrier, this.extract)) {
-          return this.startExtractionSequence();
+          if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
+          this.showMissionExitHint();
         }
       } else {
         // Single AI mode: Just one runner needs to extract
         if (overlaps(this.attacker, this.extract)) {
-          return this.startExtractionSequence();
+          if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
+          this.showMissionExitHint();
         }
       }
     }

@@ -6,6 +6,19 @@ Target branch: `claude/input-intent-layer`
 
 This document freezes the product direction agreed in the design conversation before implementation begins. Nothing described here should be treated as shipped until its implementation phase and acceptance checks are complete.
 
+## Mandatory crew job at the house exit (2026-09-16)
+
+The human confirmed the briefed object is vital: pickup of the violet case
+AND the stash is required to leave that house. This supersedes the optional
+object policy below. Completing the block therefore includes that job before
+the chapter advances. Existing saved progress past the job house is retained.
+No Cash or bonus REP is wired. Floor art remains a small violet case; pickup
+adds a labeled pulse and synthesized item-specific foley. Dialogue says
+stash/bag without the real qualifier. Duo completion gets bounded comic glints.
+
+See HANDOFF_CODEX.md's current top note for exact gating and verification limits.
+
+
 ## Current crew-story slice (2026-09-16)
 
 Run the Block now has independent local crew chapters, consulting BEFORE the

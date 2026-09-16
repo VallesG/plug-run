@@ -221,6 +221,20 @@ export function showContactPanel(scene, cue, onDone) {
       g.lineStyle(1, cue.contact.accent, 0.35).lineBetween(left + i * roofW, y, left + (i + 1) * roofW - 3, y);
       g.fillStyle(0xe8c67a, 0.7).fillRect(left + i * roofW + 9, y + 12, 4, 6);
     }
+    // Small deterministic comic glints, not a particle storm over the faces.
+    for (const [i, point] of [[0.13, 0.27], [0.87, 0.3], [0.22, 0.42], [0.79, 0.46], [0.5, 0.24]].entries()) {
+      const flare = track(scene.add.graphics().setScrollFactor(0).setDepth(DEPTH + 0.7));
+      const x = left + a.panelW * point[0], y = a.panelTop + a.panelH * point[1];
+      const r = Math.max(4, a.panelW * 0.016);
+      flare.lineStyle(2, COLORS.cream, 0.95);
+      flare.lineBetween(x - r, y, x + r, y);
+      flare.lineBetween(x, y - r, x, y + r);
+      flare.lineStyle(1, cue.contact.accent, 0.8);
+      flare.lineBetween(x - r * 0.55, y - r * 0.55, x + r * 0.55, y + r * 0.55);
+      flare.setAlpha(0.1);
+      scene.tweens.add({ targets: flare, alpha: 0.95, duration: 300, delay: i * 100,
+        yoyo: true, repeat: 2, ease: 'Sine.easeInOut' });
+    }
     track(scene.add.text(a.cx, a.panelTop + a.panelH * 0.13, '15 / 15', {
       fontFamily: 'Arial, sans-serif', fontSize: Math.round(a.panelW * 0.095) + 'px',
       fontStyle: 'bold', color: '#f1dfb0', stroke: '#080b0d', strokeThickness: 4

@@ -1,5 +1,66 @@
 # Plug Run — handoff for a new agent
 
+## Crew job items are mandatory at the house exit — Codex (2026-09-16)
+
+Latest user decision supersedes ALL optional-job/story wording below:
+the briefed object must be picked up WITH the stash before that house can
+finish. It is vital to the crew story, not an optional bonus pickup.
+
+- Journey job house (currently 9) requires both pickups. The authoritative
+  extraction guard runs before roundOver, replay finalization, stash/REP,
+  checkpoints or story writes. Item-only, stash-only and bunk-only cannot
+  clear the job house. No new reward or second stash is introduced.
+- The scene also checks readiness at the car WITHOUT returning early when
+  denied: combat/forensics/unstuck/melee later in the frame must still run.
+  Never use an unconditional return from a rejected extraction check.
+- A quiet violet-case reminder is throttled, not a blocking modal. The
+  car beacon waits until the player has both pickups.
+- `requiresMissionItem` and the object are set BEFORE placement so a missing
+  render cannot waive the requirement. Normal seeded placement is unchanged.
+  A valid tiny room falls back to its reachable spawn cell rather than
+  becoming unwinnable; an invalid/non-floor spawn still returns null honestly.
+- Death/retry resets the item; placement stays deterministic. Paused contact/
+  entrance/loadout screens cannot collect an item.
+- Keep the compact code-drawn violet case/ring on the floor, no detailed SVG
+  prop. Pickup fades the case, pulses violet, names the collected item and
+  plays stylized item foley: key rattle, marker cap click or tube tap.
+  Sound is supplemental, never the only confirmation. Foley uses small
+  deterministic oscillator plans, no downloaded samples or extra served
+  raster assets. It respects SFX mute/master/SFX volume, cleans audio nodes,
+  debounces and falls back to the existing pickup sound without WebAudio.
+  These are synthesized approximations, not recorded real-item samples.
+- Crew dialogue says stash/bag, never real stash/bag. Briefings require both
+  pickups and no longer suggest leaving the job object behind.
+- The duo finish cover gets five short deterministic comic glints per page.
+  They are tracked/killed with the panel, not an unbounded particle effect.
+- Existing checkpoints already past the job house are not rewound or invalidated.
+  Historical missed-item records remain readable; fresh gated job clears
+  cannot produce a missed-item outcome. Chapters still advance on the final
+  house; new plays necessarily passed the mandatory job-house gate first.
+
+Import-free `logic/missionItem.js` owns exit eligibility, required placement
+fallback and item sound plans. Runtime wiring is in BaseGameScene,
+ProgressionManager and AudioManager; celebration rendering is ContactPanel.
+New `test/missionExit.test.mjs` and `test/missionFoley.test.mjs` are registered
+in npm test. Placement, story-vocabulary and cover lifecycle tests extended.
+
+### Proof and remaining verification
+
+Adapted V8: 568 placement assertions (sixty seeded houses proved unchanged),
+62 exit/real-pickup/frame assertions, 32 foley/settings assertions,
+993 contacts, 4343 story, 71 flow, 42 panel, 242 steering and 16 storage:
+6369 targeted assertions. Old extraction code fails by starting before the
+item is collected; old update code fails the continued-frame check.
+Seven adapted import/binding parses passed.
+
+No sandbox/process attempts. Native npm run verify, .mjs resolution, Vite/
+full regression, actual phone pickup/audio/locked-car combat and sparkles
+remain UNVERIFIED. Run verify where allowed, including rivalBank.test.mjs.
+Phone review: job house 9, each item pickup, wait at car without item, death/
+retry, after-check-in steering, complete all fifteen houses and duo flare.
+No maze/RNG/collision, race rules/timing, bank, Cash or bonus REP changes.
+Master and the 55-record Rivals bank are untouched.
+
 ## Contact-to-house touch steering regression — fixed (2026-09-16)
 
 The human reported a runner that could not steer after later contact/praise

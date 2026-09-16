@@ -45,6 +45,8 @@ for (const gangID of gangs) {
       check('mission and earned praise unchanged ' + gangID + '/' + chapter + '/' + beat.id, beat.id === 'open' || pages[0] === cue.text);
       texts.push(...pages);
     }
+    check('dialogue uses plain stash/bag vocabulary ' + gangID + '/' + chapter,
+      texts.every(text => !/real (?:stash|bag)/i.test(text)));
     for (const [w, h] of [[280,480],[320,568],[390,844],[414,896],[768,1024],[1440,900]]) {
       for (const text of texts) {
         const pages = contactDialoguePages(text, w, h);

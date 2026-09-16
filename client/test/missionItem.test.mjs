@@ -1,7 +1,7 @@
 // Where the job object lands: reachable, deterministic, out of the way, and
 // proved against the real generator on every house of a real block.
 import {
-  MISSION_ITEM_COLOR, missionItemSeed, placeMissionItem, missionObject, missionSucceeded, MISSION_OBJECTS
+  MISSION_ITEM_COLOR, missionItemSeed, placeMissionItem, placeRequiredMissionItem, missionObject, missionSucceeded, MISSION_OBJECTS
 } from '../src/logic/missionItem.js';
 import { generateSquareMaze } from '../src/utils/mazeGenerator.js';
 import { createSeededRNG } from '../src/utils/seededRandom.js';
@@ -77,9 +77,12 @@ for (let block = 1; block <= 4; block++) {
       extract: arena.objectives.extract, egress: arena.egress.entry,
       seed: missionItemSeed(seed, block, h)
     };
+    const gridBefore = JSON.stringify(arena.grid);
     const spot = placeMissionItem(args);
     const tag = 'block ' + block + ' house ' + h;
     check('every house can hold a job: ' + tag, !!spot);
+    check('mandatory placement preserves the real seeded house: ' + tag,
+      same(spot, placeRequiredMissionItem(args)) && JSON.stringify(arena.grid) === gridBefore);
     placed++;
     check('the item sits on floor: ' + tag, arena.grid[spot.y][spot.x] === 0);
     check('the runner can reach it: ' + tag, walk(arena.grid, arena.spawns.runner, spot));

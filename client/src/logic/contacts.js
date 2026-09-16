@@ -81,8 +81,8 @@ const CONTACT_LIST = [
     background: '/art/the-window/contacts/locations/mags-planning.webp',
     heightFraction: 0.58, baseFraction: 0.75, foregroundStartFraction: 0.65,
     lines: {
-      brief: 'There is a document tube in this house. Bring it out with the real stash — not instead of it.',
-      reminder: 'Tube if you can. The real bag is still what moves the block forward.'
+      brief: 'The document tube is in this house. Grab it and the stash; you need both to leave.',
+      reminder: 'Tube and bag. Find the violet case before you head for the car.'
     }
   },
   {
@@ -126,8 +126,8 @@ const CONTACT_LIST = [
     background: '/art/the-window/contacts/locations/rook-maintenance.webp',
     heightFraction: 0.6, baseFraction: 0.76, foregroundStartFraction: null,
     lines: {
-      brief: 'Service keys are in that house. Take them and the real stash — either one alone wastes the trip.',
-      reminder: 'Keys if you can. The real bag still counts even if the keys stay behind.'
+      brief: 'Service keys are in the violet case. Grab them and the stash; you need both to leave.',
+      reminder: 'Keys and bag. The car is not leaving without both.'
     }
   },
   {
@@ -158,7 +158,7 @@ const CONTACT_LIST = [
       },
       tease: 'Sol wants you for something. He only asks runners he expects to finish.',
       debriefWin: 'Sol got his marker and you kept the bag. That is the version people repeat.',
-      debriefMiss: 'You left the marker behind, but the bag counts. Finish the block; Sol can work around it.'
+      debriefMiss: 'That earlier job slipped past us. Keep the bags coming; Sol will have another setup next block.'
     }
   },
   {
@@ -171,7 +171,7 @@ const CONTACT_LIST = [
     background: '/art/the-window/contacts/locations/sol-race.webp',
     heightFraction: 0.6, baseFraction: 0.76, foregroundStartFraction: null,
     lines: {
-      brief: 'My paint marker is sitting in that house. Grab it and the real stash on the way out.',
+      brief: 'My paint marker is in the violet case. Grab it and the stash before you head for the car.',
       reminder: 'Marker and bag. Two pickups, one exit.'
     }
   }

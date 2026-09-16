@@ -1,3 +1,4 @@
+import { missionExitAllowed } from '../logic/missionItem.js';
 import { advanceJourney } from '../logic/worldBlocks.js';
 import { saveJourneyProgress } from '../utils/journeyProgress.js';
 import RepTracker from '../utils/repTracker.js';
@@ -71,6 +72,14 @@ export default class ProgressionManager {
   async startExtractionSequence() {
     if (this.scene.runKind === 'rivals') return this.scene.rivals?.clearHouse();
     if (this.scene.roundOver) return;
+    if (!missionExitAllowed({
+      mode: this.scene.mode, runKind: this.scene.runKind, role: this.scene.role,
+      required: this.scene.requiresMissionItem || Boolean(this.scene.missionObject),
+      tookItem: this.scene.hasMissionItem, hasStash: this.scene.hasStash
+    })) {
+      this.scene.showMissionExitHint?.();
+      return false;
+    }
 
     // Set roundOver immediately to prevent multiple calls from update loop
     this.scene.roundOver = true;

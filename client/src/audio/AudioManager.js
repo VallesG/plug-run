@@ -1,3 +1,4 @@
+import { missionPickupSound } from '../logic/missionItem.js';
 import Phaser from 'phaser';
 
 // Lightweight audio scaffold with graceful fallbacks (no external assets required)
@@ -180,6 +181,36 @@ export class AudioManager {
       osc.start();
       osc.stop(ctx.currentTime + durMs / 1000);
     } catch {}
+  }
+
+  /** Short, distinct item foley; honours existing SFX mute/volume settings. */
+  playMissionItemPickup(objectID) {
+    const notes = missionPickupSound(objectID);
+    if (!notes || this.isMuted() || this._volSfx <= 0) return false;
+    if (!this.canPlay('mission_' + objectID)) return false;
+    const ctx = this.sound?.context || this._ctx;
+    if (!ctx?.createOscillator || ctx.state === 'suspended') {
+      this.play('pickup', { volume: 0.6 });
+      return false;
+    }
+    try {
+      for (const note of notes) {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        const start = ctx.currentTime + note.delay, end = start + note.duration;
+        osc.type = note.type;
+        osc.frequency.setValueAtTime(note.hz, start);
+        osc.frequency.exponentialRampToValueAtTime(note.endHz, end);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(Math.max(0.0001,
+          this.masterVolume * this._volSfx * note.volume * 0.35), start + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        osc.connect(gain);
+        gain.connect(this._busSfx?.context === ctx ? this._busSfx : ctx.destination);
+        osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch {} };
+        osc.start(start); osc.stop(end);
+      }
+      return true;
+    } catch { return false; }
   }
 
   ensureUnlocked(scene) {

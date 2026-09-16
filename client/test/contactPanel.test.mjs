@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../src/controllers/ContactPanel.js', import
   .replace(/^import[\s\S]*?;\s*/gm, '').replace(/export default showContactPanel;/, '').replace('export function', 'function');
 const show = new Function('CONTACTS', 'contactPanelLayout', 'contactDialoguePages', source + '\nreturn showContactPanel;')(CONTACTS, contactPanelLayout, contactDialoguePages);
 function stub(existing) {
-  const nodes = [], timers = [], removed = [], frames = [], requests = [], handlers = {};
+  const nodes = [], timers = [], removed = [], frames = [], requests = [], handlers = {}, tweens = [];
   const node = (kind, args = []) => {
     const target = { kind, args, active: true, handlers: {},
       destroy() { this.active = false; },
@@ -22,7 +22,7 @@ function stub(existing) {
   const scene = {
     scale: { gameSize: { width: 280, height: 480 } },
     add: new Proxy({}, { get: (_, kind) => (...args) => node(kind, args) }),
-    make: { graphics: () => node('mask') }, tweens: { killTweensOf() {} },
+    make: { graphics: () => node('mask') }, tweens: { killTweensOf() {}, add: config => tweens.push(config) },
     textures: { exists: key => existing.has(key), remove: key => { removed.push(key); existing.delete(key); },
       get: key => ({ has: () => false, add: (...args) => frames.push([key, ...args]), getSourceImage: () => ({ width: 1024, height: 1536 }) }) },
     time: { delayedCall: (ms, fn) => { timers.push(fn); return { remove() {} }; } },
@@ -35,7 +35,7 @@ function stub(existing) {
     check('one active page advance', buttons.length === 1);
     buttons[0].handlers.pointerup();
   };
-  return { scene, nodes, removed, frames, requests, handlers, tap };
+  return { scene, nodes, removed, frames, requests, handlers, tap, tweens };
 }
 for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
   const pair = gangContacts(gangID);
@@ -50,6 +50,8 @@ for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
   check('celebration uses both approved portrait frames ' + gangID, data.nodes.filter(n => n.active && n.kind === 'image').length === 2);
   check('pair scene downloads no new background raster ' + gangID, data.requests.length === 0);
   check('finish text is live, not baked in art ' + gangID, data.nodes.some(n => n.active && n.kind === 'text' && n.args[2] === '15 / 15'));
+  check('celebration has bounded comic sparkles ' + gangID,
+    data.tweens.length === 5 && data.tweens.every(t => t.yoyo && t.repeat === 2 && t.duration === 300));
   data.tap();
   check('first contact page does not start next block ' + gangID, advanced === 0);
   check('second contact is the speaker ' + gangID, data.nodes.some(n => n.active && n.kind === 'text' && n.args[2] === pair.secondary.name.toUpperCase()));
