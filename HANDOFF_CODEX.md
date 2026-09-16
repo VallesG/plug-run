@@ -1,5 +1,17 @@
 # Plug Run — handoff for a new agent
 
+## Auntie Ro mobile counter occlusion (2026-09-15)
+
+The human approved the mobile art direction but Ro still read as floating over
+the room. Portrait layouts now position her from the bodega's measured counter
+line and redraw the matching lower counter crop above her body. Ro is therefore
+actually sandwiched between the room and counter art; dialogue/buttons remain
+above both. Desktop keeps its prior composition. The foreground crop is part of
+the pure `WINDOW_ART` contract, and two new assertions prove it spans the
+portrait width and completes the source height. The Window adapted harness now
+passes 61 assertions. Exact hand/torso occlusion still needs a phone visual
+check; native verify remains unavailable under the Carbon Black restriction.
+
 ## The Window production-art pass (2026-09-15)
 
 The human verified that the first-contact flow works but correctly rejected the

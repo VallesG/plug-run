@@ -85,6 +85,10 @@ export class WindowScene extends Phaser.Scene {
     if(bodega&&!bodega.has('counter-portrait')){
       bodega.add('counter-portrait',0,crop.x,crop.y,crop.width,crop.height);
     }
+    const front=WINDOW_ART.bodega.foreground;
+    if(bodega&&!bodega.has('counter-foreground')){
+      bodega.add('counter-foreground',0,front.x,front.y,front.width,front.height);
+    }
   }
 
   drawBodega() {
@@ -121,17 +125,31 @@ export class WindowScene extends Phaser.Scene {
 
   drawRo(x,y,scale=1,expression=0) {
     const size=176*scale;
-    const shadow=this.add.ellipse(x+5,y+size*0.42,size*0.72,size*0.16,COLORS.ink,0.7).setDepth(9);
+    const shadow=this.add.ellipse(x+5,y+size*0.42,size*0.72,size*0.16,COLORS.ink,0.7).setDepth(3.8);
     if(!this.textures.exists('window_ro')){
-      const fallback=this.add.graphics({x,y}).setDepth(10);
+      const fallback=this.add.graphics({x,y}).setDepth(4);
       fallback.fillStyle(COLORS.teal,1).fillRoundedRect(-size*0.2,-size*0.05,size*0.4,size*0.48,size*0.08);
       fallback.fillStyle(0x8b5a43,1).fillCircle(0,-size*0.16,size*0.16);
       this.keep(shadow,fallback);
       return fallback;
     }
-    const sprite=this.add.image(x,y,'window_ro',Math.max(0,Math.min(2,expression))).setDepth(10).setScale(size/WINDOW_ART.ro.frameHeight);
+    const sprite=this.add.image(x,y,'window_ro',Math.max(0,Math.min(2,expression))).setDepth(4).setScale(size/WINDOW_ART.ro.frameHeight);
     this.keep(shadow,sprite);
     return sprite;
+  }
+
+  drawRoBehindCounter(a,scale,expression=0) {
+    const size=176*scale;
+    const front=WINDOW_ART.bodega.foreground;
+    const counterY=a.panelTop+(front.y/WINDOW_ART.bodega.portrait.height)*a.panelH;
+    const ro=this.drawRo(a.cx,counterY-size*0.47,scale,expression);
+    if(this.textures.exists('window_bodega')){
+      const frontH=a.panelH*(front.height/WINDOW_ART.bodega.portrait.height);
+      const frontY=a.panelTop+(front.y/WINDOW_ART.bodega.portrait.height)*a.panelH+frontH/2;
+      this.keep(this.add.image(a.cx,frontY,'window_bodega','counter-foreground')
+        .setDepth(4.5).setDisplaySize(a.panelW,frontH));
+    }
+    return ro;
   }
 
   drawGangPortrait(gangID,x,y,height) {
@@ -192,7 +210,9 @@ export class WindowScene extends Phaser.Scene {
     this.clearView();
     this._introIndex=Math.max(0,Math.min(WINDOW_INTRO.length-1,index));
     const a=windowLayout(this.scale.width,this.scale.height);
-    this.drawRo(a.cx,a.panelTop+a.headerH+Math.max(105,a.portrait*0.72),Math.min(1.25,a.portrait/125),this._introIndex===1?1:0);
+    const roScale=Math.min(1.25,a.portrait/125);
+    if(a.panelW/a.panelH<0.92) this.drawRoBehindCounter(a,roScale,this._introIndex===1?1:0);
+    else this.drawRo(a.cx,a.panelTop+a.headerH+Math.max(105,a.portrait*0.72),roScale,this._introIndex===1?1:0);
     const box=this.addDialogue(WINDOW_INTRO[this._introIndex]);
     const last=this._introIndex===WINDOW_INTRO.length-1;
     this.addButton(a.cx,box.y+box.h/2-28,Math.min(200,box.w-36),last?'MEET THE CREWS':'KEEP LISTENING',
@@ -301,8 +321,18 @@ export class WindowScene extends Phaser.Scene {
   }
 
   renderCounter(a,gang) {
-    const portraitY=a.panelTop+a.headerH+Math.max(82,a.portrait*0.55);
-    this.drawRo(a.cx,portraitY,Math.min(0.92,a.portrait/155),2);
+    const roScale=a.panelW/a.panelH<0.92
+      ? Math.min(1.08,Math.max(0.88,a.panelW/300))
+      : Math.min(0.92,a.portrait/155);
+    let portraitY=a.panelTop+a.headerH+Math.max(82,a.portrait*0.55);
+    if(a.panelW/a.panelH<0.92){
+      const front=WINDOW_ART.bodega.foreground;
+      const counterY=a.panelTop+(front.y/WINDOW_ART.bodega.portrait.height)*a.panelH;
+      portraitY=counterY-176*roScale*0.47;
+      this.drawRoBehindCounter(a,roScale,2);
+    }else{
+      this.drawRo(a.cx,portraitY,roScale,2);
+    }
     const panelH=Math.min(126,Math.max(100,a.panelH*0.18));
     const y=Math.min(a.panelBottom-a.pad-150,portraitY+104);
     this.addPanel(a.cx,y,a.contentW,panelH,COLORS.gold);

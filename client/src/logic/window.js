@@ -4,7 +4,8 @@ export const WINDOW_STATE_VERSION = 1;
 export const WINDOW_ART = Object.freeze({
   bodega: Object.freeze({
     width: 1672, height: 941,
-    portrait: Object.freeze({ x: 0, y: 0, width: 700, height: 941 })
+    portrait: Object.freeze({ x: 0, y: 0, width: 700, height: 941 }),
+    foreground: Object.freeze({ x: 0, y: 500, width: 700, height: 441 })
   }),
   ro: Object.freeze({ frameWidth: 724, frameHeight: 724, frames: 3 }),
   switch: Object.freeze({ frameWidth: 724, frameHeight: 724, frames: 3 }),

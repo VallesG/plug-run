@@ -17,6 +17,8 @@ check('cast frames stay inside the source', castFrames.every(f => f.x >= 0 && f.
 check('cast frames cover the atlas once', castFrames.reduce((sum,f)=>sum+f.width,0) === WINDOW_ART.cast.width);
 check('expression sheets divide evenly', WINDOW_ART.ro.frameWidth*WINDOW_ART.ro.frames === 2172 && WINDOW_ART.switch.frameWidth*WINDOW_ART.switch.frames === 2172);
 check('portrait crop stays inside bodega', WINDOW_ART.bodega.portrait.x+WINDOW_ART.bodega.portrait.width <= WINDOW_ART.bodega.width);
+check('counter foreground completes portrait crop', WINDOW_ART.bodega.foreground.y+WINDOW_ART.bodega.foreground.height === WINDOW_ART.bodega.portrait.height);
+check('counter foreground spans portrait width', WINDOW_ART.bodega.foreground.width === WINDOW_ART.bodega.portrait.width);
 check('known gang resolves', windowGang('crossline')?.primary === 'Switch');
 check('unknown gang rejected', windowGang('not-real') === null);
 
