@@ -16,7 +16,7 @@ export function rivalHudLayout(width, height) {
   const segmentH=Math.max(18,Math.min(52,Math.floor((available-gap*(RIVAL_HOUSES-1))/RIVAL_HOUSES)));
   const totalH=segmentH*RIVAL_HOUSES+gap*(RIVAL_HOUSES-1);
   const startY=Math.max(70,Math.floor((h-totalH)/2));
-  const segmentYs=Array.from({length:RIVAL_HOUSES},(_,i)=>startY+totalH-segmentH/2-i*(segmentH+gap));
+  const segmentYs=Array.from({length:RIVAL_HOUSES},(_,i)=>startY+segmentH/2+i*(segmentH+gap));
   return {leftX:margin+railW/2,rightX:w-margin-railW/2,railW,segmentH,gap,startY,totalH,segmentYs};
 }
 // Existing combat balance is authored at a 24px cell. Race distances must
@@ -155,4 +155,51 @@ export function rivalRecord(race) {
     seeds:race.course.seeds.slice(), powers:race.powers.slice(),
     clearTimes:race.clearTimes.slice(), elapsedMs:race.clearTimes[RIVAL_HOUSES-1],
     retries:race.retries, source:'local-player', verified:false };
+}
+
+// Cosmetic only: clears remain the sole authority for race outcomes.
+export function rivalHouseFill(cleared, carrying = false) {
+  const whole = Math.max(0, Math.min(RIVAL_HOUSES, Math.floor(cleared) || 0));
+  return Array.from({length:RIVAL_HOUSES}, (_,i) => i < whole ? 1 : i === whole && carrying ? 0.5 : 0);
+}
+
+// Absolute race-clock windows, including failed attempts. Only actual pickup
+// events count; death/timeout closes the window before the retry begins.
+export function rivalPickupWindows(bundle) {
+  const windows = [];
+  for (const s of bundle?.segments || []) {
+    if (!Number.isFinite(s.startedMs) || !Number.isFinite(s.durationMs) ||
+        !Number.isInteger(s.house) || s.house < 1 || s.house > RIVAL_HOUSES) continue;
+    const events = s.replay?.events || [];
+    const pickup = events.find(e => e.k === 'pickup' && Number.isFinite(e.t) && e.t >= 0 && e.t <= s.durationMs);
+    if (!pickup) continue;
+    const end = events.filter(e => ['death','timeout','extract'].includes(e.k) && Number.isFinite(e.t) && e.t >= pickup.t)
+      .reduce((t,e) => Math.min(t,e.t),s.durationMs);
+    if (end > pickup.t) windows.push({house:s.house,start:s.startedMs+pickup.t,end:s.startedMs+end});
+  }
+  return windows;
+}
+export function rivalCarryingAt(windows, cleared, elapsed) {
+  return cleared < RIVAL_HOUSES && (windows || []).some(w =>
+    w.house === cleared+1 && elapsed >= w.start && elapsed < w.end);
+}
+
+// Find an open patch near the upper centre. No grid mutations or gameplay RNG.
+// Everything painted inside this footprint is below walls, props and actors.
+export function rivalFloorClock(grid) {
+  const rows=grid?.length || 0, cols=grid?.[0]?.length || 0;
+  for (const [w,h] of [[5,2],[4,2],[4,1],[3,1]]) {
+    let best=null, score=Infinity;
+    for(let y=1;y+h<rows;y++) for(let x=1;x+w<cols;x++) {
+      let open=true;
+      for(let dy=0;dy<h && open;dy++) for(let dx=0;dx<w;dx++) {
+        if(grid[y+dy]?.[x+dx] !== 0) { open=false; break; }
+      }
+      if(!open) continue;
+      const d=Math.abs(x+w/2-cols/2)+Math.abs(y+h/2-3.5)*1.5;
+      if(d<score) { score=d; best={x:x+w/2,y:y+h/2,width:w-.35,height:Math.min(1.3,h-.2)}; }
+    }
+    if(best) return best;
+  }
+  return null;
 }

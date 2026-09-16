@@ -62,7 +62,7 @@ export function createRivalSession(selection = {}) {
 // ---------------------------------------------------------------------------
 // Recorded opponents: static JSON under /rivals/v2/, served by Vite/Netlify.
 // One small per-course file is fetched at race creation; a replay bundle is
-// fetched only when Watch Rival Replay is pressed. Every payload is validated
+// prefetched for pickup progress, then reused by Watch Rival Replay. Every payload is validated
 // as corruption checking; a failure leaves the race on the labeled simulated
 // pace rather than presenting anything as a recording.
 // ---------------------------------------------------------------------------
@@ -138,19 +138,26 @@ export function resolveRivalOpponent(race) {
     return true;
   }).catch(e => { console.warn('[Rivals] opponent resolution failed', e); return false; });
 }
-/** Fetch and validate the replay bundle for the race's opponent. null on any failure. */
+/** Validate once per race. Cache state survives the shallow copy on a clear. */
 export async function loadRivalReplay(race) {
-  const url = race?.opponent?.replayURL, record = race?.opponentRecord;
+  const url=race?.opponent?.replayURL, record=race?.opponentRecord;
   if (!url || !record) return null;
-  try {
-    const bundle = await fetchJSON(url, { timeoutMs: 12000, maxBytes: RIVAL_MAX_BUNDLE_BYTES });
-    const check = validateRivalReplayBundle(bundle, record, { validateSegment: validateReplaySegment });
-    if (!check.ok) { console.warn('[Rivals] replay rejected:', check.errors[0]); return null; }
-    return bundle;
-  } catch (e) {
-    console.warn('[Rivals] replay unavailable', e?.message || e);
-    return null;
-  }
+  const cache=race.replayCache || (race.replayCache={bundle:null,pending:null});
+  if (cache.bundle) return cache.bundle;
+  if (cache.pending) return cache.pending;
+  cache.pending=(async()=>{
+    try {
+      const bundle=await fetchJSON(url,{timeoutMs:12000,maxBytes:RIVAL_MAX_BUNDLE_BYTES});
+      const check=validateRivalReplayBundle(bundle,record,{validateSegment:validateReplaySegment});
+      if(!check.ok) { console.warn('[Rivals] replay rejected:',check.errors[0]); return null; }
+      cache.bundle=bundle;
+      return bundle;
+    } catch(e) {
+      console.warn('[Rivals] replay unavailable',e?.message || e);
+      return null;
+    } finally { cache.pending=null; }
+  })();
+  return cache.pending;
 }
 
 // Keep evidence locally for future ghost ingestion. No leaderboard/reward writes.

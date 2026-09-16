@@ -1,5 +1,5 @@
 import {
-  RIVAL_HOUSES, RIVAL_RULES_VERSION, RIVAL_HUD_HEIGHT, rivalHudLayout, rivalCourse, validRivalPowers,
+  RIVAL_HOUSES, RIVAL_RULES_VERSION, RIVAL_HUD_HEIGHT, rivalHudLayout, rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock, rivalCourse, validRivalPowers,
   rivalPixels, rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel,
   rivalPathSteps, simulatedRivalTimes, newRivalRace, compatibleRivalRecord, rivalRecord
 } from '../src/logic/rivals.js';
@@ -95,4 +95,33 @@ for(const cell of [11,21,24,36]){
   check('speed cell-invariant '+cell,Math.abs(rivalPixels(300,cell)/cell-300/24)<1e-10);
   check('range cell-invariant '+cell,Math.abs(rivalPixels(280,cell)/cell-280/24)<1e-10);
 }
+
+for (const [w,h] of [[280,480],[390,844],[1024,768]]) {
+  const ys=rivalHudLayout(w,h).segmentYs;
+  check('progress advances downward at '+w,ys.every((y,i)=>i===0 || y>ys[i-1]));
+}
+check('stash is half of the current house',same(rivalHouseFill(2,true),[1,1,.5,0,0,0,0]));
+check('bunk or death earns no half step',same(rivalHouseFill(2,false),[1,1,0,0,0,0,0]));
+check('all clears cap the bar',same(rivalHouseFill(7,true),[1,1,1,1,1,1,1]));
+const windows=rivalPickupWindows({segments:[
+  {house:1,startedMs:0,durationMs:3000,replay:{events:[{t:200,k:'bunk'},{t:1000,k:'pickup'},{t:2500,k:'death'}]}},
+  {house:1,startedMs:3650,durationMs:4000,replay:{events:[{t:2000,k:'pickup'},{t:4000,k:'extract'}]}},
+  {house:2,startedMs:7830,durationMs:1000,replay:{events:[{t:200,k:'bunk'}]}}
+]});
+check('pickup windows follow real events and end at death',same(windows,[{house:1,start:1000,end:2500},{house:1,start:5650,end:7650}]));
+check('no progress before pickup',!rivalCarryingAt(windows,0,999));
+check('half step begins at pickup',rivalCarryingAt(windows,0,1000));
+check('half step ends at death',!rivalCarryingAt(windows,0,2500));
+check('retry gap has no half step',!rivalCarryingAt(windows,0,4000));
+check('second pickup lights half again',rivalCarryingAt(windows,0,5650));
+check('past-house pickup cannot light next house',!rivalCarryingAt(windows,1,6000));
+check('missing replay never invents a pickup',!rivalCarryingAt(null,0,5000) && rivalPickupWindows(null).length===0);
+
+const floor=Array.from({length:12},()=>Array(16).fill(1));
+for(let y=5;y<7;y++) for(let x=3;x<8;x++) floor[y][x]=0;
+const before=JSON.stringify(floor), clock=rivalFloorClock(floor);
+check('floor clock occupies the actual open patch',clock?.x===5.5 && clock?.y===6);
+check('clock placement never mutates collision grid',JSON.stringify(floor)===before);
+check('solid grid has no clock footprint',rivalFloorClock([[1,1,1],[1,1,1],[1,1,1]])===null);
+check('missing grid is safe',rivalFloorClock(null)===null);
 console.log(passed+' rivals assertions passed');

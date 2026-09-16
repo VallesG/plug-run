@@ -1,5 +1,40 @@
 # Plug Run — handoff for a new agent
 
+## Current HUD follow-up — floor clock and pickup progress
+
+This section supersedes the older HUD and player-facing opponent-label notes below.
+The human approved the full-height arena and side rails, then requested:
+- A clock inset into actual walkable floor, at depth 1.7–1.72 (floor/grime below,
+  walls/furniture/actors above). Pure rivalFloorClock chooses an open footprint;
+  it changes neither the maze nor collision. No course-name badge during play.
+- A drawn settings gear bottom left. Settings exposes existing audio toggles,
+  Back to Race and Quit Race. World controls stop while open; the race deadline
+  keeps running. Back preserves powers/timers, blocks the closing tap briefly,
+  and a rival finish closes settings before showing the result.
+- Rails fill top to bottom. Each house lights halfway on real stash pickup and
+  fully on extraction. Bunk does nothing; death/retry removes unfinished half.
+  Completed-house timestamps remain the sole authority for winning.
+- Rival halves follow actual pickup/death events in a validated replay bundle.
+  A nonblocking prefetch begins at the loadout; shared cache/progress objects
+  survive shallow race copies and scene restarts. WATCH reuses that download.
+  Fetch failure leaves ordinary clear-based progress playable and WATCH can retry.
+- Player-facing opponent name is RIVAL (explicit user decision); historical
+  instructions below requiring BOT/AI RIVAL labels are superseded. Internal
+  metadata and all bank JSON remain untouched.
+
+Verification in the available adapted in-memory JavaScript harness: 94 rival
+rules, 89 flow/cache/settings, 42 capture, 68 record, 70 replay and 402 bank
+assertions (765 total). All 55 bank bundles validate; 1,040 actual pickup
+windows were derived. Clock footprints were checked against the regenerated
+floor grid of all 49 pool houses. The prior flow test still expecting
+"AI target" was corrected to the already-shipped "Rival:" result label.
+Native npm run verify, .mjs subprocess checks and Vite were not run: the user
+has prohibited sandbox/process attempts pending Carbon Black whitelisting.
+Adapted syntax/binding checks are not native ESM resolution. Actual floor-clock
+contrast, settings touch behavior, and final mobile composition remain unverified.
+
+---
+
 > **Start here (2026-09-16).** The section below, "Block Rivals recorded
 > opponents", is the current state of the branch. `RIVALS_CLAUDE_HANDOFF.md`
 > has the same material in more depth (status table, asset layout, recording

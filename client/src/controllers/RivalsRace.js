@@ -1,11 +1,14 @@
 import {
   RIVAL_HOUSES, RIVAL_COUNTDOWN_MS, RIVAL_TRANSITION_MS, RIVAL_RETRY_MS,
-  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout
+  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
+  rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock
 } from '../logic/rivals.js';
 import { saveRivalResult, resolveRivalOpponent, loadRivalReplay } from '../utils/rivalSession.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
 import ReplaySystem from './ReplaySystem.js';
+import { drawPowerIcon } from './PowerIcons.js';
+import AudioManager from '../audio/AudioManager.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
 
 // Scene adapter. Race state survives house restarts; Phaser objects never do.
@@ -22,6 +25,7 @@ export default class RivalsRace {
   prepare(startTimer) {
     this.startTimer = startTimer;
     this.drawHUD();
+    this.preparePickupProgress();
     if (this.race.status === 'finished') { this.freeze(); this.showResult(); return; }
     if (this.race.status === 'racing') { this.resumeHouse(); return; }
     this.scene.roundPausedForMenu = true;
@@ -39,6 +43,7 @@ export default class RivalsRace {
   }
   openLoadout() {
     if (this.race.status !== 'ready') return;
+    this.preparePickupProgress();
     const armCountdown = () => {
       this.race.status = 'countdown';
       this.race.countdownEndsAt = performance.now() + RIVAL_COUNTDOWN_MS;
@@ -97,19 +102,35 @@ export default class RivalsRace {
     const text=(x,y,value,color='#adbdc5',size=10,origin=[.5,.5])=>add(scene.add.text(x,y,value,{
       fontFamily:'monospace',fontSize:size+'px',fontStyle:'bold',color,stroke:'#071018',strokeThickness:3
     }).setOrigin(origin[0],origin[1]));
-    const chip=(x,y,w,h)=>add(scene.add.rectangle(x,y,w,h,0x09121a,.86).setStrokeStyle(1,0x344650,.9));
-    const courseName=this.race.course.name?this.race.course.name.toUpperCase():'BLOCK RIVALS';
-    const titleW=Math.min(width-130,Math.max(112,courseName.length*7+18));
-    chip(8+titleW/2,18,titleW,28);text(16,18,courseName,'#e5dec8',10,[0,.5]);
-    chip(width/2,50,76,26);this.clock=text(width/2,50,'0:00.0','#e5dec8',12);
-    const quit=chip(width-30,18,52,28).setInteractive({useHandCursor:true});
-    text(width-30,18,'QUIT','#aeb9c1',9);quit.on('pointerdown',()=>this.finish('forfeit',performance.now()));
+    // This is world art: depth 1.7 sits above the floor/grime and below
+    // walls (3), furniture and characters (10). It has no hit target.
+    const clockSpot=rivalFloorClock(scene.grid);
+    if(clockSpot) {
+      const cell=scene.cell, pad=scene.pad;
+      const x=pad.x+clockSpot.x*cell, y=pad.y+clockSpot.y*cell;
+      const w=clockSpot.width*cell,h=clockSpot.height*cell;
+      add(scene.add.rectangle(x,y,w,h,0x080e13,.22).setStrokeStyle(1,0x111923,.5)).setDepth(1.7);
+      add(scene.add.rectangle(x,y+h/2,w-2,1,0xc6d1c5,.22)).setDepth(1.71);
+      this.clock=add(scene.add.text(x,y,'0:00.0',{
+        fontFamily:'monospace',fontSize:Math.max(8,Math.floor(cell*.65))+'px',fontStyle:'bold',
+        color:'#bbc4b9',stroke:'#101820',strokeThickness:1
+      }).setOrigin(.5).setAlpha(.65)).setDepth(1.72);
+    }
+    const gear=add(scene.add.rectangle(27,height-29,44,44,0x0a121a,.7)
+      .setStrokeStyle(1,0x42525c,.7)).setInteractive({useHandCursor:true});
+    add(drawPowerIcon(scene,27,height-29,'settings',25,0xb7c6cf,15001)).setDepth(15001);
+    gear.on('pointerdown',(_p,_x,_y,event)=>{
+      event?.stopPropagation();
+      this.openSettings();
+    });
     this.rows=[0,1].map(row=>{
       const x=row?layout.rightX:layout.leftX,color=row?0xc6ac70:0x86bad5;
       const label=text(row?width-7:7,layout.startY-20,row?'RIVAL 0/7':'YOU 0/7',
         row?'#dec386':'#9bcae5',9,row?[1,.5]:[0,.5]);
       const bars=layout.segmentYs.map(y=>add(scene.add.rectangle(x,y,layout.railW,layout.segmentH,0x17232c,.9).setStrokeStyle(1,0x42525c,.95)));
-      return {label,bars,color};
+      const fills=layout.segmentYs.map(y=>add(scene.add.rectangle(x,y-layout.segmentH/2+1,
+        Math.max(1,layout.railW-2),1,color,.92).setOrigin(.5,0).setVisible(false)));
+      return {label,bars,fills,color,width:Math.max(1,layout.railW-2),height:layout.segmentH-2};
     });
     this.notice=add(scene.add.text(width/2,height/2,'',{fontFamily:'monospace',fontSize:'24px',fontStyle:'bold',
       color:'#f0d294',stroke:'#071018',strokeThickness:5,align:'center'}).setOrigin(.5));
@@ -118,12 +139,78 @@ export default class RivalsRace {
     const elapsed=this.race.status==='finished'?this.race.finishedMs:rivalElapsed(this.race,now);
     this.clock?.setText(rivalTimeLabel(elapsed));
     const counts=[this.race.clearTimes.length,rivalProgress(this.race.rivalTimes,elapsed)];
+    const carrying=[
+      this.race.status==='racing' && !this.transitioning && !this.scene.roundOver &&
+        this.scene.pveRound===counts[0]+1 && !!this.scene.hasStash,
+      rivalCarryingAt(this.race.pickupProgress?.windows,counts[1],elapsed)
+    ];
     this.rows?.forEach((row,i)=>{
       row.label.setText((i?'RIVAL ':'YOU ')+counts[i]+'/7');
-      row.bars.forEach((bar,j)=>bar.setFillStyle(j<counts[i]?row.color:0x17232c,.92)
-        .setStrokeStyle(j===counts[i]?2:1,j===counts[i]?row.color:0x42525c,.98));
+      const levels=rivalHouseFill(counts[i],carrying[i]);
+      row.bars.forEach((bar,j)=>{
+        bar.setStrokeStyle(j===counts[i]?2:1,j===counts[i]?row.color:0x42525c,.98);
+        row.fills[j].setVisible(levels[j]>0).setDisplaySize(row.width,Math.max(1,row.height*levels[j]));
+      });
     });
   }
+  preparePickupProgress() {
+    if(this.race.opponentKind!=='recorded-bot' || this.race.pickupProgress) return;
+    // Shared object, not a controller callback: a house can restart while the
+    // download is pending, and recordRivalClear shallow-copies the race.
+    const state={windows:[]};
+    this.race.pickupProgress=state;
+    const cached=this.race.opponentBundle || this.race.replayCache?.bundle;
+    if(cached) { state.windows=rivalPickupWindows(cached); return; }
+    loadRivalReplay(this.race).then(bundle=>{
+      if(bundle) state.windows=rivalPickupWindows(bundle);
+    }).catch(()=>{});
+  }
+  openSettings() {
+    if(this.disposed || this.settingsOpen || this.transitioning || this.race.status!=='racing') return;
+    this.settingsOpen=true;
+    this.scene.roundPausedForMenu=true;
+    this.scene._mouseDown=false;
+    this.scene.input.keyboard.enabled=false;
+    this.scene.suspendTouchUI?.(true);
+    this.settingsAudio=AudioManager.get(this.scene);
+    this.drawSettings();
+  }
+  drawSettings() {
+    this.settingsModal?.destroy?.();
+    const audio=this.settingsAudio;
+    const toggle=(music)=>{
+      if(music) audio?.setMusicMute(!audio.isMusicMuted());
+      else audio?.setMute(!audio.isMuted());
+      this.drawSettings();
+    };
+    this.settingsModal=this.scene.gameUI.showModal({
+      title:'SETTINGS',subtitle:'Race clock keeps running.',
+      inputDelay:150,
+      buttons:[
+        {label:'MUSIC: '+(audio?.isMusicMuted()?'OFF':'ON'),variant:'secondary',keepOpen:true,onClick:()=>toggle(true)},
+        {label:'SOUNDS: '+(audio?.isMuted()?'OFF':'ON'),variant:'secondary',keepOpen:true,onClick:()=>toggle(false)},
+        {label:'BACK TO RACE',variant:'primary',onClick:()=>this.closeSettings()},
+        {label:'QUIT RACE',variant:'danger',onClick:()=>{this.closeSettings(false);this.finish('forfeit',performance.now());}}
+      ]
+    });
+  }
+  closeSettings(resume=true) {
+    this.settingsModal?.destroy?.();
+    this.settingsModal=null;
+    // Keep the closing tap out of movement/powers. The clock never pauses.
+    this.settingsResume?.remove?.();
+    if(resume) {
+      this.scene.suspendTouchUI?.(true);
+      this.settingsResume=this.scene.time.delayedCall(120,()=>{
+        this.settingsOpen=false;
+        if(this.disposed || this.race.status!=='racing') return;
+        this.scene.roundPausedForMenu=false;
+        this.scene.input.keyboard.enabled=true;
+        this.scene.suspendTouchUI?.(false);
+      });
+    } else this.settingsOpen=false;
+  }
+
   update() {
     if (this.disposed) return true;
     const now = performance.now();
@@ -145,10 +232,10 @@ export default class RivalsRace {
       if (outcome) this.finish(outcome,now);
       // Recording harness only: a race that will never end is not a race.
       else if (this.race.hardLimitMs && elapsed >= this.race.hardLimitMs) this.finish('forfeit',now);
-      else if (!this.transitioning && !this.scene.roundOver) tickAttemptCapture(this.scene,this.race,now);
+      else if (!this.transitioning && !this.scene.roundOver && !this.settingsOpen) tickAttemptCapture(this.scene,this.race,now);
     }
     this.paint(now);
-    return this.race.status !== 'racing' || this.transitioning;
+    return this.race.status !== 'racing' || this.transitioning || !!this.settingsOpen;
   }
   freeze() {
     const s=this.scene;
@@ -207,6 +294,7 @@ export default class RivalsRace {
   }
   finish(result,now) {
     if (this.race.status==='finished') return;
+    this.closeSettings(false);
     this.race.status='finished';
     this.race.result=result;
     this.race.finishedMs=result==='loss' ? this.race.rivalTimes[RIVAL_HOUSES-1] : rivalElapsed(this.race,now);
@@ -297,6 +385,7 @@ export default class RivalsRace {
   }
   dispose() {
     this.disposed=true;
+    this.closeSettings(false);
     this.pending?.remove?.();
     this.objects.forEach(o=>o.destroy?.());
     clearTimeout(this.scene._resizeTimer);
