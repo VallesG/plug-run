@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node test/botDriver.test.mjs && node test/threat.test.mjs && node test/runStats.test.mjs && node test/steering.test.mjs && node test/seedCursor.test.mjs && node test/evasion.test.mjs && node test/runForensics.test.mjs && node test/spawnChoice.test.mjs && node test/cover.test.mjs && node test/blockFormat.test.mjs && node test/blockMap.test.mjs && node test/interiorStyle.test.mjs && node test/landingLayout.test.mjs && node test/tutorial.test.mjs && node test/worldBlocks.test.mjs && node test/rivals.test.mjs && node test/rivalCourses.test.mjs && node test/rivalsFlow.test.mjs && node test/moduleSyntax.test.mjs",
+    "test": "node test/botDriver.test.mjs && node test/threat.test.mjs && node test/runStats.test.mjs && node test/steering.test.mjs && node test/seedCursor.test.mjs && node test/evasion.test.mjs && node test/runForensics.test.mjs && node test/spawnChoice.test.mjs && node test/cover.test.mjs && node test/blockFormat.test.mjs && node test/blockMap.test.mjs && node test/interiorStyle.test.mjs && node test/landingLayout.test.mjs && node test/tutorial.test.mjs && node test/worldBlocks.test.mjs && node test/rivals.test.mjs && node test/rivalCourses.test.mjs && node test/rivalRecords.test.mjs && node test/rivalReplay.test.mjs && node test/rivalsFlow.test.mjs && node test/moduleSyntax.test.mjs",
     "verify": "npm test && npm run build",
     "dev": "vite --host",
     "build": "vite build",
