@@ -524,6 +524,9 @@ function installRivalsRecorder(rec, cfg) {
   const origFinish = RivalsRace.prototype.finish;
   RivalsRace.prototype.finish = function (result, now) {
     const already = this.race.status === 'finished';
+    // Decide "done" before the result modal is built inside origFinish, or
+    // the auto-clicker presses REMATCH on the final race and records one more.
+    if (!already && store.races.length + 1 >= rec.runs) store.done = true;
     origFinish.call(this, result, now);
     if (already) return;
     if (!this.race.recording) {
@@ -531,7 +534,6 @@ function installRivalsRecorder(rec, cfg) {
       store.races.push({ ok: false, reason: 'play mode', result: this.race.result, houses: this.race.clearTimes.length,
         retries: this.race.retries, elapsedMs: this.race.finishedMs, opponent: this.race.opponent ?? null, opponentKind: this.race.opponentKind });
       console.log('[RIVALS-REC] play race ' + store.races.length + '/' + rec.runs + ': ' + this.race.result + ' vs ' + (this.race.opponent?.displayName || this.race.opponentKind));
-      if (store.races.length >= rec.runs) store.done = true;
       return;
     }
     const index = rec.indexBase + store.races.length;
@@ -553,8 +555,7 @@ function installRivalsRecorder(rec, cfg) {
     });
     console.log('[RIVALS-REC] race ' + store.races.length + '/' + rec.runs + (out.ok ? ' OK ' + Math.round(this.race.finishedMs / 1000) + 's, ' + this.race.retries + ' retries'
       : ' REJECTED: ' + out.reason + ' (' + this.race.result + ', ' + this.race.clearTimes.length + '/7)'));
-    if (store.races.length >= rec.runs) {
-      store.done = true;
+    if (store.done) {
       console.log('[RIVALS-REC] done. window.__plugRunRivals holds ' + store.races.filter(r => r.ok).length + ' valid races; __plugRunRivalsDownload() saves them.');
     }
   };
@@ -563,7 +564,10 @@ function installRivalsRecorder(rec, cfg) {
   const origShowModal = GameUI.prototype.showModal;
   GameUI.prototype.showModal = function (opts) {
     if (store.done && this.scene.runKind === 'rivals') {
-      const buttons = (opts?.buttons || []).map(b => (b.label === 'REMATCH' || b.label === 'NEW RACE') ? { ...b, disabled: true } : b);
+      // Every advancing button, MAIN MENU included: the auto-clicker takes the
+      // first enabled one, and leaving for the menu would drop the result the
+      // harness is about to inspect. keepOpen buttons (WATCH) stay live.
+      const buttons = (opts?.buttons || []).map(b => b.keepOpen ? b : { ...b, disabled: true });
       return origShowModal.call(this, { ...opts, buttons });
     }
     return origShowModal.call(this, opts);

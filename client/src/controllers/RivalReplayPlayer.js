@@ -50,10 +50,13 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
   const w = Math.min(W, 480), left = (W - w) / 2;
   hudText(left + 12, 16, '● RIVAL REPLAY', '#ff5b5b', 11);
   hudText(left + 12, 34, opponentName.toUpperCase() + '  ·  not a live player', '#e5dec8', 11);
-  const clock = hudText(left + w - 12, 16, '0:00.0', '#e5dec8', 12, [1, 0.5]);
-  const label = hudText(left + w - 12, 34, '', '#dec386', 10, [1, 0.5]);
+  // EXIT / NEXT occupy the right 70px of the strip; everything else stops short.
+  const BTN_W = 70;
+  const clock = hudText(left + w - BTN_W - 10, 16, '0:00.0', '#e5dec8', 12, [1, 0.5]);
+  const label = hudText(left + w - BTN_W - 10, 34, '', '#dec386', 10, [1, 0.5]);
   // seven-house strip: filled as the rival's clears arrive in the replay
-  const seg = (w - 24 - 6 * 4) / 7;
+  const stripW = w - 24 - BTN_W;
+  const seg = (stripW - 6 * 4) / 7;
   const houseBars = Array.from({ length: 7 }, (_, i) => mk(scene.add.rectangle(left + 12 + i * (seg + 4) + seg / 2, 58, seg, 8, 0x23313a).setStrokeStyle(1, 0x3a4c58).setDepth(DEPTH + 901)));
   const barW = w - 24;
   mk(scene.add.rectangle(W / 2, HUD - 8, barW, 3, 0xffffff, 0.14).setDepth(DEPTH + 901));
@@ -268,8 +271,8 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     gone();
     onDone?.();
   };
-  button(left + w - 40, 16, 56, '✕ EXIT', end);
-  button(left + w - 40, 46, 56, 'NEXT ▶', () => {
+  button(left + w - 4 - BTN_W / 2, 20, BTN_W - 8, '✕ EXIT', end);
+  button(left + w - 4 - BTN_W / 2, 54, BTN_W - 8, 'NEXT ▶', () => {
     const cur = timelineCursor(timeline, elapsed);
     const next = timeline.items.find(it => it.kind === 'card' && it.start > (cur?.item.start ?? -1));
     elapsed = next ? next.start : timeline.total;
