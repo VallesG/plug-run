@@ -47,7 +47,7 @@ export function showContactPanel(scene, cue, onDone) {
     if (advance) onDone?.();
   };
 
-  const a = contactPanelLayout(scene.scale.gameSize.width, scene.scale.gameSize.height, cue.contact);
+  const a = contactPanelLayout(scene.scale.gameSize.width, scene.scale.gameSize.height, cue.contact, cue.text);
 
   // Everything below the panel is unreachable while it is up: one opaque,
   // interactive backstop that swallows every pointer event.
@@ -140,7 +140,7 @@ export function showContactPanel(scene, cue, onDone) {
       fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
       color: cue.contact.css, letterSpacing: 2
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH + 5));
-    track(scene.add.text(d.x - d.w / 2 + 18, d.y - d.h / 2 + 42, cue.text, {
+    track(scene.add.text(d.x - d.w / 2 + 18, d.y - d.h / 2 + d.copyTop, cue.text, {
       fontFamily: 'Georgia, serif', fontSize: a.bodyFontPx + 'px',
       color: '#e9dfc7', lineSpacing: 5, wordWrap: { width: d.w - 36 }
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH + 5));

@@ -12,6 +12,10 @@ import {
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
+import { contactCue } from '../logic/contacts.js';
+import { showContactPanel } from './ContactPanel.js';
+import { claimContact } from '../utils/contactProgress.js';
+import { getWindowState } from '../utils/windowProgress.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import { drawBlockMap } from './BlockMap.js';
 import { SESSION_RULES, streakBonus } from '../utils/repTracker.js';
@@ -441,6 +445,42 @@ export default class ProgressionManager {
    * The scene is paused before recording, timers or controls start. Entering
    * resumes startMatch; exiting leaves the saved checkpoint untouched.
    */
+  /**
+   * The gang's face, on the way into a house.
+   *
+   * Sits between the entrance map and the loadout so it never covers live
+   * movement, and it is the ONLY place check-ins are triggered — Rivals,
+   * Tutorial, the bot harness and the legacy daily route all fall straight
+   * through. A beat is claimed before it is shown, so a reload while the
+   * panel is up costs the line rather than repeating it forever.
+   */
+  showContactCheckIn(next) {
+    const scene = this.scene;
+    if (scene.runKind !== 'journey' || scene.role !== 'runner') { next(); return null; }
+    let cue = null;
+    try {
+      cue = contactCue({
+        gangID: getWindowState().gangID,
+        house: scene.pveRound || 1,
+        blockIndex: scene.blockIndex || 1,
+        // No mission exists yet, so no outcome is ever claimed. The debrief
+        // beat falls back to ordinary praise until the mission slice lands.
+        missionOutcome: null
+      });
+    } catch (error) {
+      console.warn('[Contacts] Could not build a cue', error);
+    }
+    if (!cue) { next(); return null; }
+    if (!claimContact(cue.eventID, scene.blockIndex || 1)) { next(); return null; }
+    try {
+      return showContactPanel(scene, cue, next);
+    } catch (error) {
+      console.warn('[Contacts] Panel failed, entering the house anyway', error);
+      next();
+      return null;
+    }
+  }
+
   showBlockMap(goNext) {
     const maps = PVE_BLOCK_MAPS;
     const house = Math.min(maps, this.scene.pveRound || 1);
@@ -454,7 +494,7 @@ export default class ProgressionManager {
         : 'House ' + house + ' of ' + maps + ' · Follow the light.',
       lines: block && house === 1 ? [block.arrival] : [],
       buttons: [
-        { label: house === maps ? 'ENTER HOUSE 15 · TWO PLUGS' : 'ENTER HOUSE ' + house, variant: 'primary', onClick: goNext },
+        { label: house === maps ? 'ENTER HOUSE 15 · TWO PLUGS' : 'ENTER HOUSE ' + house, variant: 'primary', onClick: () => this.showContactCheckIn(goNext) },
         ...(cleared && !block ? [{
           label: 'Restart Daily Block', variant: 'secondary',
           onClick: () => {
@@ -465,7 +505,7 @@ export default class ProgressionManager {
         { label: 'Back to Menu', variant: 'secondary', onClick: () => this.scene.scene.start('MENU') }
       ]
     });
-    if (!modal) { goNext(); return null; }
+    if (!modal) { this.showContactCheckIn(goNext); return null; }
     drawBlockMap(this.scene, modal, { cleared, maps, entering: true });
     this.scene.gameUI.currentModal = modal;
     return modal;

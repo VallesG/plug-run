@@ -116,6 +116,17 @@ for (const [w, h] of VIEWPORTS) {
   for (const c of CONTACTS) {
     const a = contactPanelLayout(w, h, c);
     const tag = c.id + ' at ' + w + 'x' + h;
+    // Every real line this contact can speak must fit above the advance.
+    for (const line of Object.values(c.lines).flat().filter(Boolean)) {
+      const box = contactPanelLayout(w, h, c, line);
+      const copyBottom = box.dialogue.y - box.dialogue.h / 2 + box.dialogue.copyTop
+        + box.dialogue.lines * box.dialogue.lineHeight;
+      check('copy clears the advance ' + tag, copyBottom <= box.action.y - box.action.h / 2 + 0.001);
+      check('copy stays inside its box ' + tag, copyBottom <= box.dialogue.y + box.dialogue.h / 2);
+      check('box never eats the panel ' + tag, box.dialogue.h <= box.panelH * 0.42 + 0.001);
+      check('box still fits the panel ' + tag,
+        box.dialogue.y - box.dialogue.h / 2 > box.panelTop && box.dialogue.y + box.dialogue.h / 2 <= box.panelBottom);
+    }
     check('panel inside the viewport ' + tag,
       a.panelW <= w && a.panelH <= h && a.panelTop >= 0 && a.panelBottom <= h);
     check('backdrop covers the panel ' + tag, a.coverW >= a.panelW - 0.001 && a.coverH >= a.panelH - 0.001);
@@ -129,7 +140,7 @@ for (const [w, h] of VIEWPORTS) {
     check('portrait never covers the copy ' + tag, a.portraitBaseY <= a.dialogue.y - a.dialogue.h / 2 + 8.001);
     check('portrait has real height ' + tag, a.portraitH > 40);
     check('portrait stays below the panel top ' + tag, a.portraitCenterY - a.portraitH / 2 >= a.panelTop - a.panelH * 0.5);
-    check('body copy stays legible ' + tag, a.bodyFontPx >= 15 && a.bodyFontPx <= 20);
+    check('body copy stays legible ' + tag, a.bodyFontPx >= 14 && a.bodyFontPx <= 20);
   }
 }
 check('foreground only where the art has one',

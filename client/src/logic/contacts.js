@@ -210,7 +210,7 @@ export function contactScript(gangID, blockIndex = 1) {
  * Fractions come from the reviewed art manifest but are clamped here, so a bad
  * manifest value cannot push a face off screen.
  */
-export function contactPanelLayout(width, height, portraitFractions = {}) {
+export function contactPanelLayout(width, height, portraitFractions = {}, text = '') {
   const w = Math.max(280, Number.isFinite(width) ? width : 390);
   const h = Math.max(480, Number.isFinite(height) ? height : 844);
   const pad = Math.max(12, Math.floor(Math.min(w, h) * 0.035));
@@ -225,9 +225,29 @@ export function contactPanelLayout(width, height, portraitFractions = {}) {
   const coverW = Math.max(panelW, panelH * ratio);
   const coverH = Math.max(panelH, panelW / ratio);
 
-  const dialogueH = Math.max(124, Math.min(172, Math.floor(panelH * 0.23)));
-  const dialogueY = panelBottom - dialogueH / 2 - pad;
   const dialogueW = Math.min(panelW - pad * 2, 480);
+  const bodyFontPx = Math.max(14, Math.min(20, Math.round(panelW * 0.046)));
+  const actionH = 40;
+  const actionW = Math.min(184, dialogueW - 28);
+
+  // Size the box to the copy instead of guessing a range. Georgia averages
+  // close to 0.5em per character at these sizes; the estimate is deliberately
+  // generous, because a box one line too tall is invisible and a box one line
+  // too short puts the advance button on top of the last sentence — which is
+  // exactly what the first render of this panel did at 280x480.
+  const charWidth = bodyFontPx * 0.5;
+  const perLine = Math.max(10, Math.floor((dialogueW - 36) / charWidth));
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  let lines = words.length ? 1 : 1, used = 0;
+  for (const word of words) {
+    const add = used ? used + 1 + word.length : word.length;
+    if (add > perLine) { lines++; used = word.length; } else used = add;
+  }
+  const lineHeight = Math.round(bodyFontPx * 1.2) + 5;
+  const copyTop = 42;                       // speaker label sits above this
+  const needed = copyTop + lines * lineHeight + 10 + actionH + 14;
+  const dialogueH = Math.max(124, Math.min(needed, Math.floor(panelH * 0.42)));
+  const dialogueY = panelBottom - dialogueH / 2 - pad;
 
   const clamp = (v, lo, hi, fallback) =>
     Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback;
@@ -248,13 +268,12 @@ export function contactPanelLayout(width, height, portraitFractions = {}) {
     coverW, coverH,
     portraitH, portraitCenterY: baseY - portraitH / 2, portraitBaseY: baseY,
     foreground,
-    dialogue: { x: w / 2, y: dialogueY, w: dialogueW, h: dialogueH },
+    dialogue: { x: w / 2, y: dialogueY, w: dialogueW, h: dialogueH, copyTop, lines, lineHeight },
     action: {
-      w: Math.min(184, dialogueW - 28),
-      x: w / 2 + dialogueW / 2 - Math.min(184, dialogueW - 28) / 2 - 14,
-      y: dialogueY + dialogueH / 2 - 28,
-      h: 40
+      w: actionW, h: actionH,
+      x: w / 2 + dialogueW / 2 - actionW / 2 - 14,
+      y: dialogueY + dialogueH / 2 - actionH / 2 - 10
     },
-    bodyFontPx: Math.max(15, Math.min(20, Math.round(panelW * 0.046)))
+    bodyFontPx
   };
 }
