@@ -1,6 +1,7 @@
 // What a block run remembers, and what a contact is therefore allowed to say.
 import {
-  BLOCK_RUN_VERSION, POWER_IDS, createBlockRun, recordHouseClear, recordBlockDeath, blockRunStats
+  BLOCK_RUN_VERSION, POWER_IDS, createBlockRun, recordHouseClear, recordBlockDeath,
+  recordMissionOutcome, blockRunStats
 } from '../src/logic/blockRun.js';
 let passed = 0;
 function check(name, ok) { if (!ok) throw new Error(name); passed++; }
@@ -49,4 +50,21 @@ check('a stale version starts clean', createBlockRun({ ...run, version: 99 }, 1)
 check('round-trip through JSON survives',
   blockRunStats(createBlockRun(JSON.parse(JSON.stringify(powered)), 1), 1).topPower === 'phase');
 check('power ids are the three the game ships', POWER_IDS.length === 3 && POWER_IDS.includes('phase'));
+
+// The mission outcome: written once, never rewritten, and it grants nothing.
+let job = createBlockRun({}, 1);
+check('no outcome before the briefed house', blockRunStats(job, 1).mission === null);
+const won = recordMissionOutcome(job, 1, 'win');
+check('a win is recorded', won.applied && blockRunStats(won.state, 1).mission === 'win');
+check('a later house cannot rewrite it',
+  recordMissionOutcome(won.state, 1, 'miss').applied === false
+  && blockRunStats(recordMissionOutcome(won.state, 1, 'miss').state, 1).mission === 'win');
+check('a miss is recorded too', blockRunStats(recordMissionOutcome(job, 1, 'miss').state, 1).mission === 'miss');
+check('nonsense outcomes refused',
+  recordMissionOutcome(job, 1, 'maybe').applied === false && recordMissionOutcome(job, 1).applied === false);
+check('the outcome survives a reload',
+  blockRunStats(createBlockRun(JSON.parse(JSON.stringify(won.state)), 1), 1).mission === 'win');
+check('a new block forgets the outcome', createBlockRun(won.state, 2).mission === null);
+check('the outcome is not stash, rep or cash',
+  Object.keys(blockRunStats(won.state, 1)).every(k => !/rep|cash|credit|stash/i.test(k)));
 console.log(passed + ' block run assertions passed');

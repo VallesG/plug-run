@@ -25,6 +25,9 @@ import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundComple
 import RunForensics from '../logic/runForensics.js';
 import { chooseAlternateSpawn } from '../logic/spawnChoice.js';
 import { hasDualOpponent, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
+import { placeMissionItem, missionItemSeed, missionObject, MISSION_ITEM_COLOR } from '../logic/missionItem.js';
+import { activeMissionContact } from '../logic/contacts.js';
+import { getWindowState } from '../utils/windowProgress.js';
 import { PALETTE } from '../logic/palette.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
@@ -689,6 +692,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.plugSpawnCell = { ...d };
     this.attacker = makeRunnerSprite(this, this.toWorldX(a.x), this.toWorldY(a.y), this.cell).setVisible(false);
     this.defender = makePlugSprite(this,   this.toWorldX(d.x), this.toWorldY(d.y), this.cell).setVisible(false);
+    // After the spawn is settled: placement measures its distance from there,
+    // so it cannot run before the runner has a cell to stand on.
+    this.makeMissionItem();
 
     console.log('[create] Round', this.pveRound, '- Created attacker, children count:', this.attacker.list.length);
 
@@ -1558,6 +1564,98 @@ export class BaseGameScene extends Phaser.Scene {
     this._drawExtractHalo = null;
   }
 
+  /**
+   * The job contact's object, for the one house they briefed.
+   *
+   * Placement is read-only over the finished grid from its own seed domain,
+   * so a house plays identically whether or not a mission is live. It is an
+   * extra pickup: it is never the real bag, never counts as stash, and the
+   * ring is violet precisely so nobody reads it as a duffel.
+   */
+  makeMissionItem(){
+    this.missionItem?.destroy?.();
+    this.missionItem = null;
+    this.missionHalo?.destroy?.();
+    this.missionHalo = null;
+    this._drawMissionHalo = null;
+    this.hasMissionItem = false;
+    this.missionObject = null;
+    if (this.mode !== 'pve' || this.runKind !== 'journey' || this.role !== 'runner') return;
+
+    let who = null;
+    try { who = activeMissionContact(getWindowState().gangID, this.pveRound); } catch { who = null; }
+    if (!who) return;
+    const object = missionObject(who.id);
+    if (!object) return;
+
+    const cell = placeMissionItem({
+      grid: this.grid,
+      spawn: this.runnerSpawnCell,
+      stash: this.stashCell, extract: this.extractCell,
+      egress: this.egress?.entry,
+      seed: missionItemSeed(this.seed, this.blockIndex || 1, this.pveRound || 1)
+    });
+    if (!cell) return;
+
+    this.missionObject = object;
+    this.missionCell = cell;
+    const x = this.toWorldX(cell.x), y = this.toWorldY(cell.y);
+    const size = this.cell * 0.52;
+    const container = this.add.container(x, y).setDepth(1000);
+    const sensor = this.add.rectangle(0, 0, size * 1.3, size * 1.3, 0x000000, 0.0001);
+    const shadow = this.add.ellipse(this.cell * 0.05, size * 0.5, size * 1.0, size * 0.4, PALETTE.ink, 0.45);
+    const g = this.add.graphics();
+    // A case, not a bag: hard ink line and a bright seam, so it reads as
+    // equipment at a glance instead of a third duffel.
+    g.fillStyle(0x2a2233, 1);
+    g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
+    g.fillRoundedRect(-size / 2, -size * 0.36, size, size * 0.72, Math.max(3, this.cell * 0.09));
+    g.strokeRoundedRect(-size / 2, -size * 0.36, size, size * 0.72, Math.max(3, this.cell * 0.09));
+    g.fillStyle(MISSION_ITEM_COLOR, 1);
+    g.fillRect(-size / 2 + 3, -size * 0.07, size - 6, Math.max(2, size * 0.14));
+    container.add([sensor, shadow, g]);
+    container.isMissionItem = true;
+    container.sensor = sensor;
+    this.missionItem = container;
+
+    this.missionHalo = this.add.graphics().setDepth(999);
+    this._drawMissionHalo = () => {
+      if (!this.missionHalo) return;
+      this.missionHalo.clear();
+      const item = this.missionItem;
+      if (!item || item.active === false || item.visible === false) return;
+      const t = (performance.now() % 1400) / 1400;
+      const r = this.cell * (0.6 + 0.14 * Math.sin(t * 2 * Math.PI));
+      const a = Math.max(0, Math.min(1, item.alpha ?? 1));
+      this.missionHalo.lineStyle(3, MISSION_ITEM_COLOR, 0.95 * a);
+      this.missionHalo.strokeCircle(item.x, item.y, r);
+      this.missionHalo.lineStyle(1, MISSION_ITEM_COLOR, 0.42 * a);
+      this.missionHalo.strokeCircle(item.x, item.y, r + 6);
+    };
+  }
+
+  /** Pickup. Additive: it never touches hasStash, the bag or the stash count. */
+  checkMissionItemPickup(){
+    const item = this.missionItem;
+    if (!item || this.hasMissionItem || this.roundOver) return;
+    const runner = this.attacker;
+    if (!runner || !runner.active || runner.visible === false) return;
+    if (!rectsOverlap(runner, item)) return;
+    this.hasMissionItem = true;
+    this.missionHalo?.clear?.();
+    this._drawMissionHalo = null;
+    try { this.audio?.play('pickup', { volume: 0.85, rateRand: 0.04 }); } catch {}
+    const label = this.add.text(item.x, item.y - this.cell * 0.65, this.missionObject.short, {
+      fontSize: Math.max(13, Math.floor(this.cell * 0.5)) + 'px',
+      color: '#c9a6f5', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({ targets: label, y: label.y - this.cell * 0.55, alpha: 0, duration: 950,
+      ease: 'Cubic.easeOut', onComplete: () => label.destroy() });
+    this.tweens.add({ targets: item, alpha: 0, scale: 0.7, duration: 260, ease: 'Cubic.easeIn',
+      onComplete: () => { item.destroy(); this.missionItem = null; } });
+    this.spawnDust?.(item.x, item.y, 6);
+  }
+
   addCarryPackage(){
     if (!this.attacker) return;
     console.log('[addCarryPackage] ===== CALLED =====');
@@ -2088,6 +2186,8 @@ export class BaseGameScene extends Phaser.Scene {
     // Draw helper visuals each frame if enabled
     try {
       this._drawStashHalo?.();
+      this._drawMissionHalo?.();
+      this.checkMissionItemPickup();
       this._drawExtractHalo?.(); // kept for compatibility if re-enabled elsewhere
       this._drawCarBeacon?.();
     } catch (e) {

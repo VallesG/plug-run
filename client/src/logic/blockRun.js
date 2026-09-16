@@ -18,7 +18,7 @@ export function createBlockRun(value = {}, blockIndex = 1) {
   const block = Number.isSafeInteger(blockIndex) && blockIndex > 0 ? blockIndex : 1;
   // A different block is a different run. No merging, no carry-over.
   if (!value || value.version !== BLOCK_RUN_VERSION || value.blockIndex !== block) {
-    return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared: [], deaths: 0 };
+    return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared: [], deaths: 0, mission: null };
   }
   const seen = new Set();
   const cleared = (Array.isArray(value.cleared) ? value.cleared : [])
@@ -33,7 +33,8 @@ export function createBlockRun(value = {}, blockIndex = 1) {
     .filter(h => h.house && !seen.has(h.house) && seen.add(h.house))
     .sort((a, b) => a.house - b.house)
     .slice(0, MAX_HOUSES);
-  return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared, deaths: count(value.deaths) };
+  const mission = value.mission === 'win' || value.mission === 'miss' ? value.mission : null;
+  return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared, deaths: count(value.deaths), mission };
 }
 
 /** A house came out clean. Recording the same house twice cannot inflate a run. */
@@ -59,6 +60,20 @@ export function recordHouseClear(value, blockIndex, house) {
 export function recordBlockDeath(value, blockIndex) {
   const state = createBlockRun(value, blockIndex);
   return { state: { ...state, deaths: state.deaths + 1 }, applied: true };
+}
+
+/**
+ * The mission house's outcome, recorded once.
+ *
+ * A win means the object AND the real bag came out of the briefed house. A
+ * miss is a clear without the object. It is never overwritten, so a later
+ * house cannot rewrite what happened, and it grants nothing: no REP, no Cash,
+ * no stash — it only decides which sentence the debrief uses.
+ */
+export function recordMissionOutcome(value, blockIndex, outcome) {
+  const state = createBlockRun(value, blockIndex);
+  if (state.mission || (outcome !== 'win' && outcome !== 'miss')) return { state, applied: false };
+  return { state: { ...state, mission: outcome }, applied: true };
 }
 
 /**
@@ -89,6 +104,7 @@ export function blockRunStats(value, blockIndex = 1) {
   return {
     blockIndex: state.blockIndex, houses, hits, deaths, bunks, swaps,
     powers, powersUsed, topPower, firstTryHouses,
+    mission: state.mission,
     flawless: houses > 0 && deaths === 0 && hits === 0,
     noDeaths: houses > 0 && deaths === 0,
     cleanBags: houses > 0 && bunks === 0

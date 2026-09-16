@@ -196,6 +196,20 @@ export function gangContacts(gangID) {
   const secondary = CONTACTS.find(c => c.gangID === gangID && c.role === 'secondary');
   return primary && secondary ? { primary, secondary } : null;
 }
+/**
+ * The job contact whose object belongs in this house, or null.
+ *
+ * One house per block carries a mission, and only for a chosen gang. The
+ * scene asks this rather than comparing house numbers itself, so the brief
+ * and the object on the floor can never drift apart.
+ */
+export function activeMissionContact(gangID, house) {
+  const beat = contactBeat(house);
+  const pair = gangContacts(gangID);
+  if (!beat || beat.kind !== 'brief' || !pair) return null;
+  return pair.secondary;
+}
+
 export function contactBeat(house) {
   return CONTACT_BEATS.find(b => b.house === house) || null;
 }

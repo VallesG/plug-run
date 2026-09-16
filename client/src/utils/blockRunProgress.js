@@ -1,7 +1,7 @@
 // Device-local, account-scoped record of how the current block has gone.
 // Its own key, separate from journey progression: losing this may only cost a
 // contact a better sentence, never a cleared house or a saved checkpoint.
-import { createBlockRun, recordHouseClear, recordBlockDeath, blockRunStats } from '../logic/blockRun.js';
+import { createBlockRun, recordHouseClear, recordBlockDeath, recordMissionOutcome, blockRunStats } from '../logic/blockRun.js';
 import { getUserID } from './userManager.js';
 
 const key = () => 'pr_blockrun_v1_' + getUserID();
@@ -22,6 +22,11 @@ export function getBlockRunStats(blockIndex) {
 }
 export function noteHouseClear(blockIndex, house) {
   const result = recordHouseClear(read(blockIndex), blockIndex, house);
+  if (result.applied) write(result.state);
+  return result.applied;
+}
+export function noteMissionOutcome(blockIndex, outcome) {
+  const result = recordMissionOutcome(read(blockIndex), blockIndex, outcome);
   if (result.applied) write(result.state);
   return result.applied;
 }

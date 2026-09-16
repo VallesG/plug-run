@@ -16,7 +16,7 @@ import { contactCue } from '../logic/contacts.js';
 import { showContactPanel } from './ContactPanel.js';
 import { claimContact, getContactProgress } from '../utils/contactProgress.js';
 import { praiseUsedInBlock, praiseMark } from '../logic/contactProgress.js';
-import { getBlockRunStats, noteHouseClear, noteBlockDeath } from '../utils/blockRunProgress.js';
+import { getBlockRunStats, noteHouseClear, noteBlockDeath, noteMissionOutcome } from '../utils/blockRunProgress.js';
 import { getWindowState } from '../utils/windowProgress.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import { drawBlockMap } from './BlockMap.js';
@@ -470,6 +470,12 @@ export default class ProgressionManager {
     const scene = this.scene;
     if (scene.runKind !== 'journey' || scene.role !== 'runner') return;
     try {
+      // The briefed house, settled at the moment it is cleared: the object
+      // and the real bag both came out, or they did not. Recorded once, and
+      // it grants nothing — it only chooses the debrief line.
+      if (scene.missionObject) {
+        noteMissionOutcome(scene.blockIndex || 1, scene.hasMissionItem ? 'win' : 'miss');
+      }
       const selected = scene.runnerPowersSelected || [];
       const consumed = scene.runnerPowersConsumed || [];
       noteHouseClear(scene.blockIndex || 1, {
@@ -511,7 +517,7 @@ export default class ProgressionManager {
         usedPraise: praiseUsedInBlock(record, blockIndex),
         // No mission exists yet, so no outcome is ever claimed. The debrief
         // beat falls back to ordinary praise until the mission slice lands.
-        missionOutcome: null
+        missionOutcome: getBlockRunStats(blockIndex).mission
       });
     } catch (error) {
       console.warn('[Contacts] Could not build a cue', error);
