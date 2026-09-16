@@ -1,0 +1,73 @@
+{
+ "schemaVersion": 1,
+ "rulesVersion": "rivals-v1",
+ "generatedAt": "2026-09-16T02:42:32.076Z",
+ "courses": [
+  {
+   "slot": 1,
+   "name": "Low End Rush",
+   "courseID": "rivals-v1-2722422571",
+   "opponents": 6,
+   "tiers": {
+    "hustler": 3,
+    "street": 3
+   },
+   "elapsedMs": [
+    382228.5,
+    183377.7999999998,
+    214470.2999999998,
+    231053.1000000001,
+    299118.6000000001,
+    245673.09999999963
+   ]
+  },
+  {
+   "slot": 2,
+   "name": "Copper Climb",
+   "courseID": "rivals-v1-2917822448",
+   "opponents": 0,
+   "tiers": {},
+   "elapsedMs": []
+  },
+  {
+   "slot": 3,
+   "name": "Freight Run",
+   "courseID": "rivals-v1-1245351574",
+   "opponents": 0,
+   "tiers": {},
+   "elapsedMs": []
+  },
+  {
+   "slot": 4,
+   "name": "Afterglow Mile",
+   "courseID": "rivals-v1-2476136539",
+   "opponents": 0,
+   "tiers": {},
+   "elapsedMs": []
+  },
+  {
+   "slot": 5,
+   "name": "Switchyard Seven",
+   "courseID": "rivals-v1-2143714553",
+   "opponents": 0,
+   "tiers": {},
+   "elapsedMs": []
+  },
+  {
+   "slot": 6,
+   "name": "Lastlight Loop",
+   "courseID": "rivals-v1-2077357177",
+   "opponents": 0,
+   "tiers": {},
+   "elapsedMs": []
+  },
+  {
+   "slot": 7,
+   "name": "Blacktop Crown",
+   "courseID": "rivals-v1-2334749748",
+   "opponents": 0,
+   "tiers": {},
+   "elapsedMs": []
+  }
+ ]
+}
