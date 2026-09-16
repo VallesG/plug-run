@@ -26,7 +26,14 @@ export function createContactProgress(value = {}) {
     const clean = [...new Set(ids.map(cleanID).filter(Boolean))].slice(-MAX_IDS_PER_BLOCK);
     if (clean.length) blocks[block] = clean;
   }
-  return { version: CONTACT_PROGRESS_VERSION, blocks };
+  const stories = {};
+  for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
+    const entry = value?.stories?.[gangID];
+    if (!entry || !Number.isSafeInteger(entry.chapter) || entry.chapter < 0 ||
+        !Number.isSafeInteger(entry.lastBlock) || entry.lastBlock < 0) continue;
+    stories[gangID] = { chapter: entry.chapter, lastBlock: entry.lastBlock };
+  }
+  return { version: CONTACT_PROGRESS_VERSION, blocks, stories };
 }
 
 export function contactShown(value, eventID) {
@@ -57,7 +64,7 @@ export function markContactShown(value, eventID, blockIndex = 1) {
     .slice(0, Math.max(CONTACT_PROGRESS_BLOCKS, 1));
   const pruned = {};
   for (const b of keep) pruned[b] = blocks[b];
-  return { state: { version: CONTACT_PROGRESS_VERSION, blocks: pruned }, applied: true, reason: null };
+  return { state: { ...state, blocks: pruned }, applied: true, reason: null };
 }
 
 /**
@@ -75,4 +82,31 @@ export function praiseMark(blockIndex, key) { return 'praise:' + key; }
 /** Beats seen in one block, for tests and debugging. Never used to grant anything. */
 export function contactsSeenInBlock(value, blockIndex) {
   return createContactProgress(value).blocks[intOr(blockIndex, 1)] || [];
+}
+
+/** Independent crew chapters survive beat pruning and old v1 records migrate empty. */
+export function crewStoryProgress(value, gangID) {
+  return createContactProgress(value).stories[gangID] || { chapter: 0, lastBlock: 0 };
+}
+
+/**
+ * Called ONLY by the successful final-house extraction seam, never a dialog tap.
+ * A monotonic block watermark retains duplicate protection without an event ledger.
+ * Cross-device/server accounting is not claimed: this is the existing local account.
+ */
+export function completeCrewStory(value, { gangID, blockIndex, clearedHouses } = {}) {
+  const state = createContactProgress(value);
+  if (!['crossline', 'iron-row', 'afterlight'].includes(gangID) ||
+      !Number.isSafeInteger(blockIndex) || blockIndex < 1 || clearedHouses !== 15)
+    return { state, applied: false, reason: 'unfinished-or-invalid' };
+  const previous = crewStoryProgress(state, gangID);
+  if (blockIndex <= previous.lastBlock)
+    return { state, applied: false, reason: 'already-completed' };
+  if (previous.chapter === Number.MAX_SAFE_INTEGER)
+    return { state, applied: false, reason: 'chapter-overflow' };
+  return {
+    state: { ...state, stories: { ...state.stories,
+      [gangID]: { chapter: previous.chapter + 1, lastBlock: blockIndex } } },
+    applied: true, reason: null
+  };
 }

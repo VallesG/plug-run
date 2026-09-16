@@ -59,7 +59,7 @@ const CONTACT_LIST = [
         ],
         flawless: 'Nobody has laid a finger on you yet. I am going to start making things up about you.',
         comeback: 'You have been put down more than once and you are still on my frequency. That counts.',
-        noPowers: 'All that and you have not burned a single charge. Showing off is allowed.',
+        noPowers: 'All that and you have not burned a single power. Showing off is allowed.',
         phase: 'You keep walking straight through the walls. Half the street thinks I am lying about you.',
         dash: 'Every time it gets close you are already gone. Keep moving like that.',
         decoy: 'Sending doubles into the dark. That is the kind of thing people repeat.',
@@ -82,7 +82,7 @@ const CONTACT_LIST = [
     heightFraction: 0.58, baseFraction: 0.75, foregroundStartFraction: 0.65,
     lines: {
       brief: 'There is a document tube in this house. Bring it out with the real stash — not instead of it.',
-      reminder: 'Tube first if you can. The bag is still what gets you paid.'
+      reminder: 'Tube if you can. The real bag is still what moves the block forward.'
     }
   },
   {
@@ -127,7 +127,7 @@ const CONTACT_LIST = [
     heightFraction: 0.6, baseFraction: 0.76, foregroundStartFraction: null,
     lines: {
       brief: 'Service keys are in that house. Take them and the real stash — either one alone wastes the trip.',
-      reminder: 'Keys and the bag. Both, or neither counts.'
+      reminder: 'Keys if you can. The real bag still counts even if the keys stay behind.'
     }
   },
   {
@@ -149,7 +149,7 @@ const CONTACT_LIST = [
         ],
         flawless: 'Not one scratch on you. Do you have any idea how that looks from out here?',
         comeback: 'You have hit the floor more than once and got back up. Better story anyway.',
-        noPowers: 'No charges spent and you are still ahead. That is the flex.',
+        noPowers: 'No powers spent and you are still ahead. That is the flex.',
         phase: 'Walking through walls like it costs nothing. Keep doing it where people can see.',
         dash: 'Gone before they finish aiming. That is the whole look.',
         decoy: 'You let a fake take the heat for you, and I love it.',
@@ -158,7 +158,7 @@ const CONTACT_LIST = [
       },
       tease: 'Sol wants you for something. He only asks runners he expects to finish.',
       debriefWin: 'Sol got his marker and you kept the bag. That is the version people repeat.',
-      debriefMiss: 'You left it behind. The run still counts — the story does not.'
+      debriefMiss: 'You left the marker behind, but the bag counts. Finish the block; Sol can work around it.'
     }
   },
   {
@@ -377,4 +377,25 @@ export function contactPanelLayout(width, height, portraitFractions = {}, text =
     },
     bodyFontPx
   };
+}
+
+/** Paginate prose before rendering; never shrink type or cover the last line. */
+export function contactDialoguePages(text, width, height) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const pages = [];
+  let current = '';
+  const fits = value => {
+    const a = contactPanelLayout(width, height, {}, value);
+    const bottom = a.dialogue.y - a.dialogue.h / 2 + a.dialogue.copyTop
+      + a.dialogue.lines * a.dialogue.lineHeight;
+    return bottom <= a.action.y - a.action.h / 2;
+  };
+  for (const word of words) {
+    const next = current ? current + ' ' + word : word;
+    if (current && !fits(next)) { pages.push(current); current = word; }
+    else current = next;
+  }
+  if (current) pages.push(current);
+  return pages;
 }

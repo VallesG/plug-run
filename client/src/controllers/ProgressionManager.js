@@ -12,10 +12,11 @@ import {
 } from '../utils/routeProgress.js';
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
-import { contactCue } from '../logic/contacts.js';
+import { crewChapter, crewConsultationPages } from '../logic/crewStory.js';
+import { gangContacts, contactCue } from '../logic/contacts.js';
 import { showContactPanel } from './ContactPanel.js';
-import { claimContact, getContactProgress } from '../utils/contactProgress.js';
-import { praiseUsedInBlock, praiseMark } from '../logic/contactProgress.js';
+import { claimContact, getContactProgress, finishCrewStory } from '../utils/contactProgress.js';
+import { praiseUsedInBlock, praiseMark, crewStoryProgress } from '../logic/contactProgress.js';
 import { getBlockRunStats, noteHouseClear, noteBlockDeath, noteMissionOutcome } from '../utils/blockRunProgress.js';
 import { getWindowState } from '../utils/windowProgress.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
@@ -454,7 +455,7 @@ export default class ProgressionManager {
   /**
    * The gang's face, on the way into a house.
    *
-   * Sits between the entrance map and the loadout so it never covers live
+   * Sits before the entrance map and the loadout so it never covers live
    * movement, and it is the ONLY place check-ins are triggered — Rivals,
    * Tutorial, the bot harness and the legacy daily route all fall straight
    * through. A beat is claimed before it is shown, so a reload while the
@@ -487,6 +488,17 @@ export default class ProgressionManager {
         powers: selected.filter((p, i) => consumed[i])
       });
       this._contactDeathsThisHouse = 0;
+      // This method is called by a real-stash extraction, not by a modal.
+      // Journey's ordered checkpoint proves the previous fourteen clears,
+      // including legacy resumes whose optional per-house stats are missing.
+      if (scene.pveRound === PVE_BLOCK_MAPS) {
+        const gangID = getWindowState().gangID;
+        const before = crewStoryProgress(getContactProgress(), gangID);
+        const result = finishCrewStory(gangID, scene.blockIndex || 1, PVE_BLOCK_MAPS);
+        const chapter = result.applied ? before.chapter
+          : Math.max(0, crewStoryProgress(result.state, gangID).chapter - 1);
+        this._crewCompletedChapter = chapter;
+      }
     } catch (error) {
       console.warn('[Contacts] Could not record the house', error);
     }
@@ -507,8 +519,9 @@ export default class ProgressionManager {
     try {
       const blockIndex = scene.blockIndex || 1;
       const record = getContactProgress();
+      const gangID = getWindowState().gangID;
       cue = contactCue({
-        gangID: getWindowState().gangID,
+        gangID,
         house: scene.pveRound || 1,
         blockIndex,
         // Only true things: the praise variants are chosen from what this
@@ -519,6 +532,15 @@ export default class ProgressionManager {
         // beat falls back to ordinary praise until the mission slice lands.
         missionOutcome: getBlockRunStats(blockIndex).mission
       });
+      if (cue) {
+        const chapter = crewStoryProgress(record, gangID).chapter;
+        const story = crewChapter(gangID, chapter);
+        cue = { ...cue,
+          pages: crewConsultationPages(gangID, chapter, cue.beat.id, cue.text),
+          chapterLabel: 'CHAPTER ' + story.number + ' · ' + story.title.toUpperCase(),
+          action: 'VIEW THE BLOCK  >>'
+        };
+      }
     } catch (error) {
       console.warn('[Contacts] Could not build a cue', error);
     }
@@ -537,6 +559,10 @@ export default class ProgressionManager {
   }
 
   showBlockMap(goNext) {
+    return this.showContactCheckIn(() => this.showBlockEntranceMap(goNext));
+  }
+
+  showBlockEntranceMap(goNext) {
     const maps = PVE_BLOCK_MAPS;
     const house = Math.min(maps, this.scene.pveRound || 1);
     const cleared = house - 1;
@@ -549,7 +575,7 @@ export default class ProgressionManager {
         : 'House ' + house + ' of ' + maps + ' · Follow the light.',
       lines: block && house === 1 ? [block.arrival] : [],
       buttons: [
-        { label: house === maps ? 'ENTER HOUSE 15 · TWO PLUGS' : 'ENTER HOUSE ' + house, variant: 'primary', onClick: () => this.showContactCheckIn(goNext) },
+        { label: house === maps ? 'ENTER HOUSE 15 · TWO PLUGS' : 'ENTER HOUSE ' + house, variant: 'primary', onClick: goNext },
         ...(cleared && !block ? [{
           label: 'Restart Daily Block', variant: 'secondary',
           onClick: () => {
@@ -560,7 +586,7 @@ export default class ProgressionManager {
         { label: 'Back to Menu', variant: 'secondary', onClick: () => this.scene.scene.start('MENU') }
       ]
     });
-    if (!modal) { this.showContactCheckIn(goNext); return null; }
+    if (!modal) { goNext(); return null; }
     drawBlockMap(this.scene, modal, { cleared, maps, entering: true });
     this.scene.gameUI.currentModal = modal;
     return modal;
@@ -574,6 +600,33 @@ export default class ProgressionManager {
    * daily leaderboard entry and a shared replay hang off.
    */
   showBlockComplete() {
+    // The two-contact curtain call comes before the revealed block/result.
+    // It never advances the story: only the actual final extraction does.
+    if (this.scene.runKind === 'journey' && this.scene.role === 'runner') {
+      const gangID = getWindowState().gangID;
+      const pair = gangContacts(gangID);
+      const chapter = this._crewCompletedChapter;
+      const eventID = 'crew-finish/block-' + (this.scene.blockIndex || 1) + '/' + gangID;
+      if (pair && Number.isSafeInteger(chapter) && claimContact(eventID, this.scene.blockIndex || 1)) {
+        const story = crewChapter(gangID, chapter);
+        const cue = {
+          contact: pair.primary, contacts: [pair.primary, pair.secondary], celebration: true,
+          speaker: pair.primary.name.toUpperCase(), text: story.primaryFinish,
+          pages: [
+            { text: story.primaryFinish, contact: pair.primary },
+            { text: story.secondaryFinish, contact: pair.secondary }
+          ],
+          chapterLabel: 'CHAPTER ' + story.number + ' COMPLETE · ' + story.title.toUpperCase(),
+          action: 'SEE THE BLOCK  >>'
+        };
+        try { return showContactPanel(this.scene, cue, () => this.showBlockCompleteResult()); }
+        catch (error) { console.warn('[Contacts] Celebration failed', error); }
+      }
+    }
+    return this.showBlockCompleteResult();
+  }
+
+  showBlockCompleteResult() {
     const maps = PVE_BLOCK_MAPS;
     this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, maps);
 

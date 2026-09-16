@@ -16,7 +16,7 @@
 // A missing or slow image falls back to a flat accent panel and the dialogue
 // still reads. Nothing here can strand a player between houses.
 import Phaser from 'phaser';
-import { CONTACTS, contactPanelLayout } from '../logic/contacts.js';
+import { CONTACTS, contactPanelLayout, contactDialoguePages } from '../logic/contacts.js';
 
 const DEPTH = 24_000;          // above GameUI modals (20k), below replay (30k)
 const COLORS = { ink: 0x080b0d, cream: 0xf1dfb0, paper: 0xe9dfc7, dim: 0x92a0a2 };
@@ -31,11 +31,23 @@ export function showContactPanel(scene, cue, onDone) {
   const objects = [];
   let finished = false;
   let bgKey = null;
+  let pageIndex = 0;
+  const cast = cue.contacts || [cue.contact];
+  const pages = (cue.pages?.length ? cue.pages : [cue.text]).flatMap(value => {
+    const entry = typeof value === 'string' ? { text: value, contact: cue.contact } : value;
+    return contactDialoguePages(entry.text, scene.scale.gameSize.width, scene.scale.gameSize.height)
+      .map(text => ({ ...entry, text }));
+  });
+  const page = () => pages[pageIndex];
+  let a;
   const track = (o) => { objects.push(o); return o; };
 
-  const teardown = () => {
+  const clearObjects = () => {
     for (const o of objects) { try { scene.tweens?.killTweensOf(o); o.destroy(); } catch {} }
     objects.length = 0;
+  };
+  const teardown = () => {
+    clearObjects();
     // Release the room. Portrait atlases stay: they are small and The Window
     // uses them too, so removing them would only cause a reload.
     if (bgKey) { try { scene.textures.remove(bgKey); } catch {} bgKey = null; }
@@ -47,12 +59,17 @@ export function showContactPanel(scene, cue, onDone) {
     if (advance) onDone?.();
   };
 
-  const a = contactPanelLayout(scene.scale.gameSize.width, scene.scale.gameSize.height, cue.contact, cue.text);
+  const measure = () => {
+    a = contactPanelLayout(scene.scale.gameSize.width, scene.scale.gameSize.height,
+      cue.celebration ? { heightFraction: 0.55, baseFraction: 0.72 } : cue.contact, page().text);
+  };
+  measure();
 
   // Everything below the panel is unreachable while it is up: one opaque,
   // interactive backstop that swallows every pointer event.
-  track(scene.add.rectangle(a.w / 2, a.h / 2, a.w + 4, a.h + 4, COLORS.ink, 1)
+  const drawBackstop = () => track(scene.add.rectangle(a.w / 2, a.h / 2, a.w + 4, a.h + 4, COLORS.ink, 1)
     .setScrollFactor(0).setDepth(DEPTH - 1).setInteractive());
+  drawBackstop();
 
   const backdropFallback = () => track(scene.add.rectangle(a.cx, a.cy, a.panelW, a.panelH, cue.contact.accent, 0.22)
     .setScrollFactor(0).setDepth(DEPTH));
@@ -73,25 +90,28 @@ export function showContactPanel(scene, cue, onDone) {
     return image;
   };
 
-  const drawPortrait = () => {
-    const c = cue.contact;
+  const drawPortrait = (c = cue.contact, x = a.cx, duo = false) => {
+    const portraitH = duo
+      ? Math.min(a.portraitH, a.panelW * 0.5 * c.frame.height / c.frame.width)
+      : a.portraitH;
+    const portraitY = a.portraitBaseY - portraitH / 2;
     const key = c.portraitKey;
     if (!scene.textures.exists(key)) {
-      const circle = track(scene.add.circle(a.cx, a.portraitCenterY, a.portraitH * 0.26, c.accent, 0.9)
+      const circle = track(scene.add.circle(x, portraitY, portraitH * 0.26, c.accent, 0.9)
         .setScrollFactor(0).setDepth(DEPTH + 1));
-      track(scene.add.text(a.cx, a.portraitCenterY, c.name[0], {
-        fontFamily: 'Georgia, serif', fontSize: Math.round(a.portraitH * 0.24) + 'px',
+      track(scene.add.text(x, portraitY, c.name[0], {
+        fontFamily: 'Georgia, serif', fontSize: Math.round(portraitH * 0.24) + 'px',
         fontStyle: 'bold', color: '#0b1012'
       }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
       return circle;
     }
-    track(scene.add.ellipse(a.cx + 5, a.portraitBaseY - a.portraitH * 0.02,
-      a.portraitH * 0.42, a.portraitH * 0.09, COLORS.ink, 0.55)
+    track(scene.add.ellipse(x + 5, a.portraitBaseY - portraitH * 0.02,
+      portraitH * 0.42, portraitH * 0.09, COLORS.ink, 0.55)
       .setScrollFactor(0).setDepth(DEPTH + 0.9));
-    const frameName = c.expressions > 1 ? 0 : c.id;
-    const sprite = track(scene.add.image(a.cx, a.portraitCenterY, key, frameName)
+    const frameName = c.expressions > 1 ? (duo ? 2 : 0) : c.id;
+    const sprite = track(scene.add.image(x, portraitY, key, frameName)
       .setScrollFactor(0).setDepth(DEPTH + 1));
-    sprite.setScale(a.portraitH / c.frame.height);
+    sprite.setScale(portraitH / c.frame.height);
     return sprite;
   };
 
@@ -124,9 +144,9 @@ export function showContactPanel(scene, cue, onDone) {
     g.lineStyle(1, cue.contact.accent, 0.4);
     g.strokeRect(a.cx - a.panelW / 2 + 6, a.panelTop + 6, a.panelW - 12, a.panelH - 12);
     // Where we are, small and out of the way.
-    track(scene.add.text(a.cx, a.panelTop + 18, cue.contact.setting.toUpperCase(), {
+    track(scene.add.text(a.cx, a.panelTop + 18, cue.chapterLabel || cue.contact.setting.toUpperCase(), {
       fontFamily: 'monospace', fontSize: '10px', color: '#c9bfa6', letterSpacing: 2,
-      stroke: '#080b0d', strokeThickness: 3
+      stroke: '#080b0d', strokeThickness: 3, align: 'center', wordWrap: { width: a.panelW - 32 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3));
   };
 
@@ -136,11 +156,11 @@ export function showContactPanel(scene, cue, onDone) {
       .setScrollFactor(0).setDepth(DEPTH + 3));
     track(scene.add.rectangle(d.x, d.y, d.w, d.h, 0x0d1417, 0.97)
       .setStrokeStyle(2, cue.contact.accent).setScrollFactor(0).setDepth(DEPTH + 4));
-    track(scene.add.text(d.x - d.w / 2 + 18, d.y - d.h / 2 + 16, cue.speaker, {
+    track(scene.add.text(d.x - d.w / 2 + 18, d.y - d.h / 2 + 16, page().contact.name.toUpperCase(), {
       fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
-      color: cue.contact.css, letterSpacing: 2
+      color: page().contact.css, letterSpacing: 2
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH + 5));
-    track(scene.add.text(d.x - d.w / 2 + 18, d.y - d.h / 2 + d.copyTop, cue.text, {
+    track(scene.add.text(d.x - d.w / 2 + 18, d.y - d.h / 2 + d.copyTop, page().text, {
       fontFamily: 'Georgia, serif', fontSize: a.bodyFontPx + 'px',
       color: '#e9dfc7', lineSpacing: 5, wordWrap: { width: d.w - 36 }
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH + 5));
@@ -150,7 +170,7 @@ export function showContactPanel(scene, cue, onDone) {
       .setScrollFactor(0).setDepth(DEPTH + 5));
     const button = track(scene.add.rectangle(b.x, b.y, b.w, b.h, 0x172126, 1)
       .setStrokeStyle(2, cue.contact.accent).setScrollFactor(0).setDepth(DEPTH + 6));
-    const label = track(scene.add.text(b.x, b.y, cue.action, {
+    const label = track(scene.add.text(b.x, b.y, pageIndex < pages.length - 1 ? 'KEEP LISTENING  >>' : cue.action, {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
       color: '#f4ecd7', letterSpacing: 1
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 7));
@@ -162,17 +182,57 @@ export function showContactPanel(scene, cue, onDone) {
       button.setInteractive({ cursor: 'pointer' });
       button.on('pointerover', () => button.setFillStyle(cue.contact.accent, 0.3));
       button.on('pointerout', () => button.setFillStyle(0x172126, 1));
-      button.on('pointerup', () => close(true));
+      button.on('pointerup', () => {
+        if (pageIndex >= pages.length - 1) { close(true); return; }
+        pageIndex++;
+        clearObjects();
+        measure();
+        drawBackstop();
+        compose(bgKey);
+      });
       label.setAlpha(1);
     });
     label.setAlpha(0.55);
   };
 
+  // Original code-native cover art: approved pair, roofline and comic spotlight.
+  // No extra raster download, no invented character designs, no served source PNGs.
+  const drawCelebration = () => {
+    const g = track(scene.add.graphics().setScrollFactor(0).setDepth(DEPTH));
+    const left = a.cx - a.panelW / 2;
+    g.fillStyle(0x111b20, 1).fillRect(left, a.panelTop, a.panelW, a.panelH);
+    const centerY = a.panelTop + a.panelH * 0.4;
+    for (let i = 0; i < 14; i++) {
+      const x = left + a.panelW * i / 14;
+      g.fillStyle(cue.contact.accent, i % 2 ? 0.04 : 0.1);
+      g.fillTriangle(a.cx, centerY, x, a.panelTop + 6, x + a.panelW / 28, a.panelTop + 6);
+    }
+    for (let i = 0; i < 8; i++) {
+      const roofW = a.panelW / 8, roofH = a.panelH * (0.09 + (i % 3) * 0.015);
+      const y = a.portraitBaseY - roofH;
+      g.fillStyle(0x080e12, 1).fillRect(left + i * roofW, y, roofW - 3, roofH + 10);
+      g.lineStyle(1, cue.contact.accent, 0.35).lineBetween(left + i * roofW, y, left + (i + 1) * roofW - 3, y);
+      g.fillStyle(0xe8c67a, 0.7).fillRect(left + i * roofW + 9, y + 12, 4, 6);
+    }
+    track(scene.add.text(a.cx, a.panelTop + a.panelH * 0.13, '15 / 15', {
+      fontFamily: 'Arial, sans-serif', fontSize: Math.round(a.panelW * 0.095) + 'px',
+      fontStyle: 'bold', color: '#f1dfb0', stroke: '#080b0d', strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 0.5));
+    track(scene.add.text(a.cx, a.panelTop + a.panelH * 0.19, 'ALL STASHES HOME', {
+      fontFamily: 'monospace', fontSize: '11px', color: cue.contact.css, letterSpacing: 2
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 0.5));
+    drawPortrait(cast[1], a.cx + a.panelW * 0.19, true);
+    drawPortrait(cast[0], a.cx - a.panelW * 0.19, true);
+  };
+
   const compose = (key) => {
     if (finished) return;
-    if (key && scene.textures.exists(key)) drawRoom(key); else backdropFallback();
-    drawPortrait();
-    if (key) drawForeground(key);
+    if (cue.celebration) drawCelebration();
+    else {
+      if (key && scene.textures.exists(key)) drawRoom(key); else backdropFallback();
+      drawPortrait();
+      if (key) drawForeground(key);
+    }
     drawFrame();
     drawDialogue();
   };
@@ -180,28 +240,28 @@ export function showContactPanel(scene, cue, onDone) {
   // The portrait atlas is shared with The Window but a gameplay scene has not
   // loaded it, so both it and the room are fetched here on demand.
   const key = 'contact_bg_' + cue.contact.id;
-  const portraitKey = cue.contact.portraitKey;
-  const needRoom = !scene.textures.exists(key);
-  const needPortrait = !scene.textures.exists(portraitKey);
+  const needRoom = !cue.celebration && !scene.textures.exists(key);
+  const missingPortraits = cast.filter((c, i) => cast.findIndex(other => other.portraitKey === c.portraitKey) === i &&
+    !scene.textures.exists(c.portraitKey));
+  const needPortrait = missingPortraits.length > 0;
 
   // Named crops on the shared cast sheet. Registered once per texture; the
   // frame bounds come from the tested contact contract, never from guesses.
   const registerFrames = () => {
-    if (!scene.textures.exists(portraitKey) || cue.contact.expressions > 1) return;
-    const texture = scene.textures.get(portraitKey);
     for (const c of CONTACTS) {
-      if (c.portraitKey !== portraitKey || c.expressions > 1 || texture.has(c.id)) continue;
-      texture.add(c.id, 0, c.frame.x, 0, c.frame.width, c.frame.height);
+      if (c.expressions > 1 || !scene.textures.exists(c.portraitKey)) continue;
+      const texture = scene.textures.get(c.portraitKey);
+      if (!texture.has(c.id)) texture.add(c.id, 0, c.frame.x, 0, c.frame.width, c.frame.height);
     }
   };
 
-  if (!needRoom && !needPortrait) { bgKey = key; registerFrames(); compose(key); }
+  if (!needRoom && !needPortrait) { bgKey = cue.celebration ? null : key; registerFrames(); compose(bgKey); }
   else {
     let settled = false;
     const settle = () => {
       if (settled || finished) return;
       settled = true;
-      const room = scene.textures.exists(key);
+      const room = !cue.celebration && scene.textures.exists(key);
       if (room) bgKey = key;
       registerFrames();
       compose(room ? key : null);
@@ -209,13 +269,11 @@ export function showContactPanel(scene, cue, onDone) {
     // A slow or failed network cannot hold the player between houses.
     const guard = scene.time?.delayedCall?.(2500, settle);
     if (needRoom) scene.load.image(key, cue.contact.background);
-    if (needPortrait) {
-      if (cue.contact.expressions > 1) {
-        scene.load.spritesheet(portraitKey, cue.contact.portraitSource,
-          { frameWidth: cue.contact.frame.width, frameHeight: cue.contact.frame.height });
-      } else {
-        scene.load.image(portraitKey, cue.contact.portraitSource);
-      }
+    for (const c of missingPortraits) {
+      if (c.expressions > 1) {
+        scene.load.spritesheet(c.portraitKey, c.portraitSource,
+          { frameWidth: c.frame.width, frameHeight: c.frame.height });
+      } else scene.load.image(c.portraitKey, c.portraitSource);
     }
     scene.load.once('complete', () => { guard?.remove?.(); settle(); });
     scene.load.once('loaderror', () => { guard?.remove?.(); settle(); });

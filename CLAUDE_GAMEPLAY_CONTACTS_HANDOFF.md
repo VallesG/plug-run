@@ -4,6 +4,61 @@ Written 2026-09-16. Repository: VallesG/plug-run.
 Work only on `claude/input-intent-layer`. **Never touch master: live deploy.**
 Gameplay implementation checkpoint: `08e45597d89c0fc446e8076d7b427704fbca3fc7`.
 
+## Crew story chapters and completion curtain call — Codex (2026-09-16)
+
+This section supersedes the older sequencing/content notes below. Work is on
+`claude/input-intent-layer` only; master and the 55-record Rivals bank are untouched.
+
+- The contact now speaks BEFORE the exterior entrance map, including house 1:
+  consultation -> street view -> ENTER HOUSE -> existing loadout.
+- Three separate six-chapter arcs: Crossline rebuilds a street network; Iron Row
+  gets the garage working; Afterlight puts a night event together. Further
+  blocks get numbered continuation dialogue, not a reset to chapter one.
+- Every chapter requires a complete 15-real-stash Journey block. Only the
+  successful final-house extraction calls `finishCrewStory`; panel taps, pickup
+  alone, deaths, partial blocks, Rivals, Tutorial and replay never advance it.
+  Ordered Journey checkpoints prove the previous houses, so legacy resumes
+  do not depend on optional per-house contact statistics being present.
+- Chapters are independent per gang, local/account-scoped, and stored inside
+  the existing `pr_contacts_v1_<user>` record as `stories[gangID]` with
+  `{chapter,lastBlock}`. Old v1 records migrate to no story completions.
+  Monotonic block watermarks survive two-block dialogue-history pruning;
+  never turn them into a truncated event ledger. No retrospective chapter
+  grants for historical blocks. Future gang switching must freeze block crew
+  ownership before it is enabled.
+- Opening consultations have context + goal; secondaries have chapter-specific
+  briefings. Measured praise and the mission instruction remain intact.
+  Optional object failure never blocks a chapter: all fifteen real bags do.
+- A crew-specific paired comic cover appears on block finish, with both approved
+  portraits, live chapter text, a lit roofline, comic spotlight rays and 15/15.
+  Both contacts speak, then the existing fully lit block/result and next-block/
+  replay/menu actions appear. This is code-native cover composition using the
+  existing WebP portraits, NOT three newly generated raster illustrations.
+  Switch uses the impressed expression. No source PNGs returned to public/.
+- Dialogue is paginated to viewport before rendering; type is never shrunk to
+  squeeze prose in. Page turns keep the one loaded room and release it only
+  on final teardown. Lower-right >> and delayed input arming are preserved.
+- Storage denial keeps a per-account in-memory fallback for this session;
+  a reload cannot recover an unsaved write. No Cash or bonus REP is granted.
+  The old Cash ledger retention hazard is still unfixed.
+
+### Verification for THIS change, not inherited from Claude
+
+Carbon Black restriction honored: no sandbox/process attempts. Native
+`npm run verify`, .mjs checks, Vite and actual browser rendering were NOT run.
+Adapted in-memory V8 baseline: 993 contact + 53 flow assertions.
+After changes: 993 contact + 4320 story + 71 flow + 39 panel-lifecycle +
+16 storage assertions (5439 total); six adapted import/binding checks.
+These are not native ESM resolution or a full regression.
+New suites are registered in `client/package.json` and must run in the next
+execution-enabled environment, including unchanged `test/rivalBank.test.mjs`.
+
+Phone review still required: two-character proportions, chapter heading wrap,
+comic cover, pagination/font estimates, and finish -> result -> next-block flow.
+Carry the special object out manually as well; this task did not prove that.
+New story progress is device-local, not trusted/server/shared crew accounting.
+
+
 ## Status: stages 1-5 implemented (2026-09-16)
 
 See the top section of HANDOFF_CODEX.md for what shipped, the rules that must

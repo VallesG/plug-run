@@ -2,11 +2,12 @@
 // Exercises the real ProgressionManager source against a stub scene, the same
 // way the Rivals adapter is tested — no Phaser, no browser, no storage.
 import { readFileSync } from 'node:fs';
-import { contactCue, CONTACT_BEATS } from '../src/logic/contacts.js';
+import { gangContacts, contactCue, CONTACT_BEATS } from '../src/logic/contacts.js';
 import {
   createContactProgress, contactShown, markContactShown, contactsSeenInBlock,
-  praiseUsedInBlock, praiseMark, CONTACT_PROGRESS_BLOCKS
+  praiseUsedInBlock, praiseMark, crewStoryProgress, completeCrewStory, CONTACT_PROGRESS_BLOCKS
 } from '../src/logic/contactProgress.js';
+import { crewChapter, crewConsultationPages } from '../src/logic/crewStory.js';
 import { blockRunStats, createBlockRun, recordHouseClear } from '../src/logic/blockRun.js';
 
 let blockStats = blockRunStats(createBlockRun({}, 1), 1);
@@ -62,10 +63,15 @@ let gangID = 'crossline';
 let shownPanels = [];
 let panelFailure = false;
 const bindings = {
-  contactCue,
+  contactCue, gangContacts, crewChapter, crewConsultationPages, crewStoryProgress,
+  finishCrewStory: (id, block, cleared) => {
+    const result = completeCrewStory(store, { gangID: id, blockIndex: block, clearedHouses: cleared });
+    store = result.state;
+    return result;
+  },
   praiseUsedInBlock, praiseMark,
   getBlockRunStats: () => blockStats,
-  noteHouseClear: () => true, noteBlockDeath: () => true,
+  noteHouseClear: () => true, noteBlockDeath: () => true, noteMissionOutcome: () => true,
   getContactProgress: () => store,
   getWindowState: () => ({ gangID }),
   claimContact: (id, block) => {
@@ -206,5 +212,65 @@ check('nothing in the block was said twice',
   new Set(praiseUsedInBlock(store, 7)).size === praiseUsedInBlock(store, 7).length);
 check('praise marks never collide with beat ids',
   praiseUsedInBlock(store, 7).every(k => !k.includes('/')));
+
+
+// --- consult BEFORE the exterior map, including the very first house -------
+store = createContactProgress();
+gangID = 'crossline';
+shownPanels = [];
+let loadouts = 0;
+const order = [];
+const firstScene = { runKind: 'journey', role: 'runner', pveRound: 1, blockIndex: 21,
+  gameUI: { showModal: config => { order.push('map'); return { config }; } }
+};
+const firstManager = new Manager(firstScene);
+const opener = firstManager.showBlockMap(() => { loadouts++; order.push('loadout'); });
+check('opening consultation waits before creating the map', shownPanels.length === 1 && order.length === 0);
+check('opening is fleshed out in short pages', shownPanels[0].pages.length === 2);
+opener.advance();
+check('map appears only after the opening conversation', order.join(',') === 'map' && loadouts === 0);
+firstScene.gameUI.currentModal.config.buttons[0].onClick();
+check('enter-house proceeds directly to loadout, no second contact', order.join(',') === 'map,loadout' && shownPanels.length === 1);
+shownPanels = [];
+order.length = 0;
+firstManager.showBlockMap(() => loadouts++);
+check('retry goes straight to map without replaying the consultation', order.join(',') === 'map' && shownPanels.length === 0);
+
+// The ordered Journey final extraction is the only story-writing seam.
+store = createContactProgress();
+const winnerScene = { runKind: 'journey', role: 'runner', pveRound: 14, blockIndex: 30 };
+const winner = new Manager(winnerScene);
+winner.noteHouseForContacts();
+check('fourteen clears never advance story', crewStoryProgress(store, gangID).chapter === 0);
+winnerScene.pveRound = 15;
+winner.noteHouseForContacts();
+check('fifteenth successful extraction advances story once', crewStoryProgress(store, gangID).chapter === 1);
+winner.noteHouseForContacts();
+check('duplicate final extraction does not advance twice', crewStoryProgress(store, gangID).chapter === 1);
+shownPanels = [];
+let results = 0;
+winner.showBlockCompleteResult = () => { results++; };
+const curtain = winner.showBlockComplete();
+check('both crew contacts appear at block completion', shownPanels.length === 1 && shownPanels[0].contacts.map(c => c.id).join(',') === 'switch,mags');
+check('completion speaks the chapter just earned, not the next', shownPanels[0].chapterLabel.includes('CHAPTER 1 COMPLETE'));
+check('result waits for celebration', results === 0);
+curtain.advance();
+check('celebration returns to intact finish result', results === 1);
+winner.showBlockComplete();
+check('duplicate finish rendering is quiet and never grants anything', shownPanels.length === 1 && results === 2 && crewStoryProgress(store, gangID).chapter === 1);
+winnerScene.pveRound = 1;
+winnerScene.blockIndex = 31;
+shownPanels = [];
+winner.showContactCheckIn(() => {});
+check('next block consults the new chapter', shownPanels[0].chapterLabel.includes('CHAPTER 2'));
+
+for (const runKind of ['rivals', 'daily', 'tutorial']) {
+  const excluded = new Manager({ runKind, role: 'runner', pveRound: 15, blockIndex: 31 });
+  excluded.noteHouseForContacts();
+  check(runKind + ' cannot advance crew story', crewStoryProgress(store, gangID).chapter === 1);
+}
+const silent = new Manager({ runKind: 'journey', role: 'plug', pveRound: 15, blockIndex: 31 });
+silent.noteHouseForContacts();
+check('plug cannot advance crew story', crewStoryProgress(store, gangID).chapter === 1);
 
 console.log(passed + ' contact flow assertions passed');

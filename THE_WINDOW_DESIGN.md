@@ -6,6 +6,26 @@ Target branch: `claude/input-intent-layer`
 
 This document freezes the product direction agreed in the design conversation before implementation begins. Nothing described here should be treated as shipped until its implementation phase and acceptance checks are complete.
 
+## Current crew-story slice (2026-09-16)
+
+Run the Block now has independent local crew chapters, consulting BEFORE the
+exterior house entrance. Crossline rebuilds its street network, Iron Row
+revives the garage, and Afterlight prepares its own night event. Six authored
+chapters per crew lead into numbered continuing runs. A chapter moves forward
+only on a complete 15-real-stash block; the extra mission object is optional
+for this storyline and awards nothing.
+
+Finishing gets a code-native two-contact comic cover using the existing approved
+WebP portraits, then the fully lit block summary. No new raster illustrations,
+Cash, shop, shared standings or gang-switching were added. Chapter watermarks
+live alongside contact beats in the existing account key and survive pruning.
+Old records migrate empty; historical blocks are not retrospectively counted.
+
+See HANDOFF_CODEX.md's top section for exact contracts and verification limits.
+Runtime art is WebP and PNG originals live outside public/ in art-sources/;
+older asset/compression notes below are historical.
+
+
 ## Currency naming clarification (2026-09-16)
 
 The human renamed the proposed currency to **Cash**. No Cash earning/spending
