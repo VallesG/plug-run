@@ -9,6 +9,74 @@ plan. This file is onboarding; that one is the research log.
 
 ---
 
+## Block Rivals prototype and main-menu consolidation — 2026-09-15
+
+Current menu: Run the Block / Block Rivals / Tutorial / Settings. Run the Block
+launches the existing saved journey (15 unique house clears per block, then the
+next named block). The old Daily entry/countdown is no longer on the main menu;
+its code, stored data and leaderboard backend remain untouched. Journey REP is
+still local under the previous implementation, not newly wired to the legacy
+daily leaderboard by this change.
+
+Block Rivals is a separate seven-house sprint, mode=pve / runKind=rivals:
+- One opening loadout, a three-second countdown, then seven seeded houses with
+  no overhead maps or repeated selection modals. The chosen two charges refill
+  on each house and retry. Single defender throughout; no house-15 finale.
+- Two segmented HUD bars show completed houses, not invented continuous movement.
+  A top 84px strip is reserved outside the arena. The race clock uses monotonic
+  performance time from scheduled GO; transitions, retries and background time
+  count. Winning requires all seven before the opponent deadline.
+- Escapes advance after 180ms. Death/round timeout retries the same house after
+  650ms with the same seed/spawn/weapon. An active resize counts as a retry,
+  avoiding a free ammo/health reset. Countdown resize preserves its original GO.
+- RivalsRace owns the scene adapter and lifecycle. State crosses restarts in
+  rivalRace; display objects/timers never do. Results support Rematch (same course),
+  New Race and Menu. Reload abandons an active race; no mid-race cloud resume.
+- No daily/journey stash, REP, session, activity-success or leaderboard writes.
+  Legacy inventory stakes are disabled for Rivals. Partial/complete results are
+  kept in an account-scoped local history capped at 20 entries.
+
+IMPORTANT: the initial opponent is explicitly a SIMULATED AI PACE TARGET, not
+a recording of the existing combat bot and not a human. rivalSession generates
+the same seven mazes, measures floor paths (including a primary-pocket search),
+and computes fixed timestamps from movement/carry speeds plus hesitation.
+It does not simulate combat, deaths or powers. No rubber-banding. 100 sampled
+courses (700 houses), generated twice, gave repeatable targets of 1:09–1:44
+(mean 1:21). These are target times, NOT measured human completion times.
+
+logic/rivals.js has import-free course identity, timing, progress, outcome,
+path metrics and recording compatibility. Completed player runs save actual
+seven-house clear timestamps, course seeds, rules version and ordered loadout.
+These are explicitly unverified local records. No remote matchmaking, public
+ghost pool, recorded-AI dataset, anti-cheat verification or ranking is shipped.
+The compatibility predicate is structural validation, NOT proof a run is genuine.
+Use trusted recordings and server validation before public competitive scoring.
+
+Rivals-only initial conditions use seeded defender weapons/random decisions,
+the same real/bunk assignment and maze generator. Defender speed/range and
+bullet speed/radius scale from 24px reference cells so resizing the display does
+not change their grid-relative values. Other modes retain their old balance.
+The simulation is still frame-stepped, NOT deterministic lockstep combat.
+Bump rivals-v1 when gameplay/maze/loadout rules change before consuming old ghosts.
+
+Validation:
+- 466 existing + 67 race-rule + 41 scene-adapter assertions passed in the adapted
+  in-memory V8 harness (574 total). The two new suites are in npm test.
+- Adapter tests cover countdown/GO, clear ordering, single loadout, auto-retry,
+  powers, transition-inclusive clock, background catch-up, pending retry
+  cancellation, no eighth house, results, rematch, quit and disposal.
+- Additional stubs exercised Base init, race restarts, daily/journey isolation,
+  ProgressionManager's early Rivals dispatch without reward/network calls,
+  bounded account-scoped result storage and menu routing.
+- Layout probes reserved arena room at 280x480, 390x844 and 1440x900. Adapted
+  binding-aware compilation passed edited sources; it is not native ESM/Vite.
+- User reported Carbon Black blocking the sandbox and asked us not to use it.
+  No further local/sandbox calls were made after that request. Native npm test,
+  temporary-.mjs syntax subprocess checks, Vite build, live controls, rendering,
+  background behavior and race feel still need local verification once allowed.
+  Run npm run verify in client, then try a complete race, repeated deaths,
+  rematch, resize, background return and main journey resume before deployment.
+
 ## Entrance flow and Keep Running — 2026-09-15
 
 - Runner PvE now pauses on the exterior block map BEFORE startMatch/loadout,

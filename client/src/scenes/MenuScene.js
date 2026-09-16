@@ -1,3 +1,4 @@
+import { getJourneyProgress } from '../utils/journeyProgress.js';
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
@@ -275,7 +276,8 @@ export class MenuScene extends Phaser.Scene {
     c._text = t;
     c._update = () => {
       if (!t.active) return;
-      t.setText(`NEW BLOCK IN ${this.getTimeUntilReset()}`);
+      const progress = getJourneyProgress();
+      t.setText(`BLOCK ${progress.blockIndex} · HOUSE ${progress.pveRound} / 15`);
       const w = Math.max(190, t.width + 28);
       bg.setSize(w, h);
     };
@@ -350,21 +352,18 @@ export class MenuScene extends Phaser.Scene {
 
   makeRunnerTitleMenu(){
     const a = landingLayout(this.scale.width, this.scale.height);
-    let session = null;
-    try { session = getSessionState('runner'); } catch {}
-    const state = landingSession(session?.pveRound, PVE_BLOCK_MAPS);
     const cont = this.add.container(0,0).setSize(a.menuW,a.rowH+a.rowGap).setDepth(3);
     cont.modeKey = 'runner';
-    cont._resumable = state.resumable;
-    const start = this.makeTitleOption(state.resumable ? 'Continue Daily' : 'Daily Block', () => this.launchCard(cont));
+    cont.runKind = 'journey';
+    const start = this.makeTitleOption('Run the Block', () => this.launchCard(cont));
     cont.add(start);
     cont._startBg = start._bg;
     cont._startText = start._text;
     this._titlePrimary = start;
     this.focusTitleOption(start);
-    const journey = this.makeTitleOption('Keep Running', () => this.launchCard({ modeKey: 'runner', runKind: 'journey' }))
-      .setPosition(0, a.rowGap);
-    cont.add(journey);
+    const rivals = this.makeTitleOption('Block Rivals', () => this.launchCard({ modeKey:'runner', runKind:'rivals' }))
+      .setPosition(0,a.rowGap);
+    cont.add(rivals);
     return cont;
   }
 
@@ -2010,7 +2009,7 @@ export class MenuScene extends Phaser.Scene {
           target: 'RUNNER',
           duration: 250,
           moveBelow: true,
-          data: { mode: 'pve', runKind: card.runKind || 'daily' }
+          data: { mode: 'pve', role: 'runner', runKind: card.runKind || 'journey' }
         });
       });
     } else if (k === 'plug'){

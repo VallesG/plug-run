@@ -17,7 +17,7 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
   scene.roundPausedForMenu=true;
   const modal=ui.showModal({
     loadout:true,title:options.title ?? (scene.mode==='pve'?'HOUSE '+String(scene.pveRound||1).padStart(2,'0')+' / LOADOUT':'RUNNER / LOADOUT'),
-    subtitle:'Choose two charges. Use them in order.',buttons:[]
+    subtitle:options.subtitle ?? 'Choose two charges. Use them in order.',buttons:[]
   });
   const {panel,registerExtra}=modal;
   const left=panel.x-panel.width/2,top=panel.y-panel.height/2;
@@ -60,7 +60,7 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
       .setStrokeStyle(1,ready?0xd4e5e9:0x3b4b58);
     start.text.setColor(ready?'#10202b':'#82939e')
       .setText(ready?(options.startLabel || 'ENTER HOUSE'):'CHOOSE TWO CHARGES');
-    help.setText(ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.');
+    help.setText(options.helpText ?? (ready?'Ready. Tap a selected card to adjust.':'You can take the same power twice.'));
   };
   POWERS.forEach((power,i)=>{
     const r=layout.cards[i],x=left+r.x+r.w/2,y=top+r.y;

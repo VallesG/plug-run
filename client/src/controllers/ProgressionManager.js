@@ -33,6 +33,7 @@ export default class ProgressionManager {
   }
 
   saveProgress(data, completed = false) {
+    if (this.scene.runKind === 'rivals') return false;
     if (this.scene.runKind !== 'journey') return saveSessionState(this.scene.role, data);
     const checkpoint = { ...data, blockIndex: this.scene.blockIndex,
       swapSpawnCycle: data.swapSpawnCycle ?? this.scene.swapSpawnCycle ?? 0 };
@@ -45,6 +46,7 @@ export default class ProgressionManager {
    * Initialize RepTracker for a new round
    */
   startRound(roundNum) {
+    if (this.scene.runKind === 'rivals') return;
     // Track game start on round 1
     if (roundNum === 1) {
       trackGameStart('pve', this.scene.role, roundNum);
@@ -60,6 +62,7 @@ export default class ProgressionManager {
    * Handle successful extraction sequence (runner reached car with stash)
    */
   async startExtractionSequence() {
+    if (this.scene.runKind === 'rivals') return this.scene.rivals?.clearHouse();
     if (this.scene.roundOver) return;
 
     // Set roundOver immediately to prevent multiple calls from update loop
@@ -347,6 +350,7 @@ export default class ProgressionManager {
    * End round (death or timeout)
    */
   endRound(winner) {
+    if (this.scene.runKind === 'rivals') return this.scene.rivals?.retryHouse();
     if (this.scene.roundOver) return;
     this.scene.roundOver = true;
     ReplaySystem.finalize();
@@ -523,6 +527,7 @@ export default class ProgressionManager {
    * Show PvE game over modal
    */
   async showPvEGameOver(context = {}) {
+    if (this.scene.runKind === 'rivals') return this.scene.rivals?.retryHouse();
     const roundNumber = this.scene.pveRound || 1;
     const isPlug = this.scene.role === 'plug';
     const reason = context.reason || (isPlug ? 'runner_eliminated' : 'runner_eliminated');

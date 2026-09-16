@@ -1,3 +1,6 @@
+import { RIVAL_HUD_HEIGHT, rivalPixels } from '../logic/rivals.js';
+import { createRivalSession } from '../utils/rivalSession.js';
+import RivalsRace from '../controllers/RivalsRace.js';
 import { worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
 import { getJourneyProgress } from '../utils/journeyProgress.js';
 import Phaser from 'phaser';
@@ -158,7 +161,9 @@ export class BaseGameScene extends Phaser.Scene {
     this.fxBulletHighContrast = true;
 
     // PvE session tracking
-    this.runKind = initData?.runKind === 'journey' ? 'journey' : 'daily';
+    this.runKind = ['journey','rivals'].includes(initData?.runKind) ? initData.runKind : 'daily';
+    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession(initData?.rivalSeed)) : null;
+    this.rivals = null;
     this._blockEntranceShown = false;
     this.worldBlock = null;
     this.mode = initData?.mode || 'pvp'; // 'pve' or 'pvp'
@@ -176,7 +181,7 @@ export class BaseGameScene extends Phaser.Scene {
       // storage is keyed by routeID, so a new day simply misses).
       const menuEntry = initData?.pveRound == null && !initData?.savedSession;
       const entryRole = initData?.role ?? (this.scene.key === 'PLUG' ? 'plug' : 'runner');
-      let sess = initData?.savedSession ?? (menuEntry
+      let sess = this.runKind === 'rivals' ? null : initData?.savedSession ?? (menuEntry
         ? (this.runKind === 'journey' ? getJourneyProgress() : getSessionState(entryRole)) : null);
       if (this.runKind === 'daily' && sess?.pveRound > 15) sess = null;
       this.blockIndex = initData?.blockIndex ?? sess?.blockIndex ?? 1;
@@ -184,7 +189,7 @@ export class BaseGameScene extends Phaser.Scene {
       this.savedSession = sess;
 
       // Continue session or start new
-      this.pveRound = initData?.pveRound ?? sess?.pveRound ?? 1;
+      this.pveRound = this.runKind === 'rivals' ? Math.min(7, this.rivalRace.clearTimes.length + 1) : (initData?.pveRound ?? sess?.pveRound ?? 1);
       this.pveSessionStash = initData?.pveSessionStash ?? sess?.pveSessionStash ?? 0;
       this.pveSessionRep = initData?.pveSessionRep ?? sess?.pveSessionRep ?? 0;
       this.pveCleanStreak = initData?.pveCleanStreak ?? sess?.pveCleanStreak ?? 0;
@@ -197,14 +202,14 @@ export class BaseGameScene extends Phaser.Scene {
       // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
       // opponent's spot, 2 = take the second opponent's spot (round 8+),
       // then wraps back to original. Boolean swapSpawns kept for compat.
-      this.swapSpawnCycle = initData?.swapSpawnCycle ?? sess?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0);
+      this.swapSpawnCycle = this.runKind === 'rivals' ? 0 : (initData?.swapSpawnCycle ?? sess?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0));
       console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep, 'SpawnCycle:', this.swapSpawnCycle);
 
       // Use deterministic route seed for PvE (same daily route for all players globally, resets 12am PST)
       // Runner and plug modes get different seeds for balanced gameplay
       const routeID = getCurrentRouteID();
-      this.currentRouteID = routeID;
-      this.seed = this.runKind === 'journey'
+      this.currentRouteID = this.runKind === 'rivals' ? this.rivalRace.course.id : routeID;
+      this.seed = this.runKind === 'rivals' ? this.rivalRace.course.seeds[this.pveRound - 1] : this.runKind === 'journey'
         ? worldHouseSeed(this.blockIndex, this.pveRound, 'runner')
         : getRouteSeed(routeID, this.pveRound, this.role);
       console.log('[BaseGameScene] PvE Route ID:', routeID, 'Round:', this.pveRound, 'Role:', this.role, 'Seed:', this.seed);
@@ -213,7 +218,7 @@ export class BaseGameScene extends Phaser.Scene {
       this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01); // XOR to create different sequence from maze gen
 
       // Cleanup old route data periodically (every new route start)
-      if (this.pveRound === 1 && this.runKind !== 'journey') {
+      if (this.pveRound === 1 && this.runKind === 'daily') {
         cleanupOldRoutes();
       }
     } else {
@@ -471,15 +476,17 @@ export class BaseGameScene extends Phaser.Scene {
   computeLayoutFromViewport(){
     const { cols, rows } = this;
     const { width, height } = this.scale.gameSize;
-    const cellFit = Math.floor(Math.min(width / cols, height / rows));
-    const MIN_CELL = 12;
+    const hudHeight = this.runKind === 'rivals' ? RIVAL_HUD_HEIGHT : 0;
+    const arenaHeight = Math.max(1,height-hudHeight);
+    const cellFit = Math.floor(Math.min(width / cols, arenaHeight / rows));
+    const MIN_CELL = this.runKind === 'rivals' ? 8 : 12;
     const cell = Math.max(MIN_CELL, cellFit);
     this.cell = cell;
     // Center the maze; leftover margins get painted with border brick
     // in drawNeonArena so the screen never shows empty space.
     this.pad = {
       x: Math.max(0, Math.floor((width  - cols*cell) / 2)),
-      y: Math.max(0, Math.floor((height - rows*cell) / 2))
+      y: hudHeight + Math.max(0, Math.floor((arenaHeight - rows*cell) / 2))
     };
   }
 
@@ -577,7 +584,7 @@ export class BaseGameScene extends Phaser.Scene {
     const baseIdx = Math.floor(themeRng() * THEMES.length);
     const prevIdx = parseInt((typeof localStorage!== 'undefined' ? localStorage.getItem('pr_lastThemeIdx') : '-1') || '-1', 10);
     let idx = baseIdx;
-    if (THEMES.length > 1 && idx === prevIdx){
+    if (this.runKind !== 'rivals' && THEMES.length > 1 && idx === prevIdx){
       // rotate by at least 1, with a little RNG so it doesn't just flip-flop
       const shift = 1 + (((themeRng()*100)|0) % (THEMES.length - 1));
       idx = (idx + shift) % THEMES.length;
@@ -607,7 +614,9 @@ export class BaseGameScene extends Phaser.Scene {
       const dh = Math.abs(gameSize.height - this._lastLayoutH);
       if (dw < 40 && dh < 40) return; // ignore jitter (URL bar, etc.)
       clearTimeout(this._resizeTimer);
-      this._resizeTimer = setTimeout(() => this.scene.restart({
+      this._resizeTimer = setTimeout(() => {
+        if (this.rivals) { this.rivals.resize(); return; }
+        this.scene.restart({
         mode: this.mode,
         runKind: this.runKind, blockIndex: this.blockIndex,
         role: this.role,
@@ -620,7 +629,7 @@ export class BaseGameScene extends Phaser.Scene {
         pveCleanStreak: this.pveCleanStreak || 0,
         runId: this.runId,
         pveBestRound: this.pveBestRound
-      }), 250);
+      }); }, 250);
     };
     this.scale.on('resize', this._onResizeCb);
 
@@ -628,7 +637,7 @@ export class BaseGameScene extends Phaser.Scene {
     // Early-round openness: fewer wall clusters while new players learn to
     // navigate. R1: 60% density, R2: 75%, R3: 90%, R4+: full. Deterministic
     // per round, so all players still share identical mazes.
-    const roundScale = this.mode === 'pve'
+    const roundScale = this.runKind === 'rivals' ? this.rivalRace.course.scales[this.pveRound - 1] : this.mode === 'pve'
       ? ([0, 0.6, 0.75, 0.9, 0.95][this.pveRound] ?? 1)
       : 1;
     const arena = generateSquareMaze(this.cols, this.rows, { rng: makeRng(this.seed), role: this.role, clusterScale: roundScale });
@@ -897,7 +906,7 @@ export class BaseGameScene extends Phaser.Scene {
     // PvE runner mode: AI plug gets random weapon (no laser)
     if (this.mode === 'pve' && this.role === 'runner') {
       const aiWeapons = ['pistol', 'doublebarrel', 'rifle'];
-      const randomWeapon = aiWeapons[Math.floor(Math.random() * aiWeapons.length)];
+      const randomWeapon = aiWeapons[Math.floor((this.runKind === 'rivals' ? this.gameplayRNG() : Math.random()) * aiWeapons.length)];
       this.allowedGuns = [randomWeapon];
     } else {
       this.allowedGuns = [this.availableGuns[0]];
@@ -943,7 +952,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.antiCampTime      = 0;
     this.antiCampThreshold = 4000;
 
-    this.stake = inv.product > 0 ? 1 : 0;
+    this.stake = this.runKind !== 'rivals' && inv.product > 0 ? 1 : 0;
     if (this.stake > 0) { inv.product -= 1; saveInv(); this.pot = 2; } else { this.pot = 0; }
 
     this.meleeEnabled = false;
@@ -1139,7 +1148,7 @@ export class BaseGameScene extends Phaser.Scene {
 
   startMatch(role){
     this.role = role;
-    if (this.mode === 'pve' && role === 'runner' && !this._blockEntranceShown) {
+    if (this.mode === 'pve' && this.runKind !== 'rivals' && role === 'runner' && !this._blockEntranceShown) {
       this._blockEntranceShown = true;
       this.roundPausedForMenu = true;
       this.input.keyboard.enabled = false;
@@ -1332,7 +1341,12 @@ export class BaseGameScene extends Phaser.Scene {
       }
     };
 
-    if (this.role === 'plug') {
+    if (this.runKind === 'rivals') {
+      this.aiPlug.speed = rivalPixels(this.aiPlug.speed,this.cell);
+      this.aiPlug.maxRange = rivalPixels(this.aiPlug.maxRange,this.cell);
+      this.rivals = new RivalsRace(this);
+      this.rivals.prepare(startTimer);
+    } else if (this.role === 'plug') {
       // AI runner gets 2 random powers (consumable, used once each)
       if (!this.availableRunnerPowers?.length) this.availableRunnerPowers = Object.keys(this.runnerPowerStats || {});
       const choices = this.availableRunnerPowers.length ? this.availableRunnerPowers : ['phase','decoy'];
@@ -1677,11 +1691,14 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   getWeaponStats(weapon){
-    return this.weaponStats?.[weapon] || this.weaponStats?.pistol;
+    const stats = this.weaponStats?.[weapon] || this.weaponStats?.pistol;
+    return this.runKind === 'rivals' && stats
+      ? { ...stats, speed: rivalPixels(stats.speed,this.cell) } : stats;
   }
 
 
   beginRoundTimer(){
+    if (this.runKind === 'rivals') this._shootTicker = 0;
     this.endAt = performance.now() + this.timerMs;
     this.roundPausedForMenu = false;
 
@@ -2049,6 +2066,7 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   update(_, delta){
+    if (this.rivals?.update()) return;
     // Trace timebase. Advances once per rendered frame today; once update()
     // steps at a fixed dt this becomes an exact time coordinate and traces
     // become replayable across machines.
@@ -2407,7 +2425,7 @@ export class BaseGameScene extends Phaser.Scene {
 
           // Log activity feed event: Player picked up bunk (only for human player)
           if (this.role === 'runner') {
-            this.runKind !== 'journey' && logBunkPickup(this.pveRound || 1);
+            this.runKind === 'daily' && logBunkPickup(this.pveRound || 1);
           }
 
           // Play pickup sounds (generic pickup + bunk stash pickup)

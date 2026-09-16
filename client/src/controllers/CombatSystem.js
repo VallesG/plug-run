@@ -134,7 +134,8 @@ export default class CombatSystem {
       const dy = Math.sin(ang);
       // Use high-contrast color based on floor theme
       const color = palette.fill;
-      const radius = Math.max(3, Math.floor(this.scene.cell * 0.13));
+      const radius = this.scene.runKind === 'rivals'
+        ? this.scene.cell * 0.13 : Math.max(3, Math.floor(this.scene.cell * 0.13));
       const bullet = this.scene.add.circle(origin.x, origin.y, radius, color, 1)
         .setDepth(10)
         .setBlendMode(useNormalBlend ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD);
