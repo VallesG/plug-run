@@ -13,17 +13,23 @@ button.on{border-color:#e2b45f;background:#23313a}
 .cap{font-size:11px;color:#a7b3b0;padding:6px 8px;background:#111719}
 </style>
 <h1>Contact panels</h1>
-<p>The real <code>ContactPanel</code> controller and the real <code>logic/contacts.js</code> cues, rendered by Phaser at phone and desktop sizes. This is the review surface for portrait placement, desk occlusion, dialogue legibility and the bottom-right advance. Advancing logs to the console and redraws; nothing here touches gameplay, progress or Cash.</p>
+<p>The real <code>ContactPanel</code> controller and the real <code>logic/contacts.js</code> cues, rendered by Phaser at phone and desktop sizes. This is the review surface for portrait placement, desk occlusion, dialogue legibility and the bottom-right advance. Choose an Iron Row chapter, house and measured condition to inspect the Season 1 script and duo finish. A silent slot is intentional. Advancing redraws; nothing writes gameplay progress or Cash.</p>
 <div class="bar" id="who"></div>
 <div class="bar" id="beat"></div>
+<div class="bar" id="chapters"></div>
+<div class="bar" id="performance"></div>
+<details><summary>Iron Row dialogue bank</summary><div id="bank"></div></details>
 <div class="frames" id="frames"></div>
 <script type="module">
 import Phaser from 'phaser';
-import { CONTACTS, CONTACT_BEATS, contactCue, gangContacts } from './src/logic/contacts.js';
+import { CONTACTS, CONTACT_BEATS, contactCue, gangContacts, contact } from './src/logic/contacts.js';
+import { IRON_ROW_CHAPTERS, IRON_ROW_DIALOGUE_BANK, ironRowCue, ironRowFinish } from './src/logic/ironRowSeason.js';
 import { showContactPanel } from './src/controllers/ContactPanel.js';
 
 const SIZES = [[390, 844, 'iPhone portrait'], [280, 480, 'smallest supported'], [900, 640, 'desktop']];
-let gangID = 'crossline';
+let gangID = 'iron-row';
+let chapter = 0;
+let performance = 'neutral';
 let house = CONTACT_BEATS[0].house;
 
 const bar = (el, items, current, onPick) => {
@@ -44,9 +50,22 @@ function render() {
       return { value: id, label: p.primary.gang.toUpperCase() + ' · ' + p.primary.name + ' / ' + p.secondary.name };
     }), gangID, v => { gangID = v; render(); });
   bar(document.getElementById('beat'),
-    CONTACT_BEATS.map(b => ({ value: b.house, label: 'HOUSE ' + b.house + ' · ' + b.kind })),
+    [...CONTACT_BEATS.map(b => ({ value: b.house, label: 'HOUSE ' + b.house + ' · ' + b.kind })), {value:15,label:'BLOCK FINISH'}],
     house, v => { house = v; render(); });
 
+  bar(document.getElementById('chapters'), gangID === 'iron-row'
+    ? IRON_ROW_CHAPTERS.map(c => ({value:c.number-1,label:c.number+' · '+c.title})) : [],
+    chapter, v => { chapter=v; render(); });
+  bar(document.getElementById('performance'), gangID === 'iron-row'
+    ? ['neutral','flawless','comeback','noDeaths','noPowers','bunk','phase','dash','decoy'].map(id=>({value:id,label:id})) : [],
+    performance, v => { performance=v; render(); });
+  const bank=document.getElementById('bank');
+  bank.replaceChildren();
+  for (const line of IRON_ROW_DIALOGUE_BANK) {
+    const p=document.createElement('p');
+    p.textContent=line.id+' · '+line.category+' · chapter '+line.minChapter+'+ — '+line.text;
+    bank.append(p);
+  }
   for (const g of games.splice(0)) g.destroy(true);
   const frames = document.getElementById('frames');
   frames.innerHTML = '';
@@ -59,7 +78,22 @@ function render() {
     host.className = 'frame';
     wrap.append(cap, host);
     frames.append(wrap);
-    const cue = contactCue({ gangID, house, blockIndex: 1 });
+    let cue = contactCue({ gangID, house, blockIndex: 1 });
+    if (gangID === 'iron-row') {
+      const story=IRON_ROW_CHAPTERS[chapter];
+      const pages=house===15 ? ironRowFinish(chapter, 'Duskport') : null;
+      const authored=pages ? {pages, text:pages[0].text, celebration:true,
+        chapterLabel:'CHAPTER '+story.number+' COMPLETE · '+story.title.toUpperCase(),
+        action:'SEE THE BLOCK  >>', beat:{id:'finish'}} : ironRowCue({
+          chapter,house,blockIndex:chapter+1,cityName:'Duskport',
+          earnedPraise:performance==='neutral'?[]:[performance],
+          telemetryComplete:performance!=='neutral'
+        });
+      cue=authored ? {...authored,contact:contact(authored.pages[0].speaker),
+        contacts:[contact('brick'),contact('rook')],
+        pages:authored.pages.map(p=>({text:p.text,contact:contact(p.speaker)}))} : null;
+    }
+    if (!cue) cap.textContent += ' — silent slot';
     if (!cue) continue;
     games.push(new Phaser.Game({
       type: Phaser.AUTO, parent: host, width: w, height: h, backgroundColor: '#05080a',

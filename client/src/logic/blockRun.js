@@ -12,13 +12,16 @@ export const POWER_IDS = Object.freeze(['phase', 'dash', 'decoy']);
 const MAX_HOUSES = 15;
 
 const count = (value) => Number.isSafeInteger(value) && value > 0 ? value : 0;
+const validMetrics = h => Number.isSafeInteger(h?.hits) && h.hits >= 0
+  && typeof h?.bunk === 'boolean' && Array.isArray(h?.powers)
+  && h.powers.length <= 2 && h.powers.every(p => POWER_IDS.includes(p));
 const houseNo = (value) => Number.isSafeInteger(value) && value >= 1 && value <= MAX_HOUSES ? value : 0;
 
 export function createBlockRun(value = {}, blockIndex = 1) {
   const block = Number.isSafeInteger(blockIndex) && blockIndex > 0 ? blockIndex : 1;
   // A different block is a different run. No merging, no carry-over.
   if (!value || value.version !== BLOCK_RUN_VERSION || value.blockIndex !== block) {
-    return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared: [], deaths: 0, mission: null };
+    return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared: [], deaths: 0, mission: null, historyKnown: false };
   }
   const seen = new Set();
   const cleared = (Array.isArray(value.cleared) ? value.cleared : [])
@@ -28,13 +31,25 @@ export function createBlockRun(value = {}, blockIndex = 1) {
       deaths: count(h?.deaths),
       bunk: Boolean(h?.bunk),
       swapped: Boolean(h?.swapped),
-      powers: Array.isArray(h?.powers) ? h.powers.filter(p => POWER_IDS.includes(p)).slice(0, 2) : []
+      powers: Array.isArray(h?.powers) ? h.powers.filter(p => POWER_IDS.includes(p)).slice(0, 2) : [],
+      measured: h?.measured === true && validMetrics(h)
     }))
     .filter(h => h.house && !seen.has(h.house) && seen.add(h.house))
     .sort((a, b) => a.house - b.house)
     .slice(0, MAX_HOUSES);
   const mission = value.mission === 'win' || value.mission === 'miss' ? value.mission : null;
-  return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared, deaths: count(value.deaths), mission };
+  return { version: BLOCK_RUN_VERSION, blockIndex: block, cleared, deaths: count(value.deaths), mission,
+    historyKnown: value.historyKnown === true && Number.isSafeInteger(value.deaths) && value.deaths >= 0
+      && Array.isArray(value.cleared) && value.cleared.length <= MAX_HOUSES
+      && value.cleared.every(h => houseNo(h?.house))
+      && new Set(value.cleared.map(h => h.house)).size === value.cleared.length };
+}
+
+/** Establish history before the first attempt, never when resuming mid-block. */
+export function beginBlockRun(value, blockIndex, house = 1) {
+  const state = createBlockRun(value, blockIndex);
+  if (house !== 1 || value?.unreadable === true || value?.blockIndex === state.blockIndex || state.cleared.length || state.deaths || state.historyKnown) return {state, applied:false};
+  return {state:{...state, historyKnown:true}, applied:true};
 }
 
 /** A house came out clean. Recording the same house twice cannot inflate a run. */
@@ -46,7 +61,8 @@ export function recordHouseClear(value, blockIndex, house) {
     deaths: count(house?.deaths),
     bunk: Boolean(house?.bunk),
     swapped: Boolean(house?.swapped),
-    powers: Array.isArray(house?.powers) ? house.powers.filter(p => POWER_IDS.includes(p)).slice(0, 2) : []
+    powers: Array.isArray(house?.powers) ? house.powers.filter(p => POWER_IDS.includes(p)).slice(0, 2) : [],
+    measured: validMetrics(house)
   };
   if (!entry.house) return { state, applied: false };
   if (state.cleared.some(h => h.house === entry.house)) return { state, applied: false };
@@ -87,6 +103,9 @@ export function recordMissionOutcome(value, blockIndex, outcome) {
 export function blockRunStats(value, blockIndex = 1) {
   const state = createBlockRun(value, blockIndex);
   const houses = state.cleared.length;
+  // A missing legacy record or a gap costs praise, never campaign progress.
+  const telemetryComplete = state.historyKnown && houses > 0
+    && state.cleared.every((h, i) => h.house === i + 1 && h.measured === true);
   const hits = state.cleared.reduce((sum, h) => sum + h.hits, 0);
   const deaths = state.deaths;
   const bunks = state.cleared.filter(h => h.bunk).length;
@@ -104,9 +123,9 @@ export function blockRunStats(value, blockIndex = 1) {
   return {
     blockIndex: state.blockIndex, houses, hits, deaths, bunks, swaps,
     powers, powersUsed, topPower, firstTryHouses,
-    mission: state.mission,
-    flawless: houses > 0 && deaths === 0 && hits === 0,
-    noDeaths: houses > 0 && deaths === 0,
-    cleanBags: houses > 0 && bunks === 0
+    mission: state.mission, telemetryComplete,
+    flawless: telemetryComplete && deaths === 0 && hits === 0,
+    noDeaths: telemetryComplete && deaths === 0,
+    cleanBags: telemetryComplete && bunks === 0
   };
 }

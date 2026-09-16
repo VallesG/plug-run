@@ -4,7 +4,7 @@ import {
   contact, gangContacts, contactBeat, contactCue, contactScript, contactPanelLayout,
   praiseKey, praiseEarned, PRAISE_KEYS
 } from '../src/logic/contacts.js';
-import { blockRunStats, createBlockRun, recordHouseClear, recordBlockDeath } from '../src/logic/blockRun.js';
+import { blockRunStats, beginBlockRun, createBlockRun, recordHouseClear, recordBlockDeath } from '../src/logic/blockRun.js';
 import { WINDOW_ART, WINDOW_GANGS } from '../src/logic/window.js';
 
 let passed = 0;
@@ -146,8 +146,8 @@ for (const g of ['crossline', 'iron-row', 'afterlight']) {
     flawlessRun.filter(c => ['tease', 'brief', 'open'].includes(c.beat.kind)).every(c => c.praiseKey === null));
 }
 // The compliment must be earned by measured play, end to end.
-let real = createBlockRun({}, 1);
-for (const house of [1, 2, 3]) real = recordHouseClear(real, 1, { house, powers: ['phase'] }).state;
+let real = beginBlockRun({}, 1, 1).state;
+for (const house of [1, 2, 3]) real = recordHouseClear(real, 1, { house, hits:0, bunk:false, powers: ['phase'] }).state;
 check('a real clean run earns flawless', praiseKey(blockRunStats(real, 1)) === 'flawless');
 real = recordBlockDeath(real, 1).state;
 check('one death drops it to the favourite power', praiseKey(blockRunStats(real, 1)) === 'phase');

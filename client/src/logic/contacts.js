@@ -224,7 +224,7 @@ export function contactBeat(house) {
 export const PRAISE_KEYS = Object.freeze(['flawless', 'comeback', 'noPowers', 'bunk', 'phase', 'dash', 'decoy', 'noDeaths']);
 
 export function praiseEarned(stats) {
-  if (!stats || !stats.houses) return [];
+  if (!stats || !stats.houses || stats.telemetryComplete === false) return [];
   const earned = [];
   if (stats.flawless) earned.push('flawless');
   if (stats.deaths >= 3) earned.push('comeback');
@@ -284,7 +284,7 @@ export function contactCue({ gangID, house, blockIndex = 1, missionOutcome = nul
     // Scoped to account + block + beat by the caller; this half is the stable
     // content identity, so a content change does not silently replay a beat.
     eventID: 'contact/v' + CONTACT_CONTENT_VERSION + '/block-' + blockIndex + '/' + beat.id + '/' + who.id,
-    beat, contact: who, text, praiseKey: beat.kind === 'praise' || beat.kind === 'debrief' ? earned : null,
+    beat, contact: who, text, praiseKey: earned && text === who.lines.praise?.[earned] ? earned : null,
     speaker: who.name.toUpperCase(),
     action: beat.kind === 'brief' ? 'ENTER HOUSE ' + house + '  >>'
       : beat.kind === 'open' ? 'RUN THE BLOCK  >>' : 'KEEP MOVING  >>'

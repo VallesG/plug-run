@@ -21,7 +21,7 @@ function collect(directory) {
 collect(join(clientRoot,'src'));
 // Vite's separate art previews also contain modules outside the production
 // entry graph. Check those too so review tools receive the same protection.
-for(const name of ['block-map-preview.html','interior-style-preview.html','gang-skins-preview.html','city-map-preview.html']){
+for(const name of ['block-map-preview.html','interior-style-preview.html','gang-skins-preview.html','city-map-preview.html','contact-preview.html']){
   const path=join(clientRoot,name);
   if(!existsSync(path))continue;
   const html=readFileSync(path,'utf8');

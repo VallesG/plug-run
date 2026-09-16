@@ -61,7 +61,7 @@ export function showContactPanel(scene, cue, onDone) {
 
   const measure = () => {
     a = contactPanelLayout(scene.scale.gameSize.width, scene.scale.gameSize.height,
-      cue.celebration ? { heightFraction: 0.55, baseFraction: 0.72 } : cue.contact, page().text);
+      cue.celebration ? { heightFraction: 0.55, baseFraction: 0.72 } : page().contact, page().text);
   };
   measure();
 
@@ -251,7 +251,7 @@ export function showContactPanel(scene, cue, onDone) {
     if (cue.celebration) drawCelebration();
     else {
       if (key && scene.textures.exists(key)) drawRoom(key); else backdropFallback();
-      drawPortrait();
+      drawPortrait(page().contact);
       if (key) drawForeground(key);
     }
     drawFrame();

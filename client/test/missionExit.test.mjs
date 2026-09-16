@@ -1,3 +1,5 @@
+import { ironRowJob } from '../src/logic/ironRowSeason.js';
+import { crewStoryProgress, createContactProgress } from '../src/logic/contactProgress.js';
 import { readFileSync } from 'node:fs';
 import { missionExitAllowed, placeMissionItem, placeRequiredMissionItem, missionItemSeed, missionObject, MISSION_ITEM_COLOR } from '../src/logic/missionItem.js';
 import { activeMissionContact, CONTACT_TARGET_HOUSE } from '../src/logic/contacts.js';
@@ -70,7 +72,7 @@ for (const dual of [false,true]) {
 // Actual placement/pickup methods, not a separate simulated mission model.
 const start=source.indexOf('  makeMissionItem(){'),finish=source.indexOf('  addCarryPackage(){',start);
 let gangID='crossline', overlap=true;
-const inputs={placeRequiredMissionItem,missionItemSeed,missionObject,MISSION_ITEM_COLOR,
+const inputs={ironRowJob, crewStoryProgress, getContactProgress:()=>createContactProgress(), placeRequiredMissionItem,missionItemSeed,missionObject,MISSION_ITEM_COLOR,
   activeMissionContact,getWindowState:()=>({gangID}),PALETTE:{ink:0x080b0d},
   rectsOverlap:()=>overlap,performance:{now:()=>1000},console:{warn(){}}};
 const Host = new Function(...Object.keys(inputs),'class Host {\n'+source.slice(start,finish)+'\n}\nreturn Host;')(...Object.values(inputs));

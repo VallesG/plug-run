@@ -78,4 +78,16 @@ let stoppedCalls = 0;
 const aborted = show(stopped.scene, contactCue({ gangID: 'crossline', house: 1 }), () => stoppedCalls++);
 aborted.close(false);
 check('forced shutdown never enters next scene', stoppedCalls === 0);
+
+// An ordinary consultation can hand the conversation between both contacts.
+const iron=gangContacts('iron-row');
+const exchange=stub(new Set([iron.primary.portraitKey,'contact_bg_brick']));
+let exchanged=0;
+show(exchange.scene,{contact:iron.primary,contacts:[iron.primary,iron.secondary],action:'VIEW THE BLOCK  >>',
+  pages:[{text:'First door.',contact:iron.primary},{text:'Keep moving.',contact:iron.secondary}]},()=>exchanged++);
+exchange.tap();
+check('speaker portrait follows the dialogue page',exchange.nodes.some(n=>n.active&&n.kind==='image'&&n.args[3]===iron.secondary.id));
+check('speaker label follows the dialogue page',exchange.nodes.some(n=>n.active&&n.kind==='text'&&n.args[2]==='ROOK'));
+exchange.tap();
+check('two-speaker consultation advances only at its end',exchanged===1);
 console.log(passed + ' contact panel assertions passed');

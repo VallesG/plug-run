@@ -1,3 +1,4 @@
+import { ironRowChapter, ironRowCue, ironRowFinish } from '../logic/ironRowSeason.js';
 import { CITY_BLOCKS, cityForBlock, cityView } from '../logic/city.js';
 import { getCityProgress, completeCityBlock, startCityIntro } from '../utils/cityProgress.js';
 import { drawCityMap } from './CityMap.js';
@@ -17,11 +18,11 @@ import {
 import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js';
 import ReplaySystem from './ReplaySystem.js';
 import { crewChapter, crewConsultationPages } from '../logic/crewStory.js';
-import { gangContacts, contactCue } from '../logic/contacts.js';
+import { contact, gangContacts, contactCue, praiseEarned } from '../logic/contacts.js';
 import { showContactPanel } from './ContactPanel.js';
 import { claimContact, getContactProgress, finishCrewStory } from '../utils/contactProgress.js';
 import { praiseUsedInBlock, praiseMark, crewStoryProgress } from '../logic/contactProgress.js';
-import { getBlockRunStats, noteHouseClear, noteBlockDeath, noteMissionOutcome } from '../utils/blockRunProgress.js';
+import { startBlockRunTracking, getBlockRunStats, noteHouseClear, noteBlockDeath, noteMissionOutcome } from '../utils/blockRunProgress.js';
 import { getWindowState } from '../utils/windowProgress.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import { drawBlockMap } from './BlockMap.js';
@@ -499,11 +500,13 @@ export default class ProgressionManager {
       const consumed = scene.runnerPowersConsumed || [];
       noteHouseClear(scene.blockIndex || 1, {
         house: scene.pveRound || 1,
-        hits: this.repTracker?.stats?.damagesTaken || 0,
+        hits: this.repTracker?.stats?.damagesTaken,
         deaths: this._contactDeathsThisHouse || 0,
-        bunk: Boolean(this.repTracker?.stats?.gotBunkStash),
+        bunk: this.repTracker?.stats?.gotBunkStash,
         swapped: Boolean(scene.swapSpawnCycle),
-        powers: selected.filter((p, i) => consumed[i])
+        powers: Array.isArray(scene.runnerPowersSelected) && Array.isArray(scene.runnerPowersConsumed)
+          && selected.length === 2 && consumed.length === 2 && consumed.every(v => typeof v === 'boolean')
+          ? selected.filter((p, i) => consumed[i]) : undefined
       });
       this._contactDeathsThisHouse = 0;
       // This method is called by a real-stash extraction, not by a modal.
@@ -536,22 +539,37 @@ export default class ProgressionManager {
     let cue = null;
     try {
       const blockIndex = scene.blockIndex || 1;
+      startBlockRunTracking(blockIndex, scene.pveRound || 1);
       const record = getContactProgress();
       const gangID = scene.blockGangID ?? getWindowState().gangID;
-      cue = contactCue({
+      const chapter = crewStoryProgress(record, gangID).chapter;
+      const season = gangID === 'iron-row' && ironRowChapter(chapter);
+      const stats = getBlockRunStats(blockIndex);
+      // Coverage must match this exact pre-house checkpoint, not a partial
+      // legacy record that happens to contain a few untouched clears.
+      const complete = stats.telemetryComplete && stats.houses === (scene.pveRound || 1) - 1;
+      const measured = complete ? stats : { ...stats, telemetryComplete: false };
+      if (season) {
+        const authored = ironRowCue({ chapter, house:scene.pveRound || 1, blockIndex,
+          cityName:cityForBlock(blockIndex)?.name, earnedPraise:praiseEarned(measured),
+          usedPraise:praiseUsedInBlock(record, blockIndex), telemetryComplete:complete });
+        cue = authored ? { ...authored, contact:contact(authored.pages[0].speaker),
+          contacts:[contact('brick'), contact('rook')],
+          speaker:authored.pages[0].speaker.toUpperCase(),
+          pages:authored.pages.map(page => ({text:page.text, contact:contact(page.speaker)})) } : null;
+      } else cue = contactCue({
         gangID,
         house: scene.pveRound || 1,
         blockIndex,
         // Only true things: the praise variants are chosen from what this
         // block actually measured, and one is never repeated in a block.
-        stats: getBlockRunStats(blockIndex),
+        stats: measured,
         usedPraise: praiseUsedInBlock(record, blockIndex),
         // No mission exists yet, so no outcome is ever claimed. The debrief
         // beat falls back to ordinary praise until the mission slice lands.
-        missionOutcome: getBlockRunStats(blockIndex).mission
+        missionOutcome: stats.mission
       });
-      if (cue) {
-        const chapter = crewStoryProgress(record, gangID).chapter;
+      if (cue && !season) {
         const story = crewChapter(gangID, chapter);
         cue = { ...cue,
           pages: crewConsultationPages(gangID, chapter, cue.beat.id, cue.text),
@@ -664,14 +682,16 @@ export default class ProgressionManager {
       const chapter = this._crewCompletedChapter;
       const eventID = 'crew-finish/block-' + (this.scene.blockIndex || 1) + '/' + gangID;
       if (pair && Number.isSafeInteger(chapter) && claimContact(eventID, this.scene.blockIndex || 1)) {
-        const story = crewChapter(gangID, chapter);
+        const authored = gangID === 'iron-row' ? ironRowChapter(chapter) : null;
+        const story = authored || crewChapter(gangID, chapter);
+        const finishPages = authored
+          ? ironRowFinish(chapter, cityForBlock(scene.blockIndex)?.name)
+              .map(page => ({text:page.text, contact:contact(page.speaker)}))
+          : [{text:story.primaryFinish, contact:pair.primary}, {text:story.secondaryFinish, contact:pair.secondary}];
         const cue = {
           contact: pair.primary, contacts: [pair.primary, pair.secondary], celebration: true,
-          speaker: pair.primary.name.toUpperCase(), text: story.primaryFinish,
-          pages: [
-            { text: story.primaryFinish, contact: pair.primary },
-            { text: story.secondaryFinish, contact: pair.secondary }
-          ],
+          speaker: finishPages[0].contact.name.toUpperCase(), text: finishPages[0].text,
+          pages: finishPages,
           chapterLabel: 'CHAPTER ' + story.number + ' COMPLETE · ' + story.title.toUpperCase(),
           action: 'SEE THE BLOCK  >>'
         };

@@ -1,15 +1,16 @@
+import { ironRowChapter, ironRowCue, ironRowFinish } from '../src/logic/ironRowSeason.js';
 import { cityForBlock } from '../src/logic/city.js';
 // The entrance seam: who speaks, once, and what must never trigger one.
 // Exercises the real ProgressionManager source against a stub scene, the same
 // way the Rivals adapter is tested — no Phaser, no browser, no storage.
 import { readFileSync } from 'node:fs';
-import { gangContacts, contactCue, CONTACT_BEATS } from '../src/logic/contacts.js';
+import { contact, gangContacts, contactCue, praiseEarned, CONTACT_BEATS } from '../src/logic/contacts.js';
 import {
   createContactProgress, contactShown, markContactShown, contactsSeenInBlock,
   praiseUsedInBlock, praiseMark, crewStoryProgress, completeCrewStory, CONTACT_PROGRESS_BLOCKS
 } from '../src/logic/contactProgress.js';
 import { crewChapter, crewConsultationPages } from '../src/logic/crewStory.js';
-import { blockRunStats, createBlockRun, recordHouseClear } from '../src/logic/blockRun.js';
+import { blockRunStats, beginBlockRun, createBlockRun, recordHouseClear } from '../src/logic/blockRun.js';
 
 let blockStats = blockRunStats(createBlockRun({}, 1), 1);
 
@@ -63,7 +64,8 @@ let store = createContactProgress();
 let gangID = 'crossline';
 let shownPanels = [];
 let panelFailure = false;
-const bindings = { cityForBlock,
+const bindings = { cityForBlock, contact, praiseEarned, ironRowChapter, ironRowCue, ironRowFinish,
+  startBlockRunTracking: () => true,
   contactCue, gangContacts, crewChapter, crewConsultationPages, crewStoryProgress,
   finishCrewStory: (id, block, cleared) => {
     const result = completeCrewStory(store, { gangID: id, blockIndex: block, clearedHouses: cleared });
@@ -189,8 +191,8 @@ check('every cue carries a page-turn advance', shownPanels[0].action.endsWith('>
 // --- the compliment is earned, and spent ----------------------------------
 gangID = 'crossline';
 store = createContactProgress();
-let real = createBlockRun({}, 7);
-for (const house of [1, 2, 3]) real = recordHouseClear(real, 7, { house, powers: ['phase'] }).state;
+let real = beginBlockRun({}, 7, 1).state;
+for (const house of [1, 2, 3]) real = recordHouseClear(real, 7, { house, hits:0, bunk:false, powers: ['phase'] }).state;
 blockStats = blockRunStats(real, 7);
 shownPanels = [];
 run = seam({ house: 4, blockIndex: 7 });
@@ -200,12 +202,16 @@ check('the compliment is recorded, not just the beat',
   praiseUsedInBlock(store, 7).includes('flawless'));
 run.result.advance();
 shownPanels = [];
+for (let house=4; house<=9; house++) real=recordHouseClear(real,7,{house,hits:0,bunk:false,powers:['phase']}).state;
+blockStats=blockRunStats(real,7);
 run = seam({ house: 10, blockIndex: 7 });
 check('the next check-in finds something else to say',
   shownPanels.length === 1 && shownPanels[0].praiseKey !== 'flawless');
 check('and it is still true of the run', ['noPowers', 'phase', 'noDeaths'].includes(shownPanels[0].praiseKey));
 run.result.advance();
 shownPanels = [];
+for (let house=10; house<=12; house++) real=recordHouseClear(real,7,{house,hits:0,bunk:false,powers:['phase']}).state;
+blockStats=blockRunStats(real,7);
 run = seam({ house: 13, blockIndex: 7 });
 check('a third beat says a third thing',
   shownPanels.length === 1 && !['flawless'].includes(shownPanels[0].praiseKey));
@@ -273,5 +279,54 @@ for (const runKind of ['rivals', 'daily', 'tutorial']) {
 const silent = new Manager({ runKind: 'journey', role: 'plug', pveRound: 15, blockIndex: 31 });
 silent.noteHouseForContacts();
 check('plug cannot advance crew story', crewStoryProgress(store, gangID).chapter === 1);
+
+
+// Ten real controller schedules, including intentional silence and retries.
+gangID='iron-row';
+for(let chapter=0;chapter<10;chapter++){
+  store=createContactProgress();
+  for(let previous=1;previous<=chapter;previous++)
+    store=completeCrewStory(store,{gangID,blockIndex:previous,clearedHouses:15}).state;
+  const story=ironRowChapter(chapter), blockIndex=100+chapter;
+  for(let house=1;house<=14;house++){
+    shownPanels=[];
+    const current=seam({house,blockIndex});
+    check('live season schedule '+chapter+'/'+house,shownPanels.length===(story.beats[house]?1:0));
+    if(story.beats[house]){
+      const cue=shownPanels[0];
+      check('live pages retain authored speakers '+chapter+'/'+house,
+        cue.pages.map(p=>p.contact.id).join(',')===story.beats[house].pages.map(p=>p.speaker).join(','));
+      check('live chapter label '+chapter+'/'+house,cue.chapterLabel.includes('CHAPTER '+(chapter+1)+' ·'));
+      current.result.advance();
+      shownPanels=[];seam({house,blockIndex});
+      check('live retry stays silent '+chapter+'/'+house,shownPanels.length===0);
+    } else check('live silence continues '+chapter+'/'+house,current.entered()===1);
+  }
+  shownPanels=[];
+  const finalManager=new Manager({runKind:'journey',role:'runner',pveRound:15,blockIndex});
+  finalManager._crewCompletedChapter=chapter;
+  let completed=0;
+  finalManager.showBlockCompleteResult=()=>completed++;
+  const finish=finalManager.showBlockComplete();
+  check('live duo preserves every authored page '+chapter,
+    shownPanels.length===1&&shownPanels[0].pages.length===story.finish.length);
+  check('live celebration waits '+chapter,completed===0);
+  finish.advance();
+  check('live celebration returns to result '+chapter,completed===1);
+}
+// The adapter must supply missing, not manufactured, attempt metrics.
+store=createContactProgress();let captured=null;
+const capture=bindings.noteHouseClear;
+bindings.noteHouseClear=(block,entry)=>{captured=entry;};
+const CaptureManager=new Function(...Object.keys(bindings),source+'\nreturn ProgressionManager;')(...Object.values(bindings));
+const unknown=new CaptureManager({runKind:'journey',role:'runner',pveRound:3,blockIndex:500});
+unknown.noteHouseForContacts();
+check('absent tracker is not zero hits or zero bunk',captured.hits===undefined&&captured.bunk===undefined&&captured.powers===undefined);
+const known=new CaptureManager({runKind:'journey',role:'runner',pveRound:3,blockIndex:500,
+  runnerPowersSelected:['phase','dash'],runnerPowersConsumed:[true,false]});
+known.repTracker={stats:{damagesTaken:1,gotBunkStash:true}};
+known.noteHouseForContacts();
+check('measured tracker and spent slots are captured',captured.hits===1&&captured.bunk===true&&captured.powers.join(',')==='phase');
+bindings.noteHouseClear=capture;
 
 console.log(passed + ' contact flow assertions passed');
