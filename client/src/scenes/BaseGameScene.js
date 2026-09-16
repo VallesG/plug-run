@@ -2971,6 +2971,12 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   destroyTouchUI(){
+    // Do this even if no listeners remain: a removed/queued release can leave
+    // the controller holding a finger ID, rejecting every subsequent swipe.
+    this.playerController?.resetTouchGestures?.();
+    this._swipePid = null;
+    this._swipeStart = null;
+    this._aimDragActive = false;
     if (!this._touchHandlers) return;
     const { downHandler, moveHandler, upHandler, zone } = this._touchHandlers;
     try {

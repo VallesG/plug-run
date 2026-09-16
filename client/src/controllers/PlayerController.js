@@ -347,7 +347,20 @@ export default class PlayerController {
   /**
    * Touch input handlers
    */
+  /** Cancel a gesture without steering, firing, or spending a power.
+   * Modal transitions can remove listeners before the matching release arrives.
+   * Reset controller-owned state, not just the scene's legacy swipe mirrors.
+   */
+  resetTouchGestures() {
+    this._swipePid = null;
+    this._swipeStart = null;
+    this._aimDragActive = false;
+    this._dragMoveActive = false;
+    this._lastTapAt = 0;
+  }
+
   beginSwipe(pointer) {
+    if (this.scene.roundPausedForMenu || this.scene.roundOver) return;
     // Track one touch ID at a time
     if (this._swipePid !== null) return;
     this._swipePid = pointer.id;
@@ -362,6 +375,7 @@ export default class PlayerController {
   }
 
   updateSwipe(pointer) {
+    if (this.scene.roundPausedForMenu || this.scene.roundOver) return;
     if (pointer.id !== this._swipePid || !pointer.isDown) return;
 
     if (this.scene.role === 'plug') {
@@ -475,6 +489,13 @@ export default class PlayerController {
   }
 
   endSwipe(pointer) {
+    if (this.scene.roundPausedForMenu || this.scene.roundOver || !pointer || pointer.id == null) {
+      this.resetTouchGestures();
+      return;
+    }
+    // Phaser and raw DOM touch events use different IDs. An unrelated release
+    // must not steer, spend a power, or clear the active finger's gesture.
+    if (pointer.id !== this._swipePid) return;
     // DRAG-MOVE END: gesture released. Drift already points where the
     // finger was heading; clearing the flag drops the aim slowdown so
     // post-release movement runs at full speed (per spec).

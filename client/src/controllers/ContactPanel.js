@@ -65,6 +65,13 @@ export function showContactPanel(scene, cue, onDone) {
   };
   measure();
 
+  // A display-list backstop does not block Safari's raw DOM touch fallback.
+  // Match the loadout/entrance modal contract and cancel any in-flight swipe.
+  // Keep input suspended on close: the next modal/startMatch owns resuming it.
+  scene.roundPausedForMenu = true;
+  if (scene.input?.keyboard) scene.input.keyboard.enabled = false;
+  scene.suspendTouchUI?.(true);
+
   // Everything below the panel is unreachable while it is up: one opaque,
   // interactive backstop that swallows every pointer event.
   const drawBackstop = () => track(scene.add.rectangle(a.w / 2, a.h / 2, a.w + 4, a.h + 4, COLORS.ink, 1)

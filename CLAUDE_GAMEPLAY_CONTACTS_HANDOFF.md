@@ -4,6 +4,50 @@ Written 2026-09-16. Repository: VallesG/plug-run.
 Work only on `claude/input-intent-layer`. **Never touch master: live deploy.**
 Gameplay implementation checkpoint: `08e45597d89c0fc446e8076d7b427704fbca3fc7`.
 
+## Contact-to-house touch steering regression — fixed (2026-09-16)
+
+The human reported a runner that could not steer after later contact/praise
+panels. Reproduced with the actual PlayerController and scene touch lifecycle:
+a gesture claimed finger 42, a modal removed listeners before release, then
+rebind reset only the scene's legacy swipe fields. The controller still held
+42, so new fingers were rejected and their releases could not clear it.
+The display-list contact backstop also did not stop Safari's raw DOM fallback.
+
+Fix on `claude/input-intent-layer`:
+- `PlayerController.resetTouchGestures()` clears controller finger/origin,
+  aim/drag flags and double-tap history, without changing movement/drift,
+  spending powers, firing or touching progression.
+- `BaseGameScene.destroyTouchUI()` calls that reset BEFORE its early return;
+  `makeMobileControls()` already goes through destroy, so every rebind starts
+  clean even if listeners have already vanished.
+- begin/update ignore paused or ended rounds. End ignores unrelated pointer
+  releases and cancels pointerless/paused gestures without gameplay effects.
+  Phaser and raw DOM identifiers are not interchangeable.
+- ContactPanel pauses the world, disables keyboard and suspends touch before
+  displaying dialogue. Page turns stay suspended. Close does NOT resume
+  controls: the entrance/loadout/startMatch chain owns resuming, avoiding
+  new listeners being installed mid-release before the next modal opens.
+
+`test/mobileInputLifecycle.test.mjs` uses the actual controller, actual scene
+touch methods and actual contact renderer against a small display-list stub.
+242 adapted assertions cover lost releases, no-handler reset, all three crews
+and six beats, queued events, page turns, contact -> map -> loadout -> steering,
+no listener accumulation, DOM fallback, mixed transport IDs, cancellation and
+normal double taps. Registered in npm test.
+
+Negative controls: the original lost-release fixture fails against old code;
+keeping the old ContactPanel with the fixed touch lifecycle also fails its
+input-suspension assertion. Both pass with all fixes.
+Existing 993 contact, 4320 story, 71 flow, 39 panel and 16 storage assertions
+still pass: 5681 targeted adapted assertions including the new suite.
+Three adapted import/binding parses passed.
+No sandbox/process attempts. Native `npm run verify`, native .mjs resolution,
+Vite/full regression and a real phone run were NOT performed. Run verify in
+an allowed environment and review mobile house 4/7/9/10/13 after dialogue.
+No bank records, maze, race timing/rules, rewards or story progress changed;
+master and the 55-record Rivals bank remain untouched.
+
+
 ## Crew story chapters and completion curtain call — Codex (2026-09-16)
 
 This section supersedes the older sequencing/content notes below. Work is on
