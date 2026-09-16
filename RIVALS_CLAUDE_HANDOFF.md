@@ -7,6 +7,85 @@ Read `HANDOFF_CODEX.md` end to end before changing code. It contains the
 architecture, test history and six build traps. This file is the focused next
 assignment for Block Rivals.
 
+## Status after the recorded-opponents pass (2026-09-16)
+
+Done on `claude/input-intent-layer`, all verified natively with `npm run verify`
+(tests + Vite build) in a Linux container, plus headless Chromium runs of the
+bot recorder. Nothing has been seen on a phone or touched by a human yet.
+
+| piece | where | proof |
+|---|---|---|
+| Fixed seven-course pool, rotation policy | `logic/rivals.js` (`RIVAL_COURSE_POOL`, `nextRivalSlot`, `rivalPoolCourse`) | `test/rivalCourses.test.mjs`: 668 assertions on the real generator: 49 houses reachable, deterministic, seeds derive from slug hash, weapons/real-bunk stable |
+| RivalRunRecord / RivalReplayBundle contracts | `logic/rivalRecords.js` | `test/rivalRecords.test.mjs` (68) |
+| Portable replay segment format | `logic/rivalReplay.js` | `test/rivalReplay.test.mjs` (69) |
+| Bot presets, opponent choice, ladder tier, bank loadouts | `logic/rivalPresets.js` | `test/rivalPresets.test.mjs` (24) |
+| Live-scene capture (Phaser-free) | `controllers/RivalReplayCapture.js` | `test/rivalCapture.test.mjs` (42, stub scene) |
+| Race adapter: capture hooks, fixed loadout, opponent lookup, WATCH RIVAL REPLAY | `controllers/RivalsRace.js` | `test/rivalsFlow.test.mjs` (67) |
+| Seven-house playback overlay | `controllers/RivalReplayPlayer.js` | headless screenshots only (see below); no unit test, it is all Phaser |
+| Static bank loading + validation | `utils/rivalSession.js` (`loadRivalOpponents`, `resolveRivalOpponent`, `loadRivalReplay`) | exercised by the play-mode harness run |
+| Recording / play harness | `controllers/installBotDriver.js` (`?rivalsRecord=1`, `?rivalsPlay=1`) | headless runs, output in `client/public/rivals/v2/` |
+
+### How the pieces fit
+
+- A race object (`scene.rivalRace`) now carries `opponentKind` (`simulated-ai` |
+  `recorded-bot`), `opponent` (recordingID, displayName, replayURL...),
+  `opponentRecord`, `fixedPowers`, `hardLimitMs`, `recording`, `capture`.
+- `RivalsRace.prepare()` calls `resolveRivalOpponent(race)` before the loadout.
+  It returns `null` synchronously when there is nothing to do and a promise
+  otherwise; the HUD shows FINDING RIVAL meanwhile. On success the seven
+  recorded clear timestamps replace the simulated ones and the player gets the
+  recording's ordered loadout (fixed-loadout confirm instead of the picker).
+  On any failure the race stays the labeled simulated pace.
+- Capture: `beginRaceCapture` at GO, `beginAttemptCapture` when each house
+  clock starts, `tickAttemptCapture` every racing frame (15Hz samples, events
+  on transitions), `endAttemptCapture` on extract / caught / timeout /
+  abandoned. A resize retry or a forfeit is `abandoned`, which makes that race
+  unexportable on purpose.
+- `exportRaceCapture(race, {opponent, recordingID})` refuses anything short of
+  seven clears whose timestamps equal the race clock, then builds both
+  artifacts. The player's own race is exported the same way (kind `human`,
+  id `local-player`) into the local result history as `runRecord`.
+- Static assets: `client/public/rivals/v2/manifest.json` (summary),
+  `courses/<courseID>/opponents.json` (records + `replay` path, fetched at race
+  creation, 3.5s timeout), `replays/<recordingID>.json` (bundle, fetched only
+  on WATCH, 12s timeout, 6MB cap). Built by the assembler script described in
+  the recording section below; not hand-edited.
+
+### Recording the bank
+
+```
+# from client/: npm run build, serve dist on a port, then per job:
+http://127.0.0.1:4173/?rivalsRecord=1&courseSlot=3&skillPreset=hustler&runs=3
+# optional: &powers=phase,dash (defaults to rivalBankLoadout(slot, preset))
+#           &hardLimitMs=720000 (race forfeits at 12 min) &opponentIndex=4
+```
+
+The page auto-launches the race, the auto-clicker presses READY / REMATCH, and
+`window.__plugRunRivals` fills with `{ok, reason, record, bundle, traces}` per
+race; `__plugRunRivalsDownload()` saves it. Incomplete races are listed with a
+reason, never exported. The bank in the repo was produced by driving that page
+with Playwright and Chromium (swiftshader WebGL) and assembling the outputs
+with a script that re-validates every record and bundle with the game's own
+logic modules before writing files. `?rivalsPlay=1&courseSlot=N` races the bot
+against the shipped bank the way a player would (opponent lookup, fixed
+loadout, WATCH button) and exports nothing.
+
+### Not done / not verified
+
+- The opponent bank is being recorded as this is written; until
+  `client/public/rivals/v2/` exists the game serves the labeled simulated pace
+  everywhere. The first headless attempt (WebGL via swiftshader) ran at 9-18fps
+  and the Ace bot died 29 times in 7 minutes, forfeiting at 5/7; the pipeline
+  itself behaved (auto-launch, retries, hard limit, export refused with a
+  reason). Chromium's Canvas renderer (`--disable-gpu`) holds 60fps with three
+  browsers in parallel and is what the bank is recorded with.
+- Nothing has been seen rendered by a human: the fixed-loadout confirm, the
+  FINDING RIVAL notice, the result copy, the replay player. Headless
+  screenshots are the only visual evidence so far.
+- No manual run of the handoff's verification list yet (seven courses on
+  device, background return, 280x480 layout, Run the Block resume, storage
+  isolation). The Rivals code paths write only `pr_rivals_results_v1_<user>`.
+
 ## Product decision
 
 The title menu is now:

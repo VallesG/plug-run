@@ -1,8 +1,10 @@
 # Plug Run — handoff for a new agent
 
-> Block Rivals recording continuation: read `RIVALS_CLAUDE_HANDOFF.md` after
-> this file. It freezes the proposed seven-course pool and details BotDriver
-> recording, portable replay bundles, opponent selection and verification.
+> Block Rivals recorded opponents (2026-09-16): implemented on this branch.
+> `RIVALS_CLAUDE_HANDOFF.md` opens with a status table of what shipped, how the
+> bank is recorded, and what is still unverified. Read that section before
+> touching `logic/rivals*.js`, `controllers/RivalsRace.js`,
+> `controllers/RivalReplay*.js` or `client/public/rivals/`.
 
 Written 2026-09-15 at the end of a long Claude Code session. Branch:
 `claude/input-intent-layer`. 38 commits ahead of `master`; `master` is
