@@ -4,23 +4,44 @@ Written 2026-09-16. Repository: VallesG/plug-run.
 Work only on `claude/input-intent-layer`. **Never touch master: live deploy.**
 Gameplay implementation checkpoint: `08e45597d89c0fc446e8076d7b427704fbca3fc7`.
 
-## Status: stages 1 and 2 implemented (2026-09-16)
+## Status: stages 1-5 implemented (2026-09-16)
 
-See the top section of HANDOFF_CODEX.md for what shipped and how it was
-verified. Stage 1 (art review/compression and reusable contact dialogue) and
-stage 2 (milestone check-ins with persisted, duplicate-safe IDs) are done and
-pushed; stages 3-6 (mission definition, special item, completion seam, bonus
-REP and +1 Cash) are untouched. The 200-entry ledger hazard this document
-flagged was inspected and confirmed real — it drops balance AND duplicate
-protection together — and must be fixed before stage 6.
+See the top section of HANDOFF_CODEX.md for what shipped, the rules that must
+keep holding and how it was verified. Against this document's own staging:
+
+- **1 art + reusable dialogue** — done. WebP runtime art, PNG sources out of
+  `public/`, `logic/contacts.js`, `controllers/ContactPanel.js`.
+- **2 milestone check-ins** — done, plus an opening beat at house 1 the human
+  asked for: the primary requests the block and alludes to something bigger,
+  without naming content that does not exist.
+- **3 mission definition and state** — done as `logic/blockRun.js` mission
+  field: offered at the brief, settled once at the briefed house's clear,
+  never rewritten by a later house.
+- **4 special-item pickup** — done. `logic/missionItem.js`, deterministic from
+  a separate seed domain, reachable, same on retries, violet ring, additive to
+  the real bag, no maze/collision/RNG edits. Sixty real houses proved.
+- **5 completion seam** — partly done: success is item + real stash +
+  extraction from the briefed house, recorded once, and it drives the debrief
+  line. It grants nothing.
+- **6 bonus REP and +1 Cash** — NOT done, and deliberately so.
+
+The praise also became performance-aware at the human's request: each primary
+reacts to a flawless run, a comeback after three deaths, spending no powers,
+two wrong bags, or leaning on phase, dash or decoy. A power counts as a habit
+at two uses with a clear lead, so one press is never called a style, and a
+variant is spoken at most once per block.
+
+The 200-entry ledger hazard this document flagged was inspected and confirmed
+real — it drops balance AND duplicate protection together — and still blocks
+stage 6.
 
 Decisions taken, so they are not re-litigated:
-- beats at houses 4, 7, 9, 10, 13; house 1 is never interrupted and house 15
-  keeps its existing block-complete finale
+- beats at houses 1, 4, 7, 9, 10, 13; house 15 keeps its block-complete finale
 - one panel per house, never stacked; the clear-6 check-in carries the tease
 - a beat is claimed before it is shown, so a reload during the panel costs
   the line rather than looping it
-- praise is indexed by milestone, not chosen at random
+- milestone lines are indexed by beat; variant praise is earned and spent
+- the mission ring is violet for every gang, never per-gang, never green
 - Rook, Sol, Brick and Vee get no foreground crop; only The Dispatch and The
   Map Room have full-width furniture at body height
 

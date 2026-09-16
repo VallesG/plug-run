@@ -2,50 +2,98 @@
 
 ## Gang contacts in Run the Block — implemented (2026-09-16)
 
-Two slices are on `claude/input-intent-layer` and pushed. `npm run verify` is
-green natively (this container allows execution; the Carbon Black restriction
-is the user's machine, so verify was run for real, not adapted).
+Four slices on `claude/input-intent-layer`, pushed, ending at `7eee8fc`.
+`npm run verify` is green **natively** — this container allows execution, so
+these are real npm/Vite runs, not adapted-harness claims. Last run: 30
+block-run, 508 mission-item, 993 contact, 53 contact-flow, 136 contact-art
+assertions, every prior suite, an 89-file ES-module check and the Vite build.
+The 55-record Rivals bank is untouched at 402.
 
-**Art is now shippable.** Runtime art is WebP; the PNG originals moved to
-`client/art-sources/the-window/`, outside the served tree. Six backdrops
-15.4MB -> 892KB, props 2.2MB -> 249KB, the four Window rasters 8.6MB -> 1.15MB
-at identical dimensions with alpha intact. `dist` went 69MB -> 37MB, because
-everything under `public/` — including the archived concept sheets — was being
-deployed. Do not put source rasters back under `public/`.
+### What a block feels like now
 
-**`logic/contacts.js`** is the content authority: six dossiers (gang, role,
-setting, voice, accent, portrait frame, backdrop, placement), the beat
-schedule and the panel geometry. No randomness: praise lines are indexed by
-milestone because the copy is written for a specific number of clears.
-`contactArt.test.mjs` asserts the module and the art manifest never drift.
+House 1 the primary asks for the job and points past it. Houses 4, 10 and 13
+they react to how the run has actually gone. House 7 they tease the job
+contact; house 9 that contact briefs an object, and the object is on the floor
+of that house under a violet ring. House 10's debrief reports whether it came
+out. Everything else is silent, and Rivals, Tutorial, the legacy daily route,
+the bot harness and the shelved plug role fall straight through — asserted.
 
-**`controllers/ContactPanel.js`** renders one cue in Auntie Ro's grammar and
-loads exactly one room at a time, releasing the texture on teardown. A missing
-or slow image falls back after 2.5s; the advance arms 360ms late so the tap
-that cleared the entrance map cannot skip the panel. The dialogue box is sized
-from its own copy — a fixed height put the button on top of the text at
-280x480.
+### Art is shippable; do not undo this
 
-**Beats** fire on the existing pre-house entrance seam via
-`ProgressionManager.showContactCheckIn`, which the overhead map's ENTER button
-routes through: primary praises at house 4, teases at 7, the job contact
-briefs at 9, the primary debriefs at 10, praises at 13. Everything else is
-silent, and Rivals, Tutorial, the daily route, the bot harness and the plug
-role fall straight through.
+Runtime art is WebP; PNG originals live in `client/art-sources/the-window/`,
+outside the served tree. Six backdrops 15.4MB -> 892KB, props 2.2MB -> 249KB,
+the four Window rasters 8.6MB -> 1.15MB at identical dimensions with alpha
+intact. `dist` went 69MB -> 37MB, because everything under `public/` —
+including the archived concept sheets — was being deployed to players.
+**Never put source rasters back under `public/`.**
 
-**Duplicate safety:** a beat is claimed before it is shown.
-`logic/contactProgress.js` groups seen IDs by block and prunes to the current
-block and the one before, which is bounded without being lossy because Run the
-Block only moves forward. It deliberately does not copy the Cash ledger shape.
+### The modules
 
-Verified in a real browser: block 1 house 4 as Crossline shows Switch at The
-Dispatch behind the desk; a genuine reload goes straight to the loadout with
-no repeat; `contact-preview.html` (client root, dev only) renders all three
-gangs and all five beats at 390x844, 280x480 and 900x640.
+| file | role |
+|---|---|
+| `logic/contacts.js` | six dossiers, the six beats, praise selection, panel geometry. Import-free. |
+| `logic/contactProgress.js` | which beats and which compliments a block has already used |
+| `logic/blockRun.js` | how the current block has gone: hits, deaths, powers, bunk bags, swaps, mission outcome |
+| `logic/missionItem.js` | where the job object goes, its colour, and what counts as success |
+| `controllers/ContactPanel.js` | renders one cue in Auntie Ro's grammar; loads one room at a time |
+| `utils/contactProgress.js` / `utils/blockRunProgress.js` | their own storage keys, separate from journey |
+| `contact-preview.html` | client root, dev only: every gang, every beat, three viewports |
 
-**Not built:** no mission, no special item, no REP, no Cash. The debrief beat
-never claims an outcome because none can happen yet. `CONTACT_TARGET_HOUSE`
-is 9 and provisional. The two desk occlusion fractions want a phone review.
+### Rules that must keep holding
+
+- **A contact may only say true things.** Praise variants are chosen from what
+  `blockRun` measured. Nothing fires on absent data: a block with no cleared
+  houses earns no compliment, and `flawless` is computed from the houses
+  themselves rather than a flag a restart could drop.
+- **No randomness anywhere in the dialogue.** Milestone lines are indexed by
+  the beat; a hash made house 13 congratulate the player for three houses.
+- **A variant is spoken once per block.** The spoken key is persisted beside
+  the beat under a `praise:` prefix in the same record, so a reload cannot
+  repeat it. Written the obvious way, a clean run got the identical sentence
+  at houses 4, 10 and 13.
+- **A beat is claimed before it is shown.** Retry, resize restart, reload and
+  duplicate callbacks all enter the house in silence.
+- **The mission item never touches the maze.** Placement is a read-only pass
+  over the finished grid from its own seed domain, so a house plays
+  identically with or without a mission live. It never touches `hasStash`,
+  the carried bag or the stash count — it is an extra objective, not a
+  replacement. Proved on all sixty houses of four real blocks.
+- **The ring is violet** (`MISSION_ITEM_COLOR`), deliberately not stash green
+  and not car-beacon blue, and it is one colour for every gang so players
+  learn it rather than decode it.
+- **The mission outcome grants nothing.** It is recorded once when the briefed
+  house clears and cannot be rewritten; it only chooses the debrief sentence.
+  No REP, no Cash, no stash.
+- Contacts write only `pr_contacts_v1_<user>` and `pr_blockrun_v1_<user>`.
+  Losing either costs a nicer sentence, never a cleared house.
+
+### Two bugs worth not repeating
+
+`makeMissionItem()` was first called before the runner sprite existed, so
+placement measured from cell (0,0), found nothing reachable and silently
+placed no item at all — with every test still green. It now runs after the
+spawn is settled and measures from `runnerSpawnCell`. Driving the real game
+found it; the tests could not.
+
+The dialogue box was first a fixed height range, which put the advance button
+on top of the last line at 280x480. It is now sized from its own copy, and the
+suite checks every line every contact can speak, at six viewports.
+
+### Verified in a real browser
+
+Crossline block 1 house 4: Switch at The Dispatch, behind the desk, advance
+bottom right. A genuine reload goes straight to the loadout, no repeat. Iron
+Row block 1 house 9: Rook briefs the service keys and the violet-ringed case
+is on the floor beside the two green stash rings.
+
+### Not built, and what blocks it
+
+No REP and no Cash for the mission — that seam stays closed until the ledger
+below is fixed. Nobody has carried the object out in play, so the win debrief
+is proved in tests only. `CONTACT_TARGET_HOUSE` is 9 and still provisional.
+The two desk-occlusion fractions (The Dispatch, The Map Room) are Codex's
+starting values and want a phone review. The pickup toast and the case art
+have not been judged at gameplay size on a phone.
 
 ### The Cash ledger hazard, still unfixed
 
