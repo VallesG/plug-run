@@ -5,7 +5,9 @@ import {
 let passed = 0;
 function check(name, value) { if (!value) throw new Error(name); passed++; }
 check('three tiers', Object.keys(RIVAL_SKILL_PRESETS).length === 3 && [1, 2, 3].every(t => rivalPresetByTier(t)));
-check('tiers ascend in skill', RIVAL_SKILL_PRESETS.street.aiLevel < RIVAL_SKILL_PRESETS.hustler.aiLevel && RIVAL_SKILL_PRESETS.hustler.aiLevel < RIVAL_SKILL_PRESETS.ace.aiLevel);
+check('tiers are distinct configurations', new Set(Object.values(RIVAL_SKILL_PRESETS).map(p => JSON.stringify([p.aiLevel, p.coverPenalty, p.phaseEscapeCells, p.dangerCells]))).size === 3);
+check('ace keeps route variety (level 5 or lower)', RIVAL_SKILL_PRESETS.ace.aiLevel <= 5 && RIVAL_SKILL_PRESETS.street.aiLevel <= 5);
+check('evasion layers grow with tier', RIVAL_SKILL_PRESETS.street.coverPenalty === 0 && RIVAL_SKILL_PRESETS.ace.coverPenalty > 0 && RIVAL_SKILL_PRESETS.ace.phaseEscapeCells > 0);
 check('presets frozen', Object.isFrozen(RIVAL_SKILL_PRESETS) && Object.isFrozen(RIVAL_SKILL_PRESETS.ace));
 check('aliases resolve', rivalPreset('bronze').key === 'street' && rivalPreset('GOLD').key === 'ace' && rivalPreset('hustler').tier === 2);
 check('unknown preset null', rivalPreset('legend') === null && rivalPreset() === null);

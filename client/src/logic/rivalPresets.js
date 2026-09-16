@@ -3,19 +3,31 @@
 // A preset is a named BotDriver configuration. The names are honest about
 // what they are (a bot at a skill setting), and the record's opponent block
 // carries the preset and driver version so a recording can be retired the
-// day the driver changes. The knob values here are starting points for the
-// first bank; what each tier actually clears is measured by recording, not
-// asserted here.
+// day the driver changes. A tier is a pool to draw from; how fast a given
+// recording actually was is on the record (elapsedMs, retries) and shown to
+// the player. Nothing here claims a tier is faster.
+//
+// WHY ACE IS NOT "aiLevel 20"
+// The first bank tried Ace as the sweep bot (aiLevel 20, full cover routing).
+// It forfeited every race at 3/7: on Low End Rush house 4 it died 55-72 times
+// in a row, ~5.4s each, identical tick counts. applyRunnerProgression zeroes
+// wander/hesitation from level 6 up, so a high-level runner takes the same
+// route every retry and walks into the same lane; level 5 keeps 6%/5%
+// imperfection and breaks the loop. Measured on that house: level 20 with
+// Street knobs 5/7 in 6 min, level 8 with Hustler knobs 3/7 (47 deaths),
+// level 5 with Hustler knobs 7/7 in 3:34. So Ace is level 5 with the
+// evasion layers on, and the level knob is a route-variety knob, not skill.
 export const RIVAL_BOT_DRIVER_VERSION = 'botdriver-v2';
 export const RIVAL_SKILL_PRESETS = Object.freeze({
   // Street: the shipped runner AI at a low level, no exposure awareness. It
   // routes by path length alone and walks down firing lanes, which is what a
   // first-week player does too.
   street:  Object.freeze({ key: 'street',  label: 'Street',  tier: 1, aiLevel: 5,  coverPenalty: 0, phaseEscapeCells: 0, dangerCells: 5 }),
-  // Hustler: mid-level AI with some cover routing and a phase escape.
+  // Hustler: mid-level AI with cover routing and a phase escape. Deterministic
+  // routing from level 6 up; it cleared 5 of its first 6 races.
   hustler: Object.freeze({ key: 'hustler', label: 'Hustler', tier: 2, aiLevel: 12, coverPenalty: 3, phaseEscapeCells: 7, dangerCells: 6 }),
-  // Ace: the measuring-instrument bot as tuned in the sweeps.
-  ace:     Object.freeze({ key: 'ace',     label: 'Ace',     tier: 3, aiLevel: 20, coverPenalty: 5, phaseEscapeCells: 9, dangerCells: 7 })
+  // Ace: route variety of level 5 plus the evasion layers (see above).
+  ace:     Object.freeze({ key: 'ace',     label: 'Ace',     tier: 3, aiLevel: 5,  coverPenalty: 3, phaseEscapeCells: 7, dangerCells: 6 })
 });
 const ALIASES = { bronze: 'street', silver: 'hustler', gold: 'ace', easy: 'street', medium: 'hustler', hard: 'ace' };
 export function rivalPreset(name) {
