@@ -1,8 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 192" role="img" aria-labelledby="title desc"><title id="title">Plug Run</title><desc id="desc">Bold ivory and runner-blue lettering with a street route leading to a golden house marker.</desc>
-<g transform="translate(0 8)"><path d="M20 135V85H64V36H94V108H50V154Z" fill="#34454c" stroke="#090d11" stroke-width="7"/><path d="M35 135V99H79V55" fill="none" stroke="#9ad1ff" stroke-width="3" stroke-dasharray="9 8"/><path d="M61 30L79 12L97 30V49L79 69L61 49Z" fill="#f1ca82" stroke="#090d11" stroke-width="5"/><path d="M71 34H87V47H71Z" fill="#151e24"/><path d="M70 33L79 25L88 33Z" fill="#151e24"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 192" role="img" aria-labelledby="title desc" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+<title id="title">Plug Run</title>
+<desc id="desc">Smooth italic ivory and runner-blue wordmark with a street route leading to a golden house marker.</desc>
+<g transform="translate(0 8)">
+  <path d="M20 135V85H64V36H94V108H50V154Z" fill="#34454c" stroke="#090d11" stroke-width="7"/>
+  <path d="M35 135V99H79V55" fill="none" stroke="#9ad1ff" stroke-width="3" stroke-dasharray="9 8"/>
+  <path d="M61 30L79 12L97 30V49L79 69L61 49Z" fill="#f1ca82" stroke="#090d11" stroke-width="5"/>
+  <path d="M71 34H87V47H71Z" fill="#151e24"/>
+  <path d="M70 33L79 25L88 33Z" fill="#151e24"/>
+</g>
 <path d="M128 167H555L573 154H146Z" fill="#213b4c"/>
-<g transform="translate(146 9) skewX(-8) scale(0.87)" fill="#ede5d4" stroke="#07090b" stroke-width="3" paint-order="stroke" fill-rule="evenodd"><path transform="translate(0 0)" d="M0 90V0H46L58 12V42L46 54H18V90ZM18 16V38H40V16Z"/><path transform="translate(70 0)" d="M0 0H18V72H58V90H0Z"/><path transform="translate(140 0)" d="M0 0H18V72H40V0H58V78L46 90H12L0 78Z"/><path transform="translate(210 0)" d="M12 0H58V18H18V72H40V56H30V40H58V90H12L0 78V12Z"/></g>
-<g transform="translate(301 96) skewX(-8) scale(0.87)" fill="#9ad1ff" stroke="#07090b" stroke-width="3" paint-order="stroke" fill-rule="evenodd"><path transform="translate(0 0)" d="M0 90V0H46L58 12V42L46 54L62 90H42L27 54H18V90ZM18 16V38H40V16Z"/><path transform="translate(70 0)" d="M0 0H18V72H40V0H58V78L46 90H12L0 78Z"/><path transform="translate(140 0)" d="M0 90V0H18L40 52V0H58V90H40L18 38V90Z"/></g>
+<g font-family="Impact, Haettenschweiler, 'Arial Narrow Bold', 'Helvetica Neue', Arial, sans-serif" font-style="italic" font-weight="900" paint-order="stroke fill" stroke="#07090b" stroke-width="4" stroke-linejoin="round">
+  <text x="137" y="91" font-size="94" letter-spacing="1" fill="#ede5d4">PLUG</text>
+  <text x="294" y="180" font-size="94" letter-spacing="1" fill="#9ad1ff">RUN</text>
+</g>
 <path d="M132 113H264M126 127H244M122 141H221" stroke="#f1ca82" stroke-width="5"/>
 <path d="M150 7H374" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/>
 </svg>

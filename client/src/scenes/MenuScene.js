@@ -35,7 +35,8 @@ export class MenuScene extends Phaser.Scene {
   constructor(){ super('MENU'); }
 
   preload(){
-    // SVG outlines are the shared brand masters, independent of system fonts.
+    // The SVG is rasterized large, then this texture gets linear filtering so
+    // the smooth athletic wordmark does not inherit the game's pixel-art scale.
     this.load.svg('plug_run_wordmark', '/brand/plug-run-wordmark.svg', { width: 1200, height: 384 });
 
     // Load character sprites for card visuals
@@ -79,6 +80,7 @@ export class MenuScene extends Phaser.Scene {
     this.drawStreetBackground();
 
     const brand = landingLayout(W, H);
+    this.textures.get('plug_run_wordmark')?.setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.logo = this.add.image(W/2, brand.logoY, 'plug_run_wordmark')
       .setDisplaySize(brand.logoW, brand.logoH).setDepth(5);
 
@@ -2189,102 +2191,98 @@ export class MenuScene extends Phaser.Scene {
   }
 
   openHelp(){
-    const W = this.scale.width, H = this.scale.height;
-    const cx = this.cameras.main.centerX;
-    const cy = this.cameras.main.centerY;
-    const panelW = Math.min(400, W - 32);
-    const wrapW = panelW - 44;
-
-    // Sections: each line is an array of segments so role names can carry
-    // their own color/weight inline (Phaser text objects are single-style).
-    const ROLE_BLUE = '#4db2ff', ROLE_RED = '#ff6b6b';
-    const sections = [
-      { head: 'THE PREMISE', lines: [
-        [{ t: 'A daily arcade chase with two roles.' }],
-        [{ t: 'RUNNER: ', c: ROLE_BLUE, b: true }, { t: 'Grab the stash and reach the getaway car.' }],
-        [{ t: 'PLUG: ', c: ROLE_RED, b: true }, { t: 'Stop the Runner before they escape.' }],
-        [{ t: 'Each round gets harder.' }],
-      ]},
-      { head: 'THE DAILY BLOCK', lines: [
-        [{ t: 'A new route drops for each role every day. Everyone playing that role gets the same route.' }],
-      ]},
-      { head: 'LEADERBOARDS', lines: [
-        [{ t: 'Each role has daily and all-time rankings. Survive more rounds to climb higher.' }],
-      ]},
-      { head: 'REPLAYS', lines: [
-        [{ t: 'After every run, watch the replay and download the clip to share.' }],
-      ]},
-      { head: 'REP', lines: [
-        [{ t: 'Every run starts with the same amount of Rep. What you do in the round decides how much you walk away with.' }],
-      ]},
+    const W=this.scale.width,H=this.scale.height;
+    const cx=this.cameras.main.centerX,cy=this.cameras.main.centerY;
+    const panelW=Math.min(430,W-24);
+    const panelH=Math.min(520,H-24);
+    const pad=Math.max(12,Math.min(20,panelW*0.045));
+    const cream='#f1dfb0',muted='#a9b0aa',ink=0x090d0f,gold=0xe2b45f,teal=0x4e9b96;
+    const sections=[
+      {
+        number:'01',title:'RUN THE BLOCK',
+        copy:'Clear 15 houses. Find the real stash, lose the Plug, and reach the getaway car.'
+      },
+      {
+        number:'02',title:'BLOCK RIVALS',
+        copy:'Race the same seven houses and loadout. A half-lit rail means stash found; full means escaped.'
+      },
+      {
+        number:'03',title:'STASH + REP',
+        copy:'Stashes clear houses and unlock new blocks. REP is your leaderboard score.'
+      },
+      {
+        number:'04',title:'THE WINDOW',
+        copy:'Auntie Ro introduces the streets and your gang. Jobs and the cosmetic Shelf are coming next.'
+      }
     ];
 
-    const els = [];
-    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
-    els.push(veil);
+    const els=[];
+    const veil=this.add.rectangle(cx,cy,W,H,0x000000,0.76).setDepth(50).setInteractive();
+    const shadow=this.add.rectangle(cx+6,cy+7,panelW,panelH,ink,0.8).setDepth(51);
+    const panel=this.add.rectangle(cx,cy,panelW,panelH,0x111719,0.985)
+      .setDepth(52).setStrokeStyle(2,gold);
+    els.push(veil,shadow,panel);
 
-    // Measure pass: build all texts at local (xOff, yCursor); position later.
-    const mkStyle = (seg, availW) => ({
-      fontFamily: 'monospace', fontSize: '12px',
-      color: seg.c || '#aab3c8',
-      fontStyle: seg.b ? 'bold' : 'normal',
-      align: 'left', lineSpacing: 3,
-      wordWrap: availW ? { width: availW } : undefined
+    const top=cy-panelH/2;
+    const headerH=58;
+    const header=this.add.rectangle(cx,top+headerH/2,panelW,headerH,0x182329,0.98)
+      .setDepth(53).setStrokeStyle(1,0x705d37);
+    const title=this.add.text(cx,top+20,'HOW THE STREET WORKS',{
+      fontFamily:'Georgia, serif',fontSize:Math.max(17,Math.min(21,panelW*0.052))+'px',
+      fontStyle:'bold',color:cream,letterSpacing:1,stroke:'#090d0f',strokeThickness:3
+    }).setOrigin(0.5).setDepth(54);
+    const sub=this.add.text(cx,top+43,'GET THE BAG · GET OUT · BUILD YOUR NAME',{
+      fontFamily:'monospace',fontSize:'8px',color:'#c0a86e',letterSpacing:1
+    }).setOrigin(0.5).setDepth(54);
+    els.push(header,title,sub);
+
+    const buttonH=40,gap=7;
+    const contentTop=top+headerH+10;
+    const contentBottom=cy+panelH/2-buttonH-22;
+    const cardH=(contentBottom-contentTop-gap*(sections.length-1))/sections.length;
+    const cardW=panelW-pad*2;
+
+    sections.forEach((section,index)=>{
+      const y=contentTop+cardH/2+index*(cardH+gap);
+      const accent=index===1?0xc58a68:index===3?0x9b78d0:teal;
+      const cardShadow=this.add.rectangle(cx+3,y+3,cardW,cardH,ink,0.55).setDepth(53);
+      const card=this.add.rectangle(cx,y,cardW,cardH,0x0d1214,0.94)
+        .setDepth(54).setStrokeStyle(1,accent,0.75);
+      const badgeSize=Math.min(36,cardH-14);
+      const badgeX=cx-cardW/2+badgeSize/2+7;
+      const badge=this.add.rectangle(badgeX,y,badgeSize,badgeSize,accent,0.9)
+        .setDepth(55).setStrokeStyle(2,ink);
+      const number=this.add.text(badgeX,y,section.number,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#091012'
+      }).setOrigin(0.5).setDepth(56);
+      const textX=cx-cardW/2+badgeSize+16;
+      const heading=this.add.text(textX,y-cardH/2+9,section.title,{
+        fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',
+        color:index===3?'#c9a7ef':'#e7c981',letterSpacing:1
+      }).setOrigin(0,0).setDepth(56);
+      const copy=this.add.text(textX,y-cardH/2+27,section.copy,{
+        fontFamily:'monospace',fontSize:panelW<300?'8px':'9px',
+        color:muted,lineSpacing:2,wordWrap:{width:cardW-badgeSize-28}
+      }).setOrigin(0,0).setDepth(56);
+      els.push(cardShadow,card,badge,number,heading,copy);
     });
-    let y = 0;
-    const content = []; // { obj, xOff, yOff }
-    for (const sec of sections) {
-      const h = this.add.text(0, 0, sec.head, {
-        fontFamily: 'monospace', fontSize: '12px', color: '#86efac',
-        fontStyle: 'bold', letterSpacing: 1
-      }).setOrigin(0, 0).setDepth(52);
-      content.push({ obj: h, xOff: 0, yOff: y });
-      y += h.height + 4;
-      for (const line of sec.lines) {
-        let x = 0, lineH = 0;
-        line.forEach((seg, i) => {
-          const last = i === line.length - 1;
-          const obj = this.add.text(0, 0, seg.t, mkStyle(seg, last ? wrapW - x : null))
-            .setOrigin(0, 0).setDepth(52);
-          content.push({ obj, xOff: x, yOff: y });
-          x += obj.width;
-          lineH = Math.max(lineH, obj.height);
-        });
-        y += lineH + 3;
-      }
-      y += 11; // section gap
-    }
-    const contentH = y;
-    const titleH = 34, btnH = 40;
-    const panelH = Math.min(H - 60, contentH + titleH + btnH + 30);
 
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.97)
-      .setDepth(51).setStrokeStyle(2, 0x2f8fe0);
-    els.push(panel);
-    const title = this.add.text(cx, cy - panelH/2 + 20, 'HOW IT WORKS', {
-      color: PALETTE.title, fontSize: '16px', fontFamily: 'monospace', letterSpacing: 2, fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(52);
-    els.push(title);
-    const titleRule = this.add.rectangle(cx, cy - panelH/2 + 36, 130, 2, 0x2f8fe0, 1).setDepth(52);
-    els.push(titleRule);
+    const actionW=Math.min(132,panelW-2*pad);
+    const actionX=cx+panelW/2-pad-actionW/2;
+    const actionY=cy+panelH/2-buttonH/2-8;
+    const actionShadow=this.add.rectangle(actionX+3,actionY+4,actionW,buttonH,ink,0.7).setDepth(54);
+    const action=this.add.rectangle(actionX,actionY,actionW,buttonH,0x172126,1)
+      .setStrokeStyle(2,gold).setDepth(55).setInteractive({cursor:'pointer'});
+    const actionText=this.add.text(actionX,actionY,'GOT IT  >>',{
+      fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:cream,letterSpacing:1
+    }).setOrigin(0.5).setDepth(56);
+    els.push(actionShadow,action,actionText);
 
-    const contentX = cx - panelW/2 + 22;
-    const contentY = cy - panelH/2 + titleH + 6;
-    for (const { obj, xOff, yOff } of content) {
-      obj.setPosition(contentX + xOff, contentY + yOff);
-      els.push(obj);
-    }
-
-    const gotBg = this.add.rectangle(cx, cy + panelH/2 - btnH/2 - 10, Math.min(220, panelW - 60), btnH - 8, 0xfbbf24, 1)
-      .setStrokeStyle(2, 0xf59e0b).setDepth(52).setInteractive({ cursor: 'pointer' });
-    const gotTxt = this.add.text(gotBg.x, gotBg.y, 'GOT IT', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#1e293b', fontStyle: 'bold', letterSpacing: 1
-    }).setOrigin(0.5).setDepth(53);
-    els.push(gotBg, gotTxt);
-
-    const close = () => els.forEach(e => e.destroy());
-    gotBg.on('pointerup', close);
-    veil.on('pointerup', close);
+    const close=()=>els.forEach(object=>object?.destroy());
+    action.on('pointerover',()=>action.setFillStyle(gold,0.24));
+    action.on('pointerout',()=>action.setFillStyle(0x172126,1));
+    action.on('pointerup',close);
+    veil.on('pointerup',close);
   }
 
   openSettings(){

@@ -1,5 +1,23 @@
 # Plug Run — handoff for a new agent
 
+## Landing wordmark and current-rules help (2026-09-15)
+
+The human reported that the PLUG RUN lettering looked pixelated and that HOW IT
+WORKS was both visually stale and factually about the shelved two-role game.
+The wordmark keeps its route/house lockup and colors but replaces the
+rectangular constructed glyphs with a smooth italic athletic SVG text face.
+MenuScene explicitly sets only that texture to LINEAR filtering; global
+pixel-art rendering remains unchanged for gameplay sprites.
+
+HOW IT WORKS is now HOW THE STREET WORKS: four ink/gold cards explain the
+current Run the Block, seven-house Block Rivals, stash/REP distinction and The
+Window. It no longer advertises player Plug mode, role-specific daily routes or
+a replay after every ordinary run. Its measured card height is 76.25px at
+280×480 and 92.25px at larger checked viewports; the 40px GOT IT action remains
+inside the lower-right inset. The edited scene parses in the adapted harness.
+The exact SVG fallback font and rendered antialiasing still need iPhone/desktop
+review, and native verify remains blocked by Carbon Black.
+
 ## Auntie Ro mobile counter occlusion (2026-09-15)
 
 The human approved the mobile art direction but Ro still read as floating over
