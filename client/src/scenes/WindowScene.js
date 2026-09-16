@@ -25,10 +25,10 @@ export class WindowScene extends Phaser.Scene {
   constructor() { super('WINDOW'); }
 
   preload() {
-    this.load.image('window_bodega', '/art/the-window/bodega-night.png');
-    this.load.spritesheet('window_ro', '/art/the-window/auntie-ro.png', { frameWidth: WINDOW_ART.ro.frameWidth, frameHeight: WINDOW_ART.ro.frameHeight });
-    this.load.spritesheet('window_switch', '/art/the-window/switch.png', { frameWidth: WINDOW_ART.switch.frameWidth, frameHeight: WINDOW_ART.switch.frameHeight });
-    this.load.image('window_cast', '/art/the-window/cast.png');
+    this.load.image('window_bodega', '/art/the-window/bodega-night.webp');
+    this.load.spritesheet('window_ro', '/art/the-window/auntie-ro.webp', { frameWidth: WINDOW_ART.ro.frameWidth, frameHeight: WINDOW_ART.ro.frameHeight });
+    this.load.spritesheet('window_switch', '/art/the-window/switch.webp', { frameWidth: WINDOW_ART.switch.frameWidth, frameHeight: WINDOW_ART.switch.frameHeight });
+    this.load.image('window_cast', '/art/the-window/cast.webp');
   }
 
   init(data = {}) {

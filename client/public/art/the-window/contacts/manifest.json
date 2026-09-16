@@ -1,238 +1,245 @@
 {
-  "schemaVersion": 1,
-  "status": "art-review-not-gameplay",
-  "backgroundAspectRatio": "2:3",
-  "notes": "Preview placement values are provisional. Character frame bounds follow WINDOW_ART. No missions or Cash rewards are active. Source PNGs require compression and lazy loading before production integration.",
-  "contacts": [
-    {
-      "id": "switch",
-      "gang": "Crossline",
-      "role": "Primary contact",
-      "setting": "The Dispatch",
-      "background": "/art/the-window/contacts/locations/switch-dispatch.png",
-      "backgroundSize": {
-        "id": "switch-dispatch",
-        "width": 1024,
-        "height": 1536,
-        "bitDepth": 8,
-        "colorType": 2,
-        "bytes": 2396248
-      },
-      "portrait": {
-        "source": "/art/the-window/switch.png",
-        "frame": {
-          "x": 0,
-          "width": 724,
-          "height": 724,
-          "sheetWidth": 2172
-        },
-        "heightFraction": 0.44,
-        "baseFraction": 0.74,
-        "centerXFraction": 0.5
-      },
-      "foregroundStartFraction": 0.7,
-      "sampleDialogue": "Three houses down. That’s how you get the street talking."
+ "schemaVersion": 2,
+ "status": "art-integrated-runtime-webp",
+ "backgroundAspectRatio": "2:3",
+ "notes": "Runtime art is WebP under public/; the original PNG sources are archived outside the served directory at client/art-sources/the-window/ and are not deployed. Portrait placement fractions are reviewed defaults consumed by logic/contacts.js, which is the runtime authority. No missions or Cash rewards are active.",
+ "contacts": [
+  {
+   "id": "switch",
+   "gang": "Crossline",
+   "role": "Primary contact",
+   "setting": "The Dispatch",
+   "background": "/art/the-window/contacts/locations/switch-dispatch.webp",
+   "backgroundSize": {
+    "id": "switch-dispatch",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 132160,
+    "format": "webp",
+    "pngSource": "art-sources/the-window/contacts/locations/switch-dispatch.png",
+    "pngBytes": 2396248
+   },
+   "portrait": {
+    "source": "/art/the-window/switch.webp",
+    "frame": {
+     "x": 0,
+     "width": 724,
+     "height": 724,
+     "sheetWidth": 2172
     },
-    {
-      "id": "mags",
-      "gang": "Crossline",
-      "role": "Job contact",
-      "setting": "The Map Room",
-      "background": "/art/the-window/contacts/locations/mags-planning.png",
-      "backgroundSize": {
-        "id": "mags-planning",
-        "width": 1024,
-        "height": 1536,
-        "bitDepth": 8,
-        "colorType": 2,
-        "bytes": 2676999
-      },
-      "portrait": {
-        "source": "/art/the-window/cast.png",
-        "frame": {
-          "x": 1191,
-          "width": 396,
-          "height": 793,
-          "sheetWidth": 1983
-        },
-        "heightFraction": 0.58,
-        "baseFraction": 0.75,
-        "centerXFraction": 0.5
-      },
-      "foregroundStartFraction": 0.65,
-      "sampleDialogue": "The tube is the extra pickup. Bring it out with the real stash."
+    "heightFraction": 0.44,
+    "baseFraction": 0.74,
+    "centerXFraction": 0.5
+   },
+   "foregroundStartFraction": 0.7,
+   "sampleDialogue": "Three houses down. That’s how you get the street talking."
+  },
+  {
+   "id": "mags",
+   "gang": "Crossline",
+   "role": "Job contact",
+   "setting": "The Map Room",
+   "background": "/art/the-window/contacts/locations/mags-planning.webp",
+   "backgroundSize": {
+    "id": "mags-planning",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 166946,
+    "format": "webp",
+    "pngSource": "art-sources/the-window/contacts/locations/mags-planning.png",
+    "pngBytes": 2676999
+   },
+   "portrait": {
+    "source": "/art/the-window/cast.webp",
+    "frame": {
+     "x": 1191,
+     "width": 396,
+     "height": 793,
+     "sheetWidth": 1983
     },
-    {
-      "id": "brick",
-      "gang": "Iron Row",
-      "role": "Primary contact",
-      "setting": "The Garage",
-      "background": "/art/the-window/contacts/locations/brick-garage.png",
-      "backgroundSize": {
-        "id": "brick-garage",
-        "width": 1024,
-        "height": 1536,
-        "bitDepth": 8,
-        "colorType": 2,
-        "bytes": 2932864
-      },
-      "portrait": {
-        "source": "/art/the-window/cast.png",
-        "frame": {
-          "x": 0,
-          "width": 397,
-          "height": 793,
-          "sheetWidth": 1983
-        },
-        "heightFraction": 0.6,
-        "baseFraction": 0.76,
-        "centerXFraction": 0.5
-      },
-      "foregroundStartFraction": null,
-      "sampleDialogue": "Three exits. Good work. Keep your head on the next one."
+    "heightFraction": 0.58,
+    "baseFraction": 0.75,
+    "centerXFraction": 0.5
+   },
+   "foregroundStartFraction": 0.65,
+   "sampleDialogue": "The tube is the extra pickup. Bring it out with the real stash."
+  },
+  {
+   "id": "brick",
+   "gang": "Iron Row",
+   "role": "Primary contact",
+   "setting": "The Garage",
+   "background": "/art/the-window/contacts/locations/brick-garage.webp",
+   "backgroundSize": {
+    "id": "brick-garage",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 186836,
+    "format": "webp",
+    "pngSource": "art-sources/the-window/contacts/locations/brick-garage.png",
+    "pngBytes": 2932864
+   },
+   "portrait": {
+    "source": "/art/the-window/cast.webp",
+    "frame": {
+     "x": 0,
+     "width": 397,
+     "height": 793,
+     "sheetWidth": 1983
     },
-    {
-      "id": "rook",
-      "gang": "Iron Row",
-      "role": "Job contact",
-      "setting": "The Service Room",
-      "background": "/art/the-window/contacts/locations/rook-maintenance.png",
-      "backgroundSize": {
-        "id": "rook-maintenance",
-        "width": 1024,
-        "height": 1536,
-        "bitDepth": 8,
-        "colorType": 2,
-        "bytes": 2723949
-      },
-      "portrait": {
-        "source": "/art/the-window/cast.png",
-        "frame": {
-          "x": 1587,
-          "width": 396,
-          "height": 793,
-          "sheetWidth": 1983
-        },
-        "heightFraction": 0.6,
-        "baseFraction": 0.76,
-        "centerXFraction": 0.5
-      },
-      "foregroundStartFraction": null,
-      "sampleDialogue": "Find the blue-tag keys, then the real bag. I need both back here."
+    "heightFraction": 0.6,
+    "baseFraction": 0.76,
+    "centerXFraction": 0.5
+   },
+   "foregroundStartFraction": null,
+   "sampleDialogue": "Three exits. Good work. Keep your head on the next one."
+  },
+  {
+   "id": "rook",
+   "gang": "Iron Row",
+   "role": "Job contact",
+   "setting": "The Service Room",
+   "background": "/art/the-window/contacts/locations/rook-maintenance.webp",
+   "backgroundSize": {
+    "id": "rook-maintenance",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 149264,
+    "format": "webp",
+    "pngSource": "art-sources/the-window/contacts/locations/rook-maintenance.png",
+    "pngBytes": 2723949
+   },
+   "portrait": {
+    "source": "/art/the-window/cast.webp",
+    "frame": {
+     "x": 1587,
+     "width": 396,
+     "height": 793,
+     "sheetWidth": 1983
     },
-    {
-      "id": "vee",
-      "gang": "Afterlight",
-      "role": "Primary contact",
-      "setting": "The Paint Room",
-      "background": "/art/the-window/contacts/locations/vee-studio.png",
-      "backgroundSize": {
-        "id": "vee-studio",
-        "width": 1024,
-        "height": 1536,
-        "bitDepth": 8,
-        "colorType": 2,
-        "bytes": 2603866
-      },
-      "portrait": {
-        "source": "/art/the-window/cast.png",
-        "frame": {
-          "x": 397,
-          "width": 397,
-          "height": 793,
-          "sheetWidth": 1983
-        },
-        "heightFraction": 0.6,
-        "baseFraction": 0.76,
-        "centerXFraction": 0.5
-      },
-      "foregroundStartFraction": null,
-      "sampleDialogue": "Three houses. Three bags. You’re starting to leave a mark."
+    "heightFraction": 0.6,
+    "baseFraction": 0.76,
+    "centerXFraction": 0.5
+   },
+   "foregroundStartFraction": null,
+   "sampleDialogue": "Find the blue-tag keys, then the real bag. I need both back here."
+  },
+  {
+   "id": "vee",
+   "gang": "Afterlight",
+   "role": "Primary contact",
+   "setting": "The Paint Room",
+   "background": "/art/the-window/contacts/locations/vee-studio.webp",
+   "backgroundSize": {
+    "id": "vee-studio",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 114256,
+    "format": "webp",
+    "pngSource": "art-sources/the-window/contacts/locations/vee-studio.png",
+    "pngBytes": 2603866
+   },
+   "portrait": {
+    "source": "/art/the-window/cast.webp",
+    "frame": {
+     "x": 397,
+     "width": 397,
+     "height": 793,
+     "sheetWidth": 1983
     },
-    {
-      "id": "sol",
-      "gang": "Afterlight",
-      "role": "Job contact",
-      "setting": "The Night Bay",
-      "background": "/art/the-window/contacts/locations/sol-race.png",
-      "backgroundSize": {
-        "id": "sol-race",
-        "width": 1024,
-        "height": 1536,
-        "bitDepth": 8,
-        "colorType": 2,
-        "bytes": 2732504
-      },
-      "portrait": {
-        "source": "/art/the-window/cast.png",
-        "frame": {
-          "x": 794,
-          "width": 397,
-          "height": 793,
-          "sheetWidth": 1983
-        },
-        "heightFraction": 0.6,
-        "baseFraction": 0.76,
-        "centerXFraction": 0.5
-      },
-      "foregroundStartFraction": null,
-      "sampleDialogue": "Grab the stopwatch and the real stash. Then bring it home."
-    }
-  ],
-  "objects": {
-    "source": "/art/the-window/contacts/mission-props.png",
-    "id": "mission-props",
-    "width": 1536,
-    "height": 1024,
-    "bitDepth": 8,
-    "colorType": 6,
-    "bytes": 2303938,
-    "hasAlphaChannel": true,
-    "alphaEdgesUnverified": true,
-    "cells": [
-      {
-        "id": "radio",
-        "x": 0,
-        "y": 0,
-        "width": 512,
-        "height": 512
-      },
-      {
-        "id": "document-tube",
-        "x": 512,
-        "y": 0,
-        "width": 512,
-        "height": 512
-      },
-      {
-        "id": "ignition-key",
-        "x": 1024,
-        "y": 0,
-        "width": 512,
-        "height": 512
-      },
-      {
-        "id": "service-keys",
-        "x": 0,
-        "y": 512,
-        "width": 512,
-        "height": 512
-      },
-      {
-        "id": "paint-marker",
-        "x": 512,
-        "y": 512,
-        "width": 512,
-        "height": 512
-      },
-      {
-        "id": "stopwatch",
-        "x": 1024,
-        "y": 512,
-        "width": 512,
-        "height": 512
-      }
-    ],
-    "note": "Equal cells are inventory-art crops, not ready-made floor sprites or finalized mission assignments."
+    "heightFraction": 0.6,
+    "baseFraction": 0.76,
+    "centerXFraction": 0.5
+   },
+   "foregroundStartFraction": null,
+   "sampleDialogue": "Three houses. Three bags. You’re starting to leave a mark."
+  },
+  {
+   "id": "sol",
+   "gang": "Afterlight",
+   "role": "Job contact",
+   "setting": "The Night Bay",
+   "background": "/art/the-window/contacts/locations/sol-race.webp",
+   "backgroundSize": {
+    "id": "sol-race",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 163662,
+    "format": "webp",
+    "pngSource": "art-sources/the-window/contacts/locations/sol-race.png",
+    "pngBytes": 2732504
+   },
+   "portrait": {
+    "source": "/art/the-window/cast.webp",
+    "frame": {
+     "x": 794,
+     "width": 397,
+     "height": 793,
+     "sheetWidth": 1983
+    },
+    "heightFraction": 0.6,
+    "baseFraction": 0.76,
+    "centerXFraction": 0.5
+   },
+   "foregroundStartFraction": null,
+   "sampleDialogue": "Grab the stopwatch and the real stash. Then bring it home."
   }
+ ],
+ "objects": {
+  "source": "/art/the-window/contacts/mission-props.png",
+  "id": "mission-props",
+  "width": 1536,
+  "height": 1024,
+  "bitDepth": 8,
+  "colorType": 6,
+  "bytes": 2303938,
+  "hasAlphaChannel": true,
+  "alphaEdgesUnverified": true,
+  "cells": [
+   {
+    "id": "radio",
+    "x": 0,
+    "y": 0,
+    "width": 512,
+    "height": 512
+   },
+   {
+    "id": "document-tube",
+    "x": 512,
+    "y": 0,
+    "width": 512,
+    "height": 512
+   },
+   {
+    "id": "ignition-key",
+    "x": 1024,
+    "y": 0,
+    "width": 512,
+    "height": 512
+   },
+   {
+    "id": "service-keys",
+    "x": 0,
+    "y": 512,
+    "width": 512,
+    "height": 512
+   },
+   {
+    "id": "paint-marker",
+    "x": 512,
+    "y": 512,
+    "width": 512,
+    "height": 512
+   },
+   {
+    "id": "stopwatch",
+    "x": 1024,
+    "y": 512,
+    "width": 512,
+    "height": 512
+   }
+  ],
+  "note": "Equal cells are inventory-art crops, not ready-made floor sprites or finalized mission assignments."
+ },
+ "sourceArchive": "client/art-sources/the-window/"
 }
