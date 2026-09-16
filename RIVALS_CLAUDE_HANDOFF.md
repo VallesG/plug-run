@@ -72,12 +72,12 @@ loadout, WATCH button) and exports nothing.
 
 ### Bank as shipped (2026-09-16)
 
-`client/public/rivals/v2/` holds 53 complete bot races (9.9MB of replay
+`client/public/rivals/v2/` holds 55 complete bot races (9.9MB of replay
 bundles, 57KB-525KB each), assembled from the headless recorder and
-re-checked by `test/rivalBank.test.mjs` (388 assertions). Per course:
+re-checked by `test/rivalBank.test.mjs` (402 assertions). Per course:
 Low End Rush 9, Copper Climb 8, Freight Run 9, Afterglow Mile 8, Switchyard
-Seven 4 (no Ace yet), Lastlight Loop 9, Blacktop Crown 6 (no Hustler yet).
-Four races forfeited at the 12-minute limit and were rejected, never shipped.
+Seven 5, Lastlight Loop 9, Blacktop Crown 7. Eight races forfeited at the
+12-minute limit and were rejected, never shipped.
 Race times run 1:14 to 11:39 with 2 to 108 retries; Switchyard Seven is the
 hard course. Where a tier has no recording on a course, selection falls to
 the nearest tier that has one (`chooseRivalOpponent`).
@@ -94,9 +94,10 @@ three browsers in parallel. Record with Canvas.
 
 ### Not done / not verified
 
-- Missing from the 63-race minimum: Ace on Switchyard Seven, Hustler on
-  Blacktop Crown, and one Hustler each on Copper Climb / Afterglow Mile and
-  one Street on Switchyard Seven (forfeits). Re-run those jobs to fill in.
+- Missing from the 63-race minimum (all forfeits at the 12-minute limit):
+  two Ace on Switchyard Seven, two Hustler on Blacktop Crown, one Hustler
+  each on Copper Climb / Afterglow Mile, one Street on Switchyard Seven.
+  Re-run those jobs (or raise hardLimitMs) to fill in.
 - Nothing has been seen rendered by a human. Headless screenshots verified:
   race HUD with AI RIVAL row, fixed-loadout confirm, result modal with WATCH
   RIVAL REPLAY, the replay overlay (arena, duffels, sprites, clock, house

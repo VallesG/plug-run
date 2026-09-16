@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-16T04:43:19.033Z",
+ "generatedAt": "2026-09-16T04:46:31.531Z",
  "courses": [
   {
    "slot": 1,
@@ -133,15 +133,17 @@
    "slot": 7,
    "name": "Blacktop Crown",
    "courseID": "rivals-v1-2334749748",
-   "opponents": 6,
+   "opponents": 7,
    "tiers": {
     "ace": 3,
+    "hustler": 1,
     "street": 3
    },
    "elapsedMs": [
     200701.30000000075,
     448197.7999999989,
     166983.09999999963,
+    718482.5,
     158410.5,
     222457.00000000093,
     302676.69999999925
