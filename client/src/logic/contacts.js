@@ -17,6 +17,7 @@ export const CONTACT_CONTENT_VERSION = 1;
 // Derived from the suggested pacing in CLAUDE_GAMEPLAY_CONTACTS_HANDOFF.md.
 export const CONTACT_TARGET_HOUSE = 9;      // provisional; mission slice decides
 export const CONTACT_BEATS = Object.freeze([
+  Object.freeze({ id: 'open',      house: 1,  role: 'primary',   kind: 'open',    clears: 0 }),
   Object.freeze({ id: 'checkin-1', house: 4,  role: 'primary',   kind: 'praise',  clears: 3,  praise: 0 }),
   Object.freeze({ id: 'tease',     house: 7,  role: 'primary',   kind: 'tease',   clears: 6 }),
   Object.freeze({ id: 'brief',     house: 9,  role: 'secondary', kind: 'brief',   clears: 8 }),
@@ -49,11 +50,22 @@ const CONTACT_LIST = [
     background: '/art/the-window/contacts/locations/switch-dispatch.webp',
     heightFraction: 0.44, baseFraction: 0.74, foregroundStartFraction: 0.7,
     lines: {
-      praise: [
-        'Three houses, three ways out. The street noticed.',
-        'Nine houses. You keep moving like that and I stop worrying.',
-        'Twelve down. Nobody on this frequency is doubting you now.'
-      ],
+      open: 'We need this whole block emptied, quiet. Something bigger is coming and it runs on what you carry out.',
+      praise: {
+        base: [
+          'Three houses, three ways out. The street noticed.',
+          'Nine houses. You keep moving like that and I stop worrying.',
+          'Twelve down. Nobody on this frequency is doubting you now.'
+        ],
+        flawless: 'Nobody has laid a finger on you yet. I am going to start making things up about you.',
+        comeback: 'You have been put down more than once and you are still on my frequency. That counts.',
+        noPowers: 'All that and you have not burned a single charge. Showing off is allowed.',
+        phase: 'You keep walking straight through the walls. Half the street thinks I am lying about you.',
+        dash: 'Every time it gets close you are already gone. Keep moving like that.',
+        decoy: 'Sending doubles into the dark. That is the kind of thing people repeat.',
+        bunk: 'You have come up with a couple of empty bags. Slow down one beat and read the room.',
+        noDeaths: 'Still nobody has put you down. Keep it that way.'
+      },
       tease: 'Mags has been asking about you. She has something she only trusts to a runner who finishes.',
       debriefWin: 'Mags got her tube. Crossline owes you one, and I do not say that twice.',
       debriefMiss: 'You came out without it, but the bag still counts. Go again.'
@@ -83,11 +95,22 @@ const CONTACT_LIST = [
     background: '/art/the-window/contacts/locations/brick-garage.webp',
     heightFraction: 0.6, baseFraction: 0.76, foregroundStartFraction: null,
     lines: {
-      praise: [
-        'Three clean exits. Keep your head on the next one.',
-        'Nine deep and still walking. That is the whole job.',
-        'Twelve. You have earned the right to be tired — not careless.'
-      ],
+      open: 'Fifteen houses on this block. Iron Row needs every bag, because what comes after is not small.',
+      praise: {
+        base: [
+          'Three clean exits. Keep your head on the next one.',
+          'Nine deep and still walking. That is the whole job.',
+          'Twelve. You have earned the right to be tired — not careless.'
+        ],
+        flawless: 'Not a mark on you. That is what finishing clean actually looks like.',
+        comeback: 'You have been dropped and you keep getting back up. I respect that more than a clean run.',
+        noPowers: 'You have not spent a thing yet. Save it for the house that needs it.',
+        phase: 'Straight through the walls every time. Just do not get comfortable in there.',
+        dash: 'You run when it is time to run. That is what keeps people alive.',
+        decoy: 'Letting the double take the shots. Smart, and cheaper than getting hit.',
+        bunk: 'Couple of empty bags now. Look before you commit to one.',
+        noDeaths: 'Nobody has dropped you yet. Do not make me come out there.'
+      },
       tease: 'Rook has a job he will not hand to just anyone. He wants to see you first.',
       debriefWin: 'You brought back his keys and the bag. Iron Row finishes what it starts.',
       debriefMiss: 'No keys, but you got out. Do it right next time.'
@@ -117,11 +140,22 @@ const CONTACT_LIST = [
     background: '/art/the-window/contacts/locations/vee-studio.webp',
     heightFraction: 0.6, baseFraction: 0.76, foregroundStartFraction: null,
     lines: {
-      praise: [
-        'Three in a row and you made it look easy. Keep it that way.',
-        'Nine houses in and they are describing you, not your gang.',
-        'Twelve houses. Whatever you are doing, do it where they can see you.'
-      ],
+      open: 'Empty this block for us. There is something big on the other side of it and I want us holding the bags.',
+      praise: {
+        base: [
+          'Three in a row and you made it look easy. Keep it that way.',
+          'Nine houses in and they are describing you, not your gang.',
+          'Twelve houses. Whatever you are doing, do it where they can see you.'
+        ],
+        flawless: 'Not one scratch on you. Do you have any idea how that looks from out here?',
+        comeback: 'You have hit the floor more than once and got back up. Better story anyway.',
+        noPowers: 'No charges spent and you are still ahead. That is the flex.',
+        phase: 'Walking through walls like it costs nothing. Keep doing it where people can see.',
+        dash: 'Gone before they finish aiming. That is the whole look.',
+        decoy: 'You let a fake take the heat for you, and I love it.',
+        bunk: 'You keep coming up with empty bags. Not your best angle.',
+        noDeaths: 'Still standing. Stay that way, it photographs better.'
+      },
       tease: 'Sol wants you for something. He only asks runners he expects to finish.',
       debriefWin: 'Sol got his marker and you kept the bag. That is the version people repeat.',
       debriefMiss: 'You left it behind. The run still counts — the story does not.'
@@ -144,7 +178,13 @@ const CONTACT_LIST = [
 ];
 
 export const CONTACTS = Object.freeze(CONTACT_LIST.map(c => Object.freeze({
-  ...c, lines: Object.freeze({ ...c.lines, praise: c.lines.praise ? Object.freeze([...c.lines.praise]) : undefined })
+  ...c,
+  lines: Object.freeze({
+    ...c.lines,
+    praise: c.lines.praise
+      ? Object.freeze({ ...c.lines.praise, base: Object.freeze([...c.lines.praise.base]) })
+      : undefined
+  })
 })));
 
 export function contact(id) {
@@ -160,6 +200,40 @@ export function contactBeat(house) {
   return CONTACT_BEATS.find(b => b.house === house) || null;
 }
 
+/**
+ * Which praise a run has earned, or null for the plain milestone line.
+ *
+ * Order is priority, and every branch is something the game observed and the
+ * player will remember doing. Nothing here may fire on an absence of data: a
+ * block with no cleared houses earns no compliment at all.
+ */
+export const PRAISE_KEYS = Object.freeze(['flawless', 'comeback', 'noPowers', 'bunk', 'phase', 'dash', 'decoy', 'noDeaths']);
+
+export function praiseEarned(stats) {
+  if (!stats || !stats.houses) return [];
+  const earned = [];
+  if (stats.flawless) earned.push('flawless');
+  if (stats.deaths >= 3) earned.push('comeback');
+  if (stats.powersUsed === 0) earned.push('noPowers');
+  if (stats.bunks >= 2) earned.push('bunk');
+  if (stats.topPower) earned.push(stats.topPower);
+  if (stats.noDeaths) earned.push('noDeaths');
+  return earned;
+}
+
+/**
+ * Which praise a run has earned, or null for the plain milestone line.
+ *
+ * Priority order, and every branch is something the game observed. A variant
+ * already spoken in this block is skipped: on a clean run the same compliment
+ * would otherwise land at houses 4, 10 and 13 word for word, which reads like
+ * a machine. Falling through to the milestone line is the honest alternative.
+ */
+export function praiseKey(stats, used = []) {
+  const spent = new Set(Array.isArray(used) ? used : []);
+  return praiseEarned(stats).find(key => !spent.has(key)) ?? null;
+}
+
 // No randomness anywhere in here. Each praise line is written for a specific
 // number of clears ("Three houses...", "Halfway...", "Twelve..."), so the beat
 // names its line by index. A reload, resize or retry cannot reroll dialogue,
@@ -171,14 +245,19 @@ export function contactBeat(house) {
  * until the mission slice exists it is always null, which reads as a miss-free
  * generic line rather than claiming an outcome that never happened.
  */
-export function contactCue({ gangID, house, blockIndex = 1, missionOutcome = null } = {}) {
+export function contactCue({ gangID, house, blockIndex = 1, missionOutcome = null, stats = null, usedPraise = [] } = {}) {
   const beat = contactBeat(house);
   const pair = gangContacts(gangID);
   if (!beat || !pair) return null;
   const who = beat.role === 'secondary' ? pair.secondary : pair.primary;
-  const praise = who.lines.praise?.[beat.praise] ?? null;
+  // The milestone line is the floor. A run that earned something specific
+  // gets said back to it instead; if that line is missing, the floor holds.
+  const earned = praiseKey(stats, usedPraise);
+  const base = who.lines.praise?.base?.[beat.praise] ?? null;
+  const praise = (earned && who.lines.praise?.[earned]) || base;
   let text = null;
-  if (beat.kind === 'praise') text = praise;
+  if (beat.kind === 'open') text = who.lines.open;
+  else if (beat.kind === 'praise') text = praise;
   else if (beat.kind === 'tease') text = who.lines.tease;
   else if (beat.kind === 'brief') text = who.lines.brief;
   else if (beat.kind === 'debrief') {
@@ -191,15 +270,23 @@ export function contactCue({ gangID, house, blockIndex = 1, missionOutcome = nul
     // Scoped to account + block + beat by the caller; this half is the stable
     // content identity, so a content change does not silently replay a beat.
     eventID: 'contact/v' + CONTACT_CONTENT_VERSION + '/block-' + blockIndex + '/' + beat.id + '/' + who.id,
-    beat, contact: who, text,
+    beat, contact: who, text, praiseKey: beat.kind === 'praise' || beat.kind === 'debrief' ? earned : null,
     speaker: who.name.toUpperCase(),
-    action: beat.kind === 'brief' ? 'ENTER HOUSE ' + house + '  >>' : 'KEEP MOVING  >>'
+    action: beat.kind === 'brief' ? 'ENTER HOUSE ' + house + '  >>'
+      : beat.kind === 'open' ? 'RUN THE BLOCK  >>' : 'KEEP MOVING  >>'
   };
 }
 
 /** Every beat a gang can show in one block. Used by tests and the preview. */
-export function contactScript(gangID, blockIndex = 1) {
-  return CONTACT_BEATS.map(b => contactCue({ gangID, house: b.house, blockIndex })).filter(Boolean);
+export function contactScript(gangID, blockIndex = 1, stats = null) {
+  // Walks the block the way a player does, so a repeated compliment shows up
+  // in a test rather than in someone's game.
+  const usedPraise = [];
+  return CONTACT_BEATS.map(b => {
+    const cue = contactCue({ gangID, house: b.house, blockIndex, stats, usedPraise });
+    if (cue?.praiseKey) usedPraise.push(cue.praiseKey);
+    return cue;
+  }).filter(Boolean);
 }
 
 /**

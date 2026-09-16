@@ -14,7 +14,9 @@ import { submitScore, submitAllTimeScore } from '../utils/leaderboardManager.js'
 import ReplaySystem from './ReplaySystem.js';
 import { contactCue } from '../logic/contacts.js';
 import { showContactPanel } from './ContactPanel.js';
-import { claimContact } from '../utils/contactProgress.js';
+import { claimContact, getContactProgress } from '../utils/contactProgress.js';
+import { praiseUsedInBlock, praiseMark } from '../logic/contactProgress.js';
+import { getBlockRunStats, noteHouseClear, noteBlockDeath } from '../utils/blockRunProgress.js';
 import { getWindowState } from '../utils/windowProgress.js';
 import { isBlockComplete, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import { drawBlockMap } from './BlockMap.js';
@@ -186,6 +188,10 @@ export default class ProgressionManager {
       updateRouteProgress(this.scene.role, this.scene.pveRound);
 
       }
+
+      // What this house cost, for the contacts. Recorded next to the
+      // checkpoint so a clear and its story are saved in the same breath.
+      this.noteHouseForContacts();
 
       // Save session state (for continue feature) - save next round since that's what they'll play
       this.saveProgress({
@@ -454,15 +460,55 @@ export default class ProgressionManager {
    * through. A beat is claimed before it is shown, so a reload while the
    * panel is up costs the line rather than repeating it forever.
    */
+  /**
+   * Log how the house just cleared went: bullets that landed, powers spent,
+   * whether a bunk bag was picked up and whether the spawn had to be swapped.
+   * Only Run the Block; everything is read from what the round already
+   * tracked, and a failure here can never block the clear.
+   */
+  noteHouseForContacts() {
+    const scene = this.scene;
+    if (scene.runKind !== 'journey' || scene.role !== 'runner') return;
+    try {
+      const selected = scene.runnerPowersSelected || [];
+      const consumed = scene.runnerPowersConsumed || [];
+      noteHouseClear(scene.blockIndex || 1, {
+        house: scene.pveRound || 1,
+        hits: this.repTracker?.stats?.damagesTaken || 0,
+        deaths: this._contactDeathsThisHouse || 0,
+        bunk: Boolean(this.repTracker?.stats?.gotBunkStash),
+        swapped: Boolean(scene.swapSpawnCycle),
+        powers: selected.filter((p, i) => consumed[i])
+      });
+      this._contactDeathsThisHouse = 0;
+    } catch (error) {
+      console.warn('[Contacts] Could not record the house', error);
+    }
+  }
+
+  /** A death in Run the Block. Counted for the block and for the house retry. */
+  noteDeathForContacts() {
+    const scene = this.scene;
+    if (scene.runKind !== 'journey' || scene.role !== 'runner') return;
+    this._contactDeathsThisHouse = (this._contactDeathsThisHouse || 0) + 1;
+    try { noteBlockDeath(scene.blockIndex || 1); } catch {}
+  }
+
   showContactCheckIn(next) {
     const scene = this.scene;
     if (scene.runKind !== 'journey' || scene.role !== 'runner') { next(); return null; }
     let cue = null;
     try {
+      const blockIndex = scene.blockIndex || 1;
+      const record = getContactProgress();
       cue = contactCue({
         gangID: getWindowState().gangID,
         house: scene.pveRound || 1,
-        blockIndex: scene.blockIndex || 1,
+        blockIndex,
+        // Only true things: the praise variants are chosen from what this
+        // block actually measured, and one is never repeated in a block.
+        stats: getBlockRunStats(blockIndex),
+        usedPraise: praiseUsedInBlock(record, blockIndex),
         // No mission exists yet, so no outcome is ever claimed. The debrief
         // beat falls back to ordinary praise until the mission slice lands.
         missionOutcome: null
@@ -472,6 +518,9 @@ export default class ProgressionManager {
     }
     if (!cue) { next(); return null; }
     if (!claimContact(cue.eventID, scene.blockIndex || 1)) { next(); return null; }
+    // Remember the compliment, not just the beat, so a reload cannot hand the
+    // player the same sentence twice in one block.
+    if (cue.praiseKey) claimContact(praiseMark(scene.blockIndex || 1, cue.praiseKey), scene.blockIndex || 1);
     try {
       return showContactPanel(scene, cue, next);
     } catch (error) {
@@ -568,6 +617,7 @@ export default class ProgressionManager {
    */
   async showPvEGameOver(context = {}) {
     if (this.scene.runKind === 'rivals') return this.scene.rivals?.retryHouse();
+    this.noteDeathForContacts();
     const roundNumber = this.scene.pveRound || 1;
     const isPlug = this.scene.role === 'plug';
     const reason = context.reason || (isPlug ? 'runner_eliminated' : 'runner_eliminated');

@@ -60,6 +60,18 @@ export function markContactShown(value, eventID, blockIndex = 1) {
   return { state: { version: CONTACT_PROGRESS_VERSION, blocks: pruned }, applied: true, reason: null };
 }
 
+/**
+ * Praise variants already spoken in a block. Stored in the same bucket with a
+ * `praise:` prefix, which no beat ID can collide with, so remembering what a
+ * contact already said costs no second record and prunes with the first.
+ */
+export function praiseUsedInBlock(value, blockIndex) {
+  return contactsSeenInBlock(value, blockIndex)
+    .filter(id => id.startsWith('praise:'))
+    .map(id => id.slice(7));
+}
+export function praiseMark(blockIndex, key) { return 'praise:' + key; }
+
 /** Beats seen in one block, for tests and debugging. Never used to grant anything. */
 export function contactsSeenInBlock(value, blockIndex) {
   return createContactProgress(value).blocks[intOr(blockIndex, 1)] || [];

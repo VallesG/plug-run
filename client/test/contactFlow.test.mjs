@@ -5,8 +5,11 @@ import { readFileSync } from 'node:fs';
 import { contactCue, CONTACT_BEATS } from '../src/logic/contacts.js';
 import {
   createContactProgress, contactShown, markContactShown, contactsSeenInBlock,
-  CONTACT_PROGRESS_BLOCKS
+  praiseUsedInBlock, praiseMark, CONTACT_PROGRESS_BLOCKS
 } from '../src/logic/contactProgress.js';
+import { blockRunStats, createBlockRun, recordHouseClear } from '../src/logic/blockRun.js';
+
+let blockStats = blockRunStats(createBlockRun({}, 1), 1);
 
 let passed = 0;
 function check(name, ok) { if (!ok) throw new Error(name); passed++; }
@@ -60,6 +63,10 @@ let shownPanels = [];
 let panelFailure = false;
 const bindings = {
   contactCue,
+  praiseUsedInBlock, praiseMark,
+  getBlockRunStats: () => blockStats,
+  noteHouseClear: () => true, noteBlockDeath: () => true,
+  getContactProgress: () => store,
   getWindowState: () => ({ gangID }),
   claimContact: (id, block) => {
     const result = markContactShown(store, id, block);
@@ -94,9 +101,18 @@ function seam({ runKind = 'journey', role = 'runner', house = 4, blockIndex = 1 
   return { entered: () => entered, result, scene };
 }
 
+// The block opens with the primary asking for the job.
+shownPanels = [];
+let run = seam({ house: 1 });
+check('the primary opens the block', shownPanels.length === 1 && shownPanels[0].beat.kind === 'open');
+check('the opener waits for a tap', run.entered() === 0);
+run.result.advance();
+shownPanels = [];
+check('the opener does not repeat', (seam({ house: 1 }), shownPanels.length === 0));
+
 // A beat house, with a gang: the contact speaks and the house waits.
 shownPanels = [];
-let run = seam({ house: 4 });
+run = seam({ house: 4 });
 check('a check-in appears at house four', shownPanels.length === 1 && run.entered() === 0);
 check('the check-in is the gang primary', shownPanels[0].contact.name === 'Switch');
 check('the house starts when the panel advances',
@@ -120,7 +136,7 @@ check('the job contact briefs at the target house',
 run.result.advance();
 
 // Quiet houses, other modes, no gang, other roles.
-for (const house of [1, 2, 3, 5, 6, 8, 11, 12, 14, 15]) {
+for (const house of [2, 3, 5, 6, 8, 11, 12, 14, 15]) {
   shownPanels = [];
   run = seam({ house });
   check('house ' + house + ' is quiet', shownPanels.length === 0 && run.entered() === 1);
@@ -162,5 +178,33 @@ shownPanels = [];
 run = seam({ house: 9, blockIndex: 3 });
 check('the third gang briefs too', shownPanels.length === 1 && shownPanels[0].contact.name === 'Sol');
 check('every cue carries a page-turn advance', shownPanels[0].action.endsWith('>>'));
+
+// --- the compliment is earned, and spent ----------------------------------
+gangID = 'crossline';
+store = createContactProgress();
+let real = createBlockRun({}, 7);
+for (const house of [1, 2, 3]) real = recordHouseClear(real, 7, { house, powers: ['phase'] }).state;
+blockStats = blockRunStats(real, 7);
+shownPanels = [];
+run = seam({ house: 4, blockIndex: 7 });
+check('a clean block is complimented for being clean',
+  shownPanels.length === 1 && shownPanels[0].praiseKey === 'flawless');
+check('the compliment is recorded, not just the beat',
+  praiseUsedInBlock(store, 7).includes('flawless'));
+run.result.advance();
+shownPanels = [];
+run = seam({ house: 10, blockIndex: 7 });
+check('the next check-in finds something else to say',
+  shownPanels.length === 1 && shownPanels[0].praiseKey !== 'flawless');
+check('and it is still true of the run', ['noPowers', 'phase', 'noDeaths'].includes(shownPanels[0].praiseKey));
+run.result.advance();
+shownPanels = [];
+run = seam({ house: 13, blockIndex: 7 });
+check('a third beat says a third thing',
+  shownPanels.length === 1 && !['flawless'].includes(shownPanels[0].praiseKey));
+check('nothing in the block was said twice',
+  new Set(praiseUsedInBlock(store, 7)).size === praiseUsedInBlock(store, 7).length);
+check('praise marks never collide with beat ids',
+  praiseUsedInBlock(store, 7).every(k => !k.includes('/')));
 
 console.log(passed + ' contact flow assertions passed');
