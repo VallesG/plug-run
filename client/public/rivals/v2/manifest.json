@@ -1,18 +1,22 @@
 {
  "schemaVersion": 1,
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-16T02:42:32.076Z",
+ "generatedAt": "2026-09-16T04:40:04.241Z",
  "courses": [
   {
    "slot": 1,
    "name": "Low End Rush",
    "courseID": "rivals-v1-2722422571",
-   "opponents": 6,
+   "opponents": 9,
    "tiers": {
+    "ace": 3,
     "hustler": 3,
     "street": 3
    },
    "elapsedMs": [
+    433677.2999999998,
+    611280.2000000002,
+    224845.7999999998,
     382228.5,
     183377.7999999998,
     214470.2999999998,
@@ -25,49 +29,121 @@
    "slot": 2,
    "name": "Copper Climb",
    "courseID": "rivals-v1-2917822448",
-   "opponents": 0,
-   "tiers": {},
-   "elapsedMs": []
+   "opponents": 8,
+   "tiers": {
+    "ace": 3,
+    "hustler": 2,
+    "street": 3
+   },
+   "elapsedMs": [
+    171758.90000000037,
+    141317.7000000002,
+    190926.59999999963,
+    353149.8999999999,
+    214090.8999999999,
+    244638.7000000002,
+    440867.1000000001,
+    175942.30000000028
+   ]
   },
   {
    "slot": 3,
    "name": "Freight Run",
    "courseID": "rivals-v1-1245351574",
-   "opponents": 0,
-   "tiers": {},
-   "elapsedMs": []
+   "opponents": 9,
+   "tiers": {
+    "ace": 3,
+    "hustler": 3,
+    "street": 3
+   },
+   "elapsedMs": [
+    192442.10000000056,
+    76245.79999999981,
+    111982,
+    232067.2000000002,
+    100562.5,
+    241591.40000000037,
+    124631.89999999944,
+    158445.19999999925,
+    88577.09999999963
+   ]
   },
   {
    "slot": 4,
    "name": "Afterglow Mile",
    "courseID": "rivals-v1-2476136539",
-   "opponents": 0,
-   "tiers": {},
-   "elapsedMs": []
+   "opponents": 8,
+   "tiers": {
+    "ace": 3,
+    "hustler": 2,
+    "street": 3
+   },
+   "elapsedMs": [
+    335005.80000000075,
+    653408.4999999991,
+    361837.30000000075,
+    301703.9000000004,
+    113912.10000000056,
+    149311.69999999925,
+    125380.40000000037,
+    225061.7000000002
+   ]
   },
   {
    "slot": 5,
    "name": "Switchyard Seven",
    "courseID": "rivals-v1-2143714553",
-   "opponents": 0,
-   "tiers": {},
-   "elapsedMs": []
+   "opponents": 4,
+   "tiers": {
+    "hustler": 2,
+    "street": 2
+   },
+   "elapsedMs": [
+    327624.7000000002,
+    221026,
+    447671.2999999998,
+    699255.5
+   ]
   },
   {
    "slot": 6,
    "name": "Lastlight Loop",
    "courseID": "rivals-v1-2077357177",
-   "opponents": 0,
-   "tiers": {},
-   "elapsedMs": []
+   "opponents": 9,
+   "tiers": {
+    "ace": 3,
+    "hustler": 3,
+    "street": 3
+   },
+   "elapsedMs": [
+    135247.90000000037,
+    203387.40000000037,
+    288351.69999999925,
+    147476.5,
+    304240.2999999998,
+    268810.30000000075,
+    204680.39999999944,
+    73530.69999999925,
+    121778
+   ]
   },
   {
    "slot": 7,
    "name": "Blacktop Crown",
    "courseID": "rivals-v1-2334749748",
-   "opponents": 0,
-   "tiers": {},
-   "elapsedMs": []
+   "opponents": 6,
+   "tiers": {
+    "ace": 3,
+    "street": 3
+   },
+   "elapsedMs": [
+    200701.30000000075,
+    448197.7999999989,
+    166983.09999999963,
+    158410.5,
+    222457.00000000093,
+    302676.69999999925
+   ]
   }
  ]
 }

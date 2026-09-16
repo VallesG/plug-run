@@ -70,21 +70,43 @@ logic modules before writing files. `?rivalsPlay=1&courseSlot=N` races the bot
 against the shipped bank the way a player would (opponent lookup, fixed
 loadout, WATCH button) and exports nothing.
 
+### Bank as shipped (2026-09-16)
+
+`client/public/rivals/v2/` holds 53 complete bot races (9.9MB of replay
+bundles, 57KB-525KB each), assembled from the headless recorder and
+re-checked by `test/rivalBank.test.mjs` (388 assertions). Per course:
+Low End Rush 9, Copper Climb 8, Freight Run 9, Afterglow Mile 8, Switchyard
+Seven 4 (no Ace yet), Lastlight Loop 9, Blacktop Crown 6 (no Hustler yet).
+Four races forfeited at the 12-minute limit and were rejected, never shipped.
+Race times run 1:14 to 11:39 with 2 to 108 retries; Switchyard Seven is the
+hard course. Where a tier has no recording on a course, selection falls to
+the nearest tier that has one (`chooseRivalOpponent`).
+
+The Ace preset had to be redefined during recording: see the comment in
+`logic/rivalPresets.js` and commit a9d76d9 (aiLevel 20 runs the same route
+every retry and dies in the same lane; level 5 with the evasion layers on
+completes). Any change to the driver or presets means a new
+`RIVAL_BOT_DRIVER_VERSION` and a re-recorded bank.
+
+Frame-rate matters for recording: WebGL via swiftshader ran at 9-18fps and
+crippled the bot; Chromium's Canvas renderer (`--disable-gpu`) held 60fps with
+three browsers in parallel. Record with Canvas.
+
 ### Not done / not verified
 
-- The opponent bank is being recorded as this is written; until
-  `client/public/rivals/v2/` exists the game serves the labeled simulated pace
-  everywhere. The first headless attempt (WebGL via swiftshader) ran at 9-18fps
-  and the Ace bot died 29 times in 7 minutes, forfeiting at 5/7; the pipeline
-  itself behaved (auto-launch, retries, hard limit, export refused with a
-  reason). Chromium's Canvas renderer (`--disable-gpu`) holds 60fps with three
-  browsers in parallel and is what the bank is recorded with.
-- Nothing has been seen rendered by a human: the fixed-loadout confirm, the
-  FINDING RIVAL notice, the result copy, the replay player. Headless
-  screenshots are the only visual evidence so far.
-- No manual run of the handoff's verification list yet (seven courses on
-  device, background return, 280x480 layout, Run the Block resume, storage
-  isolation). The Rivals code paths write only `pr_rivals_results_v1_<user>`.
+- Missing from the 63-race minimum: Ace on Switchyard Seven, Hustler on
+  Blacktop Crown, and one Hustler each on Copper Climb / Afterglow Mile and
+  one Street on Switchyard Seven (forfeits). Re-run those jobs to fill in.
+- Nothing has been seen rendered by a human. Headless screenshots verified:
+  race HUD with AI RIVAL row, fixed-loadout confirm, result modal with WATCH
+  RIVAL REPLAY, the replay overlay (arena, duffels, sprites, clock, house
+  strip, EXIT/NEXT) and the intact result after exit.
+- Play-mode bot race against the bank: win in 2:33 with 11 retries vs the
+  4:59 Street recording; replay opened and closed with the result unchanged.
+- Not run: the handoff's device checks (background return, 280x480 layout,
+  Run the Block resume, Rematch/New Race by hand, storage isolation review).
+  Rivals code writes only `pr_rivals_results_v1_<user>` and reads it.
+- Not built, by instruction: uploads, human recordings, a Rivals leaderboard.
 
 ## Product decision
 
