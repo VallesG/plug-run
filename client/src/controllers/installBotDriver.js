@@ -510,8 +510,11 @@ function installRivalsRecorder(rec, cfg) {
     origCreate.call(this);
     if (store.done) return;
     console.log('[RIVALS-REC] launching', entry.name, 'preset', rec.preset.key, 'powers', rec.powers.join(','), 'run', store.races.length + 1, '/', rec.runs);
+    // Play mode still passes a loadout: if no recorded opponent is eligible
+    // the race falls back to the picker, which the auto-clicker cannot drive.
+    // A found opponent replaces it with the recording's loadout.
     this.scene.start('RUNNER', rec.mode === 'play'
-      ? { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot }
+      ? { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers }
       : { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers, rivalHardLimitMs: rec.hardLimitMs, rivalRecording: true });
   };
 

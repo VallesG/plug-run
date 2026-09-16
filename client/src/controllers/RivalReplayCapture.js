@@ -127,7 +127,9 @@ export function tickAttemptCapture(scene, race, now) {
   if (Number.isFinite(hp)) cur.hp = hp;
 
   if (now < cur.nextSampleAt) return false;
-  cur.nextSampleAt = Math.max(cur.nextSampleAt + RIVAL_REPLAY_STEP_MS, now - RIVAL_REPLAY_STEP_MS);
+  // Steady cadence, but never schedule the next sample in the past: after a
+  // stall that produced back-to-back samples a frame apart, which is noise.
+  cur.nextSampleAt = Math.max(cur.nextSampleAt + RIVAL_REPLAY_STEP_MS, now + RIVAL_REPLAY_STEP_MS / 2);
   return pushReplayFrame(cur.seg, t, sampleState(scene));
 }
 function nearestStash(stashes, c) {

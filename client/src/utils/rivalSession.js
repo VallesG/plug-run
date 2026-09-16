@@ -89,8 +89,12 @@ export async function loadRivalOpponents(course) {
     try {
       const data = await fetchJSON(RIVALS_ASSET_ROOT + 'courses/' + encodeURIComponent(course.id) + '/opponents.json');
       if (data?.schemaVersion !== 1 || data.rulesVersion !== RIVAL_RULES_VERSION || !Array.isArray(data.opponents)) return [];
-      return data.opponents.filter(r => validateRivalRunRecord(r).ok && rivalRecordMatchesCourse(r, course, RIVAL_RULES_VERSION)
-        && r.opponent?.kind === 'bot' && (r.replay == null || typeof r.replay === 'string'));
+      // Each entry is { record, replay }: the record is hashed as recorded and
+      // must not be decorated, so the replay path travels beside it.
+      return data.opponents
+        .filter(e => e && validateRivalRunRecord(e.record).ok && rivalRecordMatchesCourse(e.record, course, RIVAL_RULES_VERSION)
+          && e.record.opponent?.kind === 'bot' && (e.replay == null || typeof e.replay === 'string'))
+        .map(e => ({ record: e.record, replay: e.replay ?? null }));
     } catch (e) {
       console.warn('[Rivals] opponents unavailable for', course.id, e?.message || e);
       return [];
@@ -111,23 +115,24 @@ function rivalHistory() {
 export function resolveRivalOpponent(race) {
   if (!race || race.opponentResolved || race.status !== 'ready') return null;
   race.opponentResolved = true;
-  return loadRivalOpponents(race.course).then(records => {
-    if (!records.length || race.status !== 'ready') return false;
+  return loadRivalOpponents(race.course).then(entries => {
+    if (!entries.length || race.status !== 'ready') return false;
     const history = rivalHistory();
     const played = history.filter(r => r?.courseID === race.course.id).length;
-    const pick = chooseRivalOpponent(records, {
+    const pick = chooseRivalOpponent(entries.map(e => e.record), {
       recordingID: race.wantRecordingID,
       tier: rivalTierForHistory(history, race.course.id),
       salt: getUserID() + '/' + race.course.id + '/' + played
     });
     if (!pick) return false;
+    const replay = entries.find(e => e.record === pick)?.replay ?? null;
     race.rivalTimes = pick.clearTimes.slice();
     race.opponentKind = 'recorded-bot';
     race.opponentRecord = pick;
     race.opponent = {
       recordingID: pick.recordingID, kind: pick.opponent.kind, displayName: pick.opponent.displayName,
       skillPreset: pick.opponent.skillPreset, retries: pick.retries, elapsedMs: pick.elapsedMs,
-      orderedPowers: pick.orderedPowers.slice(), replayURL: pick.replay ? RIVALS_ASSET_ROOT + pick.replay : null
+      orderedPowers: pick.orderedPowers.slice(), replayURL: replay ? RIVALS_ASSET_ROOT + replay : null
     };
     race.fixedPowers = pick.orderedPowers.slice();
     return true;

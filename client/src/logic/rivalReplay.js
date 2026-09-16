@@ -67,7 +67,10 @@ export function unpackFlags(bits) {
 export function pushReplayFrame(seg, t, state) {
   if (seg.sealed || !finite(t) || t < 0) return false;
   const last = seg.frames[seg.frames.length - 1];
-  if (last && t <= last[FRAME.T]) return false;
+  // Compare the stored (rounded) time: two samples in the same millisecond
+  // rounded to a duplicate timestamp in the first headless bank and failed
+  // validation on playback.
+  if (last && Math.round(t) <= last[FRAME.T]) return false;
   if (seg.frames.length >= RIVAL_REPLAY_MAX_FRAMES) return false;
   const r = state.runner;
   const bullets = (state.bullets || []).slice(0, RIVAL_REPLAY_MAX_BULLETS);

@@ -32,6 +32,7 @@ check('first frame accepted', pushReplayFrame(seg, 0, state(0)));
 check('second frame accepted', pushReplayFrame(seg, 67, state(67, { bullets: [{ x: 5, y: 5 }, { x: 6.123456, y: 5 }] })));
 check('backwards time dropped', !pushReplayFrame(seg, 60, state(60)));
 check('duplicate time dropped', !pushReplayFrame(seg, 67, state(67)));
+check('same-millisecond sample dropped after rounding', !pushReplayFrame(seg, 67.4, state(67)) && !pushReplayFrame(seg, 66.6, state(67)));
 check('NaN time dropped', !pushReplayFrame(seg, NaN, state(0)));
 check('third frame accepted', pushReplayFrame(seg, 1000, state(1000, { decoy: { x: 4, y: 4 } })));
 check('frames are compact arrays', Array.isArray(seg.frames[0]) && seg.frames[0].length === 7 && seg.frames[1][FRAME.BULLETS].length === 4);
