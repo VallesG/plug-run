@@ -11,6 +11,7 @@ import {
 } from '../src/logic/contactProgress.js';
 import { crewChapter, crewConsultationPages } from '../src/logic/crewStory.js';
 import { blockRunStats, beginBlockRun, createBlockRun, recordHouseClear, recordBlockDeath } from '../src/logic/blockRun.js';
+import { campaignHouseScale } from '../src/logic/skillEvidence.js';
 
 let blockStats = blockRunStats(createBlockRun({}, 1), 1);
 
@@ -70,6 +71,7 @@ let store = legacyCrosslineProgress();
 let gangID = 'crossline';
 let shownPanels = [];
 let panelFailure = false;
+let observed = [];
 const bindings = { console, cityForBlock, contact, praiseEarned, seasonChapter, seasonCue, seasonFinish,
   startBlockRunTracking: () => true,
   contactCue, gangContacts, crewChapter, crewConsultationPages, crewStoryProgress,
@@ -81,6 +83,9 @@ const bindings = { console, cityForBlock, contact, praiseEarned, seasonChapter, 
   praiseUsedInBlock, praiseMark,
   getBlockRunStats: () => blockStats,
   noteHouseClear: () => true, noteBlockDeath: () => true, noteMissionOutcome: () => true,
+  // Matchmaking evidence travels through the same seam as the clear.
+  noteHouseObservation: o => { observed.push(o); return true; },
+  campaignHouseScale,
   getContactProgress: () => store,
   getWindowState: () => ({ gangID }),
   claimContact: (id, block) => {
@@ -367,5 +372,41 @@ known.repTracker={stats:{damagesTaken:1,gotBunkStash:true}};
 known.noteHouseForContacts();
 check('measured tracker and spent slots are captured',captured.hits===1&&captured.bunk===true&&captured.powers.join(',')==='phase');
 bindings.noteHouseClear=capture;
+
+// Matchmaking evidence is recorded beside the clear, on the same seam.
+// Real numbers or none: the accumulator is the scene's own play clock, and a
+// retried house carries the failed attempts in totalActiveMs, not in activeMs.
+observed = [];
+const timed = new Manager({ runKind: 'journey', role: 'runner', pveRound: 3, blockIndex: 42, _activePlayMs: 9100 });
+timed.repTracker = { stats: { damagesTaken: 2, gotBunkStash: false } };
+timed.noteHouseForContacts();
+check('house observation is recorded', observed.length === 1);
+check('observation names the house', observed[0].block === 42 && observed[0].house === 3);
+check('observation uses the active play clock', observed[0].activeMs === 9100);
+check('a first-try clear totals its own time', observed[0].totalActiveMs === 9100);
+check('a first-try clear is one attempt', observed[0].attempts === 1 && observed[0].deaths === 0);
+check('observation carries the campaign scale', observed[0].scale === campaignHouseScale(3));
+
+observed = [];
+const retried = new Manager({ runKind: 'journey', role: 'runner', pveRound: 4, blockIndex: 43, _activePlayMs: 5000 });
+retried.noteDeathForContacts();
+retried.scene._activePlayMs = 6000;
+retried.noteDeathForContacts();
+retried.scene._activePlayMs = 7000;
+retried.noteHouseForContacts();
+check('a retried house reports only the winning clear', observed[0].activeMs === 7000);
+check('a retried house totals every attempt', observed[0].totalActiveMs === 18000);
+check('a retried house counts its attempts', observed[0].attempts === 3 && observed[0].deaths === 2);
+observed = [];
+retried.scene.pveRound = 5;
+retried.scene._activePlayMs = 4000;
+retried.noteHouseForContacts();
+check('failed time does not carry into the next house', observed[0].totalActiveMs === 4000);
+
+// Rivals, Tutorial and the daily route are not campaign evidence.
+observed = [];
+new Manager({ runKind: 'rivals', role: 'runner', pveRound: 2, blockIndex: 1, _activePlayMs: 5000 }).noteHouseForContacts();
+new Manager({ runKind: 'journey', role: 'plug', pveRound: 2, blockIndex: 1, _activePlayMs: 5000 }).noteHouseForContacts();
+check('non-campaign play records no evidence', observed.length === 0);
 
 console.log(passed + ' contact flow assertions passed');

@@ -7,7 +7,7 @@ import {
   rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
   rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock
 } from '../logic/rivals.js';
-import { saveRivalResult, resolveRivalOpponent, loadRivalReplay } from '../utils/rivalSession.js';
+import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome } from '../utils/rivalSession.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
 import ReplaySystem from './ReplaySystem.js';
@@ -78,8 +78,11 @@ export default class RivalsRace {
     this.searching=true;this.race.entryStage='search';
     this.entryModal?.destroy?.({resumeTouch:false});
     this.entryModal=this.scene.gameUI.showModal({
-      title:'FINDING YOUR RIVAL',subtitle:'Recorded opponent pool · not a live queue',
-      lines:['RIVAL','Choosing a run for this course.'],
+      // No claim is made about anyone being online, in a queue or playing now,
+      // and no recording vocabulary reaches the player. The carousel carries
+      // the moment; internal provenance stays in the record, not on screen.
+      title:'FINDING RIVAL',subtitle:this.race.course.name?this.race.course.name.toUpperCase():'BLOCK RIVALS',
+      lines:['SEVEN HOUSES · ONE RACE'],
       buttons:[{label:'CANCEL',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}]
     });
     // An on-floor name card provides animation without re-creating modal input.
@@ -97,7 +100,7 @@ export default class RivalsRace {
       const names=this.race.searchNames?.length?this.race.searchNames:['RIVAL / 01','RIVAL / 02','RIVAL / 03','RIVAL / 04'];
       this.searchCard.setText(this.rivalDisplayName(names[cycles%names.length]));cycles++;
       if(settled&&cycles>=12){
-        this.searchCard.setText(this.rivalDisplayName(this.race.opponent?.displayName||'RIVAL PACE TRIAL')+(this.race.opponent?.orderedPowers?'\n'+this.race.opponent.orderedPowers.map(p=>p.toUpperCase()).join(' → '):''));
+        this.searchCard.setText('RIVAL FOUND\n'+this.rivalDisplayName(this.race.opponent?.displayName||'RIVAL')+(this.race.opponent?.orderedPowers?'\n'+this.race.opponent.orderedPowers.map(p=>p.toUpperCase()).join(' → '):''));
         this.searchTimer=this.scene.time.delayedCall(550,()=>{
           if(this.disposed)return;
           this.searchCard?.destroy?.();this.entryModal?.destroy?.();
@@ -126,7 +129,7 @@ export default class RivalsRace {
       this.race.powers=this.race.fixedPowers.slice();
       showRunnerLoadout(this.scene.gameUI,armCountdown,{
         title:'BLOCK RIVALS',subtitle:this.opponentSubtitle(),startLabel:'READY TO RACE',
-        helpText:'Harness loadout. Refills each house.',
+        helpText:'Fixed mix. Refills each house.',
         fixedPowers:this.race.fixedPowers,allowReplay:false,showAccount:false
       });
       return;
@@ -375,6 +378,9 @@ export default class RivalsRace {
     ReplaySystem.finalize();
     this.notice?.setText('');
     this.paint(now);
+    // Adapt on what actually happened. Never during a race, never on a
+    // recording, and never in a direction that would make winning easier.
+    if(!this.race.recording)noteRivalOutcome(this.race,result);
     const record=rivalRecord(this.race);
     // The player's own race in the shared record format (kind 'human', local,
     // unverified). Only a complete race with no abandoned attempt exports.
@@ -397,7 +403,9 @@ export default class RivalsRace {
     const config={
       fullScreen:!!this.race.rivalCityIndex,
       title:({win:'YOU WIN',loss:who.toUpperCase()+' WINS',draw:'PHOTO FINISH',forfeit:'RACE ENDED'})[this.race.result] || 'RACE ENDED',
-      subtitle:recorded ? 'Recorded rival run · not live' : 'Rival pace trial',
+      // A real opponent gets the plain word. The generated fallback is still
+      // never dressed up as one: it says pace trial.
+      subtitle:recorded ? 'RIVAL · SEVEN HOUSES' : 'PACE TRIAL · NO RIVAL FOUND',
       lines:[
         ...(this.race.course.name ? ['Course: '+this.race.course.name] : []),
         'You: '+this.race.clearTimes.length+'/7 houses \u00b7 '+this.race.retries+' retries',
@@ -410,7 +418,7 @@ export default class RivalsRace {
       ],
       buttons:[
         ...(recorded && (this.race.opponent?.replayURL || this.race.opponentBundle) ? [{
-          label:'\u25B6 WATCH RIVAL REPLAY',variant:'secondary',keepOpen:true,onClick:(m)=>this.watchRival(m)
+          label:'\u25B6 WATCH RIVAL',variant:'secondary',keepOpen:true,onClick:(m)=>this.watchRival(m)
         }] : []),
         {label:'REMATCH',variant:'primary',onClick:()=>this.scene.scene.restart({
           mode:'pve',role:'runner',runKind:'rivals',rivalSeed:this.race.course.seed,

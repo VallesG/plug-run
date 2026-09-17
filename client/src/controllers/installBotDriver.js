@@ -17,7 +17,7 @@ import { MenuScene } from '../scenes/MenuScene.js';
 import RivalsRace from './RivalsRace.js';
 import { exportRaceCapture } from './RivalReplayCapture.js';
 import { rivalPoolEntry, validRivalPowers } from '../logic/rivals.js';
-import { RIVAL_BOT_DRIVER_VERSION, rivalPreset, rivalBotDisplayName, rivalBankLoadout, rivalRecordingID } from '../logic/rivalPresets.js';
+import { RIVAL_BOT_DRIVER_VERSION, rivalPreset, rivalBotDisplayName, rivalBankLoadout, rivalRecordingID, rivalDriverKnobs } from '../logic/rivalPresets.js';
 
 // Injected rather than imported by BotDriver so that file stays clear of the
 // Phaser dependency graph and its logic remains runnable under plain Node.
@@ -489,7 +489,9 @@ export function rivalsRecordConfig() {
     const powers = validRivalPowers(powersParam) ? powersParam : rivalBankLoadout(slot, preset.key);
     return {
       mode,
-      slot, preset: { key: preset.key, knobs: { aiLevel: preset.aiLevel, coverPenalty: preset.coverPenalty, phaseEscapeCells: preset.phaseEscapeCells, dangerCells: preset.dangerCells } },
+      // A style supplies its own knob set; a legacy preset supplies the four
+      // it always had. Either way the driver is described by what it ran with.
+      slot, preset: { key: preset.key, knobs: rivalDriverKnobs(preset.key) },
       powers,
       runs: Math.max(1, Math.round(Number(p.get('runs') || 3))),
       // A race that will not finish is not a race. 12 minutes is ~4x a slow clear.
@@ -516,6 +518,25 @@ function installRivalsRecorder(rec, cfg) {
     this.scene.start('RUNNER', rec.mode === 'play'
       ? { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers }
       : { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers, rivalHardLimitMs: rec.hardLimitMs, rivalRecording: true });
+  };
+
+  // The Rivals entrance now opens the real loadout picker even for a fixed
+  // harness mix, and the modal auto-clicker cannot drive that picker's Start
+  // button — recordings stalled at status 'ready' forever. Take the same
+  // actions the picker's Start handler takes, then arm the countdown. Harness
+  // only: production never reaches this path, and the player-facing picker is
+  // untouched.
+  const origOpenLoadout = RivalsRace.prototype.openLoadout;
+  RivalsRace.prototype.openLoadout = function () {
+    if (rec.mode !== 'record' || !this.race?.recording || !this.race?.fixedPowers) {
+      return origOpenLoadout.call(this);
+    }
+    if (this.race.status !== 'ready') return;
+    this.preparePickupProgress?.();
+    this.scene.runnerPowersSelected = this.race.fixedPowers.slice();
+    this.scene.runnerPowersConsumed = [false, false];
+    this.race.powers = this.race.fixedPowers.slice();
+    this.armCountdown();
   };
 
   // Export after every finish. The auto-clicker then presses REMATCH (the

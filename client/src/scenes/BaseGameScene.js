@@ -1868,6 +1868,10 @@ export class BaseGameScene extends Phaser.Scene {
     // tick 0 mean something different on every run.
     this.simTick = 0;
     this._runStartedAt = performance.now();
+    // Active play for this attempt, accumulated per frame in update(). Wall
+    // clock would include the entrance map, contact dialogue, the loadout
+    // picker, settings and city zooms; matchmaking needs time at the sticks.
+    this._activePlayMs = 0;
     this.intent?.start({ startedAt: Date.now() });
 
     // Initialize RepTracker for this round via ProgressionManager
@@ -2231,6 +2235,12 @@ export class BaseGameScene extends Phaser.Scene {
     // steps at a fixed dt this becomes an exact time coordinate and traces
     // become replayable across machines.
     this.simTick = (this.simTick | 0) + 1;
+
+    // Active play only: a paused or finished frame is menu, dialogue, city or
+    // settings time, and matchmaking evidence must not count it.
+    if (this._activePlayMs != null && !this.roundPausedForMenu && !this.roundOver) {
+      this._activePlayMs += Number.isFinite(delta) ? delta : 0;
+    }
 
     // Replay recorder: samples world sprites ~15x/sec, auto-finalizes on round end
     try { ReplaySystem.tick(this, delta); } catch (e) { console.error('[Replay] tick error:', e); }

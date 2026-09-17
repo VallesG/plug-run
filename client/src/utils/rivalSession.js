@@ -5,6 +5,8 @@ import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace,
 import { validateRivalRunRecord, rivalRecordMatchesCourse, validateRivalReplayBundle, RIVAL_MAX_BUNDLE_BYTES } from '../logic/rivalRecords.js';
 import { validateReplaySegment } from '../logic/rivalReplay.js';
 import { chooseRivalOpponent, rivalTierForHistory } from '../logic/rivalPresets.js';
+import { recordBenchmark, playerSkill, chooseCalibratedOpponent, adaptSkill } from '../logic/rivalSkill.js';
+import { getSkillSamples } from './skillEvidence.js';
 import { generateSquareMaze } from './mazeGenerator.js';
 import { createSeededRNG } from './seededRandom.js';
 import { getUserID } from './userManager.js';
@@ -119,6 +121,35 @@ function rivalHistory() {
  * recording run), otherwise a promise that settles once the race is final.
  * The race object is mutated in place before the countdown can start.
  */
+// The working estimate, per course. Seeded from campaign evidence and then
+// moved by actual Rivals outcomes — never by what would make the next race
+// easier. Its own account-scoped key; losing it falls back to the campaign.
+const estimateKey = () => 'pr_rival_skill_v1_' + getUserID();
+function readEstimates() {
+  try { const v = JSON.parse(localStorage.getItem(estimateKey()) || 'null'); return v && typeof v === 'object' ? v : {}; }
+  catch { return {}; }
+}
+export function rivalEstimate(courseID, campaignMs) {
+  const stored = readEstimates()[courseID];
+  if (Number.isFinite(stored)) return stored;
+  return Number.isFinite(campaignMs) ? campaignMs : null;
+}
+export function noteRivalOutcome(race, result) {
+  try {
+    const courseID = race?.course?.id, opponentMs = race?.opponent?.benchmarkMs;
+    if (!courseID || !Number.isFinite(opponentMs)) return false;
+    const estimates = readEstimates();
+    const current = Number.isFinite(estimates[courseID])
+      ? estimates[courseID]
+      : (Number.isFinite(race?.playerSkill?.estimateMs) ? race.playerSkill.estimateMs : null);
+    const next = adaptSkill(current, { opponentMs, result });
+    if (!Number.isFinite(next)) return false;
+    estimates[courseID] = next;
+    localStorage.setItem(estimateKey(), JSON.stringify(estimates));
+    return true;
+  } catch (error) { console.warn('[Rivals] estimate not updated', error); return false; }
+}
+
 export function resolveRivalOpponent(race) {
   if(race?.opponentPending)return race.opponentPending;
   if (!race || race.opponentResolved || race.status !== 'ready') return null;
@@ -128,11 +159,37 @@ export function resolveRivalOpponent(race) {
     race.searchNames=entries.map(e=>e.record.opponent.displayName);
     const history = rivalHistory();
     const played = history.filter(r => r?.courseID === race.course.id).length;
-    const pick = chooseRivalOpponent(entries.map(e => e.record), {
-      recordingID: race.wantRecordingID,
-      tier: rivalTierForHistory(history, race.course.id),
-      salt: getUserID() + '/' + race.course.id + '/' + played
-    });
+
+    // Pair on measured seconds per house, not on a preset's name. The player's
+    // number comes from campaign houses generated at the same maze scales as
+    // this course's houses; each candidate's number comes from its own recorded
+    // attempts. Falls back to the old tier ladder only if nothing is measurable.
+    let pick = null, estimate = null;
+    try {
+      const samples = getSkillSamples();
+      const skill = playerSkill(samples);
+      estimate = rivalEstimate(race.course.id, skill.clearMs);
+      const candidates = entries.map(e => ({
+        recordingID: e.record.recordingID, record: e.record,
+        benchmark: recordBenchmark(e.record, race.course.scales, skill.scales)
+      }));
+      pick = chooseCalibratedOpponent(candidates, {
+        recordingID: race.wantRecordingID,
+        targetMs: estimate,
+        recent: history.filter(r => r?.courseID === race.course.id).slice(0, 4).map(r => r?.recordingID).filter(Boolean),
+        salt: getUserID() + '/' + race.course.id + '/' + played
+      })?.record ?? null;
+      race.playerSkill = { clearMs: skill.clearMs, estimateMs: estimate, provisional: skill.provisional, houses: skill.houses };
+    } catch (error) {
+      console.warn('[Rivals] calibration unavailable', error);
+    }
+    if (!pick) {
+      pick = chooseRivalOpponent(entries.map(e => e.record), {
+        recordingID: race.wantRecordingID,
+        tier: rivalTierForHistory(history, race.course.id),
+        salt: getUserID() + '/' + race.course.id + '/' + played
+      });
+    }
     if (!pick) return false;
     const replay = entries.find(e => e.record === pick)?.replay ?? null;
     race.rivalTimes = pick.clearTimes.slice();
@@ -141,7 +198,9 @@ export function resolveRivalOpponent(race) {
     race.opponent = {
       recordingID: pick.recordingID, kind: pick.opponent.kind, displayName: pick.opponent.displayName,
       skillPreset: pick.opponent.skillPreset, retries: pick.retries, elapsedMs: pick.elapsedMs,
-      orderedPowers: pick.orderedPowers.slice(), replayURL: replay ? RIVALS_ASSET_ROOT + replay : null
+      orderedPowers: pick.orderedPowers.slice(), replayURL: replay ? RIVALS_ASSET_ROOT + replay : null,
+      // Kept for adaptation after the race. Not shown to the player.
+      benchmarkMs: recordBenchmark(pick, race.course.scales)?.clearMs ?? null
     };
     // Keep their ordered powers on opponent metadata only. The live runner
     // chooses a separate mix; never mutate hashed bank records to match it.

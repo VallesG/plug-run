@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import * as rules from '../src/logic/rivals.js';
 import * as presets from '../src/logic/rivalPresets.js';
+import * as skill from '../src/logic/rivalSkill.js';
 import * as capture from '../src/controllers/RivalReplayCapture.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
@@ -14,7 +15,7 @@ const bindings={
   rivalCityView:index=>({index}),drawCityMap:(s,o)=>{s.cityOptions=o;return {destroy(){s.cityDestroyed=true;}};},
   drawRivalDistrictMap:(s,m,r,o)=>{s.districtDraws=(s.districtDraws||0)+1;}, performance:{now:()=>now}, clearTimeout:()=>{},
   saveRivalResult:(result,record,runRecord)=>{saved.push({result,record,runRecord});return true;},
-  resolveRivalOpponent:(race)=>resolver(race), loadRivalReplay:(race)=>replayLoader(race), playRivalReplay:(scene,opts)=>{played.push(opts);return {end(){}};},
+  resolveRivalOpponent:(race)=>resolver(race), noteRivalOutcome:()=>true, loadRivalReplay:(race)=>replayLoader(race), playRivalReplay:(scene,opts)=>{played.push(opts);return {end(){}};},
   showRunnerLoadout:(ui,done,options)=>{loadouts++;lastPicker={ui,done,options};},
   drawPowerIcon:()=>node(), AudioManager:{get:()=>({isMusicMuted:()=>false,isMuted:()=>false,setMusicMute(){},setMute(){}})},
   ReplaySystem:{finalize(){}}
@@ -89,7 +90,7 @@ check('late callbacks cannot change result',saved.length===1 && state.result==='
 check('partial race not offered as ghost',saved[0].record===null);
 check('partial race has no exported run record',saved[0].runRecord===null);
 check('death attempt captured as caught, resize as abandoned',state.capture.attempts.map(a=>a.outcome).join()==='extracted,caught,abandoned');
-check('results expose only the rival label',run.modals.at(-1).subtitle==='Rival pace trial');
+check('a generated pace is never dressed up as a rival who ran it',run.modals.at(-1).subtitle==='PACE TRIAL · NO RIVAL FOUND');
 
 now=1000;state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash']};
 run=setup(state);
@@ -156,8 +157,9 @@ check('recorded match refills player mix on retry',run.scene.runnerPowersSelecte
 now=70000;run.controller.update();
 check('recorded rival finishing first is a loss at its recorded time',state.result==='loss' && state.finishedMs===63000);
 const result=run.modals.at(-1);
-check('result uses only the rival label',result.title==='RIVAL WINS' && result.subtitle.includes('Recorded rival run') && result.lines.some(l=>l.startsWith('Rival: 1:03.0')));
-check('watch button offered and keeps the modal',result.buttons[0].label.includes('WATCH RIVAL REPLAY') && result.buttons[0].keepOpen===true);
+check('result uses only the rival label',result.title==='RIVAL WINS' && result.subtitle==='RIVAL · SEVEN HOUSES' && result.lines.some(l=>l.startsWith('Rival: 1:03.0')));
+check('the result says nothing technical',!/recorded|bank|driver|bot/i.test(result.subtitle+' '+result.title));
+check('watch button offered and keeps the modal',result.buttons[0].label.includes('WATCH RIVAL') && result.buttons[0].keepOpen===true);
 check('saved result records the opponent',saved.at(-1).result.opponentKind==='recorded-bot' && saved.at(-1).result.recordingID==='rec-x');
 const vis=[];const fakeModal={setVisible:v=>vis.push(v)};
 state.opponentBundle={segments:[{house:1,attempt:1,startedMs:0,durationMs:1000,outcome:'extracted',replay:{durationMs:1000}}]};
@@ -260,8 +262,9 @@ check('a later watch can recover from offline',!!(await retry) && downloads===3)
 // Use the actual opponent loader, not just the adapter's resolver stub: picking
 // a record must never populate fixedPowers or alter either runner's pair.
 const bankSnapshot=JSON.stringify(opponentRecord);
-const chooseBindings={...rules,...presets,console,setTimeout,clearTimeout,
-  getUserID:()=> 'test-runner',localStorage:{getItem:()=> '[]'},
+const chooseBindings={...rules,...presets,...skill,console,setTimeout,clearTimeout,
+  getSkillSamples:()=>({byScale:{},houses:0}),
+  getUserID:()=> 'test-runner',localStorage:{getItem:()=> '[]',setItem:()=>{}},
   validateRivalRunRecord:()=>({ok:true}),rivalRecordMatchesCourse:()=>true,
   fetch:async()=>({ok:true,text:async()=>JSON.stringify({schemaVersion:1,rulesVersion:rules.RIVAL_RULES_VERSION,
     opponents:[{record:opponentRecord,replay:'replays/rec-x.json'}]})})};

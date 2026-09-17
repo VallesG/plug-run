@@ -23,6 +23,8 @@ import { crewChapter, crewConsultationPages } from '../logic/crewStory.js';
 import { contact, gangContacts, contactCue, praiseEarned } from '../logic/contacts.js';
 import { showContactPanel } from './ContactPanel.js';
 import { claimContact, getContactProgress, finishCrewStory } from '../utils/contactProgress.js';
+import { noteHouseObservation } from '../utils/skillEvidence.js';
+import { campaignHouseScale } from '../logic/skillEvidence.js';
 import { praiseUsedInBlock, praiseMark, crewStoryProgress } from '../logic/contactProgress.js';
 import { startBlockRunTracking, getBlockRunStats, noteHouseClear, noteBlockDeath, noteMissionOutcome } from '../utils/blockRunProgress.js';
 import { getWindowState } from '../utils/windowProgress.js';
@@ -498,6 +500,28 @@ export default class ProgressionManager {
       if (scene.missionObject) {
         noteMissionOutcome(scene.blockIndex || 1, scene.hasMissionItem ? 'win' : 'miss');
       }
+      // Matchmaking evidence: how long this house actually took at the sticks,
+      // how long every attempt on it took, and how many attempts there were.
+      // Recorded next to the clear so a crash cannot save one without the
+      // other, and never for Rivals, Tutorial or the daily route.
+      try {
+        const active = Math.round(scene._activePlayMs ?? 0);
+        noteHouseObservation({
+          block: scene.blockIndex || 1,
+          house: scene.pveRound || 1,
+          scale: campaignHouseScale(scene.pveRound || 1),
+          activeMs: active,
+          totalActiveMs: Math.round((this._contactFailedActiveMs || 0) + active),
+          attempts: 1 + (this._contactDeathsThisHouse || 0),
+          deaths: this._contactDeathsThisHouse || 0,
+          hits: this.repTracker?.stats?.damagesTaken || 0,
+          bunk: Boolean(this.repTracker?.stats?.gotBunkStash),
+          at: Date.now()
+        });
+        this._contactFailedActiveMs = 0;
+      } catch (error) {
+        console.warn('[Skill] Could not record the house', error);
+      }
       const selected = scene.runnerPowersSelected || [];
       const consumed = scene.runnerPowersConsumed || [];
       noteHouseClear(scene.blockIndex || 1, {
@@ -532,6 +556,8 @@ export default class ProgressionManager {
     const scene = this.scene;
     if (scene.runKind !== 'journey' || scene.role !== 'runner') return;
     this._contactDeathsThisHouse = (this._contactDeathsThisHouse || 0) + 1;
+    // A failed attempt still cost the player time on this house.
+    this._contactFailedActiveMs = (this._contactFailedActiveMs || 0) + Math.round(scene._activePlayMs ?? 0);
     try { noteBlockDeath(scene.blockIndex || 1); } catch {}
   }
 

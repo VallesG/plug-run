@@ -29,10 +29,112 @@ export const RIVAL_SKILL_PRESETS = Object.freeze({
   // Ace: route variety of level 5 plus the evasion layers (see above).
   ace:     Object.freeze({ key: 'ace',     label: 'Ace',     tier: 3, aiLevel: 5,  coverPenalty: 3, phaseEscapeCells: 7, dangerCells: 6 })
 });
+
+// DRIVER STYLES — how a bot plays, which is NOT how good it turns out to be.
+//
+// A style is a set of BotDriver knobs and a default ordered power mix. The
+// band a recording lands in is measured afterwards from its actual elapsed
+// time on that course (see rivalBands.js); nothing here claims a ranking.
+// Every style drives through the same InputIntent path a player uses, sees
+// only what a runner can see, and gets no immunity, teleport or stash
+// knowledge. They differ in attention, caution and which power they lean on.
+//
+// WHY EVERY aiLevel IS 5 OR LOWER
+// From level 6 up, applyRunnerProgression zeroes wander and hesitation, so the
+// borrowed runner AI repeats an identical fatal route every retry and a race
+// never finishes (measured: 55-72 identical deaths on one house). Weakness is
+// therefore expressed with wander, hesitation and missing evasion layers, not
+// by turning the level knob down from a high number that cannot finish.
+export const RIVAL_DRIVER_STYLES = Object.freeze({
+  rookie: Object.freeze({
+    key: 'rookie', label: 'Rookie', tier: 1,
+    note: 'First-week player: wanders, hesitates, walks down firing lanes.',
+    aiLevel: 2, wrongTurnChance: 0.2, hesitateChance: 0.12,
+    coverPenalty: 0, phaseEscapeCells: 0, dangerCells: 4,
+    mixes: [['phase', 'dash'], ['dash', 'dash'], ['phase', 'phase']]
+  }),
+  erratic: Object.freeze({
+    key: 'erratic', label: 'Erratic', tier: 1,
+    note: 'Inconsistent: good stretches then a bad decision under pressure.',
+    aiLevel: 3, wrongTurnChance: 0.26, hesitateChance: 0.16,
+    coverPenalty: 2, phaseEscapeCells: 5, dangerCells: 5,
+    mixes: [['dash', 'phase'], ['decoy', 'dash'], ['phase', 'dash']]
+  }),
+  cautious: Object.freeze({
+    key: 'cautious', label: 'Cautious', tier: 2,
+    note: 'Refuses open lanes, takes the long way, survives but loses time.',
+    aiLevel: 5, wrongTurnChance: 0.05, hesitateChance: 0.06,
+    coverPenalty: 9, coverCarryMul: 2.4, phaseEscapeCells: 9, dangerCells: 9,
+    dodgeCommitMs: 300, dodgeRestMs: 420,
+    mixes: [['phase', 'phase'], ['phase', 'decoy'], ['decoy', 'phase']]
+  }),
+  ghost: Object.freeze({
+    key: 'ghost', label: 'Ghost', tier: 2,
+    note: 'Phase specialist: spends walls to leave a lane instead of running it.',
+    aiLevel: 5, wrongTurnChance: 0.06, hesitateChance: 0.04,
+    coverPenalty: 4, phaseEscapeCells: 11, phaseMaxWall: 3, dangerCells: 8,
+    mixes: [['phase', 'phase'], ['phase', 'dash']]
+  }),
+  dasher: Object.freeze({
+    key: 'dasher', label: 'Dasher', tier: 2,
+    note: 'Straight-line bursts, less patience for cover.',
+    aiLevel: 5, wrongTurnChance: 0.07, hesitateChance: 0.03,
+    coverPenalty: 1, phaseEscapeCells: 0, dangerCells: 6, dodgeCommitMs: 160,
+    mixes: [['dash', 'dash'], ['dash', 'phase']]
+  }),
+  trickster: Object.freeze({
+    key: 'trickster', label: 'Trickster', tier: 2,
+    note: 'Leans on Decoy. Whether the double actually pulls fire is measured, not claimed.',
+    aiLevel: 5, wrongTurnChance: 0.08, hesitateChance: 0.05,
+    coverPenalty: 3, phaseEscapeCells: 6, dangerCells: 7,
+    mixes: [['decoy', 'decoy'], ['decoy', 'dash'], ['decoy', 'phase']]
+  }),
+  balanced: Object.freeze({
+    key: 'balanced', label: 'Balanced', tier: 2,
+    note: 'Mixed powers, moderate caution. The middle of the pool.',
+    aiLevel: 5, wrongTurnChance: 0.09, hesitateChance: 0.05,
+    coverPenalty: 4, phaseEscapeCells: 7, dangerCells: 6,
+    mixes: [['phase', 'dash'], ['dash', 'phase'], ['decoy', 'dash'], ['phase', 'decoy']]
+  }),
+  sharp: Object.freeze({
+    key: 'sharp', label: 'Sharp', tier: 3,
+    note: 'Low error rate with every evasion layer on. The strong end of the pool.',
+    aiLevel: 5, wrongTurnChance: 0.03, hesitateChance: 0.02,
+    coverPenalty: 6, coverCarryMul: 2, phaseEscapeCells: 9, dangerCells: 8,
+    dodgeCommitMs: 200, dodgeMaxMs: 1100,
+    mixes: [['phase', 'dash'], ['dash', 'dash'], ['phase', 'phase']]
+  })
+});
+
+/** The BotDriver knobs for a style or a legacy preset. Null if unknown. */
+export function rivalDriverKnobs(key) {
+  const style = RIVAL_DRIVER_STYLES[String(key || '').toLowerCase()];
+  if (style) {
+    const { key: _k, label: _l, tier: _t, note: _n, mixes: _m, ...knobs } = style;
+    return knobs;
+  }
+  const preset = rivalPreset(key);
+  if (!preset) return null;
+  return {
+    aiLevel: preset.aiLevel, coverPenalty: preset.coverPenalty,
+    phaseEscapeCells: preset.phaseEscapeCells, dangerCells: preset.dangerCells
+  };
+}
+/** Ordered power mixes a style is recorded with, including duplicates. */
+export function rivalStyleMixes(key) {
+  const style = RIVAL_DRIVER_STYLES[String(key || '').toLowerCase()];
+  return style ? style.mixes.map(m => m.slice()) : [];
+}
+export function rivalStyle(key) {
+  return RIVAL_DRIVER_STYLES[String(key || '').toLowerCase()] ?? null;
+}
+
 const ALIASES = { bronze: 'street', silver: 'hustler', gold: 'ace', easy: 'street', medium: 'hustler', hard: 'ace' };
 export function rivalPreset(name) {
   const key = String(name || '').toLowerCase();
-  return RIVAL_SKILL_PRESETS[ALIASES[key] ?? key] ?? null;
+  // Styles resolve here too: a recording's skillPreset is the style it was
+  // driven with, and the bank contract validates that field.
+  return RIVAL_SKILL_PRESETS[ALIASES[key] ?? key] ?? RIVAL_DRIVER_STYLES[key] ?? null;
 }
 export function rivalPresetByTier(tier) {
   return Object.values(RIVAL_SKILL_PRESETS).find(p => p.tier === tier) ?? null;

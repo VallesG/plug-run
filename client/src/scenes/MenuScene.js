@@ -4,6 +4,7 @@ import { hasWindowOnboarding } from '../utils/windowProgress.js';
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
 import { landingLayout, landingSession, titleBackdrop } from '../logic/landingLayout.js';
+import { rivalsMenuState } from '../utils/rivalsUnlock.js';
 import { drawPowerIcon } from '../controllers/PowerIcons.js';
 import { PALETTE as INK } from '../logic/palette.js';
 import { PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
@@ -336,27 +337,40 @@ export class MenuScene extends Phaser.Scene {
 
   // MENU: UI helpers -------------------------------------------------
   // Simple card with background and text overlay
-  makeTitleOption(label, onClick){
+  makeTitleOption(label, onClick, locked = null){
     const a = landingLayout(this.scale.width, this.scale.height);
     const c = this.add.container(0, 0).setSize(a.menuW, a.rowH).setDepth(6);
     const bg = this.add.rectangle(0, 0, a.menuW, a.rowH, 0x182329, 0.2)
-      .setInteractive({ cursor: 'pointer' });
+      .setInteractive({ cursor: locked ? 'default' : 'pointer' });
     const line = this.add.rectangle(0, a.rowH/2, a.menuW-24, 1, 0x506064, 0.15);
     const tx = this.add.text(0, 0, label, {
-      fontFamily: 'Arial, sans-serif', fontSize: '21px', color: '#a6b0b6'
+      fontFamily: 'Arial, sans-serif', fontSize: '21px', color: locked ? '#6b7478' : '#a6b0b6'
     }).setOrigin(0.5);
     c.add([bg,line,tx]);
+    // A locked row stays visible and says how far along you are. One line, no
+    // popup, no explanation of a system the player has not met yet.
+    if (locked) {
+      c._locked = true;
+      const note = this.add.text(0, a.rowH * 0.3, locked, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#6b7478', letterSpacing: 1
+      }).setOrigin(0.5);
+      c.add(note);
+      c._note = note;
+    }
     c._bg = bg;
     c._text = tx;
     c._setSelected = selected => {
+      if (c._locked) return;
       bg.setFillStyle(0x182329, selected ? 0.6 : 0.2);
       tx.setColor(selected ? '#f1ca82' : '#a6b0b6');
       line.setFillStyle(selected ? 0xf1ca82 : 0x506064, selected ? 0.45 : 0.15);
     };
-    this._titleOptions.push(c);
-    bg.on('pointerover', () => this.focusTitleOption(c));
-    bg.on('pointerout', () => this.focusTitleOption(this._titlePrimary));
-    bg.on('pointerup', onClick);
+    if (!locked) {
+      this._titleOptions.push(c);
+      bg.on('pointerover', () => this.focusTitleOption(c));
+      bg.on('pointerout', () => this.focusTitleOption(this._titlePrimary));
+      bg.on('pointerup', onClick);
+    }
     return c;
   }
 
@@ -377,7 +391,12 @@ export class MenuScene extends Phaser.Scene {
     cont._startText = start._text;
     this._titlePrimary = start;
     this.focusTitleOption(start);
-    const rivals = this.makeTitleOption('Block Rivals', () => this.launchCard({ modeKey:'runner', runKind:'rivals' }))
+    // Block Rivals opens after three complete blocks. The row is always
+    // visible so the player knows it exists; it simply is not theirs yet.
+    const unlock = rivalsMenuState();
+    const rivals = this.makeTitleOption('Block Rivals',
+      () => this.launchCard({ modeKey:'runner', runKind:'rivals' }),
+      unlock.unlocked ? null : unlock.progressText)
       .setPosition(0,a.rowGap);
     cont.add(rivals);
     return cont;
