@@ -1,3 +1,4 @@
+import { consumeModalPointer, guardModalDismissal } from '../utils/modalPointerGuard.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
 import { isPremiumUser, getCurrentRouteProgress } from '../utils/routeProgress.js';
 import ReplaySystem from './ReplaySystem.js';
@@ -128,8 +129,11 @@ export default class GameUI {
         bg.setInteractive({ useHandCursor: true });
         bg.on('pointerover', () => bg.setStrokeStyle(2, strk).setFillStyle(fill, 0.85));
         bg.on('pointerout',  () => bg.setStrokeStyle(1.5, strk).setFillStyle(fill, 1));
-        bg.on('pointerdown', () => {
+        bg.on('pointerdown', (pointer,x,y,event) => {
+          consumeModalPointer(pointer,event);
+          if(destroyed)return;
           if (b.keepOpen) { b.onClick && b.onClick(this.currentModal); return; }
+          guardModalDismissal(this.scene,pointer,event);
           destroy(); b.onClick && b.onClick();
         });
       } else {

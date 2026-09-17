@@ -1,3 +1,32 @@
+## Modal close tap cannot launch the underlying menu — Codex (2026-09-17)
+
+Settings closed on pointerdown, but title actions activate on pointerup.
+Destroying its veil on press exposed Tutorial before the same finger released.
+Stop propagation alone does not consume that later separate event.
+
+utils/modalPointerGuard.js consumes Phaser/DOM close events and installs a
+full-viewport, high-depth input shield for at least 250ms AND until all pointers
+are released. A held finger or second finger extends protection; scene shutdown
+cancels timers and shield; stale cleanup cannot destroy a replacement guard.
+It does not disable the scene input plugin or create controls after shutdown.
+
+Menu settings/profile/help/recovery dismissals, authUI in-game Settings
+dismissals, and GameUI standard closing buttons share this protection.
+Settings toggles consume their pointerdown without dismissing the modal.
+GameUI buttons ignore duplicate actions once their modal is destroyed.
+Existing touch-resume and idempotent dispose contracts remain intact.
+
+Adapted V8: new modalPointerGuard suite 32 assertions, including actual
+Menu.openSettings and GameUI.showModal callbacks, exact down-close/up-Tutorial
+regression reproduction without protection, normal next tap, held finger,
+multi-touch, replacement, shutdown, camera-gone cases. Existing mobile lifecycle
+251, firstPlay 27, campaignContacts 1009, contactFlow 1900 passed. Four runtime
+modules passed binding-aware parse; new suite registered in npm test.
+Native verify/build and actual phone event delivery are unverified (execution
+helper ACL remains blocked). Phone-check Settings Close/outside taps over Tutorial,
+Help and profile dismissal, in-game Settings over loadout, and held/double taps.
+No bank/recording/build/master changes.
+
 ## Landing-first onboarding and crew banter — Codex (2026-09-17)
 
 Read FIRST_PLAY_AND_CREW_BANTER.md for the current flow and review checklist.

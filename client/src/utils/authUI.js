@@ -1,3 +1,4 @@
+import { consumeModalPointer, guardModalDismissal } from './modalPointerGuard.js';
 import { drawPowerIcon } from '../controllers/PowerIcons.js';
 // In-game UI: settings button + settings modal + toasts
 // (Account/login UI removed — offline build)
@@ -46,7 +47,8 @@ export function createBottomLeftButtons(scene, panelX, panelY, panelW, panelH, Z
 
   const settingsIcon = drawPowerIcon(scene, settingsX, topEdge, 'settings', 16, 0xb7c6cf, Z + 1);
 
-  settingsBg.on('pointerdown', () => {
+  settingsBg.on('pointerdown', (pointer,x,y,event) => {
+    consumeModalPointer(pointer,event);
     showInGameSettings(scene, Z + 10);
   });
 
@@ -104,7 +106,8 @@ function showInGameSettings(scene, Z = 25000) {
     fontSize: '13px'
   }).setOrigin(0.5).setDepth(Z + 3).setScrollFactor(0);
 
-  musicBg.on('pointerdown', () => {
+  musicBg.on('pointerdown', (pointer,x,y,event) => {
+    consumeModalPointer(pointer,event);
     musicOn = !musicOn;
     musicText.setText(musicOn ? 'ON' : 'OFF').setColor(musicOn ? '#86efac' : '#cbd1ff');
     if (audio) {
@@ -133,7 +136,8 @@ function showInGameSettings(scene, Z = 25000) {
     fontSize: '13px'
   }).setOrigin(0.5).setDepth(Z + 3).setScrollFactor(0);
 
-  soundsBg.on('pointerdown', () => {
+  soundsBg.on('pointerdown', (pointer,x,y,event) => {
+    consumeModalPointer(pointer,event);
     soundsOn = !soundsOn;
     soundsText.setText(soundsOn ? 'ON' : 'OFF').setColor(soundsOn ? '#86efac' : '#cbd1ff');
     if (audio) {
@@ -161,8 +165,8 @@ function showInGameSettings(scene, Z = 25000) {
     elements.forEach(el => el?.destroy?.());
   };
 
-  closeBg.on('pointerdown', destroyAll);
-  veil.on('pointerdown', destroyAll);
+  closeBg.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(scene,pointer,event);destroyAll();});
+  veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(scene,pointer,event);destroyAll();});
 
   return { destroy: destroyAll };
 }

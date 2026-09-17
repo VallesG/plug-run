@@ -1,3 +1,4 @@
+import { consumeModalPointer, guardModalDismissal } from '../utils/modalPointerGuard.js';
 import { getJourneyProgress } from '../utils/journeyProgress.js';
 import { firstPlayDestination } from '../logic/firstPlay.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
@@ -2314,8 +2315,8 @@ export class MenuScene extends Phaser.Scene {
     const close=()=>els.forEach(object=>object?.destroy());
     action.on('pointerover',()=>action.setFillStyle(gold,0.24));
     action.on('pointerout',()=>action.setFillStyle(0x172126,1));
-    action.on('pointerup',close);
-    veil.on('pointerup',close);
+    action.on('pointerup',(pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);close();});
+    veil.on('pointerup',(pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);close();});
   }
 
   openSettings(){
@@ -2353,7 +2354,7 @@ export class MenuScene extends Phaser.Scene {
       }
       this.toast('Music ' + (musicOn ? 'ON' : 'OFF'));
     };
-    musicBg.on('pointerdown', ()=> applyMusic(!musicOn));
+    musicBg.on('pointerdown', (pointer,x,y,event)=>{consumeModalPointer(pointer,event);applyMusic(!musicOn);});
 
     // Sounds toggle (game sound effects)
     const soundsLabel = this.add.text(cx - panelW/2 + 16, cy + 30, 'Sounds', { color: PALETTE.sub, fontSize:'14px' }).setOrigin(0,0.5).setDepth(52);
@@ -2396,14 +2397,14 @@ export class MenuScene extends Phaser.Scene {
     // Apply current setting on open
     applySounds(soundsOn);
 
-    soundsBg.on('pointerdown', ()=> applySounds(!soundsOn));
+    soundsBg.on('pointerdown', (pointer,x,y,event)=>{consumeModalPointer(pointer,event);applySounds(!soundsOn);});
 
     // Close button
     const closeBg = this.add.rectangle(cx, cy + panelH/2 - 22, 92, 28, 0x1a2038, 1).setStrokeStyle(1, PALETTE.stroke).setDepth(52).setInteractive({ useHandCursor:true });
     const closeTx = this.add.text(closeBg.x, closeBg.y, 'Close', { color:'#cbd1ff' }).setOrigin(0.5).setDepth(53);
     const destroyAll = ()=> { [veil, panel, title, titleRule, musicLabel, musicBg, musicTxt, soundsLabel, soundsBg, soundsTxt, closeBg, closeTx].forEach(o=>o?.destroy()); };
-    closeBg.on('pointerdown', destroyAll);
-    veil.on('pointerdown', destroyAll);
+    closeBg.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
   }
 
   // Pre-game tips modal (disabled for now - may re-enable with different UX later)
@@ -2511,7 +2512,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Allow clicking outside to cancel
-    veil.on('pointerdown', destroyAll);
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
   }
   */
 
@@ -2624,8 +2625,8 @@ export class MenuScene extends Phaser.Scene {
     const destroyAll = ()=> {
       baseElements.forEach(o=>o?.destroy());
     };
-    closeBg.on('pointerdown', destroyAll);
-    veil.on('pointerdown', destroyAll);
+    closeBg.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
   }
 
   openRestoreModal(){
@@ -2696,8 +2697,8 @@ export class MenuScene extends Phaser.Scene {
         status.setColor('#f87171');
       }
     });
-    cancelBg.on('pointerup', teardown);
-    veil.on('pointerdown', teardown);
+    cancelBg.on('pointerup', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);teardown();});
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);teardown();});
   }
 
   createStatSection(cx, y, label, rank, score, panelW){
