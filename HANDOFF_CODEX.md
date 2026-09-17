@@ -1,3 +1,36 @@
+## Getaway car no longer hides the exit guard or leaves a black silhouette — Codex (2026-09-17)
+
+The Plug's guard/intercept target is deliberately unchanged. The roof used to
+overlap the extraction-pad center because the parked car was only 0.6 cells
+outward. logic/getawayCar.js places the visual car 1.5 cells outward on the
+same driveway centerline, putting its rear edge 0.8 cells beyond the pad center.
+This applies to BaseGameScene cars; it does not move the extraction sensor,
+maze, collision, AI actor, path target, RNG stream, or Rivals recorded frames.
+No PlugAI or recording-bank file changed. TutorialMini's separate car unchanged.
+
+The departure "hole" was NOT absent floor: the four ink outline copies stayed
+at the parking position while the car drove away. ProgressionManager now
+tweens car, all four outlines, lights and beacon together. Existing floor is
+revealed naturally. A separate cosmetic seed hash chooses occasional paired
+skid lines behind the rear wheels, drawn only at departure, depth 5 (floor 1,
+characters 10). No additional gameplay random draw or persistence.
+
+Adapted V8 checks: getawayCar 774 assertions (all four directions at four cell
+sizes, guard-center clearance including outline, distinct departure targets,
+deterministic occasional marks across 120 seeds, actual extraction callback
+with its actual tween targets and graphics calls). Existing mobile lifecycle
+251, missionExit 335, modalPointerGuard 32 passed. Three changed runtime modules
+passed binding-aware parse. New suite registered in npm test.
+
+Native npm run verify/build, complete rivalBank suite and actual phone/browser
+render remain unverified: native execution helper is blocked by sandbox ACL.
+Before shipping: run client/npm run verify; check all four exits on phone,
+especially whether the outward car remains comfortably visible at screen
+edges, guard readability, light alignment, boarding animation, floor after
+departure, and skid contrast. Historical replay cars retain captured parking
+positions; new live/captured cars use the outward visual position. Do not
+rewrite old frames or rebuild a recording worker's static dist mid-batch.
+
 ## Modal close tap cannot launch the underlying menu — Codex (2026-09-17)
 
 Settings closed on pointerdown, but title actions activate on pointerup.

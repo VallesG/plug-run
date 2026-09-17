@@ -1,3 +1,4 @@
+import { carDepartureTargets, carSkidLines } from '../logic/getawayCar.js';
 import { drawBlockComplete } from './BlockComplete.js';
 import { crewSigil } from '../logic/crewSigils.js';
 import { seasonChapter } from '../logic/crewSeason.js';
@@ -330,10 +331,14 @@ export default class ProgressionManager {
         const dx = this.scene.carOutDir?.x || 0;
         const dy = this.scene.carOutDir?.y || 0;
 
-        // Move car, lights, and beacon together (matching tutorial)
-        const targets = [this.scene.car];
-        if (this.scene.carLights) targets.push(this.scene.carLights);
-        if (this.scene.vfx?.carBeacon) targets.push(this.scene.vfx.carBeacon);
+        // The ink silhouette is part of the car, not a parked floor decal.
+        const targets = carDepartureTargets(this.scene);
+        const skidLines = carSkidLines(this.scene.seed, this.scene.car, this.scene.carOutDir, this.scene.cell);
+        if (skidLines.length) {
+          const marks = this.scene.add.graphics().setDepth(5);
+          marks.lineStyle(Math.max(1, this.scene.cell * 0.08), 0x080b0c, 0.55);
+          for (const line of skidLines) marks.lineBetween(line.x1, line.y1, line.x2, line.y2);
+        }
 
         this.scene.tweens.add({
           targets: targets,

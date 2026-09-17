@@ -1,3 +1,4 @@
+import { carParkCenter } from '../logic/getawayCar.js';
 import { seasonJob } from '../logic/crewSeason.js';
 import { getContactProgress } from '../utils/contactProgress.js';
 import { crewStoryProgress } from '../logic/contactProgress.js';
@@ -1433,18 +1434,18 @@ export class BaseGameScene extends Phaser.Scene {
     const side = this.egress.side;
     const ex = this.toWorldX(this.egress.entry.x);
     const ey = this.toWorldY(this.egress.entry.y);
-    // Determine outward direction (toward the street) and place car just INSIDE the house at the driveway mouth
+    // Determine outward direction (toward the street) and park at the driveway mouth
     let cx = ex, cy = ey, ang = 0, dx=0, dy=0;
     // Car art faces upward (headlights at top). Map angles accordingly so headlights point toward street.
     if (side==='N'){ ang = 0; dx=0; dy=-1; }
     else if (side==='S'){ ang = 180; dx=0; dy=1; }
     else if (side==='E'){ ang = 90; dx=1; dy=0; }
     else { ang = -90; dx=-1; dy=0; }
-    // Place car so its front is in the gap, centered at the driveway mouth with a small interior nudge
-    // Position center slightly toward the street so the nose sits in the gap
-    const forward = this.cell * 0.6;
-    cx = ex + dx * forward;
-    cy = ey + dy * forward;
+    // Park outside the guard's pad center. This is a visual offset only:
+    // keep egress, extraction thresholds, AI targets and collision unchanged.
+    const parked = carParkCenter(ex, ey, { x: dx, y: dy }, this.cell);
+    cx = parked.x;
+    cy = parked.y;
 
     // Cosmetic paint/stripe textures preserve the original car silhouette.
     const carKey = ensureGangSkin(this).car;
