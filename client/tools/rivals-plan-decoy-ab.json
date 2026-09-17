@@ -1,0 +1,70 @@
+[
+ {
+  "slot": 5,
+  "style": "ghost",
+  "powers": "decoy,phase",
+  "runs": 3,
+  "indexBase": 3005,
+  "hardLimitMs": 960000
+ },
+ {
+  "slot": 5,
+  "style": "ghost",
+  "powers": "decoy,phase",
+  "runs": 3,
+  "indexBase": 3010,
+  "hardLimitMs": 960000,
+  "openingDecoy": true
+ },
+ {
+  "slot": 5,
+  "style": "cautious",
+  "powers": "phase,decoy",
+  "runs": 3,
+  "indexBase": 3015,
+  "hardLimitMs": 1080000
+ },
+ {
+  "slot": 5,
+  "style": "cautious",
+  "powers": "phase,decoy",
+  "runs": 3,
+  "indexBase": 3020,
+  "hardLimitMs": 1080000,
+  "openingDecoy": true
+ },
+ {
+  "slot": 5,
+  "style": "trickster",
+  "powers": "decoy,decoy",
+  "runs": 3,
+  "indexBase": 3025,
+  "hardLimitMs": 1080000
+ },
+ {
+  "slot": 5,
+  "style": "trickster",
+  "powers": "decoy,decoy",
+  "runs": 3,
+  "indexBase": 3030,
+  "hardLimitMs": 1080000,
+  "openingDecoy": true
+ },
+ {
+  "slot": 5,
+  "style": "balanced",
+  "powers": "phase,decoy",
+  "runs": 3,
+  "indexBase": 3035,
+  "hardLimitMs": 840000
+ },
+ {
+  "slot": 5,
+  "style": "balanced",
+  "powers": "phase,decoy",
+  "runs": 3,
+  "indexBase": 3040,
+  "hardLimitMs": 840000,
+  "openingDecoy": true
+ }
+]

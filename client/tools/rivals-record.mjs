@@ -74,11 +74,23 @@ export async function recordJob(job, shared) {
   });
   const page = await browser.newPage({ viewport: { width: OPTIONS.width, height: OPTIONS.height } });
   const started = Date.now();
-  const tag = `slot${job.slot}-${job.style}-${job.powers.replace(/,/g, '')}`;
+  // openingDecoy is part of a job's IDENTITY, not a detail: an A/B pair shares
+  // slot, style and powers, so without it both arms collapse to one tag and
+  // --resume would skip the treatment arm as already recorded.
+  const tag = `slot${job.slot}-${job.style}-${job.powers.replace(/,/g, '')}` +
+    (job.openingDecoy ? '-odecoy' : '');
   const log = m => console.log(`${((Date.now() - started) / 1000).toFixed(0).padStart(5)}s [${tag}] ${m}`);
+  let openingDecoyFires = 0;
   const problems = [];
   page.on('pageerror', e => problems.push('pageerror: ' + e.message));
-  page.on('console', m => { if (/\[RIVALS-REC\]/.test(m.text())) log(m.text().replace('[RIVALS-REC] ', '')); });
+  // [RIVALS-REC] is the harness's own narration. The opening-Decoy line is let
+  // through too: it is one line per house, and without it an openingDecoy run
+  // is indistinguishable from a control run until the batch is over.
+  page.on('console', m => {
+    const t = m.text();
+    if (/\[RIVALS-REC\]/.test(t)) log(t.replace('[RIVALS-REC] ', ''));
+    else if (/\[BOT\] opening decoy/.test(t)) openingDecoyFires++;
+  });
 
   const query = new URLSearchParams({
     rivalsRecord: '1', courseSlot: String(job.slot), skillPreset: job.style,
@@ -132,7 +144,8 @@ export async function recordJob(job, shared) {
   for (const r of store.races) {
     log(`  ${r.ok ? 'OK ' : 'REJ'} ${r.result} ${r.houses}/7 ${Math.round((r.elapsedMs || 0) / 1000)}s retries=${r.retries}${r.reason ? ' ' + r.reason : ''}`);
   }
-  return { job, ok, races: store.races, fps: median, renderer };
+  if (job.openingDecoy) log(`opening decoy fired ${openingDecoyFires} time(s)`);
+  return { job, ok, races: store.races, fps: median, renderer, openingDecoyFires };
 }
 
 async function main() {
