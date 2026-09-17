@@ -6,12 +6,16 @@ import { advanceJourney, worldBlock } from '../src/logic/worldBlocks.js';
 import { windowGang } from '../src/logic/window.js';
 import { layoutBlock, buildFog, blockNoise, distanceToStreet } from '../src/logic/blockMap.js';
 import { PALETTE } from '../src/logic/palette.js';
+import { fullBlockReveal, blockCompleteLayout } from '../src/logic/blockComplete.js';
+import { crewSigil } from '../src/logic/crewSigils.js';
+import { drawCrewSigil } from '../src/controllers/CrewSigil.js';
+import { drawBlockComplete as completionRenderer } from '../src/controllers/BlockComplete.js';
 let passed=0;
 function check(name,ok){if(!ok)throw Error(name);passed++;}
 const source=path=>readFileSync(new URL(path,import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'');
 const blockSource=source('../src/controllers/BlockMap.js').replace('export function','function');
-const drawBlockMap=new Function('layoutBlock','buildFog','blockNoise','distanceToStreet','PALETTE','getCurrentRouteID',
- blockSource+'\nreturn drawBlockMap;')(layoutBlock,buildFog,blockNoise,distanceToStreet,PALETTE,()=>1);
+const drawBlockMap=new Function('layoutBlock','buildFog','blockNoise','distanceToStreet','PALETTE','getCurrentRouteID','fullBlockReveal','drawCrewSigil',
+ blockSource+'\nreturn drawBlockMap;')(layoutBlock,buildFog,blockNoise,distanceToStreet,PALETTE,()=>1,fullBlockReveal,drawCrewSigil);
 const mapSource=source('../src/controllers/CityMap.js').replace('export function','function');
 const drawCityMap=new Function('cityMapLayout','cityZoomFrames','blockNoise','worldBlock','windowGang','drawBlockMap',
  mapSource+'\nreturn drawCityMap;')(cityMapLayout,cityZoomFrames,blockNoise,worldBlock,windowGang,drawBlockMap);
@@ -25,7 +29,7 @@ const bindings={console, CITY_BLOCKS,cityForBlock,cityView,drawCityMap,advanceJo
  completeCityBlock:event=>{claims++;const result=claimCityBlock(atlas,event);atlas=result.state;return result;},
  saveJourneyProgress:value=>{saved.push(value);return true;},saveSessionState:()=>true,
  getWindowState:()=>({gangID:'afterlight'}),PVE_BLOCK_MAPS:15,
- drawBlockMap,ReplaySystem:{hasReplay:()=>hasReplay,play:(_,options)=>{replayDone=options.onDone;}}};
+ drawBlockMap,drawBlockComplete:completionRenderer,crewSigil,ReplaySystem:{hasReplay:()=>hasReplay,play:(_,options)=>{replayDone=options.onDone;}}};
 const Manager=new Function(...Object.keys(bindings),managerSource+'\nreturn ProgressionManager;')(...Object.values(bindings));
 function scene(width=390,height=844,props={}){
  const objects=[],tweens=[],delays=[],configs=[],controls=[],restarts=[],events=[],listeners={};
@@ -38,7 +42,7 @@ function scene(width=390,height=844,props={}){
    setVisible(n){this.visible=n;return this;},setFillStyle(){return this;},on(name,fn){this.handlers[name]=fn;return this;},
    add(child){this.children.push(child);child.parentContainer=this;return this;},destroy(){if(!this.active)return;this.active=false;this.children.forEach(child=>child.destroy());},
    fillStyle(){return this;},fillRect(){return this;},lineStyle(){return this;},lineBetween(){return this;},
-   fillTriangle(){return this;},strokeCircle(){return this;},fillCircle(){return this;},strokeRect(){return this;}};
+   fillPoints(){return this;},fillTriangle(){return this;},strokeCircle(){return this;},fillCircle(){return this;},strokeRect(){return this;}};
   objects.push(o);return o;
  };
  const s={mode:'pve',runKind:'journey',role:'runner',blockIndex:1,pveRound:1,
@@ -124,14 +128,36 @@ m.saveProgress({},true);
 check('duplicate completion keeps owner',atlas.owners[1]==='iron-row');
 hasReplay=true;m.showBlockCompleteResult();
 check('finish retains revealed block',f.configs.at(-1).title==='BLOCK CLEARED'&&!f.s._cityMapOpen);
-const replay=f.configs.at(-1).buttons.find(b=>b.label.includes('Watch Replay'));
+const replay=f.configs.at(-1).buttons.flatMap(b=>b.pair||[b]).find(b=>b.label==='WATCH REPLAY');
 check('finish retains last-house replay',Boolean(replay));
-replay.onClick(f.s.gameUI.currentModal);replayDone();
+const completionObjects=f.objects.filter(o=>o.active);
+check('completion has no opaque exploration masks',completionObjects.filter(o=>o.kind==='graphics'&&o.depth===20003).length===0);
+check('completion removes destination marker',completionObjects.filter(o=>o.kind==='graphics'&&o.depth===20004).length===0);
+check('completion registers both result badges',completionObjects.filter(o=>o.kind==='rectangle'&&o.depth===20004).length===2);
+replay.onClick(f.s.gameUI.currentModal);
+check('replay hides all celebration objects',completionObjects.every(o=>o.visible===false));
+replayDone();
+check('replay restores all celebration objects',completionObjects.every(o=>o.visible===true));
 f.configs.at(-1).buttons[0].onClick();
 check('next block enters same seeded flow',f.restarts.at(-1).blockIndex===2&&f.restarts.at(-1).pveRound===1);
+f.s.gameUI.currentModal.destroy();
+check('completion teardown destroys every registered object',completionObjects.every(o=>!o.active));
+const daily=scene(320,568,{runKind:'daily'}),dm=new Manager(daily.s);dm.showBlockCompleteResult();
+const dailyConfig=daily.configs.at(-1);
+check('daily does not claim selected crew branding',dailyConfig.accent===undefined);
+check('daily still has one primary menu action',dailyConfig.buttons.flatMap(b=>b.pair||[b]).filter(b=>b.variant==='primary').length===1);
+daily.s.gameUI.currentModal.destroy();
 const next=scene(390,844,{blockIndex:2}),nm=new Manager(next.s);let arrived=0;
 nm.showContactCheckIn=()=>arrived++;nm.showBlockMap(()=>{});finish(next);
 check('new block automatically has intro',arrived===1&&atlas.introThrough===2);
+for(const crew of ['crossline','iron-row','afterlight']) for(const [w,h] of [[280,480],[390,844],[900,640]]) {
+ const v=scene(w,h,{blockGangID:crew}),vm=new Manager(v.s);vm.showBlockCompleteResult();
+ const a=v.s.gameUI.currentModal.contentBounds,l=blockCompleteLayout(a);
+ check('completion reserves positive map area '+crew+w,l.map.height>100&&l.map.width>0);
+ check('crew accent '+crew+w,v.configs.at(-1).accent===crewSigil(crew).color);
+ v.s.gameUI.currentModal.destroy();
+ check('crew completion teardown '+crew+w,v.objects.every(o=>!o.active));
+}
 for(const kind of ['rectangle','container','graphics','text']) {
  atlas=createCityState();
  const broken=scene();broken.s.add[kind]=()=>{throw Error('renderer unavailable');};
@@ -140,4 +166,7 @@ for(const kind of ['rectangle','container','graphics','text']) {
  check('construction error continues safely '+kind,fallback===1&&!broken.s._cityMapOpen);
  check('construction error leaves no veil '+kind,broken.objects.every(o=>!o.active));
 }
+check('completion uses frozen crew accent',f.configs.at(-1).accent===crewSigil('iron-row').color);
+check('completion has one bright action',f.configs.at(-1).buttons.flatMap(b=>b.pair||[b]).filter(b=>b.variant==='primary').length===1);
+check('completion omits duplicate totals',f.configs.at(-1).lines.length===0);
 console.log('city flow: '+passed+' assertions passed');

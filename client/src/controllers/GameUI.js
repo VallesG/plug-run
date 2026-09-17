@@ -50,12 +50,21 @@ export default class GameUI {
     };
   }
 
-  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false, loadout = false, compactLoadout = false }) {
+  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false, loadout = false, compactLoadout = false, completion = false, accent = null }) {
     // block world input + hide touch controls
     this.scene.input.keyboard.enabled = false;
     this.scene.suspendTouchUI?.(true);
 
-    const T = this.theme();
+    const baseTheme = this.theme();
+    const victoryAccent = Number.isInteger(accent) && accent >= 0 && accent <= 0xffffff ? accent : baseTheme.accentHi;
+    const T = completion ? { ...baseTheme, title: '#eee6d2',
+      accent: victoryAccent, accentHi: victoryAccent,
+      accentTxt: '#' + victoryAccent.toString(16).padStart(6, '0'),
+      variants: { ...baseTheme.variants,
+        primary: { bg: victoryAccent, stroke: victoryAccent, color: '#080b0d' },
+        secondary: { bg: 0x141e20, stroke: 0x45534f, color: '#b5c6c3' }
+      }
+    } : baseTheme;
     const Z = 20_000; // above touch UI
     const cx = this.scene.cameras.main.centerX;
     const cy = this.scene.cameras.main.centerY;
@@ -77,7 +86,7 @@ export default class GameUI {
 
     // header: title, accent underline, optional subtitle
     const titleTxt = this.scene.add.text(cx, cy - panelH / 2 + 30, (title || '').toUpperCase(), {
-      color: T.title, fontFamily: loadout ? 'Arial, sans-serif' : 'Courier', fontSize: loadout ? (panelW < 330 ? '15px' : '18px') : '21px', fontStyle: 'bold',
+      color: T.title, fontFamily: loadout || completion ? 'Arial, sans-serif' : 'Courier', fontSize: loadout ? (panelW < 330 ? '15px' : '18px') : '21px', fontStyle: 'bold',
       letterSpacing: 2, wordWrap: { width: panelW - 24 }, align: 'center'
     }).setOrigin(0.5).setDepth(Z).setScrollFactor(0);
 
@@ -88,7 +97,7 @@ export default class GameUI {
     let y = titleTxt.y + 34;
     if (subtitle) {
       const subtitleText = this.scene.add.text(cx, y, subtitle, {
-        fontFamily: loadout ? 'Arial, sans-serif' : 'Courier', color: loadout ? '#a5b5bc' : T.accentTxt, fontSize: '13px', wordWrap: { width: panelW - 32 }, align: 'center'
+        fontFamily: loadout || completion ? 'Arial, sans-serif' : 'Courier', color: loadout ? '#a5b5bc' : T.accentTxt, fontSize: '13px', wordWrap: { width: panelW - 32 }, align: 'center'
       }).setOrigin(0.5).setDepth(Z).setScrollFactor(0);
       content.push(subtitleText);
       y += fullScreen ? Math.max(22, subtitleText.height + 8) : 22;
@@ -104,7 +113,7 @@ export default class GameUI {
     const btnCenters = [];
     const btnW = Math.min(280, panelW - 40);
     const totalH = rowCount * btnH + Math.max(0, rowCount - 1) * btnGap;
-    let by = cy + panelH / 2 - totalH - 50;
+    let by = cy + panelH / 2 - totalH - (completion ? 24 : 50);
 
     const makeButton = (b, x, w, yPos) => {
       const v = (b.variant && T.variants[b.variant]) || null;
@@ -128,7 +137,7 @@ export default class GameUI {
       }
 
       const t = this.scene.add.text(x, yPos, b.label, {
-        color: col, fontSize: '14px', fontStyle: 'bold'
+        color: col, fontFamily: completion ? 'Arial, sans-serif' : undefined, fontSize: completion ? '13px' : '14px', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(Z).setScrollFactor(0);
       if (b.disabled) t.setAlpha(0.45);
 

@@ -1,3 +1,5 @@
+import { fullBlockReveal } from '../logic/blockComplete.js';
+import { drawCrewSigil } from './CrewSigil.js';
 // An overhead night map. Streets, yards and houses share one continuous world.
 // Opaque pixel-stepped fog hides all unexplored geography. A clear removes
 // only its new patch of fog, revealing the road and warm lights beneath it.
@@ -10,9 +12,10 @@ const LAND = [0x424735,0x454a37,0x484d39,0x4a4e3b,0x464b38];
 const WARM = 0xffd78a;
 const ROOFS = [0x675e4e,0x505e60,0x736557,0x5c6150,0x685758];
 
-export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true, caption = true, labels = true, overview = false, fog = true, marker = true }) {
+export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true, caption = true, labels = true, overview = false, fog = true, marker = true, celebration = false, gangID = null }) {
   if (!modal?.contentBounds || !modal.registerExtra) return null;
   const area = modal.contentBounds;
+  const complete = fullBlockReveal({cleared,maps,celebration});
   // Reserve a caption outside the cartography, with no card around the map.
   const block = layoutBlock({
     maps, cleared, entering, layoutSeed: scene.worldBlock?.seed ?? 0, width:area.width, height:Math.max(0,area.height-(caption ? 24 : 0)),
@@ -40,6 +43,22 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
   for (let y=0;y<220;y+=groundStep) for (let x=0;x<200;x+=groundStep) {
     rect(LAND[Math.floor(blockNoise(x,y,routeID)*LAND.length)],x,y,Math.min(groundStep,200-x),Math.min(groundStep,220-y));
   }
+  if(complete) {
+    // Previously black courtyards now read as a whole lit neighborhood.
+    // Low-cost park paths, paving and garden beds occupy the negative space.
+    for(let y=14;y<208;y+=24)for(let x=12;x<192;x+=24){
+      if(block.streets.some(s=>distanceToStreet(x+6,y+6,s.a,s.b)<14))continue;
+      if(block.houses.some(h=>Math.abs(x+6-h.x)<h.w/2+11&&Math.abs(y+6-h.y)<h.h/2+11))continue;
+      rect(0x343d31,x,y,16,16);
+      rect(0x73745c,x,y+7,16,2,0.48);
+      rect(0x596149,x+7,y,2,16,0.6);
+      rect(0x71815d,x+2,y+2,3,3,0.6);
+      rect(WARM,x+13,y+12,1,1,0.55);
+    }
+    // A faded crew mural ON the land, beneath streets/roofs: readable without
+    // obscuring labels. This is decoration, not a server territory claim.
+    drawCrewSigil(g,gangID,{x:31,y:41,size:138,alpha:0.19});
+  }
   for (const street of block.streets) {
     line(PALETTE.ink,11,street.a,street.b,0.55);
     line(0x797765,9,street.a,street.b);
@@ -62,7 +81,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
   }
 
   // Trees and shrubs stop at streets and properties; empty parcels remain
-  // real black holes in the explored map until the route reaches them.
+  // hidden parcels during progression; the celebration reveals all of them.
   for (let y=4;y<217;y+=4) for (let x=4;x<197;x+=4) {
     const n=blockNoise(x,y,routeID^0x7123);
     if (n<0.68) continue;
@@ -143,7 +162,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
 
   // Two disjoint opaque masks. Existing exploration never dims again.
   // The newly cleared road and property emerge together over 900ms.
-  if(fog) {
+  if(fog && !complete) {
     const fog=layer(20003), reveal=layer(20003);
     fog.fillStyle(BLACK,1);reveal.fillStyle(BLACK,1);
     const tiles=buildFog(block,routeID);
@@ -168,7 +187,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
 
   // Marker stays at the end of the lit road. Future streets and houses remain
   // hidden; the button explains the next destination.
-  if(marker) {
+  if(marker && !complete) {
     const pin=layer(20004);
     const {x,y}=block.marker;
     pin.fillStyle(PALETTE.ink,1);pin.fillTriangle(x-3.6,y-7,x+3.6,y-7,x,y);

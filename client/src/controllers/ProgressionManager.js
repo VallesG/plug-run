@@ -1,3 +1,5 @@
+import { drawBlockComplete } from './BlockComplete.js';
+import { crewSigil } from '../logic/crewSigils.js';
 import { ironRowChapter, ironRowCue, ironRowFinish } from '../logic/ironRowSeason.js';
 import { CITY_BLOCKS, cityForBlock, cityView } from '../logic/city.js';
 import { getCityProgress, completeCityBlock, startCityIntro } from '../utils/cityProgress.js';
@@ -704,46 +706,37 @@ export default class ProgressionManager {
 
   showBlockCompleteResult() {
     const maps = PVE_BLOCK_MAPS;
+    const journey = this.scene.runKind === 'journey';
+    const gangID = journey ? (this.scene.blockGangID ?? getWindowState().gangID) : null;
+    const mark = crewSigil(gangID);
     this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, maps);
-
-    const replayRow = ReplaySystem.hasReplay(this.scene.role) ? [{
-      label: '\u25B6 Watch Replay',
-      variant: 'secondary',
-      keepOpen: true,
+    const menu = { label: 'MAIN MENU', variant: journey ? 'secondary' : 'primary',
+      onClick: () => this.scene.scene.start('MENU') };
+    const replay = ReplaySystem.hasReplay(this.scene.role) ? {
+      label: 'WATCH REPLAY', variant: 'secondary', keepOpen: true,
       onClick: (m) => {
         m.setVisible(false);
         ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
       }
-    }] : [];
-
+    } : null;
     const modal = this.scene.gameUI?.showModal?.({
-      fullScreen: true,
+      fullScreen: true, completion: true, accent: mark?.color,
       title: 'BLOCK CLEARED',
       subtitle: this.scene.worldBlock ? this.scene.worldBlock.departure : `All ${maps} runs, start to finish.`,
-      lines: [
-        ``,
-        `Total Stash Collected: ${this.scene.pveSessionStash}`,
-        `Total Rep Earned: ${this.scene.pveSessionRep}`
-      ],
-      buttons: [
-        ...(this.scene.runKind === 'journey' ? [{
-          label: 'ENTER NEXT BLOCK',
-          variant: 'primary', onClick: () => this.scene.scene.restart({
-            mode: 'pve', role: 'runner', runKind: 'journey',
-            blockIndex: this.scene.blockIndex + 1, pveRound: 1
-          })
-        }] : []),
-        ...replayRow,
-        { label: 'Back to Menu', variant: 'primary', onClick: () => this.scene.scene.start('MENU') }
-      ]
+      lines: [],
+      buttons: journey ? [
+        { label: 'ENTER NEXT BLOCK', variant: 'primary', onClick: () => this.scene.scene.restart({
+          mode: 'pve', role: 'runner', runKind: 'journey',
+          blockIndex: this.scene.blockIndex + 1, pveRound: 1
+        }) },
+        ...(replay ? [{ pair: [replay, menu] }] : [menu])
+      ] : [...(replay ? [replay] : []), menu]
     });
-
     if (this.scene.gameUI) this.scene.gameUI.currentModal = modal;
     else this.scene.currentModal = modal;
-
-    // The whole block revealed. This is the image the night can be shared as.
-    if (modal) drawBlockMap(this.scene, modal, { cleared: maps, maps });
-
+    if (modal) drawBlockComplete(this.scene, modal, {
+      gangID, stash: this.scene.pveSessionStash, rep: this.scene.pveSessionRep, maps
+    });
     return modal;
   }
 
