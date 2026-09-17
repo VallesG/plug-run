@@ -1,3 +1,80 @@
+## Matchmaking, skill evidence and the 3-block unlock — 2026-09-17
+
+Branch `claude/input-intent-layer`, commit `85d5636`. `npm run verify` ran
+natively and is green: 52 suites, build 20.2s, bundle 3.08 MB (gzip 768 kB).
+Nothing deployed; `master` untouched.
+
+Block Rivals previously paired a player against whatever the bank held, and the
+game had never recorded how long a house took anyone — so there was no evidence
+to match on and no honest way to say a player had finished three blocks. That is
+what this adds.
+
+**Evidence.** `logic/skillEvidence.js` + `utils/skillEvidence.js` record one
+observation per cleared campaign house beside the clear itself: active play time,
+total time across every attempt, attempts, deaths, hits, bunk. Account-scoped
+under `pr_skill_v1_<userID>`, separate from progression, so losing it cannot
+touch stash, REP, territory or story. Active time is the scene's own play clock
+and excludes the entrance map, contact dialogue, city zooms, the loadout picker,
+settings and every paused frame. A retried house reports its winning attempt as
+`activeMs` and every attempt in `totalActiveMs`. The record starts EMPTY for
+every existing save; nothing backfills it, and `playerSkill` returns
+`provisional` with a reason rather than a confident number built from nothing.
+
+**Comparison.** Campaign house N generates at scale `[_,0.6,0.75,0.9,0.95][N] ?? 1`
+and a Rivals course's houses at `[0.6,0.75,0.9,0.95,1,1,1]` — identical inputs to
+the same generator on the same 16x35 grid with one defender. That is the only
+reason the modes can be compared, so comparison is per-scale on median per-house
+clear time. House 15 is excluded everywhere: second defender. Raw race elapsed
+time is never compared to a house time; it includes transitions and retries.
+
+**Bands.** `measuredBands` cuts the bank's own benchmark spread into three
+equal-population groups. Nothing is named after a feeling and no recording is
+ranked by the style it was driven with. On the 57 records shipped before this
+batch: 5.4-7.7s / 7.7-9.0s / 9.0-12.0s median per-house clear, 19 each. Under
+six benchmarks it returns one band called `measured`, which is honest about a
+thin bank rather than inventing tiers inside it.
+
+**Selection.** A named `recordingID` always wins, so a rematch is the same race.
+Recently raced opponents are set aside unless that would empty the pool. The rest
+are ranked by distance from the player's own clear time and one is taken from the
+closest few by a hash of who is racing and how many races they have run — same
+inputs, same pick; a new race, a new pick. No opponent's pace is adjusted and
+nothing filters for a win; a player faster than the whole bank races the fastest
+recording. `adaptSkill` moves at most a quarter toward a raced opponent,
+symmetrically for wins and losses. Fixed course seeds, immutable bank payloads
+and independent player power selection are untouched.
+
+**Unlock.** Three COMPLETE campaign blocks — 45 extracted stashes — not reaching
+house 3 and not opening three blocks. Two sources: the new evidence and the
+campaign's own long-standing stash count, so a save that finished blocks before
+this existed still qualifies; never the reverse. The menu row stays visible when
+locked with one short progress line and no popup. No territory, progress or
+story chapter is touched.
+
+**Copy.** FINDING RIVAL / RIVAL FOUND / WATCH RIVAL, subtitle SEVEN HOUSES · ONE
+RACE, no-match result PACE TRIAL · NO RIVAL FOUND. No recording vocabulary in
+routine copy, no claim anyone is online, no invented player counts, no live
+queue. Provenance, hashes, driver versions and validation metadata unchanged
+internally. `test/rivalsCopy.test.mjs` enforces it.
+
+**Bank.** Eight driver styles now exist beside street/hustler/ace, all aiLevel
+<= 5 for the reason the bot-bank handoff gives. The recorder, assembler and plan
+generator live in `client/tools/` and are documented in `client/tools/README.md`
+— read that before recording. The expanded bank is still recording and is NOT in
+this commit; shipped coverage remains 57 records, 5-11 per course against a
+20-per-course target.
+
+**One bug worth remembering.** `ProgressionManager` called
+`noteHouseObservation` without importing it, and the try/catch around the call
+swallowed the ReferenceError. No evidence would ever have been recorded in the
+live game and the unlock would have been permanently unreachable for new
+players — with every test green. Four new suites had also never run under
+verify because `npm test` is an explicit `&&` chain they were missing from.
+
+**Unverified.** No phone pass yet on the locked menu row or the calibrated
+search. Bank coverage will be reported from the assembler's own output, not
+estimated.
+
 ## Rivals win shutdown and replay parity — fixed 2026-09-16
 
 User hit centerX undefined after their first win: RivalsRace.dispose destroyed an

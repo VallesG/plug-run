@@ -1,3 +1,87 @@
+## Block Rivals: measured matchmaking, skill evidence, 3-block unlock — Claude (2026-09-17)
+
+`claude/input-intent-layer`, commit `85d5636`. `npm run verify` green, 52 suites,
+build 20.2s, bundle 3.08 MB (gzip 768 kB). Nothing deployed.
+
+**Read `client/tools/README.md` before touching the bank.** It is the current,
+tested command surface for recording and assembly, and it replaces the
+"add an assembler if needed" note in the older bank handoff — the assembler
+exists now.
+
+### What landed
+
+- `logic/skillEvidence.js` + `utils/skillEvidence.js` — per-house campaign
+  observations (active time, total across attempts, attempts, deaths, hits,
+  bunk), account-scoped under its own key.
+- `logic/rivalSkill.js` — measured bands, per-scale comparison, deterministic
+  varied opponent choice, bounded symmetric adaptation, the unlock predicate.
+- `utils/rivalsUnlock.js` + `MenuScene` — Block Rivals visible but locked until
+  three complete blocks, with one short progress line.
+- `logic/rivalPresets.js` — eight driver styles beside the three presets.
+- `controllers/installBotDriver.js` — record-mode loadout entry (see below).
+- `tools/rivals-record.mjs`, `tools/rivals-assemble.mjs`, `tools/rivals-plan.mjs`,
+  `tools/README.md` — the reproducible workflow.
+- Tests: `skillEvidence` 30, `rivalSkill` 52, `rivalsUnlock` 19, `rivalsCopy` 15,
+  plus new evidence assertions in `contactFlow` and updated `rivalsFlow` (100).
+
+### Things that will bite you
+
+**The try/catch that hid a missing import.** `ProgressionManager` called
+`noteHouseObservation` without importing it. The catch around it logged a warning
+nobody read, so no evidence would ever have been recorded in the live game and
+the unlock would have been permanently unreachable — with every test green. If
+you wrap a new seam in try/catch, add a test that asserts the seam FIRES, not
+just that nothing threw.
+
+**New suites are not picked up automatically.** `npm test` is an explicit `&&`
+chain in `package.json`. Four suites existed and passed individually but had
+never run under verify because they were not in the chain. Add yours.
+
+**Record against a static build, not `npm run dev`.** Vite HMR restarts an
+in-flight race on every source edit; a batch reloaded every ~122s forever. Build,
+serve `dist`, and confirm the served bundle contains your change before starting
+a multi-hour batch — an interrupted `npm run build` leaves a stale `dist`.
+
+**The harness needs its own loadout entry.** The record entrance sits on the real
+loadout picker, which the modal auto-clicker cannot drive; recordings sat at
+`status:'ready'` forever. `installBotDriver.js` patches
+`RivalsRace.prototype.openLoadout` in RECORD MODE ONLY. Don't remove it, and
+don't let it run outside record mode.
+
+**Hard limits must match measured pace.** Rookie reached house 3 of 7 in 785s on
+the easiest course, so a 780s limit could never yield a complete Rookie race.
+Limits are now derived in `tools/rivals-plan.mjs` from what each style actually
+does, and the slow, least-certain styles run last.
+
+### Rules this work is built on
+
+- Campaign house N and a Rivals house are comparable ONLY at the same scale:
+  campaign `[_,0.6,0.75,0.9,0.95][N] ?? 1`, Rivals `[0.6,0.75,0.9,0.95,1,1,1]`,
+  same generator, same 16x35 grid, one defender. House 15 has a second defender
+  and is excluded everywhere. Never compare raw race elapsed time to a house
+  time — elapsed includes transitions and retries.
+- Bands are cut from the bank's own spread, not from style names. A Sharp run
+  that went badly sits with the slow ones.
+- Evidence starts empty for existing saves and is never backfilled. Absent is
+  absent, not zero.
+- The unlock needs three COMPLETE blocks (45 stashes), and consults the campaign's
+  own stash count so older saves qualify — never the reverse.
+- Copy: FINDING RIVAL / RIVAL FOUND / WATCH RIVAL. No recording vocabulary, no
+  claim anyone is online, no invented player counts, no live queue.
+
+### Still open
+
+- The expanded bank is still recording and is NOT committed. Shipped coverage is
+  still 57 records, 5-11 per course against a 20-per-course target. Coverage will
+  be reported from the assembler's own output.
+- No phone pass yet on the locked menu row or the calibrated search.
+- The Cash ledger hazard is still unaddressed and the reward seam is still
+  closed: `createWindowState` does `ledger.slice(-200)` and derives BOTH the
+  balance and the duplicate guard from the survivors, so a long ledger silently
+  loses balance and duplicate protection. Fix that before wiring any reward.
+
+---
+
 ## Rivals win shutdown and replay parity — fixed 2026-09-16
 
 User hit centerX undefined after their first win: RivalsRace.dispose destroyed an

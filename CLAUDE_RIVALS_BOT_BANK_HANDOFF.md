@@ -5,6 +5,66 @@ Read HANDOFF_CODEX.md from the top, then RIVALS_CLAUDE_HANDOFF.md,
 RIVALS_CITY_DESIGN.md and this document. Current shutdown/replay fixes supersede
 older instructions about a top strip or locking player powers to opponent powers.
 
+## Status (updated this session)
+
+The recorder and assembler asked for below now EXIST and are maintained:
+`client/tools/rivals-record.mjs`, `client/tools/rivals-assemble.mjs`,
+`client/tools/rivals-plan.mjs` (plan generator) and `client/tools/README.md`
+(the workflow, with every flag). Read `tools/README.md` first; the sections
+further down that describe the harness are kept for background but the README
+is the current, tested command surface.
+
+Eight driver styles now exist beside the three presets: rookie, erratic,
+cautious, ghost, dasher, trickster, balanced, sharp
+(`logic/rivalPresets.js`, `RIVAL_DRIVER_STYLES`). Every one is aiLevel <= 5,
+for the reason this document already gives.
+
+Matchmaking, skill evidence and the unlock also landed this session — see
+"Matchmaking and the unlock" at the end of this document.
+
+### Measured hard limits (do not lower these blind)
+
+A hard limit is a give-up point for one race. It is never written into a
+record. Measured on the served build at 390x844, Chromium Canvas, ~54fps:
+
+| style | limit | measured |
+| --- | --- | --- |
+| cautious | 540s | seven houses in 167s and 238s |
+| ghost | 480s | seven houses in 293s |
+| erratic | 900s | seven houses in 388s |
+| rookie | 2400s | reached house 3 of 7 in 785s on the EASIEST course |
+
+Rookie at 780s could never produce a complete race — it forfeited at 3/7 and
+the capture was correctly rejected. Its limit was raised to match its measured
+pace, and Rookie and Erratic run LAST in the plan so a batch that is cut short
+loses the least certain jobs rather than the surest ones. Jobs also round-robin
+across courses, neediest first, so partial completion still spreads coverage.
+
+### Record against a static build, not the dev server
+
+Vite HMR restarts an in-flight race whenever a source file changes. A batch was
+lost this way: run 1 reloaded every ~122s, forever. Build, serve `dist`, record:
+
+```
+npm run build
+npx http-server dist -p 4173 --silent
+node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3 \
+  --url http://127.0.0.1:4173 --out tools/recordings
+node tools/rivals-assemble.mjs --in tools/recordings --dry
+```
+
+Confirm the served bundle actually contains your changes before a long batch
+(`grep -c "RIVALS-REC" dist/assets/*.js`). An interrupted `npm run build`
+leaves a stale `dist`, and a multi-hour batch will then record the old code.
+
+### The recorder needs its own loadout entry
+
+The harness entrance sits on the real loadout picker, which a modal
+auto-clicker cannot drive; recordings sat at `status:'ready'` forever.
+`installBotDriver.js` patches `RivalsRace.prototype.openLoadout` in RECORD MODE
+ONLY, applying `race.fixedPowers` and arming the countdown. Do not remove that
+patch, and do not let it run outside record mode.
+
 ## What to do next
 
 Build multiple distinct BotDriver personalities for the existing seven-house
@@ -101,9 +161,10 @@ complete opponents or insert simulated times into a replay bundle.
 
 ## Reproducible bank assembly
 
-The older handoff mentions an assembler script, but none is maintained in the
-current repository tree. Add a documented recorder/assembler CLI if needed;
-do not invent a missing command or rely on one-off scripts only on your machine.
+`client/tools/rivals-assemble.mjs` is that assembler and is maintained.
+`node tools/rivals-assemble.mjs --in tools/recordings --dry` reports coverage
+per course, per measured band and per power mix with the shortfall against 20,
+and writes nothing. Drop `--dry` to write the bank.
 The assembler must use the game's build/validation/hash functions:
 validateRivalRunRecord, rivalRecordMatchesCourse,
 validateRivalReplayBundle and validateReplaySegment.
@@ -132,3 +193,83 @@ times/retries distributions, bank size and what remains unverified. Commit why,
 what was measured and unverified gaps, matching git log. Update both main handoffs
 and this document with actual commands and new driver/version information.
 No master deployment, server/global territory, new reward ledger or story edits.
+
+## Matchmaking and the unlock (added this session)
+
+### The comparison, and why it is legitimate
+
+Campaign house N generates at scale `[_,0.6,0.75,0.9,0.95][N] ?? 1`. A Rivals
+course's seven houses use `[0.6,0.75,0.9,0.95,1,1,1]`. Identical inputs to the
+same generator on the same 16x35 grid with one defender — which is the ONLY
+reason the two modes can be compared at all. So comparison is per-scale, on
+median per-house clear time. Campaign house 15 is excluded everywhere: it is
+the only house with a second defender.
+
+Never compare raw race elapsed time to a campaign house time. Race elapsed
+includes transitions and every retry; it is not a measure of how fast someone
+clears a house. `recordHouseTimes` reads the winning attempt per house out of
+the record's own attempt list instead.
+
+### Bands are measured, never named
+
+`measuredBands` cuts the bank's own benchmark spread into three
+equal-population groups. Nothing is "easy/medium/hard", and no recording is
+ranked by the style it was driven with — a Sharp run that went badly sits with
+the slow ones. Change the bank and the bands move. Under six benchmarks it
+returns ONE band called `measured`, which is honest about a thin bank rather
+than inventing tiers inside it.
+
+Measured on the 57 records shipped before this batch: 5.4-7.7s / 7.7-9.0s /
+9.0-12.0s median per-house clear, 19 records each.
+
+### Selection rules (logic/rivalSkill.js)
+
+1. A named `recordingID` always wins, so a rematch is the same race.
+2. Recently raced opponents are set aside unless that would empty the pool.
+3. The rest are ranked by distance from the player's own clear time; one is
+   taken from the closest few by a hash of who is racing and how many races
+   they have run. Same inputs, same pick; a new race, a new pick.
+
+No opponent's pace is ever adjusted. Nothing filters for a win. A player faster
+than the whole bank simply races the fastest recording. `adaptSkill` moves the
+estimate at most a quarter of the way toward a raced opponent, symmetrically
+for wins and losses. Fixed course seeds, immutable bank payloads and
+independent player power selection are untouched.
+
+### Skill evidence (logic/skillEvidence.js, utils/skillEvidence.js)
+
+Per-house observations recorded beside the campaign clear, account-scoped under
+`pr_skill_v1_<userID>`, separate from progression so losing it cannot touch
+stash, REP, territory or story.
+
+`activeMs` is the scene's own play clock and EXCLUDES the entrance map, contact
+dialogue, city zooms, the loadout picker, settings and every paused frame. A
+retried house reports its winning attempt as `activeMs` and every attempt in
+`totalActiveMs`.
+
+This record starts EMPTY for every existing save. Nothing backfills it. An
+absent observation is absent, never zero, and `playerSkill` reports
+`provisional` with a reason rather than a confident number built from nothing.
+
+Watch this seam: `ProgressionManager` once called `noteHouseObservation`
+without importing it, and the try/catch around it swallowed the ReferenceError
+— evidence would never have been recorded in the live game, with every test
+green. `test/contactFlow.test.mjs` now asserts the observation is recorded,
+with its timing exclusions and retry totals.
+
+### Unlock (utils/rivalsUnlock.js, MenuScene)
+
+Three COMPLETE campaign blocks — 45 extracted stashes. Not reaching house 3,
+not opening three blocks. Two sources are consulted: the new evidence, and the
+campaign's own long-standing stash count, so a save that finished blocks before
+any of this existed still qualifies. Never the reverse: a stash count alone
+cannot stand in for blocks it did not complete. The menu row stays VISIBLE when
+locked, with one short progress line and no popup.
+
+### Copy
+
+FINDING RIVAL / RIVAL FOUND / WATCH RIVAL. No recording vocabulary in routine
+menu, search or result copy. No claim that anyone is online, no invented player
+counts, no "live queue". A run with no match reads PACE TRIAL · NO RIVAL FOUND.
+Provenance, hashes, driver versions and validation metadata stay intact
+internally. `test/rivalsCopy.test.mjs` enforces this.
