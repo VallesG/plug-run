@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 import { markTutorialComplete } from '../utils/tutorialProgress.js';
 import { getUserID } from '../utils/userManager.js';
 import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
+import { drawArenaWallInk } from '../controllers/ArenaWallInk.js';
+import { drawTutorialInstructions } from '../controllers/TutorialInstructions.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import GameUI from '../controllers/GameUI.js';
 import { showRunnerLoadout } from '../controllers/RunnerLoadout.js';
@@ -975,6 +977,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(this.theme?.bg ?? 0x0b0f16);
     // This tutorial uses cell collision, so it doesn't need a geometry mask.
     drawArenaArt.call(this, { maskWalls: false });
+    drawArenaWallInk.call(this);
   }
 
   setupInput(){
@@ -1465,7 +1468,7 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   showStageModal(idx){
     const lesson = tutorialLesson(idx, this.sys.game.device.os.desktop);
-    this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'Choose powers' : 'Start', () => {
+    this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'CHOOSE POWERS' : lesson.stage===1 ? 'START TRAINING' : 'RUN THIS LESSON', () => {
       this.resumeFromModal();
       if (lesson.choosePowers) this.showPowerSelectionModal();
     }, { showReplay:lesson.stage>1 });
@@ -1563,17 +1566,11 @@ export class TutorialMiniScene extends Phaser.Scene {
         primary
       ]
     }] : [primary];
-    const modal = this.gameUI.showModal({
-      loadout:true, title,
+    const modal = drawTutorialInstructions(this, this.gameUI, {
+      title, lines, complete:opts.complete,
       subtitle:opts.complete ? 'Runner training complete' : 'RUNNER TRAINING · '+this.stageIdx+' / '+TUTORIAL_STAGE_COUNT,
       buttons:actions
     });
-    const area = modal.contentBounds;
-    const copy = this.add.text(modal.panel.x, area.y+8, lines.join('\n\n'), {
-      fontFamily:'Arial, sans-serif',fontSize:'15px',color:'#b7c7cc',
-      align:'center',lineSpacing:4,wordWrap:{width:area.width-16}
-    }).setOrigin(0.5,0).setScrollFactor(0).setDepth(20001);
-    modal.registerExtra(copy);
     this._tutorialModal = modal;
     return modal;
   }

@@ -1,3 +1,15 @@
+## Tutorial presentation polish — Codex (2026-09-17)
+
+Tutorial walls now use the campaign's same visual-only ArenaWallInk depth pass.
+Training instructions use fitted, labeled cards with four-step progress and
+clearer action labels. Lesson copy, objectives, controls, completion routing,
+modal input guards and replay-bank data are unchanged. All 61 suites passed;
+tutorial 150 assertions and 15 real tutorial browser checks passed. Plain build
+still hits isolated Windows realpath EPERM; equivalent preserveSymlinks build
+passed in 16.93s. No physical-phone or complete four-lesson playthrough yet.
+See TUTORIAL_PRESENTATION_HANDOFF.md. Pull claude/input-intent-layer; the shared
+working checkout was not written and master remains untouched.
+
 ## Mobile steering drift — Codex (2026-09-17)
 
 Removed PlayerController's opponent-proximity multiplier from touch lane assist.
