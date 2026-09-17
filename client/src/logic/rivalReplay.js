@@ -97,7 +97,26 @@ export function sealReplaySegment(seg, durationMs) {
   return seg;
 }
 
-const cellIn = (v, max) => finite(v) && v >= -1 && v <= max + 1;
+// How far outside the grid a recorded position may legitimately sit.
+//
+// Not zero, and not one. A runner using Phase passes THROUGH the outer wall
+// and is snapped back the frame after, and an exit walk continues a little
+// past the boundary before the house ends. Those frames are real recorded
+// gameplay, not corruption.
+//
+// The bound is measured, not guessed. Across 79,383 recorded frames the
+// largest excursion in any direction was 2.32 cells (min x -1.51, min y -1.71,
+// max 1.23 past cols, 2.32 past rows) — 15 frames in total, every one on a
+// smooth trajectory. 3 leaves headroom above that while still rejecting a
+// position that is genuinely nonsense.
+//
+// This was measured because the old bound of 1 was silently discarding 28% of
+// completed races: a whole race is rejected if any one of its ~30 segments
+// fails, so half a cell of Phase overshoot in a single retry threw away the
+// entire recording. No frame is edited to satisfy this — the tolerance was
+// wrong, the data was not.
+export const REPLAY_CELL_MARGIN = 3;
+const cellIn = (v, max) => finite(v) && v >= -REPLAY_CELL_MARGIN && v <= max + REPLAY_CELL_MARGIN;
 export function validateReplaySegment(seg) {
   const errors = [];
   if (!seg || typeof seg !== 'object') return { ok: false, errors: ['segment missing'] };

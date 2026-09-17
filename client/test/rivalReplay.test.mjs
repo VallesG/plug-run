@@ -2,7 +2,7 @@
 import {
   RIVAL_REPLAY_SCHEMA, RIVAL_REPLAY_STEP_MS, RIVAL_REPLAY_MAX_FRAMES, RIVAL_REPLAY_MAX_BULLETS, FRAME, FLAG,
   newReplaySegment, packFlags, unpackFlags, pushReplayFrame, pushReplayEvent, sealReplaySegment,
-  validateReplaySegment, replayFrameIndex, replayStateAt, replayEventsBetween, replayStashesAt,
+  validateReplaySegment, REPLAY_CELL_MARGIN, replayFrameIndex, replayStateAt, replayEventsBetween, replayStashesAt,
   replayCardLabel, raceReplayTimeline, timelineCursor, decisiveHouse
 } from '../src/logic/rivalReplay.js';
 
@@ -56,6 +56,24 @@ const corrupt = mutate => { const s = JSON.parse(JSON.stringify(seg)); mutate(s)
 check('wrong schema refused', !corrupt(s => { s.v = 9; }).ok);
 check('runner outside grid refused', !corrupt(s => { s.frames[0][FRAME.RX] = 40; }).ok);
 check('time regression refused', !corrupt(s => { s.frames[2][FRAME.T] = 10; }).ok);
+// The off-grid margin is deliberately wider than one cell: a Phase carries the
+// runner THROUGH the outer wall for a frame or two, and an exit walk continues
+// a little past the boundary. Measured across 79,383 recorded frames, the
+// largest real excursion was 2.32 cells. The margin must accept that and still
+// refuse a position that is nonsense.
+check('a phase overshoot just past the wall is accepted',
+  corrupt(s => { s.frames[0][FRAME.RX] = -1.51; }).ok &&
+  corrupt(s => { s.frames[0][FRAME.RY] = -1.71; }).ok);
+check('an exit walk past the far edge is accepted',
+  corrupt(s => { s.frames[0][FRAME.RY] = s.rows + 2.32; }).ok);
+check('the margin does not extend forever',
+  !corrupt(s => { s.frames[0][FRAME.RX] = -(REPLAY_CELL_MARGIN + 0.01); }).ok &&
+  !corrupt(s => { s.frames[0][FRAME.RY] = s.rows + REPLAY_CELL_MARGIN + 0.01; }).ok);
+check('a runner far outside the grid is still refused',
+  !corrupt(s => { s.frames[0][FRAME.RX] = 40; }).ok &&
+  !corrupt(s => { s.frames[0][FRAME.RY] = -25; }).ok);
+check('a plug far outside the grid is still refused',
+  !corrupt(s => { s.frames[0][FRAME.PLUGS] = [[99, 1, 0]]; }).ok);
 check('malformed frame refused', !corrupt(s => { s.frames[1] = [1, 2]; }).ok);
 check('odd bullet list refused', !corrupt(s => { s.frames[1][FRAME.BULLETS].push(1); }).ok);
 check('bad plug tuple refused', !corrupt(s => { s.frames[0][FRAME.PLUGS] = [[1, 2]]; }).ok);
