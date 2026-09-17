@@ -1,3 +1,42 @@
+## Picker mouse click isolation + Rivals retry power changes — Codex (2026-09-17)
+
+The custom RunnerLoadout ENTER HOUSE control bypassed GameUI's standard
+button protection: it destroyed the picker and resumed play on pointerdown,
+then BaseGameScene's scene-level pointerdown spent the first power.
+Custom picker buttons/cards/slots now consume their input; start and exit
+use guardModalDismissal. Start clears mouse/touch gesture residue. Desktop
+primary/fallback fire handlers also reject roundOver and a live dismissal
+guard. A new deliberate post-release click still activates Decoy normally.
+
+Rivals offers RETRY HOUSE / SWITCH POWERS after two deaths/timeouts on the
+same house. First death remains automatic; resize excluded from this
+threshold. Selected mix is editable/prefilled; retry restarts the same seed
+and house with fresh slots and retains that mix for following houses.
+Race startedAt, clears, deaths, opponent and clock never reset/pause.
+An opponent finish closes recovery; late callbacks cannot restart it.
+Choice/picker markers survive resize/reload; shutdown disposes their objects.
+Existing recording:true/fixedPowers batches keep automatic fixed-mix retries.
+
+Capture snapshots the initial race mix and each actual attempt mix. Optional
+attempt orderedPowers are hashed and copied to bundle metadata; new power
+events must agree with the recorded attempt's slots. Mixed local summaries
+also retain the initial mix and expose actual attempt mixes. Legacy records omit
+these fields and remain byte-identical. No bank/captured frame edits.
+CLAUDE_RIVALS_BOT_BANK_HANDOFF.md specifies an opt-in intentional Decoy-at-GO
+experiment and independent decoy-first jobs for stuck courses. That driver
+flag/adaptive retry policy is NEXT WORK, not implemented or measured here.
+
+Adapted V8: runnerLoadout 82 (actual custom picker + actual desktop handler,
+same-press leak, held/released mouse, deliberate Decoy click, editable
+prefill); rivalsFlow 146 (clock, seed, markers, resize, finish, unattended
+recordings); rivalCapture 49 (complete variable-mix export, event/mix
+corruption rejection); rivalRecords 74. Actual rivalBank suite 402 on 55
+fetched shipped bundles; all 55 legacy builder outputs byte-identical.
+Native verify/build and actual desktop/phone delivery remain unverified
+(execution helper blocked). Run client/npm run verify; check mouse ENTER
+HOUSE retains both powers, fresh click works, and switch powers on two
+Rivals deaths while watching clock/opponent advance. No master changes.
+
 ## Edge-exit car visibility follow-up — Codex (2026-09-17)
 
 Phone review caught the previous outward cosmetic offset clipping N/S cars.

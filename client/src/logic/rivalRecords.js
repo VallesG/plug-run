@@ -62,6 +62,8 @@ export function rivalAttemptErrors(attempts) {
     if (!isInt(a.attempt) || a.attempt < 1) errors.push(at + 'bad attempt number');
     if (!isMs(a.startedMs) || !isMs(a.endedMs) || a.endedMs < a.startedMs) errors.push(at + 'bad timing');
     if (a.endedMs - a.startedMs > RIVAL_MAX_ATTEMPT_MS) errors.push(at + 'attempt too long');
+    if (a.orderedPowers !== undefined && (!Array.isArray(a.orderedPowers) ||
+      a.orderedPowers.length !== 2 || !a.orderedPowers.every(p=>POWERS.includes(p)))) errors.push(at + 'bad orderedPowers');
     if (!RIVAL_ATTEMPT_OUTCOMES.includes(a.outcome)) errors.push(at + 'bad outcome');
     if (a.outcome === 'extracted' ? a.clearMs !== a.endedMs : a.clearMs != null) errors.push(at + 'clearMs inconsistent with outcome');
     if (a.house === lastHouse) {
@@ -98,7 +100,8 @@ export function buildRivalRunRecord({ rulesVersion, course, opponent, orderedPow
     opponent: { ...opponent },
     orderedPowers: orderedPowers.slice(),
     attempts: attempts.map(a => ({ house: a.house, attempt: a.attempt, startedMs: a.startedMs, endedMs: a.endedMs,
-      outcome: a.outcome, clearMs: a.outcome === 'extracted' ? a.clearMs : null })),
+      outcome: a.outcome, clearMs: a.outcome === 'extracted' ? a.clearMs : null,
+      ...(a.orderedPowers === undefined ? {} : {orderedPowers:a.orderedPowers.slice()}) })),
     clearTimes,
     elapsedMs: clearTimes[RIVAL_RECORD_HOUSES - 1],
     retries: attempts.length - RIVAL_RECORD_HOUSES,
@@ -161,7 +164,8 @@ export function buildRivalReplayBundle(record, segments) {
     courseID: record.courseID,
     segments: record.attempts.map((a, i) => ({
       house: a.house, attempt: a.attempt, startedMs: a.startedMs,
-      durationMs: a.endedMs - a.startedMs, outcome: a.outcome, replay: segments[i] ?? null
+      durationMs: a.endedMs - a.startedMs, outcome: a.outcome, replay: segments[i] ?? null,
+      ...(a.orderedPowers === undefined ? {} : {orderedPowers:a.orderedPowers.slice()})
     }))
   };
 }
@@ -183,6 +187,12 @@ export function validateRivalReplayBundle(bundle, record, { validateSegment = nu
     if (s.house !== a.house || s.attempt !== a.attempt) errors.push(at + 'house/attempt differ from record');
     if (s.startedMs !== a.startedMs || s.outcome !== a.outcome) errors.push(at + 'timing/outcome differ from record');
     if (!isMs(s.durationMs) || Math.abs(s.durationMs - (a.endedMs - a.startedMs)) > 1500) errors.push(at + 'duration differs from record');
+    if (a.orderedPowers !== undefined && JSON.stringify(s.orderedPowers) !== JSON.stringify(a.orderedPowers))
+      errors.push(at + 'power mix differs from attempt');
+    if (a.orderedPowers !== undefined) for (const e of s.replay?.events || []) {
+      if (e.k==='power' && (e.slot!==0 && e.slot!==1 || e.power!==a.orderedPowers[e.slot]))
+        errors.push(at + 'power event differs from attempt mix');
+    }
     if (!s.replay || typeof s.replay !== 'object') errors.push(at + 'replay missing');
     else if (validateSegment) {
       const r = validateSegment(s.replay, a);

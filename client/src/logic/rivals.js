@@ -151,8 +151,11 @@ export function compatibleRivalRecord(record, course, powers) {
 }
 export function rivalRecord(race) {
   if (race.clearTimes.length !== RIVAL_HOUSES || !validRivalPowers(race.powers)) return null;
+  const initialPowers=race.capture?.initialPowers || race.powers;
+  const mixed=race.capture?.attempts?.some(a=>a.orderedPowers && JSON.stringify(a.orderedPowers)!==JSON.stringify(initialPowers));
   return { version:RIVAL_RULES_VERSION, courseID:race.course.id,
-    seeds:race.course.seeds.slice(), powers:race.powers.slice(),
+    seeds:race.course.seeds.slice(), powers:initialPowers.slice(),
+    ...(mixed ? {attemptPowers:race.capture.attempts.map(a=>({house:a.house,attempt:a.attempt,powers:a.orderedPowers?.slice() ?? null}))} : {}),
     clearTimes:race.clearTimes.slice(), elapsedMs:race.clearTimes[RIVAL_HOUSES-1],
     retries:race.retries, source:'local-player', verified:false };
 }

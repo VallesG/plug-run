@@ -109,3 +109,14 @@ check('segment validator consulted', !validateRivalReplayBundle(bundle, record, 
 check('segment validator errors surfaced', validateRivalReplayBundle(bundle, record, { validateSegment: () => ({ ok: false, errors: ['nope'] }) }).errors[0].includes('nope'));
 check('garbage bundle refused', !validateRivalReplayBundle(null, record).ok && !validateRivalReplayBundle({}, record).ok && !validateRivalReplayBundle(bundle, null).ok);
 console.log(passed + ' rival record assertions passed');
+
+check('legacy record retains no optional attempt powers',record.attempts.every(a=>!Object.hasOwn(a,'orderedPowers')));
+const mixedAttempts=attempts.map((a,i)=>({...a,orderedPowers:i<2?['phase','dash']:['decoy','phase']}));
+const mixedRecord=buildRivalRunRecord({rulesVersion:RIVAL_RULES_VERSION,course,opponent,orderedPowers:['phase','dash'],attempts:mixedAttempts,recordingID:'mixed-record'});
+check('optional per-attempt mixes validate',validateRivalRunRecord(mixedRecord).ok);
+check('optional mixes survive builder copy',mixedRecord.attempts[2].orderedPowers.join()==='decoy,phase');
+check('invalid per-attempt mix rejected',mutateAttempts(a=>{a[1].orderedPowers=['fake','dash'];}).length>0);
+check('partial per-attempt mix rejected',mutateAttempts(a=>{a[1].orderedPowers=['phase'];}).length>0);
+const modifiedMix=JSON.parse(JSON.stringify(mixedRecord));modifiedMix.attempts[2].orderedPowers=['phase','phase'];
+check('changing a recorded mix invalidates hash',!validateRivalRunRecord(modifiedMix).ok);
+console.log('attempt power contract: '+passed+' total assertions passed');

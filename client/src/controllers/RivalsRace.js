@@ -5,7 +5,7 @@ import { drawRivalDistrictMap } from './RivalDistrictMap.js';
 import {
   RIVAL_HOUSES, RIVAL_COUNTDOWN_MS, RIVAL_TRANSITION_MS, RIVAL_RETRY_MS,
   rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
-  rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock
+  rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock, validRivalPowers
 } from '../logic/rivals.js';
 import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome } from '../utils/rivalSession.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
@@ -31,7 +31,12 @@ export default class RivalsRace {
     this.drawHUD();
     this.preparePickupProgress();
     if (this.race.status === 'finished') { this.freeze(); this.showResult(); return; }
-    if (this.race.status === 'racing') { this.resumeHouse(); return; }
+    if (this.race.status === 'racing') {
+      if (this.race.retryMixHouse === this.scene.pveRound) this.openRetryMix();
+      else if (this.race.retryChoiceHouse === this.scene.pveRound) this.showRetryChoice();
+      else this.resumeHouse();
+      return;
+    }
     this.scene.roundPausedForMenu = true;
     this.scene.input.keyboard.enabled = false;
     if (this.race.status === 'countdown') return;
@@ -141,10 +146,62 @@ export default class RivalsRace {
       title:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
       startLabel:this.race.rivalCityIndex?'LOOK FOR MATCH':'READY TO RACE',
       helpText:this.race.opponent?.orderedPowers
-        ? 'Rival: '+this.race.opponent.orderedPowers.map(id=>id.toUpperCase()).join(' → ')+'\nYour powers refill each house.'
+        ? 'Rival starts: '+this.race.opponent.orderedPowers.map(id=>id.toUpperCase()).join(' → ')+'\nYour powers refill each house.'
         : 'Your powers refill each house and retry.',
       allowReplay:false, showAccount:false, compact:false
     });
+  }
+  showRetryChoice() {
+    if (this.disposed || this.race.status !== 'racing') return;
+    if (this.update()) { if (this.race.status === 'finished') return; }
+    this.transitioning=true;
+    this.freeze();
+    this.race.retryChoiceHouse=this.scene.pveRound;
+    this.retryModal?.destroy?.({resumeTouch:false});
+    this.retryModal=this.scene.gameUI.showModal({
+      title:'TRY A NEW ANGLE?',subtitle:'Race clock keeps running.',
+      lines:['Retry your mix or switch powers for this house.'],
+      buttons:[
+        {label:'RETRY HOUSE',variant:'primary',onClick:()=>this.restartRetry()},
+        {label:'SWITCH POWERS',variant:'secondary',onClick:()=>{
+          if(this.disposed || this.race.status!=='racing')return;
+          delete this.race.retryChoiceHouse;
+          this.race.retryMixHouse=this.scene.pveRound;
+          this.openRetryMix();
+        }}
+      ]
+    });
+  }
+  openRetryMix() {
+    if (this.disposed || this.race.status !== 'racing' || this.race.fixedPowers) return;
+    this.transitioning=true;
+    this.freeze();
+    this.race.retryMixHouse=this.scene.pveRound;
+    this.retryModal?.destroy?.({resumeTouch:false});
+    this.retryModal=null;
+    this.retryPicker=showRunnerLoadout(this.scene.gameUI,()=>{
+      if(this.disposed || this.race.status!=='racing')return;
+      const powers=this.scene.runnerPowersSelected;
+      if(!validRivalPowers(powers))return;
+      this.race.powers=powers.slice();
+      this.retryPicker=null;
+      this.restartRetry();
+    },{
+      title:'SWITCH POWERS',subtitle:'Race clock keeps running.',
+      initialPowers:this.race.powers,startLabel:'RETRY HOUSE',
+      helpText:'New mix. Same house. Clock keeps running.',
+      compact:true,allowReplay:false,showAccount:false
+    });
+  }
+  restartRetry() {
+    if(this.disposed || this.race.status!=='racing')return;
+    if(this.update() && this.race.status==='finished')return;
+    delete this.race.retryChoiceHouse;
+    delete this.race.retryMixHouse;
+    this.retryModal?.destroy?.({resumeTouch:false});this.retryModal=null;
+    this.retryPicker?.destroy?.({resumeTouch:false});this.retryPicker=null;
+    this.freeze();
+    this.transition(this.scene.pveRound,RIVAL_RETRY_MS,'RETRYING');
   }
   opponentSubtitle() {
     const course=this.race.course.name ? this.race.course.name+' · ' : '';
@@ -360,14 +417,24 @@ export default class RivalsRace {
     const outcome = reason==='resize' ? 'abandoned' : ((this.scene.attacker?.hp ?? 1) <= 0 ? 'caught' : 'timeout');
     endAttemptCapture(this.scene,this.race,outcome,now);
     this.race.retries++;
+    if(reason!=='resize') {
+      this.race.houseRetries ??= {};
+      this.race.houseRetries[this.scene.pveRound]=(this.race.houseRetries[this.scene.pveRound]||0)+1;
+    }
     this.scene.finalizeRun?.('rivals_caught');
     ReplaySystem.finalize();
     this.freeze();
-    this.transition(this.scene.pveRound,RIVAL_RETRY_MS,'CAUGHT\nRETRYING');
+    // Keep existing unattended fixed-mix recording jobs automatic.
+    if(reason!=='resize' && !this.race.recording && !this.race.fixedPowers &&
+      this.race.houseRetries?.[this.scene.pveRound]>=2) this.showRetryChoice();
+    else this.transition(this.scene.pveRound,RIVAL_RETRY_MS,'CAUGHT\nRETRYING');
   }
   finish(result,now) {
     if (this.race.status==='finished') return;
     this.closeSettings(false);
+    this.retryModal?.destroy?.({resumeTouch:false});this.retryModal=null;
+    this.retryPicker?.destroy?.({resumeTouch:false});this.retryPicker=null;
+    delete this.race.retryChoiceHouse;delete this.race.retryMixHouse;
     this.race.status='finished';
     this.race.result=result;
     this.race.finishedMs=result==='loss' ? this.race.rivalTimes[RIVAL_HOUSES-1] : rivalElapsed(this.race,now);
@@ -475,7 +542,12 @@ export default class RivalsRace {
     loadRivalReplay(this.race).then(b => { this.notice?.setText(''); start(b); }).catch(() => start(null));
   }
   resize() {
-    if (this.transitioning) return; // pending restart already adopts the new viewport
+    if (this.transitioning) {
+      if(this.race.retryChoiceHouse || this.race.retryMixHouse) this.scene.scene.restart({
+        mode:'pve',role:'runner',runKind:'rivals',pveRound:this.scene.pveRound,rivalRace:this.race
+      });
+      return; // a pending restart already adopts the new viewport
+    }
     if (this.race.status==='racing') { this.retryHouse('resize'); return; }
     this.scene.scene.restart({
       mode:'pve',role:'runner',runKind:'rivals',pveRound:this.scene.pveRound,rivalRace:this.race
@@ -485,6 +557,7 @@ export default class RivalsRace {
     if(this.disposed)return;
     this.disposed=true;this.scene._touchSceneClosing=true;
     this.closeSettings(false);
+    this.retryModal?.destroy?.({resumeTouch:false});this.retryPicker?.destroy?.({resumeTouch:false});
     this.pending?.remove?.();
     this.searchTimer?.remove?.();
     this.cityIntro?.destroy?.();

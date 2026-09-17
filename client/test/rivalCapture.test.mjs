@@ -123,3 +123,25 @@ check('clock disagreement refused', exportRaceCapture(tampered, { opponent }).ok
 const abandoned = { ...race, capture: { ...race.capture, attempts: [...race.capture.attempts, { house: 7, attempt: 2, startedMs: 1, endedMs: 2, outcome: 'abandoned' }] } };
 check('abandoned attempt refused', exportRaceCapture(abandoned, { opponent }).reason.includes('abandoned'));
 console.log(passed + ' rival capture assertions passed');
+
+const mixed={...newRivalRace(course,[10000,20000,30000,40000,50000,60000,70000]),status:'racing',startedAt:0,powers:['phase','dash']};
+beginRaceCapture(mixed,{recordingID:'mixed-test'});
+for(let h=1;h<=7;h++){
+  const s=makeScene(h);mixed.powers=h===1?['phase','dash']:['decoy','dash'];
+  s.runnerPowersSelected=mixed.powers.slice();
+  now=(h-1)*8000;beginAttemptCapture(s,mixed,now);
+  now+=100;s.runnerPowersConsumed[0]=true;tickAttemptCapture(s,mixed,now);
+  now+=100;s.hasStash=true;tickAttemptCapture(s,mixed,now);
+  now+=7000;endAttemptCapture(s,mixed,'extracted',now);mixed.clearTimes.push(now);
+}
+const mixedOut=exportRaceCapture(mixed,{opponent});
+check('switched mix capture exports genuine complete race',mixedOut.ok);
+check('race label retains original mix not final mix',mixedOut.record.orderedPowers.join()==='phase,dash');
+check('record preserves each actual attempt mix',mixedOut.record.attempts[0].orderedPowers.join()==='phase,dash'&&mixedOut.record.attempts[1].orderedPowers.join()==='decoy,dash');
+check('switched record and bundle validate together',validateRivalRunRecord(mixedOut.record).ok&&validateRivalReplayBundle(mixedOut.bundle,mixedOut.record,{validateSegment:validateReplaySegment}).ok);
+const wrongMix=JSON.parse(JSON.stringify(mixedOut.bundle));wrongMix.segments[1].orderedPowers=['phase','dash'];
+check('bundle cannot relabel switched attempt',!validateRivalReplayBundle(wrongMix,mixedOut.record).ok);
+const wrongEvent=JSON.parse(JSON.stringify(mixedOut.bundle));wrongEvent.segments[1].replay.events.find(e=>e.k==='power').power='phase';
+check('bundle cannot relabel activated power',!validateRivalReplayBundle(wrongEvent,mixedOut.record).ok);
+check('switch did not manufacture clear timings',mixedOut.record.clearTimes.join()===mixed.clearTimes.join());
+console.log('mixed power capture: '+passed+' total assertions passed');

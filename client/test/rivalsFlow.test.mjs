@@ -400,3 +400,50 @@ await lookup;
 check('shared lookup settles and clears pending',shared.opponentPending===null&&shared.opponentKind==='recorded-bot');
 check('carousel display does not expose implementation labels',city.controller.rivalDisplayName('BOT · Street')==='RIVAL · Street');
 console.log('Rivals async continuity: '+passed+' total assertions passed');
+
+// --- death recovery: choose a different mix, never pause/reset the race ---
+now=1000;let recoveryState={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['phase','dash']};
+let recovery=setup(recoveryState,1);
+recovery.scene.attacker={hp:0};
+recovery.controller.retryHouse();recovery.events.at(-1).fn();
+let recoveredData=recovery.restarts.at(-1);now=1700;recovery=setup(recoveredData.rivalRace,1);
+recovery.scene.attacker={hp:0};recovery.controller.retryHouse();
+check('second death offers retry or switch',recovery.modals.at(-1).buttons.map(b=>b.label).join()==='RETRY HOUSE,SWITCH POWERS');
+check('choice keeps clock origin and racing status',recoveryState.startedAt===0&&recoveryState.status==='racing'&&recoveryState.retries===2);
+check('choice freezes dead house without pending auto-retry',recovery.scene.roundOver&&recovery.controller.transitioning&&recovery.events.length===0);
+now=3000;recovery.controller.update();
+check('time keeps increasing while choice open',rules.rivalElapsed(recoveryState,now)===3000);
+recovery.modals.at(-1).buttons[1].onClick();
+check('retry picker is editable and prefilled',!lastPicker.options.fixedPowers&&lastPicker.options.initialPowers.join()==='phase,dash');
+check('retry picker warns clock keeps running',lastPicker.options.subtitle==='Race clock keeps running.');
+now=4000;recovery.scene.runnerPowersSelected=['decoy','phase'];lastPicker.done();
+check('switch commits new ordered mix',recoveryState.powers.join()==='decoy,phase');
+check('switch retains origin and existing death count',recoveryState.startedAt===0&&recoveryState.retries===2);
+check('switch clears persistent modal markers',!recoveryState.retryChoiceHouse&&!recoveryState.retryMixHouse);
+recovery.events.at(-1).fn();recoveredData=recovery.restarts.at(-1);now=4700;
+recovery=setup(recoveredData.rivalRace,1);
+check('switch retries identical house and course',recoveredData.pveRound===1&&recoveredData.rivalRace.course===course);
+check('new attempt uses new mix with fresh slots',recovery.scene.runnerPowersSelected.join()==='decoy,phase'&&recovery.scene.runnerPowersConsumed.join()==='false,false');
+check('capture remembers initial mix plus current attempt mix',recoveryState.capture.initialPowers.join()==='phase,dash'&&recoveryState.capture.current.orderedPowers.join()==='decoy,phase');
+check('mix selection time is charged to retry',recoveryState.capture.current.startedMs===4700);
+now=5000;recovery.scene.attacker={hp:0};recovery.controller.retryHouse();
+const choiceState=recoveryState;
+recovery.controller.resize();
+check('resize preserves pending retry choice without another death',choiceState.retries===3&&recovery.restarts.at(-1).rivalRace.retryChoiceHouse===1);
+now=5200;recovery=setup(choiceState,1);
+check('reload restores recovery instead of starting attempt',recoveryState.capture.current===null&&recovery.modals.at(-1).buttons[1].label==='SWITCH POWERS');
+recovery.modals.at(-1).buttons[1].onClick();now=70001;recovery.controller.update();
+check('opponent can win while retry picker open',recoveryState.status==='finished'&&recoveryState.result==='loss');
+lastPicker.done();
+check('late picker cannot restart finished race',recovery.restarts.length===0&&recoveryState.powers.join()==='decoy,phase');
+
+now=1000;const automated={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['decoy','dash'],recording:true,houseRetries:{1:10}};
+const automatedRun=setup(automated,1);automatedRun.scene.attacker={hp:0};automatedRun.controller.retryHouse();
+check('existing recording jobs never stall on recovery UI',automatedRun.events.length===1&&!automated.retryChoiceHouse);
+console.log('Rivals power recovery: '+passed+' total assertions passed');
+
+const mixedSummary=rules.rivalRecord({...rules.newRivalRace(course,splits),powers:['decoy','phase'],clearTimes:splits,
+  capture:{initialPowers:['phase','dash'],attempts:[{house:1,attempt:1,orderedPowers:['phase','dash']},{house:1,attempt:2,orderedPowers:['decoy','phase']}]}});
+check('local race summary also retains initial mix',mixedSummary.powers.join()==='phase,dash');
+check('local summary exposes actual changed attempt mix',mixedSummary.attemptPowers[1].powers.join()==='decoy,phase');
+console.log('Rivals mixed summary: '+passed+' total assertions passed');

@@ -1,3 +1,59 @@
+## Decoy-first recovery experiment and retry mixes — Codex (2026-09-17)
+
+Phone/PC play found a promising human-discovered tactic: deliberately activate
+Decoy immediately after GO, then run normally. This is an observed strategy,
+NOT proof that the Plug is "panicked" or a request to alter its AI. Keep the
+existing Decoy/defender interaction; do not nerf it in this pass.
+
+Next BotDriver experiment (not implemented in the driver yet):
+- Add an opt-in openingDecoy flag, surfaced through real driver config and
+  persisted in driverConfig. Reset its once-only attempt flag on new house
+  AND retry. Fire only with role runner, race racing, unpaused, alive runner,
+  capture begun, slot 0 genuinely Decoy and unconsumed.
+- Use the normal InputIntent.drivePower(0) seam, not DOM click leakage, direct
+  consumption writes or invented replay events. Spend the actual selected
+  power exactly once; let the normal capture observe it. Do not silently
+  reorder a mix or activate outside the countdown.
+- For a course/style that keeps failing, try NEW real jobs with decoy,phase;
+  decoy,dash; and decoy,decoy plus openingDecoy enabled. Keep successful and
+  failed attempts, cumulative clock, and honest give-up limits. Compare
+  completion rate, attempts per house and measured seconds per house against
+  the same style/course without the opener. Preserve weaker styles too.
+- Do not replace all drivers with this strategy or filter the bank for wins.
+  No claimed defender response, bullet immunity, stash knowledge, teleport,
+  frame edits or fabricated times. Spectator replay shows the actual Decoy
+  power event so players can discover the tactic themselves.
+
+Human Rivals now offers RETRY HOUSE / SWITCH POWERS after two deaths/timeouts
+on the SAME house. First death remains automatic; resize is not a strategy
+death. Picking freezes the already-dead house, NOT the absolute race clock:
+startedAt, clearTimes and selected opponent remain unchanged. A new mix
+starts on the same house after retry; it stays selected for later houses.
+The opponent can finish while the picker is open.
+
+Existing recording:true jobs and explicit fixedPowers still auto-retry, with
+no recovery UI. This is intentional so currently running unattended batches
+cannot stall. Prefer the separate Decoy-first jobs above for now. If adding
+adaptive recording drivers later, explicitly plumb a non-fixed retry policy
+through the same between-attempt seam; don't use a fixed-mix harness while
+secretly overriding its promised fixed powers. No adaptive driver is shipped
+by this change.
+
+Capture now snapshots initialPowers at GO and orderedPowers per attempt.
+Record/bundle attempts optionally carry orderedPowers; new power events must
+match that attempt's slot/mix. Old records without these optional fields keep
+their exact bytes/hash and remain valid. Never relabel an old captured race.
+Variable-mix records use the race-level orderedPowers as the INITIAL mix, not
+a claim that every attempt used it. No rules version or course change.
+
+Measured on the committed branch snapshot: 55 shipped records on seven
+courses (local in-progress Claude captures are not reflected here).
+The actual rivalBank test passed in an adapted V8/filesystem harness:
+402 assertions, all 55 real bundles fetched and checked. All 55 legacy record
+builders produced byte-identical output before/after the optional extension.
+Native verify/build and real mouse/phone play remain unverified: execution
+helper is blocked by sandbox ACL. Don't rebuild a worker's static dist mid-job.
+
 # Claude: expand Plug Run's recorded rival drivers and bank
 
 > **Resuming the bank recording?** Read `RIVALS_BANK_RECORDING_HANDOFF.md`

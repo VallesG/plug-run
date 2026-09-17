@@ -1,3 +1,9 @@
+> New Decoy-first experiment and human retry power-switch details are at the
+> top of CLAUDE_RIVALS_BOT_BANK_HANDOFF.md. Existing recording jobs still
+> auto-retry with their fixed mix; do not change a running static build.
+> New capture supports truthful optional per-attempt mixes, but no adaptive
+> BotDriver retry policy has been implemented yet.
+
 # Resuming the Block Rivals bank recording
 
 Standalone. Written so a fresh agent or a human can pick this up cold, without

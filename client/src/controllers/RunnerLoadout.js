@@ -1,3 +1,4 @@
+import { consumeModalPointer, guardModalDismissal } from '../utils/modalPointerGuard.js';
 // Runner selection panel. The existing ordered, repeatable two-power rules
 // are kept in pure logic; this module owns only presentation and callbacks.
 import { choosePower, removePowerAt, compactLoadout, loadoutLayout } from '../logic/powerSelection.js';
@@ -36,13 +37,17 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
   const button=(x,y,w,h,label,callback)=>{
     const bg=rectangle(x,y,w,h,0x19222b);
     const labelObject=text(x,y,label,12,'#b9c7cf',true);
-    bg.setInteractive({useHandCursor:true}).on('pointerdown',callback);
+    bg.setInteractive({useHandCursor:true}).on('pointerdown',(pointer,x,y,event)=>{
+      consumeModalPointer(pointer,event);callback(pointer,event);
+    });
     return {bg,text:labelObject};
   };
   const fixedPowers=Array.isArray(options.fixedPowers) && options.fixedPowers.length===2 &&
     options.fixedPowers.every(id=>POWERS.some(power=>power.id===id))
     ? options.fixedPowers.slice() : null;
-  let chosen=fixedPowers ? fixedPowers.slice() : [];
+  const initialPowers=Array.isArray(options.initialPowers) && options.initialPowers.length===2 &&
+    options.initialPowers.every(id=>POWERS.some(power=>power.id===id)) ? options.initialPowers : [];
+  let chosen=fixedPowers ? fixedPowers.slice() : initialPowers.slice();
   let started=false;
   const cards=[];
   const slots=[];
@@ -76,7 +81,8 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     if(!compact) text(x,y+r.h*0.84,power.description,r.w<80?9:11,'#98a7ac');
     const badge=text(x+r.w/2-14,y+11,'',9,power.css,true).setVisible(false);
     cards.push({power,bg,badge});
-    if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',()=>{
+    if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',(pointer,x,y,event)=>{
+      consumeModalPointer(pointer,event);
       chosen=choosePower(chosen,power.id);refresh();
     });
   });
@@ -87,14 +93,18 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     text(x-slotW/2+15,y,String(i+1).padStart(2,'0'),10,'#7c8f9a',true);
     const label=text(x+8,y,'EMPTY',11,'#6f808b',true);
     slots.push({bg,label});
-    if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',()=>{
+    if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',(pointer,x,y,event)=>{
+      consumeModalPointer(pointer,event);
       chosen=removePowerAt(chosen,i);refresh();
     });
   }
   const help=text(panel.x,top+layout.slotsY+37,'',11,'#879a9f').setVisible(layout.showHelp);
-  const start=button(panel.x,top+layout.startY,layout.buttonW,44,'PICK TWO POWERS',()=>{
+  const start=button(panel.x,top+layout.startY,layout.buttonW,44,'PICK TWO POWERS',(pointer,event)=>{
     if(started||chosen.length!==2)return;
     started=true;
+    guardModalDismissal(scene,pointer,event);
+    scene._mouseDown=false;
+    scene.playerController?.resetTouchGestures?.();
     scene.runnerPowersSelected=chosen.slice();
     scene.runnerPowersConsumed=[false,false];
     modal.destroy();
@@ -110,7 +120,8 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
       ReplaySystem.play(scene,{onDone:()=>modal.setVisible(true)});
     });
   }
-  button(panel.x+(hasReplay?(navW+10)/2:0),top+layout.navY,navW,32,'MAIN MENU',()=>{
+  button(panel.x+(hasReplay?(navW+10)/2:0),top+layout.navY,navW,32,'MAIN MENU',(pointer,event)=>{
+    guardModalDismissal(scene,pointer,event);
     modal.destroy();scene.scene.start('MENU');
   });
   // Keep account/settings access and register it with the same modal lifecycle.

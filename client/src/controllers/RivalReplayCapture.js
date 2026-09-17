@@ -22,7 +22,7 @@ import {
 import { buildRivalRunRecord, buildRivalReplayBundle, rivalAttemptErrors } from '../logic/rivalRecords.js';
 
 export function beginRaceCapture(race, { recordingID = null } = {}) {
-  race.capture = { recordingID, attempts: [], segments: [], houseAttempts: {}, current: null };
+  race.capture = { recordingID, initialPowers: race.powers.slice(), attempts: [], segments: [], houseAttempts: {}, current: null };
   return race.capture;
 }
 
@@ -54,6 +54,7 @@ export function beginAttemptCapture(scene, race, now) {
   cap.current = {
     house, attempt: seg.attempt, startedMs: rivalElapsed(race, now), t0: now, nextSampleAt: now, seg,
     seenBullets: new WeakSet(), lastShotT: -1, hadStash: false, bunked: [false, false],
+    orderedPowers: [...(scene.runnerPowersSelected || race.powers)],
     powers: [...(scene.runnerPowersConsumed || [false, false])], hp: scene.attacker?.hp ?? null, dead: false
   };
   return cap.current;
@@ -153,7 +154,7 @@ export function endAttemptCapture(scene, race, outcome, now) {
   else if (outcome === 'caught' && !cur.dead) pushReplayEvent(cur.seg, t, 'death', { hp: 0 });
   sealReplaySegment(cur.seg, t);
   const endedMs = rivalElapsed(race, now);
-  const attempt = { house: cur.house, attempt: cur.attempt, startedMs: cur.startedMs, endedMs, outcome };
+  const attempt = { house: cur.house, attempt: cur.attempt, orderedPowers: cur.orderedPowers.slice(), startedMs: cur.startedMs, endedMs, outcome };
   if (outcome === 'extracted') attempt.clearMs = endedMs;
   cap.attempts.push(attempt);
   cap.segments.push(cur.seg);
@@ -178,7 +179,7 @@ export function exportRaceCapture(race, { opponent, recordingID, recordedAt = nu
   if (JSON.stringify(clears) !== JSON.stringify(race.clearTimes)) return { ok: false, reason: 'capture clears disagree with race clock' };
   try {
     const record = buildRivalRunRecord({
-      rulesVersion: RIVAL_RULES_VERSION, course: race.course, opponent, orderedPowers: race.powers,
+      rulesVersion: RIVAL_RULES_VERSION, course: race.course, opponent, orderedPowers: cap.initialPowers,
       attempts: cap.attempts, recordingID: recordingID ?? cap.recordingID, recordedAt, driverConfig
     });
     return { ok: true, record, bundle: buildRivalReplayBundle(record, cap.segments) };

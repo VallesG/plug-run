@@ -1274,7 +1274,7 @@ export class BaseGameScene extends Phaser.Scene {
       this._pointerDownHandler = (p) => {
         if (p.button !== 0) return;
         // Ignore clicks while modal is open
-        if (this.roundPausedForMenu) return;
+        if (this.roundPausedForMenu || this.roundOver || this._modalDismissGuard) return;
         if (this.role === 'plug') {
           this._mouseDown = true; this.combatSystem.tryMouseFire();
         } else if (this.role === 'runner') {
@@ -1288,7 +1288,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this._pointerDownHandler);
     this.input.on('pointerup', this._pointerUpHandler);
     // Fallback: ensure left click fires even if desktop detection flips
-    this._mouseFireHandler = (p) => { if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu) this.combatSystem.tryMouseFire(); };
+    this._mouseFireHandler = (p) => { if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu && !this.roundOver && !this._modalDismissGuard) this.combatSystem.tryMouseFire(); };
     this.input.on('pointerdown', this._mouseFireHandler);
     } else {
       this.makeMobileControls();
