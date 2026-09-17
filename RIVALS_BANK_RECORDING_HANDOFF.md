@@ -211,7 +211,28 @@ slot5-ghost-phasedash   965s -> forfeit 4/7     (960s limit)
 
 Twice the clock bought **zero** extra houses. On Blacktop Crown the same change
 turned a 6/7 forfeit into 2/2 valid, so the doubling was right — it just does
-not apply here. Slot 5 has a genuine wall around house 4-5, not a timeout.
+not apply here.
+
+**Where the time actually goes, from the attempt counts on races that DID
+finish** (attempts per house, slot 5):
+
+| job | h1 | h2 | h3 | h4 | h5 | h6 | h7 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| dasher race 1 | 1 | **64** | 1 | 1 | 17 | 1 | 1 |
+| dasher race 0 | 1 | **38** | 17 | 2 | 3 | 1 | 2 |
+| cautious race 1 | 1 | **24** | 3 | 3 | 19 | 1 | 2 |
+| balanced race 1 | 1 | **17** | 6 | 1 | **30** | 3 | 1 |
+
+Houses 2 and 5 absorb 17-64 attempts while every other house takes 1-3. So the
+forfeits that stop "at 4/7" are NOT stalling on house 5 — they burn the whole
+clock on **house 2** and run out later. That is also why doubling Ghost's limit
+bought nothing: it was never close to finishing, it was still grinding early.
+
+Slot 5's problem is two specific house layouts that are brutal for bots, not
+general difficulty. Two consequences worth stating in any report: slot 5's
+records carry genuinely high retry counts (honest data, and useful — those are
+the slow opponents a weak player should be matched against), and its coverage
+stays thinner because roughly one race in three burns out on house 2.
 
 It is not impossible, only expensive: `slot5-cautious-phasephase` completed on
 its second race in 486s with **46 retries**, against 3-19 retries typical
