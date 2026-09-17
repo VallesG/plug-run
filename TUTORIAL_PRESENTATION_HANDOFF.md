@@ -1,5 +1,9 @@
 # Tutorial presentation polish — 2026-09-17
 
+Follow-up: instruction cards and section labels removed at the player's request.
+Copy is now one reading area with paragraph spacing, not selectable-looking boxes.
+Measured sizing, progress and actions remain; tutorial tests now 182 assertions.
+
 Status: implemented and tested in the isolated checkout, then committed through
 GitHub on claude/input-intent-layer. Pull the branch to receive the changes;
 do not also apply the local review patch. Shared C:/dev/plug-run writes remained

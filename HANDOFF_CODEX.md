@@ -1,7 +1,7 @@
 ## Tutorial presentation polish — Codex (2026-09-17)
 
 Tutorial walls now use the campaign's same visual-only ArenaWallInk depth pass.
-Training instructions use fitted, labeled cards with four-step progress and
+Training instructions use fitted paragraphs with four-step progress and
 clearer action labels. Lesson copy, objectives, controls, completion routing,
 modal input guards and replay-bank data are unchanged. All 61 suites passed;
 tutorial 150 assertions and 15 real tutorial browser checks passed. Plain build

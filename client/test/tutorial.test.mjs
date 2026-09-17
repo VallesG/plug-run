@@ -60,6 +60,8 @@ for(const [w,h] of [[280,480],[390,844],[588,971],[1280,900]])for(let stage=1;st
  check('readable text '+w+'/'+stage,text.every((n)=>parseFloat(n.style.fontSize)>=12));
  const rectangles=f.nodes.filter((n)=>n.active&&n.depth===20001&&!n.text);
  check('four progress ticks '+w+'/'+stage,rectangles.length===4);
+ check('instruction copy has no card backgrounds '+w+'/'+stage,f.nodes.filter((n)=>n.active&&!n.text&&n.depth===20000&&n.height>38).length===1);
+ check('instruction copy has no section labels '+w+'/'+stage,!f.nodes.some((n)=>n.active&&n.text&&n.style?.fontSize==='10px'));
  modal.destroy();check('all training extras cleaned up '+w+'/'+stage,f.nodes.every((n)=>!n.active));
 }
 const layers=[];
