@@ -256,3 +256,49 @@ const race=new Race(exact.host);race.entryModal=exact.host.gameUI.showModal({tit
 exact.host.cameras.main=undefined;race.dispose();race.dispose();
 check('actual Rivals dispose closes modal after camera removed',race.disposed&&exact.host._touchSceneClosing&&!exact.host._touchHandlers);
 console.log('actual modal/rivals shutdown: '+passed+' total assertions passed');
+
+// Use the REAL lane assist, not the lifecycle stub above. An opponent may
+// change pursuit, but must never change the user's movement for identical input.
+const utilsSource=readFileSync(new URL('../src/utils/gameUtils.js',import.meta.url),'utf8');
+const assistStart=utilsSource.indexOf('export function corridorAssist(');
+const assistEnd=utilsSource.indexOf('// Manhattan distance',assistStart);
+if(assistStart<0||assistEnd<assistStart)throw Error('corridor assist seam moved');
+const realAssist=new Function(utilsSource.slice(assistStart,assistEnd).replace('export function','function')+';return corridorAssist;')();
+const MovementPlayer=new Function('corridorAssist',playerSource+';return PlayerController;')(realAssist);
+function movementTrace({near=false,moving=false,walls=0,strength=1,keys=false,vertical=false,idle=false,speed=60}={}) {
+ const runner={x:45,y:45},opponent={x:245,y:45};
+ const scene={role:'runner',attacker:runner,defender:opponent,cell:20,
+  corridorAssistStrength:strength,userTookOver:true,
+  toCell:(x,y)=>({x:Math.floor(x/20),y:Math.floor(y/20)}),
+  toWorldX:(x)=>x*20+10,toWorldY:(y)=>y*20+10,
+  isWallAtWorld:(x,y)=>walls===2||(walls===1&&(vertical?x<runner.x:y<runner.y)),
+  canMoveTo:()=>true};
+ const controller=new MovementPlayer(scene);
+ controller.playerDrift=idle?null:vertical?{x:0,y:1}:{x:1,y:0};
+ controller.processKeyboardInput=()=>({usingKeys:keys,vx:vertical?0:1,vy:vertical?1:0});
+ const trace=[];
+ for(let frame=0;frame<60;frame++) {
+  const distance=moving?(frame%2?200:10):near?10:200;
+  opponent.x=runner.x+distance;opponent.y=runner.y;
+  controller.handlePlayerMovement(runner,speed,1/60);
+  trace.push([runner.x,runner.y,scene.corridorAssistStrength]);
+ }
+ check('movement preserves last intended direction',idle?controller.playerDrift===null:
+  controller.playerDrift.x===(vertical?0:1)&&controller.playerDrift.y===(vertical?1:0));
+ return trace;
+}
+for(const speed of [60,180])for(const vertical of [false,true])for(const walls of [0,1,2]) {
+ const options={speed,vertical,walls},far=movementTrace(options);
+ check('near defender cannot steer '+JSON.stringify(options),JSON.stringify(far)===JSON.stringify(movementTrace({...options,near:true})));
+ check('moving defender cannot steer '+JSON.stringify(options),JSON.stringify(far)===JSON.stringify(movementTrace({...options,moving:true})));
+ check('autorun remains enabled',vertical?far.at(-1)[1]>45:far.at(-1)[0]>45);
+}
+const disabled=movementTrace({strength:0,moving:true});
+check('disabled assist has no lateral correction',disabled.every((p)=>p[1]===45&&p[2]===0));
+const keyboard=movementTrace({keys:true,moving:true});
+check('keyboard movement unchanged',keyboard.every((p)=>p[1]===45));
+const idle=movementTrace({idle:true,moving:true});
+check('no movement intent remains stationary',idle.every((p)=>p[0]===45&&p[1]===45));
+const centered=movementTrace();
+check('lane centering still helps touch movement',centered.at(-1)[1]>45);
+console.log('opponent-independent touch movement: '+passed+' total assertions passed');

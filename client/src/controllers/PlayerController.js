@@ -148,53 +148,14 @@ export default class PlayerController {
       }
     }
 
-    // Apply corridor assist when not using keys (touch controls)
-    // Reduce strength when AI opponent is very close to prevent twitching
+    // Touch lane centering depends on geometry and the user's assist setting,
+    // never on opponent proximity: a stationary finger must keep its steering.
     if (!usingKeys && (vx || vy)) {
       const dir = (Math.abs(vx) > Math.abs(vy))
         ? { x: Math.sign(vx), y: 0 }
         : { x: 0, y: Math.sign(vy) };
-
-      // Calculate distance to opponent
-      const opponent = (this.scene.role === 'runner') ? this.scene.defender : this.scene.attacker;
-      const distToOpponent = Math.hypot(sprite.x - opponent.x, sprite.y - opponent.y);
-
-      // Check if we're in a tight corridor (1x1 entrance)
-      const spriteCell = this.scene.toCell(sprite.x, sprite.y);
-      let wallsOnSides = 0;
-      if (dir.x !== 0) {
-        // Moving horizontally - check for walls above and below
-        const northWall = this.scene.isWallAtWorld(sprite.x, sprite.y - this.scene.cell);
-        const southWall = this.scene.isWallAtWorld(sprite.x, sprite.y + this.scene.cell);
-        if (northWall) wallsOnSides++;
-        if (southWall) wallsOnSides++;
-      } else if (dir.y !== 0) {
-        // Moving vertically - check for walls left and right
-        const westWall = this.scene.isWallAtWorld(sprite.x - this.scene.cell, sprite.y);
-        const eastWall = this.scene.isWallAtWorld(sprite.x + this.scene.cell, sprite.y);
-        if (westWall) wallsOnSides++;
-        if (eastWall) wallsOnSides++;
-      }
-      const inTightCorridor = wallsOnSides === 2;
-
-      // Only reduce corridor assist when opponent is close AND we're NOT in a tight corridor
-      // In tight corridors, we need maximum assist to navigate properly
-      const proximityThreshold = this.scene.cell * 4; // 4 cells
-      const originalStrength = this.scene.corridorAssistStrength;
-
-      if (!inTightCorridor && distToOpponent < proximityThreshold) {
-        // Smoothly reduce assist from 1.0 → 0.3 as opponent gets closer
-        const proximityFactor = Math.max(0.3, distToOpponent / proximityThreshold);
-        this.scene.corridorAssistStrength = originalStrength * proximityFactor;
-      }
-
       corridorAssist(this.scene, sprite, dir, dt);
-
-      // Restore original strength
-      this.scene.corridorAssistStrength = originalStrength;
     }
-
-    // Legacy-style movement with sub-stepping to prevent tunneling
     this.applyLegacyMovement(sprite, vx, vy, dt);
 
     // Cache facing direction for runner powers when moving

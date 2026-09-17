@@ -1,3 +1,15 @@
+## Mobile steering drift — Codex (2026-09-17)
+
+Removed PlayerController's opponent-proximity multiplier from touch lane assist.
+Identical steering no longer changes as the Plug approaches; normal geometry-based
+centering, autorun and cornering remain. Regression failed against old source,
+then passed: mobileInputLifecycle now 331 assertions (80 new). All 61 suites pass;
+bank is unchanged at 997 assertions/140 recordings. Plain build retains Windows
+realpath EPERM; equivalent invocation-only preserveSymlinks build checked separately.
+See MOBILE_STEERING_DRIFT_HANDOFF.md for measurements, capture compatibility and
+remaining physical-phone review. The impressed portrait sheet is a source-only
+proposal under art-sources, not shipped or wired to praise yet.
+
 ## Five-expression character pack — Codex (2026-09-17)
 
 Seven character atlases now ship under public/art/the-window/expressions/.
