@@ -171,6 +171,42 @@ Cautious with `phase,phase` on Switchyard Seven, forfeited at 4/7 — a genuine
 incomplete race, correctly discarded. One sample is not enough to justify
 raising that style's limit; track the rate and decide on evidence.
 
+### Switchyard Seven (slot 5) needs its own top-up run
+
+Measured across the batch so far, rejections are **not** spread evenly:
+
+| slot | complete | rejected |
+| --- | --- | --- |
+| 5 (Switchyard Seven) | 1 | 2 |
+| every other course | 11 | 0 |
+
+Both slot-5 forfeits stopped at **house 4 of 7, within seconds of their style's
+clock limit** (Cautious 545s against a 540s limit, Ghost 485s against 480s).
+That shape matters: the bots were still progressing when the clock ran out, not
+stuck repeating one fatal route. They ran out of time, not out of ability.
+
+This is a real coverage problem, because slot 5 is also the **neediest** course
+— 5 shipped records, 15 short of the target. At the observed rate its 16
+planned races would yield roughly 5, leaving it near 10 rather than 20.
+
+The plan as written will not close that gap. After the main batch, run a
+targeted top-up for slot 5 with limits raised on the evidence above:
+
+```sh
+node -e "const p=require('./tools/rivals-plan.json');
+  require('fs').writeFileSync('tools/rivals-plan-slot5.json',
+    JSON.stringify(p.filter(j=>j.slot===5).map(j=>({...j,
+      hardLimitMs:Math.round(j.hardLimitMs*2), indexBase:j.indexBase+5000})),null,1));"
+node tools/rivals-record.mjs --plan tools/rivals-plan-slot5.json --parallel 3 \
+  --url http://127.0.0.1:4173 --out tools/recordings
+```
+
+Do this as a SEPARATE top-up rather than restarting the main batch — recordings
+are additive, and a mid-flight restart throws away every race in progress.
+Raising a limit is legitimate: the limit is a give-up point, never a number
+written into a record. If slot 5 still falls short with doubled limits,
+**report the gap**; do not close it by relaxing what counts as a complete race.
+
 Rough cost: ~3–7 minutes per valid race, so the full 112-race plan is a
 multi-hour job (worst case ~8h at 3 workers). Rookie and Erratic run LAST in the
 plan and courses round-robin neediest-first, so **a batch cut short still leaves
