@@ -76,7 +76,7 @@ export default class RivalsRace {
   findMatch(){
     if(this.disposed||this.searching||this.race.status!=='ready')return;
     this.searching=true;this.race.entryStage='search';
-    this.entryModal?.destroy?.();
+    this.entryModal?.destroy?.({resumeTouch:false});
     this.entryModal=this.scene.gameUI.showModal({
       title:'FINDING YOUR RIVAL',subtitle:'Recorded opponent pool · not a live queue',
       lines:['RIVAL','Choosing a run for this course.'],
@@ -246,7 +246,7 @@ export default class RivalsRace {
     this.drawSettings();
   }
   drawSettings() {
-    this.settingsModal?.destroy?.();
+    this.settingsModal?.destroy?.({resumeTouch:false});
     const audio=this.settingsAudio;
     const toggle=(music)=>{
       if(music) audio?.setMusicMute(!audio.isMusicMuted());
@@ -474,7 +474,8 @@ export default class RivalsRace {
     });
   }
   dispose() {
-    this.disposed=true;
+    if(this.disposed)return;
+    this.disposed=true;this.scene._touchSceneClosing=true;
     this.closeSettings(false);
     this.pending?.remove?.();
     this.searchTimer?.remove?.();

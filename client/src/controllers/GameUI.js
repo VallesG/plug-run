@@ -180,10 +180,12 @@ export default class GameUI {
 
     const allObjs = () => [veil, panel, titleTxt, ...content, ...btnObjs, ...extras];
 
-    const destroy = () => {
+    let destroyed=false;
+    const destroy = ({resumeTouch=true}={}) => {
+      if(destroyed)return;destroyed=true;
       allObjs().forEach(o => o?.destroy?.());
       if (blocker?.active) blocker.destroy();
-      this.scene.suspendTouchUI?.(false);
+      if(resumeTouch&&!this.scene._touchSceneClosing)this.scene.suspendTouchUI?.(false);
       // inputs re-enabled by startMatch()
     };
 

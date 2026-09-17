@@ -1,3 +1,4 @@
+import { drawRivalReplayArena } from './RivalReplayArena.js';
 // RivalReplayPlayer — plays a portable RivalReplayBundle on top of the
 // current scene: the rival's whole seven-house race, attempt by attempt.
 //
@@ -15,13 +16,13 @@ import { T, THEMES, generateSquareMaze } from '../utils/mazeGenerator.js';
 import { createSeededRNG } from '../utils/seededRandom.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import { PALETTE } from '../logic/palette.js';
-import { RIVAL_HUD_HEIGHT, rivalTimeLabel } from '../logic/rivals.js';
+import { rivalTimeLabel, rivalArenaLayout, rivalHudLayout, rivalFloorClock } from '../logic/rivals.js';
 import {
   raceReplayTimeline, timelineCursor, replayStateAt, replayEventsBetween, replayStashesAt, unpackFlags, replayCardLabel
 } from '../logic/rivalReplay.js';
 
 const DEPTH = 30_000;   // above GameUI modals (20k)
-const HUD = 84;
+const HUD = 0; // Chrome overlays the perimeter, exactly like the live race.
 
 /** Same theme choice as BaseGameScene for a Rivals house (no rotation there). */
 function themeForSeed(seed) {
@@ -43,24 +44,20 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
 
   // --- static chrome -------------------------------------------------------
   mk(scene.add.rectangle(W / 2, H / 2, W + 4, H + 4, 0x05070d, 1).setDepth(DEPTH - 1).setInteractive());
-  mk(scene.add.rectangle(W / 2, HUD / 2, W, HUD, 0x0a1118, 0.98).setDepth(DEPTH + 900));
-  const hudText = (x, y, value, color = '#adbdc5', size = 11, origin = [0, 0.5]) => mk(scene.add.text(x, y, value, {
-    fontFamily: 'monospace', fontSize: size + 'px', color
-  }).setOrigin(origin[0], origin[1]).setDepth(DEPTH + 901));
-  const w = Math.min(W, 480), left = (W - w) / 2;
-  hudText(left + 12, 16, '● RIVAL REPLAY', '#ff5b5b', 11);
-  hudText(left + 12, 34, 'RIVAL  ·  recorded run', '#e5dec8', 11);
-  // EXIT / NEXT occupy the right 70px of the strip; everything else stops short.
-  const BTN_W = 70;
-  const clock = hudText(left + w - BTN_W - 10, 16, '0:00.0', '#e5dec8', 12, [1, 0.5]);
-  const label = hudText(left + w - BTN_W - 10, 34, '', '#dec386', 10, [1, 0.5]);
-  // seven-house strip: filled as the rival's clears arrive in the replay
-  const stripW = w - 24 - BTN_W;
-  const seg = (stripW - 6 * 4) / 7;
-  const houseBars = Array.from({ length: 7 }, (_, i) => mk(scene.add.rectangle(left + 12 + i * (seg + 4) + seg / 2, 58, seg, 8, 0x23313a).setStrokeStyle(1, 0x3a4c58).setDepth(DEPTH + 901)));
-  const barW = w - 24;
-  mk(scene.add.rectangle(W / 2, HUD - 8, barW, 3, 0xffffff, 0.14).setDepth(DEPTH + 901));
-  const barFill = mk(scene.add.rectangle(W / 2 - barW / 2, HUD - 8, 1, 3, 0xffffff, 0.75).setOrigin(0, 0.5).setDepth(DEPTH + 901));
+  const hudText=(x,y,value,color='#adbdc5',size=10,origin=[.5,.5])=>mk(scene.add.text(x,y,value,{
+    fontFamily:'monospace',fontSize:size+'px',color,stroke:'#071018',strokeThickness:2
+  }).setOrigin(...origin).setDepth(DEPTH+901));
+  const rail=rivalHudLayout(W,H);
+  const clock=hudText(W/2,34,'0:00.0','#bbc4b9',12);
+  const label=hudText(W/2,H-57,'RIVAL REPLAY','#dec386',10);
+  const rivalLabel=hudText(W-7,rail.startY-20,'RIVAL 0/7','#dec386',9,[1,.5]);
+  const houseBars=rail.segmentYs.map(y=>mk(scene.add.rectangle(rail.rightX,y,rail.railW,rail.segmentH,0x23313a)
+    .setStrokeStyle(1,0x3a4c58).setDepth(DEPTH+901)));
+  const playerLabel=hudText(7,rail.startY-20,'YOU 0/7','#9bcae5',9,[0,.5]);
+  const playerBars=rail.segmentYs.map(y=>mk(scene.add.rectangle(rail.leftX,y,rail.railW,rail.segmentH,0x23313a)
+    .setStrokeStyle(1,0x3a4c58).setDepth(DEPTH+901)));
+  const barW=Math.min(120,W-24);
+  const barFill=mk(scene.add.rectangle(W/2-barW/2,H-7,1,2,0xffffff,.55).setOrigin(0,.5).setDepth(DEPTH+901));
   const button = (x, y, bw, text, cb) => {
     const bg = mk(scene.add.rectangle(x, y, bw, 30, 0x141e28, 1).setStrokeStyle(1, 0x3a4c58).setDepth(DEPTH + 902).setInteractive({ useHandCursor: true }));
     mk(scene.add.text(x, y, text, { fontFamily: 'monospace', fontSize: '11px', color: '#c9d3d8' }).setOrigin(0.5).setDepth(DEPTH + 903));
@@ -79,44 +76,37 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     const rep = segment.replay;
     if (!rep) return;
     const cols = rep.cols, rows = rep.rows;
-    const cell = Math.max(6, Math.floor(Math.min(W / cols, arenaHeight / rows)));
-    const pad = { x: Math.max(0, Math.floor((W - cols * cell) / 2)), y: HUD + Math.max(0, Math.floor((arenaHeight - rows * cell) / 2)) };
+    const {cell,pad}=rivalArenaLayout(W,H,cols,rows);
     const objs = [];
     const add = (o, d = 0) => { mk(o); o.setDepth(DEPTH + d); objs.push(o); return o; };
     const wx = (cx) => pad.x + cx * cell, wy = (cy) => pad.y + cy * cell;   // cell coords -> screen
     const { theme, floorKeySingle } = themeForSeed(rep.houseSeed);
-    let grid = null;
+    let grid = null, egress=null;
     try {
-      grid = generateSquareMaze(cols, rows, { rng: createSeededRNG(rep.houseSeed), role: 'runner', clusterScale: rep.scale }).grid;
+      const arena=generateSquareMaze(cols, rows, { rng: createSeededRNG(rep.houseSeed), role: 'runner', clusterScale: rep.scale });
+      grid=arena.grid;egress=arena.egress;
     } catch { grid = null; }
-    // floor
-    add(scene.add.rectangle(W / 2, HUD + arenaHeight / 2, W, arenaHeight, theme.bg ?? 0x080a10, 1), 0);
-    const WOOD = ['wood_96', 'wood_97', 'wood_98', 'wood_99', 'wood_100', 'wood_101'];
-    const useChecker = theme.floorSet === 'checker';
-    const floorG = add(scene.add.graphics(), 1);
-    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-      if (useChecker && theme.checkerColors) {
-        floorG.fillStyle(((x + y) & 1) === 0 ? theme.checkerColors[0] : theme.checkerColors[1], 1);
-        floorG.fillRect(wx(x), wy(y), cell, cell);
-      } else {
-        const key = useChecker ? (floorKeySingle || 'check_11') : WOOD[((x % 3) + 3 * (y % 2)) % WOOD.length];
-        if (scene.textures.exists(key)) add(scene.add.image(wx(x) + cell / 2, wy(y) + cell / 2, key).setDisplaySize(cell, cell).setTint(theme.floorTint ?? 0xffffff), 1);
-        else { floorG.fillStyle(theme.floorTint ?? 0x777777, 1); floorG.fillRect(wx(x), wy(y), cell, cell); }
-      }
+    if(!grid)throw Error('Replay course regeneration failed');
+    drawRivalReplayArena(scene,{cell,pad,cols,rows,grid,seed:rep.houseSeed,theme,floorKeySingle,egress,depth:DEPTH,
+      register:o=>{mk(o);objs.push(o);}});
+    const spot=rivalFloorClock(grid);
+    if(spot){
+      clock.setPosition(wx(spot.x),wy(spot.y)).setDepth(DEPTH+1.72).setAlpha(.65);
+      clock.setFontSize(Math.max(8,Math.floor(cell*.65)));
+      add(scene.add.rectangle(wx(spot.x),wy(spot.y),spot.width*cell,spot.height*cell,0x080e13,.22),1.7);
     }
     // walls: fill tile, hard shadow, ink rim on exposed sides (drawWallInk's grammar)
     if (grid) {
       const isWall = (x, y) => y >= 0 && y < rows && x >= 0 && x < cols && grid[y][x] === T.WALL;
       const grime = add(scene.add.graphics().setAlpha(0.08), 1.5); grime.fillStyle(PALETTE.ink, 1); grime.fillRect(wx(0), wy(0), cols * cell, rows * cell);
       const shadow = add(scene.add.graphics().setAlpha(0.38), 2.5); shadow.fillStyle(PALETTE.ink, 1);
-      const fill = add(scene.add.graphics(), 3); fill.fillStyle(theme.wallFillTint ?? 0x11151c, 1);
+      
       const rim = add(scene.add.graphics().setAlpha(0.95), 4.5); rim.fillStyle(PALETTE.ink, 1);
       const sx = Math.max(1, Math.round(cell * 0.10)), sy = Math.max(1, Math.round(cell * 0.14)), px = Math.max(2, Math.round(cell * 0.09));
       for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
         if (!isWall(x, y)) continue;
         const lx = wx(x), ty = wy(y);
         shadow.fillRect(lx + sx, ty + sy, cell, cell);
-        fill.fillRect(lx, ty, cell, cell);
         if (!isWall(x, y - 1)) rim.fillRect(lx, ty, cell, px);
         if (!isWall(x, y + 1)) rim.fillRect(lx, ty + cell - px, cell, px);
         if (!isWall(x - 1, y)) rim.fillRect(lx, ty, px, cell);
@@ -152,7 +142,7 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     runner.add(carry);
     const decoy = add(scene.add.image(0, 0, 'td_runner').setAlpha(0.55).setVisible(false), 9);
     const dh = decoy.height || 43; decoy.setScale((cell * 0.9) / dh);
-    house = { objects: objs, cell, pad, seg: segment, rep, runner, plug, bullets: [], decoy, duffels, carry, wx, wy, stepT: 0, lastR: null, lastP: null, hidden: false, lastEventT: -1 };
+    house = { objects: objs, cell, pad, seg: segment, rep, runner, plug, extraPlugs:[], bullets: [], decoy, duffels, carry, wx, wy, stepT: 0, lastR: null, lastP: null, hidden: false, lastEventT: -1 };
   };
   const destroyHouse = () => {
     if (!house) return;
@@ -219,6 +209,20 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
       face(house.plug, pf.angle, movingP, dt);
       house.lastP = { x: px, y: py };
     } else house.plug.setVisible(false);
+    // The seven-house finale can have a second defender; it is in the frames,
+    // not the primary-spawn metadata, and must not disappear in playback.
+    const extra=st.plugs.slice(1);
+    while(house.extraPlugs.length<extra.length){
+      const o=mk(makePlugSprite(scene,0,0,cell).setDepth(DEPTH+10));
+      house.extraPlugs.push(o);house.objects.push(o);
+    }
+    house.extraPlugs.forEach((o,i)=>{
+      const p=extra[i];if(!p){o.setVisible(false);return;}
+      const flags=unpackFlags(p.flags),x=wx(p.x),y=wy(p.y);
+      const moving=o._lastReplayPosition?Math.hypot(x-o._lastReplayPosition.x,y-o._lastReplayPosition.y)/Math.max(dt,1e-4)>5:false;
+      o.setPosition(x,y).setVisible(!flags.hidden);face(o,flags.angle,moving,dt);
+      o._lastReplayPosition={x,y};
+    });
     // bullets: pooled circles
     while (house.bullets.length < st.bullets.length) house.bullets.push(mk(scene.add.circle(0, 0, Math.max(2, cell * 0.13), 0xffd166, 1).setDepth(DEPTH + 10.5)));
     house.bullets.forEach((b, i) => { const s = st.bullets[i]; if (s) b.setPosition(wx(s.x), wy(s.y)).setVisible(true); else b.setVisible(false); });
@@ -257,22 +261,29 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
       clock.setText(rivalTimeLabel((segment.startedMs || 0) + local));
       const done = bundle.segments.filter((s, i) => s.outcome === 'extracted' && (i < cur.item.index || (i === cur.item.index && cur.item.kind === 'segment' && local >= (s.replay?.durationMs ?? 0)))).length;
       houseBars.forEach((b, j) => b.setFillStyle(j < done ? 0xc6ac70 : 0x23313a));
+      rivalLabel.setText('RIVAL '+done+'/7');
+      const playerDone=playerTimes.filter(t=>t<=(segment.startedMs||0)+local).length;
+      playerLabel.setText('YOU '+playerDone+'/7');
+      playerBars.forEach((b,j)=>b.setFillStyle(j<playerDone?0x86bad5:0x23313a));
       barFill.width = Math.max(1, barW * Math.min(elapsed / timeline.total, 1));
     } catch (e) {
       if (++stepErrors > 30) { console.warn('[RivalReplay] playback aborted:', e); end(); }
     }
   };
   let stepErrors = 0;
-  const end = () => {
+  const end = ({notify=true}={}) => {
     if (finished) return;
     finished = true;
     scene.events.off('update', step);
+    scene.events.off('shutdown',shutdown);
     destroyHouse();
     gone();
-    onDone?.();
+    if(notify)onDone?.();
   };
-  button(left + w - 4 - BTN_W / 2, 20, BTN_W - 8, '✕ EXIT', end);
-  button(left + w - 4 - BTN_W / 2, 54, BTN_W - 8, 'NEXT ▶', () => {
+  const shutdown=()=>end({notify:false});
+  scene.events.once('shutdown',shutdown);
+  button(W-40,H-57,68,'✕ EXIT',end);
+  button(W-40,H-23,68,'NEXT ▶', () => {
     const cur = timelineCursor(timeline, elapsed);
     const next = timeline.items.find(it => it.kind === 'card' && it.start > (cur?.item.start ?? -1));
     elapsed = next ? next.start : timeline.total;

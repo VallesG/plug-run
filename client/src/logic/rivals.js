@@ -203,3 +203,10 @@ export function rivalFloorClock(grid) {
   }
   return null;
 }
+
+// Shared live/replay framing. Presentation chrome NEVER subtracts arena height.
+export function rivalArenaLayout(width,height,cols=16,rows=35){
+  const w=Math.max(1,Number(width)||1),h=Math.max(1,Number(height)||1);
+  const cell=Math.max(8,Math.floor(Math.min(w/cols,h/rows)));
+  return {cell,pad:{x:Math.max(0,Math.floor((w-cols*cell)/2)),y:Math.max(0,Math.floor((h-rows*cell)/2))}};
+}

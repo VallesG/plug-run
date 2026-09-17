@@ -4,7 +4,7 @@ import { crewStoryProgress } from '../logic/contactProgress.js';
 import { shouldShowCity } from '../logic/city.js';
 import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
-import { RIVAL_HUD_HEIGHT, rivalPixels } from '../logic/rivals.js';
+import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
 import RivalsRace from '../controllers/RivalsRace.js';
 import { advanceJourney, worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
@@ -493,6 +493,7 @@ export class BaseGameScene extends Phaser.Scene {
   computeLayoutFromViewport(){
     const { cols, rows } = this;
     const { width, height } = this.scale.gameSize;
+    if(this.runKind==='rivals'){const layout=rivalArenaLayout(width,height,cols,rows);this.cell=layout.cell;this.pad=layout.pad;return;}
     // Rival progress lives over the outer border; it does not tax arena height.
     const hudHeight = 0;
     const arenaHeight = Math.max(1,height);
@@ -524,6 +525,7 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   create(){
+    this._touchSceneClosing=false;
     // Interior furniture is drawn in code; no asynchronous texture-loading restart.
     // Characters are the td_* top-down set, animated by texture swap in
     // updateAvatarVisuals. The Kenney and gangster sheets that used to be
@@ -1245,7 +1247,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.input.keyboard.enabled = true;
 
-    if (this._pointerMoveHandler){ this.input.off('pointermove', this._pointerMoveHandler); }
+    if (this._pointerMoveHandler){ this.input?.off?.('pointermove', this._pointerMoveHandler); }
     if (this._pointerDownHandler){ this.input.off('pointerdown', this._pointerDownHandler); }
     if (this._pointerUpHandler){ this.input.off('pointerup', this._pointerUpHandler); }
     // make sure touch UI is fully reset between matches
@@ -1303,6 +1305,8 @@ export class BaseGameScene extends Phaser.Scene {
       this._spaceBound = false;
     };
     this.events.once('shutdown', () => {
+      this._touchSceneClosing=true;
+      this.destroyTouchUI?.();
       this.unbindSpace();
       // Note: Don't cleanup sidebars here - the next scene will clean them up
       // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
@@ -2937,6 +2941,8 @@ export class BaseGameScene extends Phaser.Scene {
   /* ------------- Mobile Controls: swipe + tap ------------- */
   makeMobileControls(){
     this.destroyTouchUI?.();
+    // Camera/Input plugins may already be gone during shutdown listener order.
+    if(this._touchSceneClosing||!this.cameras?.main||!this.input||!this.scale?.gameSize)return;
 
     // Thresholds adapted from 9/17 build that worked well on devices
     const SWIPE_DEAD_PX = 10;   // minimum movement to count as a swipe
@@ -3046,7 +3052,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.off('pointermove', moveHandler);
     this.input.off('pointerup', upHandler);
     this.input.off('pointerupoutside', upHandler);
-    this.input.off('gameout', upHandler);
+    this.input?.off?.('gameout', upHandler);
     // remove DOM touch fallback
     const canvas = this.sys.game?.canvas || this.game?.canvas;
     if (this._domTouchHandlers){
@@ -3068,7 +3074,7 @@ export class BaseGameScene extends Phaser.Scene {
 
   suspendTouchUI(suspended){
     // Temporarily disable touch during modals
-    if (suspended){
+    if (suspended||this._touchSceneClosing||!this.cameras?.main){
       this.destroyTouchUI();
     } else {
       this.makeMobileControls();
@@ -3239,6 +3245,7 @@ export class BaseGameScene extends Phaser.Scene {
 
   /* -------------- Scene lifecycle cleanup -------------- */
   shutdown(){
+    this._touchSceneClosing=true;
     console.log('[shutdown] Round', this.pveRound, '- Shutting down scene');
 
     // CRITICAL: Clean up carry sprite FIRST, before any containers are destroyed

@@ -1,3 +1,42 @@
+## Rivals win shutdown and replay parity — fixed 2026-09-16
+
+User hit centerX undefined after their first win: RivalsRace.dispose destroyed an
+entry modal after Phaser removed cameras.main, and GameUI.destroy unconditionally
+called suspendTouchUI(false), trying to recreate the mobile input zone. Destroy
+was also non-idempotent, so an already dismissed entry modal did this again.
+
+Fixes: GameUI modal destroy is idempotent and accepts {resumeTouch:false}.
+Rivals teardown uses silent modal cleanup and marks the scene touch lifecycle
+closing before doing so; dispose is idempotent. Base touch setup checks camera/
+input availability, cleans up listeners safely when input is gone, and refuses
+rebinds during shutdown. create resets the closing flag for a restarted instance.
+Actual modal + controller regression checks remove the camera before dispose.
+Normal live dismissals still resume exactly once; story touch feel is unchanged.
+
+Replay mismatch: RivalReplayPlayer still reserved its own 84px top HUD and had a
+different wall/floor drawing implementation. The bank itself is not a truncated
+course: all 1,646 attempts across 55 bundles retain cols=16,rows=35 and semantic
+grid-cell positions. Course validation remains seed/scales based. Live Rivals
+and portable playback now share rivalArenaLayout (full viewport, min cell 8,
+same padding) and ReplayArena delegates to live ArenaArt/InteriorDecor/perimeter
+on an isolated ghost-only facade. Original seeds, frames, hashes and bank files
+are unchanged. Replay ink/depth layering matches live; clock lives in the floor,
+progress rails overlay the sides, EXIT/NEXT sit bottom-right. All defenders in
+recorded frames are now shown, not just the primary; second-defender omission
+was another visual discrepancy. Replay shutdown cleans up without restoring a
+dead result modal. Viewer art does not change combat or course rules, so there
+is no rules-version bump or fabricated re-recording.
+
+Validation: 45 available adapted V8 suites pass; mobile lifecycle now 251,
+new actual replay-view geometry/art/death-scene cleanup 28 across 280x480,
+390x844 and 1440x900. Six changed runtime modules pass imported-binding-aware
+V8 compilation. Existing bank integrity remains 402 assertions over 55 records.
+Native npm run verify, Vite/native ESM/art checks, actual Phaser pixels/audio,
+phone first-win -> next-block steering and headless recording are unverified
+under the user's Carbon Black restriction. No native/local execution attempted.
+Read CLAUDE_RIVALS_BOT_BANK_HANDOFF.md next to expand bots/bank on an allowed
+machine. Do not rewrite old hashes or move the pinned pool just for a HUD change.
+
 ## Organic cities and Rivals territory entrance — implemented 2026-09-16
 
 The crooked grid was rejected. City cartography now has a winding central river,

@@ -218,3 +218,39 @@ check('final cleanup removes all DOM fallback listeners',
   ['touchstart','touchmove','touchend','touchcancel'].every(name => safari.dom.count(name) === 0));
 
 console.log(passed + ' mobile input lifecycle assertions passed');
+
+const goneCamera=makeHost();
+goneCamera.host.cameras.main=undefined;
+goneCamera.host.suspendTouchUI(false);
+check('camera removed before modal disposal never rebinds',!goneCamera.host._touchHandlers);
+check('camera-removed cleanup releases DOM listeners',goneCamera.dom.count('touchstart')===0);
+const closing=makeHost();closing.host._touchSceneClosing=true;closing.host.suspendTouchUI(false);
+check('closing scene never rebinds even with camera',!closing.host._touchHandlers);
+closing.host._touchSceneClosing=false;closing.host.suspendTouchUI(false);
+check('restarted scene can create touch again',!!closing.host._touchHandlers);
+closing.host.destroyTouchUI();closing.host.input=null;closing.host.makeMobileControls();
+check('removed input plugin is safe',!closing.host._touchHandlers);
+console.log('shutdown touch lifecycle: '+passed+' total assertions passed');
+
+const uiSource=readFileSync(new URL('../src/controllers/GameUI.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
+const UI=new Function(uiSource+';return GameUI;')();
+const teardown=makeHost(),ui=new UI(teardown.host);
+const realModal=ui.showModal({title:'YOU WIN',lines:[],buttons:[]});
+teardown.host.cameras.main=undefined;
+realModal.destroy();realModal.destroy();
+check('actual GameUI destroy after camera shutdown is safe',!teardown.host._touchHandlers);
+const live=makeHost(),liveUI=new UI(live.host);let resumes=0;
+const originalResume=live.host.suspendTouchUI.bind(live.host);
+live.host.suspendTouchUI=value=>{if(!value)resumes++;originalResume(value);};
+const once=liveUI.showModal({title:'DIALOGUE',buttons:[]});once.destroy();once.destroy();
+check('modal destroy resumes live touch only once',resumes===1);
+const silent=liveUI.showModal({title:'SHUTDOWN',buttons:[]});silent.destroy({resumeTouch:false});
+check('explicit cleanup does not resume touch',resumes===1);
+live.host.destroyTouchUI();
+const raceSource=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
+const Race=new Function('clearTimeout',raceSource+';return RivalsRace;')(()=>{});
+const exact=makeHost();exact.host.rivalRace={status:'finished'};exact.host.gameUI=new UI(exact.host);
+const race=new Race(exact.host);race.entryModal=exact.host.gameUI.showModal({title:'BLOCK RIVALS',buttons:[]});
+exact.host.cameras.main=undefined;race.dispose();race.dispose();
+check('actual Rivals dispose closes modal after camera removed',race.disposed&&exact.host._touchSceneClosing&&!exact.host._touchHandlers);
+console.log('actual modal/rivals shutdown: '+passed+' total assertions passed');
