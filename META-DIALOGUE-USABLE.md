@@ -1,5 +1,16 @@
 # USABLE DIALOGUE — Plug Run Season 1 Additions
-*Only dialogue. No implementation notes. All lines phone-short. Pick any ID.*
+Status: Reviewed candidate bank, not deployed canon. This is the sole current Meta dialogue file; the two superseded proposals are removed but remain recoverable in Git history.
+
+## Integration rules
+- Preserve season chapters, active pre-house slots, silent slots, claimed-beat persistence, mode isolation and the Block 3 Rivals invitation.
+- These are unconditional character lines, not measured praise. Do not change performance predicates.
+- Banter replaces the existing chapter exchange in campaignContacts.js rather than adding another exchange. Honor the named speakers; the first line is not necessarily the primary.
+- One speaker line per short page. Keep grammatical wording and review wrapping on phones.
+- Teases name House 9 and promise briefing before entry. No extra pickup on the teased house.
+- Alternative items are selectable proposals, not an approved replacement season. Only one job item per chapter; stash and violet case both remain mandatory.
+- No new mechanics, rewards, tracking, player beliefs/responses or faction alliances are implied.
+- Optional romance and new shared backstory require explicit adoption. Cross-crew references never require completing another crew's campaign.
+
 
 ---
 ## AFTERLIGHT — Vee / Sol
@@ -14,7 +25,7 @@
 - Vee: "My artistic direction: more negative space between you and the bullets."
 
 **AL_PROP_BANT_03** | Sol
-- Sol: "That stopwatch is still ticking from your last run. I love that sound."
+- Sol: "I timed myself finding the stopwatch. Terrible result. We are not discussing it."
 
 **AL_PROP_BANT_04** | Vee / Sol
 - Vee: "Sol, you blew the left speaker again."
@@ -24,7 +35,7 @@
 - Vee: "Crossline painted their repeater box beige. Beige. I could fix it."
 
 **AL_PROP_BANT_06** | Sol — Celebration add-on
-- Sol: "Real talk — you make this block look easy. You make it look intentional."
+- Sol: "Fifteen bags home. Jokes aside, glad you made it back."
 
 **AL_PROP_BANT_07** | Vee
 - Vee: "Sol drank three energy drinks. Now he thinks the mailbox is a timing gate."
@@ -56,27 +67,27 @@
 ### Alt House 9 Items
 
 **AL_PROP_ALTITEM_01 — The Plant (Kevin)**
-- Sol: "House 9. Violet case holds Vee's studio fern. Bring case and stash to car."
+- Sol: "House 9. Violet case holds Vee's studio fern. Bring the case and stash to the car."
 - Vee: "He is named Kevin. He survived three moves and two leaks."
 - Finish: Vee: "Kevin lives. Put him by the north window."
 
 **AL_PROP_ALTITEM_02 — LED Sneakers**
-- Sol: "Door 9. Violet case holds light-up kids sneakers. Bring case and stash to car."
+- Sol: "Door 9. Violet case holds light-up kids sneakers. Bring the case and stash to the car."
 - Vee: "Those soles are a lighting reference. I am keeping them."
 - Finish: Vee: "Sneakers are now our 'do not trip' warning system."
 
 **AL_PROP_ALTITEM_03 — Chipped Mug**
-- Sol: "House 9. Violet case holds chipped mug: WORLD'S OKAYEST RUNNER. Bring case and stash to car."
+- Sol: "House 9. Violet case holds chipped mug: WORLD'S OKAYEST RUNNER. Bring the case and stash to the car."
 - Vee: "That was my first studio mug. It survived my thesis show."
 - Finish: Sol: "Mug is safe. Vee filled it with spray tips."
 
 **AL_PROP_ALTITEM_04 — Dented Violet Cans**
-- Sol: "Target door. Violet case holds three dented violet cans. Bring case and stash to car."
+- Sol: "Target door. Violet case holds three dented violet cans. Bring the case and stash to the car."
 - Vee: "Dented, but full. Like Sol's personality. Almost."
 - Finish: Vee: "Three cans left. One perfect tag left in them."
 
 **AL_PROP_ALTITEM_05 — The Mixtape**
-- Sol: "House 9. Violet case holds mixtape: AFTERLIGHT FIRST SHOW. Bring case and stash to car."
+- Sol: "House 9. Violet case holds mixtape: AFTERLIGHT FIRST SHOW. Bring the case and stash to the car."
 - Vee: "I thought I lost that after the warehouse move."
 - Sol: "We are listening to it on the way to next block."
 - Finish: Vee: "Track two still slaps. You kept that jacket from the cover."
@@ -89,9 +100,9 @@
 - Vee: "Fine. Keep the jacket. I will bill you in mural labor."
 
 **AL_PROP_ARC_02 — Fridge Leaderboard**
-- Sol: "I started a leaderboard for porch-to-curb times. It's just your times."
-- Sol: "Update — leaderboard is now on my fridge. You're still top."
-- Sol: "If we clear this last block, you top the board forever."
+- Sol: "My fridge leaderboard has one category: favorite runner. One entry. Very competitive."
+- Sol: "Vee added her toaster to my leaderboard. I am appealing."
+- Sol: "Clear this last block and I retire the fridge leaderboard. The toaster had a good run."
 
 **AL_PROP_ARC_03 — Optional Will-They/Won't-They**
 - Vee: "Sol stayed up to fix my spray rig. He said it was for the job."
@@ -112,7 +123,7 @@
 - Mags: "Switch made a checklist for this checklist. I'm not okay."
 
 **CL_PROP_BANT_02** | Switch
-- Switch: "Your exit on that last door was clean. I'm marking it acceptable."
+- Switch: "Next exit: keep it simple. I have enough paperwork."
 
 **CL_PROP_BANT_03** | Mags / Switch
 - Mags: "Switch moved my soldering iron again."
@@ -128,7 +139,7 @@
 - Mags: "My bunker is freezing. I told Switch I'm not built for arctic ops."
 
 **CL_PROP_BANT_07** | Switch — Celebration add
-- Switch: "You kept the line steady while we argued over coax. That's not easy."
+- Switch: "Fifteen stashes accounted for. Thanks for sticking with us through the coax arguments."
 
 **CL_PROP_BANT_08** | Mags — Anecdote
 - Mags: "I used to label Switch's cable drawer 'definitely not coax.' He didn't laugh."
@@ -159,33 +170,33 @@
 ### Alt House 9 Items
 
 **CL_PROP_ALTITEM_01 — Grocery List**
-- Mags: "House 9. Violet case holds grocery list. Bring case and stash to car."
+- Mags: "House 9. Violet case holds grocery list. Bring the case and stash to the car."
 - Switch: "That is Mags's handwriting. Operational clutter."
 - Mags: "It's called balance. Grab both and get out!"
 - Finish: Mags: "We got the list. Switch, we're out of eggs now."
 
 **CL_PROP_ALTITEM_02 — Thermos**
-- Mags: "Door 9. Violet case holds Switch's dented thermos. Bring case and stash to car."
+- Mags: "Door 9. Violet case holds Switch's dented thermos. Bring the case and stash to the car."
 - Switch: "That thermos survived three Map Rooms. Bring it home."
-- Finish: Switch: "Thermos secured. Mags, stop using it as a stand."
+- Finish: Switch: "Thermos secured. Mags, stop using it as a soldering iron stand."
 
 **CL_PROP_ALTITEM_03 — Cat Collar**
-- Mags: "House 9. Violet case holds cat collar with tracker. Bring case and stash to car."
+- Mags: "House 9. Violet case holds cat collar with tracker. Bring the case and stash to the car."
 - Switch: "Do not extract the cat. Extract the case. Clean line to curb."
 - Finish: Mags: "Tracker returned. Cat is now listed as perimeter security."
 
 **CL_PROP_ALTITEM_04 — Afterlight Stencil**
-- Mags: "House 9. Violet case holds violet Mylar stencil. Not ours. Bring case and stash to car."
+- Mags: "House 9. Violet case holds violet Mylar stencil. Not ours. Bring the case and stash to the car."
 - Switch: "That's Afterlight's logo. Log it, don't deploy it."
 - Finish: Mags: "Found their stencil. Thought of hanging it crooked. Switch said no."
 
 **CL_PROP_ALTITEM_05 — Borrowed Heat-Sink**
-- Mags: "House 9. Violet case holds small finned heat-sink. Says ROW. Bring case and stash to car."
+- Mags: "House 9. Violet case holds small finned heat-sink. Says ROW. Bring the case and stash to the car."
 - Switch: "That belongs to Brick. We will return it via Ro."
 - Finish: Mags: "Heat-sink returned. Brick said thanks by saying nothing."
 
 **CL_PROP_ALTITEM_06 — Space Heater**
-- Mags: "House 9. Violet case holds small ceramic space heater. Bring case and stash to car."
+- Mags: "House 9. Violet case holds small ceramic space heater. Bring the case and stash to the car."
 - Switch: "Low draw, safe for bunker. Approved. Bring both."
 - Finish: Mags: "Heater installed. Bunker is now above freezing. Luxury."
 
@@ -197,7 +208,7 @@
 - Mags: "He still remembers. I pretend I don't notice."
 
 **CL_PROP_ARC_02 — Whiteboard**
-- Mags: "Switch drew your exit on the whiteboard. With a protractor."
+- Mags: "Switch plans his grocery route on the whiteboard. With a protractor."
 - Mags: "Whiteboard now says DO NOT MOVE MAGS'S STUFF. Underlined."
 - Switch: "The whiteboard is accurate. Mags drew me as a traffic cone."
 
@@ -209,7 +220,7 @@
 
 **CL_PROP_ARC_04 — Unexpected Agreement**
 - Switch: "We both agree Afterlight's megaphone is too loud."
-- Mags: "We agree again — but I want to borrow it for one announcement."
+- Mags: "I want to borrow it for one announcement: Switch, eat lunch."
 
 ---
 ## IRON ROW — Brick / Rook
@@ -220,7 +231,7 @@
 - Brick: "First rule of the Row: you bring the bag out. You bring yourself out."
 
 **IR_PROP_BANT_02** | Rook
-- Rook: "Brick used my good rag to check oil again. That rag was vintage."
+- Rook: "Brick used my good rag to check oil again. That rag was vintage. It had a name."
 
 **IR_PROP_BANT_03** | Brick / Rook
 - Brick: "Rook, stop inventorying the house."
@@ -257,7 +268,7 @@
 
 **IR_PROP_CH06_H04_CHECK** | Brick / Rook
 - Brick: "Dark porches here. Don't rush the threshold."
-- Rook: "And if it's dark, copper just lies around. Hypothetically."
+- Rook: "Rook priced a copper lamp in a photograph. Asked if delivery was included."
 
 **IR_PROP_CH08_H13_CHECK** | Brick
 - Brick: "Three houses left to close this block. You did the hard part. Keep feet moving."
@@ -268,38 +279,38 @@
 ### Alt House 9 Items
 
 **IR_PROP_ALTITEM_01 — Mixtapes**
-- Rook: "House 9. Violet case holds box of mixtapes: SHOP DAYS. Bring case and stash to car."
+- Rook: "House 9. Violet case holds box of mixtapes: SHOP DAYS. Bring the case and stash to the car."
 - Brick: "That handwriting is mine. Bring it home clean."
-- Finish: Brick: "Those tapes still work. My 2008 playlist is sincere."
+- Finish: Brick: "Those tapes still work. Rook called my 2008 playlist aggressively sincere. He's not wrong."
 
 **IR_PROP_ALTITEM_02 — Bike Bell**
-- Rook: "Target. Violet case has tiny chrome bike bell. Bring case and stash to car."
+- Rook: "Target. Violet case has tiny chrome bike bell. Bring the case and stash to the car."
 - Brick: "We are not putting a bike bell on the getaway car."
 - Rook: "It's for safety and morale!"
 - Finish: Rook: "Bell is now on shop door. Brick rings it every time."
 
 **IR_PROP_ALTITEM_03 — Recipe Card**
-- Rook: "House 9. Violet case holds recipe: Brick's Mom's Cornbread. Bring case and stash to car."
+- Rook: "House 9. Violet case holds recipe: Brick's Mom's Cornbread. Bring the case and stash to the car."
 - Brick: "That's my mom's handwriting. Bring that case home clean."
 - Finish: Brick: "Cornbread on the bench tomorrow. You earned a piece."
 
 **IR_PROP_ALTITEM_04 — Tiny Cylinder**
-- Rook: "House 9. Violet case holds small stool cylinder. Bring case and stash to car."
+- Rook: "House 9. Violet case holds small stool cylinder. Bring the case and stash to the car."
 - Brick: "That cylinder has been on my floor eight months, Rook."
 - Finish: Rook: "Cylinder is now a doorstop. Brick said 'fine.' That's good."
 
 **IR_PROP_ALTITEM_05 — Antenna Clip**
-- Rook: "House 9. Violet case holds antenna clip with cyan arrow. Bring case and stash to car."
+- Rook: "House 9. Violet case holds antenna clip with cyan arrow. Bring the case and stash to the car."
 - Brick: "That's Crossline hardware. We'll leave it at The Window."
 - Finish: Rook: "Clip returned. Mags left note that just said 'finally.'"
 
 **IR_PROP_ALTITEM_06 — Feathered Hat**
-- Rook: "Door 9. Violet case holds feathered hat, very violet. Bring case and stash to car."
+- Rook: "Door 9. Violet case holds feathered hat, very violet. Bring the case and stash to the car."
 - Brick: "Don't wear it on sprint out. You will snag."
 - Finish: Rook: "Hat is now on shop mannequin. Vee will yell about it."
 
 **IR_PROP_ALTITEM_07 — Brass Bushing**
-- Rook: "House 9. Violet case holds hardened brass bushing. Bring case and stash to car."
+- Rook: "House 9. Violet case holds hardened brass bushing. Bring the case and stash to the car."
 - Brick: "That's actual shop stock. Good find. Bring both."
 - Finish: Rook: "Bushing is in the press. First block it actually belongs in."
 
@@ -312,16 +323,53 @@
 
 **IR_PROP_ARC_02 — Hydration**
 - Brick: "Keep water nearby after sprints. Shop rule."
-- Brick: "Good exit. Water's on the bench when you want it."
+- Brick: "Water's on the bench when you want it. Shop rule: don't run on fumes."
 - Brick: "Remember to drink water. That's all. Keep moving."
 
 **IR_PROP_ARC_03 — Optional Will-They/Won't-They**
 - Rook: "Brick fixed my busted stool without me asking. Again."
 - Brick: "Rook says garage is just a garage. He sorts screws when anxious."
-- Rook: "If we move to Copper Bay, Brick's bringing the brass clock. Good."
+- Rook: "If we move to Copper Bay, Brick's bringing the shop sign. Good."
 - Brick: "Row's not just the shop, Rook."
 - Rook: "Yeah. I know. Don't get soft before ferry."
 
 **IR_PROP_ARC_04 — Unexpected Agreement**
 - Brick: "We both agree: Afterlight's party is too loud."
 - Rook: "We agree again: it's still better than Crossline arguing about cables."
+
+---
+## Placement and continuity contract
+
+### Banter and check-ins
+Use BANT lines in an existing active non-briefing check-in, preferably its current chapter banter slot. Opening lines require an existing House 1 beat. Fifteen-stash celebration lines belong only after block completion.
+Item-specific banter requires that item to exist in the chosen continuity, or must be rewritten as off-screen history.
+IR_PROP_BANT_04 is proposed shared backstory, not evidence of an earlier player mission.
+CHxx_Hxx IDs retain Meta's suggested locations, not a verified runtime schedule. Compare them to crewSeason before use; a silent or mismatched location requires schedule approval or relocation.
+Do not discard preserved tease pages, job briefing, House 10 debrief or conditional praise when replacing a cue. Item-specific teases must match the selected item; otherwise use a generic named-contact House 9 tease.
+
+### Item replacement checklist
+Each ALTITEM contains a briefing and finish callback. Before it becomes a complete usable chapter replacement:
+1. Select one chapter and document the exact original item ID/name being replaced.
+2. Update item metadata, pickup label/toast and applicable sound identifier, briefing, tease, House 10 debrief and finish exchange together.
+3. Search later fixed dialogue, campaignContacts banter, previews, tests and item-dependent conditional praise for the displaced item.
+4. Repair item-dependent wording without altering a performance predicate or pretending the original item was recovered.
+5. Reconcile dependent story reasons, such as Iron Row's grinder -> waffles -> ventilation chain.
+6. Preserve violet-case placement, mandatory dual pickup, stash counts, escape rules and unrelated story progression.
+No original item-to-chapter mapping is asserted by this candidate bank. A continuity audit is required before any item swap is deployed.
+Cats, light-up shoes, bells, heaters and other objects are case contents or off-screen lore, not new interactive mechanics.
+
+### Ordered arcs
+Spread setup and payoff over already active slots in increasing chapter order. Do not treat every later arc line as independent:
+- Jacket Paint War: paint accusation -> custom-jacket reply -> mural-labor payoff; requires spray-paint history.
+- Fridge Leaderboard: single-entry joke board -> toaster challenger -> retirement; no actual rankings or fabricated times.
+- Coffee Order: remembered order -> cold-coffee quirk -> appreciation.
+- Whiteboard: grocery protractor -> boundary sign -> traffic-cone doodle.
+- Swear Jar: missing jar -> confessed loss -> heavier returned jar.
+- Hydration: independent reminders; no claim that the player drank.
+- Unexpected Agreement: independent character chatter, not faction cooperation.
+- Optional relationship arcs: adult characters, intentional selection, no automatic new canon. May remain platonic; existing character canon takes precedence.
+
+## Before gameplay integration
+Verify exact speakers, active slots, truthful counts, item prerequisites and callbacks. Retain silence; select the best material rather than deploying every joke.
+Run native npm run verify before and after runtime edits when execution is available. Review phone wrapping, retries/reload silence and story previews.
+This consolidation changes documentation only. No runtime dialogue, item sequence, rewards or bank recordings have changed.
