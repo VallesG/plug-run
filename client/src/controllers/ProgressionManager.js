@@ -1,3 +1,5 @@
+import { eliminationTip } from '../logic/eliminationTips.js';
+import { drawEliminationTip } from './EliminationTip.js';
 import { carDepartureTargets, carSkidLines } from '../logic/getawayCar.js';
 import { drawBlockComplete } from './BlockComplete.js';
 import { crewSigil } from '../logic/crewSigils.js';
@@ -99,7 +101,7 @@ export default class ProgressionManager {
 
     // Set roundOver immediately to prevent multiple calls from update loop
     this.scene.roundOver = true;
-    ReplaySystem.finalize();
+    ReplaySystem.finalize({successful:this.scene.role === 'runner'});
 
     const cleanupArena = () => {
       this.scene.destroyDecoySprite?.();
@@ -121,7 +123,7 @@ export default class ProgressionManager {
     // PvE Plug mode: runner extracted (plug failed)
     if (this.scene.mode === 'pve' && this.scene.role === 'plug') {
       this.scene.roundOver = true;
-    ReplaySystem.finalize();
+    ReplaySystem.finalize({successful:this.scene.role === 'runner'});
       // Plug mode: the AI runner got away. A loss, despite being the
       // "extraction" path — hence the distinct outcome label.
       this.scene.finalizeRun?.('runner_extracted');
@@ -261,7 +263,7 @@ export default class ProgressionManager {
     }
 
     this.scene.roundOver = true;
-    ReplaySystem.finalize();
+    ReplaySystem.finalize({successful:this.scene.role === 'runner'});
     // Runner-mode success. The plug-mode branch above already returned, so
     // reaching here means the player extracted. Close the forensics first so
     // the record carries the leg split for a WIN too — a clean run is the
@@ -393,7 +395,8 @@ export default class ProgressionManager {
     if (this.scene.runKind === 'rivals') return this.scene.rivals?.retryHouse();
     if (this.scene.roundOver) return;
     this.scene.roundOver = true;
-    ReplaySystem.finalize();
+    ReplaySystem.finalize({successful:this.scene.role === 'runner'
+      ? (winner === 'attacker' || winner === 'runner') : (winner === 'defender' || winner === 'plug')});
     // Death or timeout. Which one is recoverable from the record: a run whose
     // durationMs lands at timerMs ran out the clock; anything shorter died.
     this.scene.finalizeRun?.(`round_end_${winner}`);
@@ -781,21 +784,17 @@ export default class ProgressionManager {
     const roundNumber = this.scene.pveRound || 1;
     const isPlug = this.scene.role === 'plug';
     const reason = context.reason || (isPlug ? 'runner_eliminated' : 'runner_eliminated');
-    const roundLabel = `ROUND ${roundNumber}`;
+    const roundLabel = `${this.scene.runKind === 'journey' ? 'HOUSE' : 'ROUND'} ${roundNumber}`;
 
     let title;
-    let descriptor;
     if (isPlug) {
       if (reason === 'runner_extracted') {
-        title = `STASH STOLEN - ${roundLabel}`;
-        descriptor = 'The AI runner escaped with the stash.';
+        title = 'STASH STOLEN';
       } else {
-        title = `DEFENSE ENDED - ${roundLabel}`;
-        descriptor = 'Defense concluded.';
+        title = 'DEFENSE ENDED';
       }
     } else {
-      title = `ELIMINATED - ${roundLabel}`;
-      descriptor = 'Run Ended';
+      title = 'ELIMINATED';
     }
 
     this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, roundNumber);
@@ -825,20 +824,12 @@ export default class ProgressionManager {
     // Check if spawn swap has been used
     const swapUsed = hasUsedSpawnSwap(role);
 
-    // Single full-width Watch Replay at the top — sharing lives on the
-    // replay's end screen, where the clip actually exists.
-    const replayShareRow = ReplaySystem.hasReplay(this.scene.role) ? [{
-      label: '\u25B6 Watch Replay',
-      variant: 'secondary',
-      keepOpen: true,
-      onClick: (m) => {
-        m.setVisible(false);
-        ReplaySystem.play(this.scene, { onDone: () => m.setVisible(true) });
-      }
-    }] : [];
-
+    const tipTurn=this.scene.eliminationTipTurn || 0;
+    this.scene.eliminationTipTurn=tipTurn+1;
+    const cue=eliminationTip({gangID:this.scene.blockGangID ?? getWindowState().gangID,
+      role,seed:this.scene.seed,house:roundNumber,turn:tipTurn});
+    const tipContact=contact(cue.contactID);
     const buttons = [
-      ...replayShareRow,
       {
         label: `Retry Round ${roundNumber}`,
         variant: 'primary',
@@ -847,6 +838,8 @@ export default class ProgressionManager {
           runKind: this.scene.runKind, blockIndex: this.scene.blockIndex,
           role,
           pveRound: roundNumber, // Same round
+          eliminationTipTurn: this.scene.eliminationTipTurn,
+          retryAfterElimination: true,
           pveSessionStash: this.scene.pveSessionStash,
           pveSessionRep: this.scene.pveSessionRep,
               pveCleanStreak: this.scene.pveCleanStreak || 0,
@@ -858,7 +851,7 @@ export default class ProgressionManager {
       },
       {
         // TEMP: Removed daily limit for testing
-        label: `Retry Round ${roundNumber} & Swap Spawns`,
+        label: `Retry & Swap Spawns (−${SESSION_RULES.SWAP_PENALTY} REP)`,
         variant: 'secondary',
         disabled: false, // Always enabled for testing
         onClick: () => {
@@ -884,6 +877,8 @@ export default class ProgressionManager {
           runKind: this.scene.runKind, blockIndex: this.scene.blockIndex,
             role,
             pveRound: roundNumber, // Same round
+            eliminationTipTurn: this.scene.eliminationTipTurn,
+            retryAfterElimination: true,
             pveSessionStash: this.scene.pveSessionStash,
             pveSessionRep: this.scene.pveSessionRep,
               pveCleanStreak: this.scene.pveCleanStreak || 0,
@@ -897,7 +892,7 @@ export default class ProgressionManager {
         }
       },
       {
-        label: 'Exit',
+        label: 'Main Menu',
         variant: 'danger',
         onClick: () => this.scene.scene.start('MENU')
       }
@@ -905,16 +900,17 @@ export default class ProgressionManager {
 
     const modal = this.scene.gameUI?.showModal?.({
       title,
-      subtitle: descriptor,
+      subtitle: roundLabel,
+      completion: true,
+      accent: tipContact?.accent ?? 0xe2b45f,
       lines: [
-        ``,
-        `Total Stash Collected: ${this.scene.pveSessionStash}`,
-        `Total Rep Earned: ${this.scene.pveSessionRep}`,
+        `${this.scene.pveSessionStash || 0} STASH  ·  ${this.scene.pveSessionRep || 0} REP`,
         ...(this.scene._lastDeathPenalty ? [`Loss penalty: \u2212${this.scene._lastDeathPenalty} REP`] : []),
-        `Best Round: ${this.scene.pveBestRound}`
       ],
       buttons
     });
+
+    drawEliminationTip(this.scene,modal,cue);
 
     if (this.scene.gameUI) {
       this.scene.gameUI.currentModal = modal;

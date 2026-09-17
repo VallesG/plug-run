@@ -112,7 +112,7 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     scene.roundPausedForMenu=false;
     onDone?.();
   });
-  const hasReplay=options.allowReplay!==false && ReplaySystem.hasReplay(scene.role);
+  const hasReplay=options.allowReplay!==false && !scene.retryAfterElimination && ReplaySystem.hasReplay(scene.role,{successfulOnly:true});
   const navW=hasReplay?(layout.buttonW-10)/2:layout.buttonW;
   if(hasReplay){
     button(panel.x-(navW+10)/2,top+layout.navY,navW,32,'WATCH REPLAY',()=>{

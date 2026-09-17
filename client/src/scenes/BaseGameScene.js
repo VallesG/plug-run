@@ -209,6 +209,8 @@ export class BaseGameScene extends Phaser.Scene {
       this.pveSessionStash = initData?.pveSessionStash ?? sess?.pveSessionStash ?? 0;
       this.pveSessionRep = initData?.pveSessionRep ?? sess?.pveSessionRep ?? 0;
       this.pveCleanStreak = initData?.pveCleanStreak ?? sess?.pveCleanStreak ?? 0;
+      this.eliminationTipTurn = Math.max(0,Math.floor(initData?.eliminationTipTurn || 0));
+      this.retryAfterElimination = initData?.retryAfterElimination ?? false;
       this.retryAfterDeath = initData?.retryAfterDeath ?? sess?.retryAfterDeath ?? false;
       this._showCityOnEntry = shouldShowCity({ mode:this.mode, runKind:this.runKind,
         role:entryRole, pveRound:this.pveRound, retryAfterDeath:this.retryAfterDeath });

@@ -302,7 +302,8 @@ const ReplaySystem = {
   /** Explicitly finalize the active recording. Round-end code calls this
    *  synchronously BEFORE building end-of-round modals, so hasReplay() is
    *  accurate in the same frame the round ends. Safe to call repeatedly. */
-  finalize() {
+  finalize({successful} = {}) {
+    if (rec && typeof successful === 'boolean') rec.meta.successful=successful;
     if (rec && rec.endAt === undefined) rec.endAt = (rec.elapsed || 0) + GRACE_MS;
   },
 
@@ -328,11 +329,11 @@ const ReplaySystem = {
   },
 
   /** Pass a role to only match replays recorded in that role. */
-  hasReplay(role) {
-    if (lastReplay && (!role || lastReplay.meta.role === role)) return true;
+  hasReplay(role, {successfulOnly = false} = {}) {
+    if (lastReplay && (!role || lastReplay.meta.role === role) && (!successfulOnly || lastReplay.meta.successful === true)) return true;
     // An in-flight recording (round just ended, grace window still open)
     // counts too — the game-over modal is built in that same frame.
-    if (rec && rec.started && rec.samples.length >= 8 && (!role || rec.meta?.role === role)) return true;
+    if (rec && rec.started && rec.samples.length >= 8 && (!role || rec.meta?.role === role) && (!successfulOnly || rec.meta?.successful === true)) return true;
     return false;
   },
   getMeta() { return lastReplay?.meta ?? null; },

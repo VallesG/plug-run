@@ -22,7 +22,7 @@ function setup(width,height,house=1,options={}) {
  let calls=0,modalOptions;
  const timers=[];
  const scene={cameras:{main:{centerX:width/2,centerY:height/2}},scale:{gameSize:{width,height}},
-  events:{once(){},off(){}},time:{delayedCall(delay,fn){const timer={delay,fn,remove(){}};timers.push(timer);return timer;}},role:'runner',mode:'pve',pveRound:house,roundPausedForMenu:false,input:{keyboard:{enabled:false}},
+  events:{once(){},off(){}},time:{delayedCall(delay,fn){const timer={delay,fn,remove(){}};timers.push(timer);return timer;}},role:'runner',mode:'pve',pveRound:house,retryAfterElimination:options.retryAfterElimination===true,roundPausedForMenu:false,input:{keyboard:{enabled:false}},
   add:{rectangle:(x,y,w,h)=>{const o=node(x,y,w,h);rectangles.push(o);return o;},
    text:(x,y,value)=>{const o=node(x,y);o.text=value;texts.push(o);return o;}},
   scene:{start:key=>{scene.destination=key;}}};
@@ -109,3 +109,10 @@ const prefilled=setup(390,844,1,{initialPowers:['dash','decoy'],allowReplay:fals
 prefilled.slots[0].press();prefilled.cards[0].press();prefilled.start.press();
 check('retry prefilled powers stay editable',prefilled.scene.runnerPowersSelected.join()==='decoy,phase');
 console.log('loadout pointer regression: '+passed+' total assertions passed');
+
+replayAvailable=true;
+const failedPicker=setup(390,844,5,{retryAfterElimination:true,showAccount:false});
+check('retry picker does not offer failed replay',!failedPicker.texts.some(t=>t.text==='WATCH REPLAY'));
+const successPicker=setup(390,844,5,{showAccount:false});
+check('normal successful-run picker still offers replay',successPicker.texts.some(t=>t.text==='WATCH REPLAY'));
+console.log('success-only picker replay: '+passed+' total assertions passed');

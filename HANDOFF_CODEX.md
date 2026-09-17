@@ -1,3 +1,47 @@
+## Regular elimination screen: contact + rotating advice — Codex (2026-09-17)
+
+ProgressionManager.showPvEGameOver now uses a short ELIMINATED/defense heading
+and HOUSE/ROUND subtitle, compact stash/REP plus existing penalty, a selected
+crew contact portrait and short loading-screen style tip. Keeps three actions:
+Retry Round, Retry & Swap Spawns (price shown), Main Menu. Existing seed,
+round, session totals, spawn cycle, swap penalty/tough-spawn rules, score
+submission-after-render and contact death tracking unchanged.
+Best-round tracking remains even though that extra line is no longer shown.
+Rivals still delegates to its own recovery controller and opponent spectator
+replays remain available (they teach tactics); no Rivals/bank behavior changed.
+
+logic/eliminationTips.js is deterministic generic advice, NEVER measured
+praise or a story beat. Retry turn rotates advice and the crew's two speakers;
+unknown/unchosen crews use Auntie Ro. The UI turn is carried only through
+retry/swap scene data, not a new storage key or campaign gate.
+
+controllers/EliminationTip.js draws into actual modal.contentBounds, fits
+both portrait dimensions, adds only the cached/on-demand portrait atlas,
+not a room/backdrop. Ro reuses window_ro. Text/initial fallback is immediate;
+retry never waits on art. Closing/shutdown removes loader callbacks and
+objects, so late downloads cannot resurrect a modal. Uses existing WebP art.
+
+Failed elimination has no Watch Replay. retryAfterElimination also hides it
+on the immediate retry/swap loadout. ReplaySystem.finalize optionally records
+successful:true/false from the actual extraction/endRound outcome;
+hasReplay(...,{successfulOnly:true}) requires explicit true for loadouts,
+including in-flight and sealed clips. Missing outcome is NOT success.
+Old hasReplay callers keep their original behavior. Block-clear replay and
+existing sharing flow remain untouched; failed clips may remain internally
+for debugging, not offered on this elimination/picker UI.
+
+Adapted V8: eliminationTips 222 assertions (banks/determinism/speaker rotation,
+responsive bounds, real renderer including atlas crop/loading failure/late
+callback/shutdown/hide-show, actual death-modal retry/swap/penalty/menu,
+and actual visual replay outcome gating). runnerLoadout 84, contactFlow 1900,
+mobile lifecycle 251, missionExit 335, rivalsFlow 146, modalPointerGuard 32,
+getawayCar 848 passed. New suite registered in npm test.
+Native verify/build and real phone/browser rendering/sharing remain
+unverified: execution helper blocked by sandbox ACL. Run client/npm run
+verify and review 280x480 tip wrap/portrait placement, all six contacts,
+missing art/network, both retry buttons and successful replay/share.
+No master, bank, rewards, collision or story-progress changes.
+
 ## Crew selection readability + two-contact welcome — Codex (2026-09-17)
 
 WindowScene selection now places WHO HAS YOUR BACK? on a dark high-contrast
