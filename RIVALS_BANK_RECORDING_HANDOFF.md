@@ -42,30 +42,33 @@ courses.** Report the real number. Never pad it.
 
 ## 2. Where the recording stands
 
-Shipped bank before this batch: **57 records**, per course:
+**All seven courses are at the 20-record checkpoint.** Measured from
+`tools/rivals-assemble.mjs --dry`, not from arithmetic:
 
-| slot | course | shipped | short of 20 |
-| --- | --- | --- | --- |
-| 5 | Switchyard Seven | 5 | 15 |
-| 7 | Blacktop Crown | 7 | 13 |
-| 2 | Copper Climb | 8 | 12 |
-| 4 | (slot 4) | 8 | 12 |
-| 3 | Freight Run | 9 | 11 |
-| 6 | Lastlight Loop | 9 | 11 |
-| 1 | Low End Rush | 11 | 9 |
+| slot | course | records | styles | mixes |
+| --- | --- | --- | --- | --- |
+| 5 | Switchyard Seven | 27 | 11 | 7 |
+| 3 | Freight Run | 25 | 11 | 6 |
+| 6 | Lastlight Loop | 25 | 11 | 6 |
+| 1 | Low End Rush | 24 | 11 | 5 |
+| 2 | Copper Climb | 24 | 11 | 5 |
+| 4 | Afterglow Mile | 24 | 11 | 5 |
+| 7 | Blacktop Crown | 22 | 11 | 6 |
 
-The plan `client/tools/rivals-plan.json` is **56 jobs / 112 races** — 8 styles ×
-14, 16 per course, across 8 ordered power mixes including duplicates and every
-Decoy pairing. If they all complete, every course lands at 21–27.
+**171 accepted, 11 rejected, 116 re-imported.** All 11 rejections are genuine
+forfeits. "Re-imported" means a byte-identical record was read from both the
+bank and the raw capture that produced it — a no-op, not a failure. Do not read
+it as loss: an earlier version of the assembler counted those as rejections and
+reported 127 failures on a clean run.
 
-**Progress when this was written: 4 jobs saved, 8 races complete, 1 rejected.**
-Raw captures live in `client/tools/recordings/` (git-ignored). They may or may
-not still be on disk — the container is ephemeral. **If that directory is empty,
-the recording starts from scratch**; nothing is lost but time, and the shipped
-57 records are untouched in `client/public/rivals/v2/`.
+Switchyard Seven went from worst-covered (16, four short) to best-covered, and
+now carries every style: Ghost was absent there until it went 3/3 on
+`decoy,phase` after 0/2 on `phase,dash`.
 
----
-
+Raw captures live in `client/tools/recordings/` (git-ignored) and may not
+survive the container. The shipped bank in `client/public/rivals/v2/` is the
+durable artefact; if the captures are gone, nothing is lost but the ability to
+re-assemble from source.
 ## 3. How to resume
 
 ```sh
@@ -158,7 +161,7 @@ live in `tools/rivals-plan.mjs` and are derived from measurements.
 
 ## 5. Measured numbers (use these, don't re-guess)
 
-Chromium **Canvas** (`--disable-gpu`), 390×844, 3 parallel workers, ~50–54fps.
+Chromium **Canvas** (`--disable-gpu`), 390×844, 3 parallel workers, 47–59fps.
 WebGL through swiftshader ran at 9–18fps and changed bot results — do not use
 it. Every output file records its own `environment.renderer`, `fpsMedian` and
 `fpsSamples`, so a slow batch is visible afterwards.
@@ -168,8 +171,11 @@ it. Every output file records its own `environment.renderer`, `fpsMedian` and
 | cautious | 1080s | seven houses in 167s, 214s, 220s, 238s, 240s |
 | ghost | 960s | seven houses in 293s |
 | erratic | 1200s | seven houses in 388s |
-| rookie | 2400s | reached house 3 of 7 in 785s (easiest course) |
-| dasher / balanced / sharp / trickster | 840–1080s | not yet individually measured |
+| rookie | 2400s | reached house 3 of 7 in 785s under the old 780s limit; now clears seven houses in 107-196s |
+| dasher / balanced / sharp / trickster | 840–1080s | all complete reliably except Sharp on Switchyard Seven (1/5) |
+
+Rookie is the clearest case that a limit is not a ceiling: it produced nothing
+but forfeits at 780s and now finishes in under two minutes.
 
 **Limits were doubled after the first set proved too tight.** The first set was
 derived from slot 1, the easiest course. Measured on harder ones: Cautious
@@ -182,124 +188,171 @@ Doubling costs almost nothing. A limit only binds on a race that would otherwise
 be REJECTED, and completed races have a median of 145s, so the change converts
 near-misses into valid records rather than halving throughput.
 
-Completed-race durations so far: n=8, min 81s, median 145s, max 240s.
-Completion rate so far: **8 complete, 1 rejected (~89%)**. The rejection was
-Cautious with `phase,phase` on Switchyard Seven, forfeited at 4/7 — a genuine
-incomplete race, correctly discarded. One sample is not enough to justify
-raising that style's limit; track the rate and decide on evidence.
+**Pace spread, cut from the bank's own benchmarks** (median per-house clear):
 
-### Switchyard Seven (slot 5) needs its own top-up run
-
-Measured across the batch so far, rejections are **not** spread evenly:
-
-| slot | complete | rejected |
+| band | range | records |
 | --- | --- | --- |
-| 5 (Switchyard Seven) | 1 | 2 |
-| every other course | 11 | 0 |
+| fast | 5.4-7.9s | 57 |
+| middle | 7.9-9.6s | 57 |
+| steady | 9.6-15.6s | 57 |
 
-Both slot-5 forfeits stopped at **house 4 of 7, within seconds of their style's
-clock limit** (Cautious 545s against a 540s limit, Ghost 485s against 480s).
-That shape matters: the bots were still progressing when the clock ran out, not
-stuck repeating one fatal route. They ran out of time, not out of ability.
+The steady ceiling was 12.0s before this work and is now 15.6s: slow,
+mistake-prone opponents are in the bank, not only quick ones. That is the whole
+point of the spread — it is who a weak player gets matched against.
 
-This is a real coverage problem, because slot 5 is also the **neediest** course
-— 5 shipped records, 15 short of the target. At the observed rate its 16
-planned races would yield roughly 5, leaving it near 10 rather than 20.
+**Diversity.** Eleven driver identities on every course (street, hustler, ace
+plus the eight styles), five to seven ordered power mixes per course including
+duplicates (`dash,dash`, `phase,phase`, `decoy,decoy`) and every Decoy pairing.
 
-**Update, and a correction.** Doubling the limits did NOT fix slot 5, and it is
-important not to assume it did. The same job was re-run under the doubled limit
-and produced the identical result:
+**Per-course elapsed and retries** (min/median/max), from the assembler:
+Freight Run 72/128/633s and 1/9/76 retries at the quick end; Switchyard Seven
+150/441/862s and 8/50/114 retries at the punishing end. One Switchyard Seven
+forfeit logged 136 retries before running out of clock.
+
+**Completion rate.** The main 112-race plan returned 92 valid of 98 attempted
+across 49 jobs. The Switchyard Seven top-up returned 11 of 15. Renderer was
+Chromium Canvas throughout at 47-59fps across 3 workers; every output file
+carries its own renderer and fps.
+
+### Switchyard Seven: what actually fixed it
+
+Slot 5 was four short and is now the best-covered course. What worked, and what
+did not, measured rather than assumed.
+
+**Raising the time limit did not work.** The same job was re-run under both
+limits and produced the identical result:
 
 ```
-slot5-ghost-phasedash   485s -> forfeit 4/7     (480s limit)
-slot5-ghost-phasedash   965s -> forfeit 4/7     (960s limit)
+slot5-ghost-phasedash   485s -> forfeit 4/7   (480s limit)
+slot5-ghost-phasedash   965s -> forfeit 4/7   (960s limit)
 ```
 
-Twice the clock bought **zero** extra houses. On Blacktop Crown the same change
-turned a 6/7 forfeit into 2/2 valid, so the doubling was right — it just does
-not apply here.
+Twice the clock bought zero extra houses. Reading the stop point as the
+obstacle was the mistake: attempt counts on races that DID finish show houses
+2 and 5 absorbing 17-64 attempts while every other house takes 1-3. A race
+that forfeits "at 4/7" burned its clock on **house 2** and ran out later.
 
-**Where the time actually goes, from the attempt counts on races that DID
-finish** (attempts per house, slot 5):
+**Changing the power mix did work.** On Switchyard Seven, across every capture:
 
-| job | h1 | h2 | h3 | h4 | h5 | h6 | h7 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| dasher race 1 | 1 | **64** | 1 | 1 | 17 | 1 | 1 |
-| dasher race 0 | 1 | **38** | 17 | 2 | 3 | 1 | 2 |
-| cautious race 1 | 1 | **24** | 3 | 3 | 19 | 1 | 2 |
-| balanced race 1 | 1 | **17** | 6 | 1 | **30** | 3 | 1 |
+| mix | completed |
+| --- | --- |
+| contains decoy | 13/13 (100%) |
+| no decoy | 9/18 (50%) |
 
-Houses 2 and 5 absorb 17-64 attempts while every other house takes 1-3. So the
-forfeits that stop "at 4/7" are NOT stalling on house 5 — they burn the whole
-clock on **house 2** and run out later. That is also why doubling Ghost's limit
-bought nothing: it was never close to finishing, it was still grinding early.
+Style is controlled in three of those comparisons — each style against itself,
+same course, same limit, only the mix differing:
 
-Slot 5's problem is two specific house layouts that are brutal for bots, not
-general difficulty. Two consequences worth stating in any report: slot 5's
-records carry genuinely high retry counts (honest data, and useful — those are
-the slow opponents a weak player should be matched against), and its coverage
-stays thinner because roughly one race in three burns out on house 2.
+| style | with decoy | without decoy |
+| --- | --- | --- |
+| Ghost | 3/3 | 2/5 |
+| Cautious | 3/3 | 1/2 |
+| Erratic | 3/3 | 1/2 |
 
-It is not impossible, only expensive: `slot5-cautious-phasephase` completed on
-its second race in 486s with **46 retries**, against 3-19 retries typical
-elsewhere. So slot 5 succeeds probabilistically, roughly one race in two or
-three, and the binding constraint is variance rather than time.
+Erratic and Cautious are among the weaker, mistake-prone styles, so this is not
+an artefact of strong drivers happening to carry Decoy. Sharp on `dash,dash`
+went 1/5 there.
 
-**The remedy is therefore more RUNS, not more time.** Raising slot 5's limit
-further is proven not to help and only wastes hours. If slot 5 is still short
-after the main batch, top it up with more races per job at the current limits:
+**What this is NOT.** Swapping Decoy in also swaps a Phase or Dash out, so part
+of the effect may be the absence of the other power rather than the presence of
+Decoy. Samples are small and nothing was randomised. Treat it as a strong
+working rule for filling a hard course, not as an established mechanism.
+
+**So: to fill a stubborn course, vary the MIX and add RUNS. Do not reach for a
+longer limit — it is measured not to help.**
+
+### Opening Decoy (openingDecoy)
+
+`openingDecoy` did NOT exist before this session; it was one sentence in
+`CLAUDE_RIVALS_BOT_BANK_HANDOFF.md`. Adaptive power switching still does not
+exist. Check before building on any proposal in these documents.
+
+What the game does on its own: `RunnerAI.considerRunnerPowerUse` fires Decoy
+purely REACTIVELY — a defender within 18 cells and no decoy live. Nothing fires
+it at the start of a house.
+
+`BotDriver.openingDecoy` (default OFF) fires one held Decoy per house through
+`scene.activateRunnerPowerByIndex`, the same call a player's tap reaches. It
+never touches the loadout picker, and `update()` has already returned on
+`roundOver` and `roundPausedForMenu` before it can run, so it cannot fire
+before play is live. It spends a real power, so the race has one fewer Decoy
+later — that is the trade being measured, not a bonus. Enable per job with
+`"openingDecoy": true`, or by hand with `?openingDecoy=1`. It is written into
+`driverConfig`, so a bank entry always says whether it was driven with one, and
+it is part of the job tag so an A/B pair does not collapse to one tag under
+`--resume`.
+
+**Result: not yet known.** `tools/rivals-plan-decoy-ab.json` is four matched
+pairs, 24 races, identical style/mix/course/limit on both sides with only the
+flag differing — which is what the observational split above cannot give you.
+It is run WITHOUT `--resume`, so both arms are captured on one build. If it is
+unfinished, re-run it whole rather than resuming half of it against an older
+build.
+
+## 6. Remaining jobs and exact resume commands
+
+The 20-per-course checkpoint is MET. What is left is the opening-Decoy
+experiment and any further diversity work.
 
 ```sh
-node -e "const p=require('./tools/rivals-plan.json');
-  require('fs').writeFileSync('tools/rivals-plan-slot5.json',
-    JSON.stringify(p.filter(j=>j.slot===5).map(j=>({...j,
-      runs:4, indexBase:j.indexBase+5000})),null,1));"
-node tools/rivals-record.mjs --plan tools/rivals-plan-slot5.json --parallel 3 \
-  --url http://127.0.0.1:4173 --out tools/recordings
+cd client
+# Serve the build the workers will use. Do NOT rebuild once workers are live.
+npm run build
+npx http-server dist -p 4173 --silent &
+grep -c "RIVALS-REC" dist/assets/*.js     # must be 1
+grep -c "opening decoy" dist/assets/*.js  # must be 1 for the A/B
+
+# The matched opening-Decoy A/B. Run it WHOLE, no --resume: both arms must
+# share one build, and the control tags collide with existing captures.
+node tools/rivals-record.mjs --plan tools/rivals-plan-decoy-ab.json \
+  --parallel 3 --url http://127.0.0.1:4173 --out tools/recordings
+
+# Top up any course, by mix and runs rather than by a longer limit.
+node tools/rivals-plan.mjs --slots 5 --styles ghost,cautious --runs 3 \
+  --indexBase 4000 > tools/rivals-plan-topup.json
+node tools/rivals-record.mjs --plan tools/rivals-plan-topup.json \
+  --parallel 3 --url http://127.0.0.1:4173 --out tools/recordings --resume
+
+# Assemble and report. --dry writes nothing.
+node tools/rivals-assemble.mjs --in tools/recordings --dry
+node tools/rivals-assemble.mjs --in tools/recordings
+npm run verify        # rivalBank.test.mjs must stay green
 ```
 
-Do this as a SEPARATE top-up rather than restarting the main batch — recordings
-are additive, and a mid-flight restart throws away every race in progress.
-Raising a limit is legitimate: the limit is a give-up point, never a number
-written into a record. If slot 5 still falls short with doubled limits,
-**report the gap**; do not close it by relaxing what counts as a complete race.
-Switchyard Seven ending under 20 is a legitimate outcome to report.
+Reading the A/B afterwards: each record carries `driverConfig.openingDecoy`,
+and treatment files are tagged `-odecoy`. Compare completion rate, elapsed and
+retries between the arms of each pair, not across pairs.
 
-Rough cost: ~3–7 minutes per valid race, so the full 112-race plan is a
-multi-hour job (worst case ~8h at 3 workers). Rookie and Erratic run LAST in the
-plan and courses round-robin neediest-first, so **a batch cut short still leaves
-coverage spread across all seven courses** rather than one finished course.
+## 7. Outstanding checks and open risks
 
----
+**Build consistency.** Every capture in the bank so far was recorded against a
+single build per batch, and `dist` was never rebuilt under live workers. Keep
+it that way: run `npm test` alone while a batch is live and save
+`npm run verify` (which builds) for when workers are idle.
 
-## 6. What to do when it finishes
+**openingDecoy is unproven in a browser.** The flag has unit coverage (13
+assertions in `botDriver.test.mjs`) and the URL and config chain were read
+end to end, but at the time of writing no completed opening-Decoy race had been
+inspected. Verify from the data before trusting it: a treatment record must
+show `driverConfig.openingDecoy === true`, and the per-job log line reports how
+many times it fired. Note the counter only prints when a JOB finishes, so
+mid-job silence means nothing.
 
-1. `node tools/rivals-assemble.mjs --in tools/recordings --dry` and read it.
-2. Assemble for real, then `npm run verify`. `rivalBank.test.mjs` must be green.
-3. Check deployment size. `dist` was 37 MB (audio 20 MB, rivals 11 MB, assets
-   3 MB) with 57 records; roughly 900 bytes per second of recorded race. A full
-   batch adds tens of MB. If it grows uncomfortably, say so with the number —
-   do not silently drop races to make it smaller.
-4. Commit the bank on its own. The commit message must say **why**, **what was
-   measured**, and **what remains unverified**. Report coverage by course,
-   measured band and power mix; completion failures; elapsed-time and retry
-   distributions; renderer and fps; deployment size.
-5. Report the shortfall honestly if any course is still under 20.
-6. Do not deploy. Do not touch `master`.
+**Deployment size is the live risk.** `dist` is now 67 MB, of which the bank is
+41 MB, essentially all replays (171 files). This is past the ~69 MB that caused
+trouble before. Replays are fetched per opponent, so runtime is unaffected, but
+the deploy is not. No races were dropped to make this smaller — it needs a
+decision, and the options are pruning per-course depth, compressing replays, or
+hosting them off the deploy.
 
----
+**No phone or browser pass has been done** on: the locked Block Rivals menu row,
+the calibrated search, rival replay playback, or whether a runner drawn 2-3
+cells outside the arena is visible (the replay off-grid margin is now 3 cells,
+raised from 1 after it was discarding 28% of valid races).
 
-## 7. Still open beyond the bank
-
-- **No phone pass yet** on the locked Block Rivals menu row or the calibrated
-  search. Worth checking: win → ENTER NEXT BLOCK, search cancellation, resize
-  during search, steering after a modal, settings, rival replay. Preserve the
-  existing shutdown fixes — `resumeTouch:false`, idempotent destroy, the
-  closing/camera guards — they fixed a real crash.
-- **The Cash ledger hazard is unaddressed and the reward seam is still closed.**
-  `createWindowState` does `ledger.slice(-200)` and derives BOTH the balance and
-  the duplicate guard from the survivors, so a long ledger silently loses
-  balance and duplicate protection. Fix that before wiring any reward.
+**Unrelated but still open:** the Cash ledger truncation hazard.
+`createWindowState` does `ledger.slice(-200)` and derives BOTH the balance and
+the duplicate guard from the survivors, so a long ledger silently loses balance
+and duplicate protection. The reward seam stays closed until that is fixed.
 
 ## 8. Further reading, in order
 
