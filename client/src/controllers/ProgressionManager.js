@@ -1,6 +1,7 @@
 import { drawBlockComplete } from './BlockComplete.js';
 import { crewSigil } from '../logic/crewSigils.js';
-import { seasonChapter, seasonCue, seasonFinish } from '../logic/crewSeason.js';
+import { seasonChapter } from '../logic/crewSeason.js';
+import { campaignContactCue as seasonCue, campaignContactFinish as seasonFinish } from '../logic/campaignContacts.js';
 import { CITY_BLOCKS, cityForBlock, cityView } from '../logic/city.js';
 import { getCityProgress, completeCityBlock, startCityIntro } from '../utils/cityProgress.js';
 import { drawCityMap } from './CityMap.js';

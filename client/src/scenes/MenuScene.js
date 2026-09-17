@@ -1,4 +1,7 @@
 import { getJourneyProgress } from '../utils/journeyProgress.js';
+import { firstPlayDestination } from '../logic/firstPlay.js';
+import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
+import { campaignStashes } from '../utils/rivalsUnlock.js';
 import { hasWindowOnboarding } from '../utils/windowProgress.js';
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
@@ -70,12 +73,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(){
-    // First contact is a one-time account-scoped gate. Returning from The
-    // Window cannot loop because gang choice persists before leaving it.
-    if (!hasWindowOnboarding()) {
-      this.scene.start('WINDOW', { firstVisit: true });
-      return;
-    }
+    // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
     // Night street background: asphalt road, curbs, scrolling lane dashes
     this.drawStreetBackground();
@@ -385,7 +383,9 @@ export class MenuScene extends Phaser.Scene {
     const cont = this.add.container(0,0).setSize(a.menuW,a.rowH+a.rowGap).setDepth(3);
     cont.modeKey = 'runner';
     cont.runKind = 'journey';
-    const start = this.makeTitleOption('Run the Block', () => this.launchCard(cont));
+    const destination = this.firstPlayDestination();
+    const label = destination === 'TUTORIAL_MINI' ? 'Start Tutorial' : destination === 'WINDOW' ? 'Join a Crew' : 'Run the Block';
+    const start = this.makeTitleOption(label, () => this.launchCard(cont));
     cont.add(start);
     cont._startBg = start._bg;
     cont._startText = start._text;
@@ -2015,6 +2015,11 @@ export class MenuScene extends Phaser.Scene {
   selectNext(){ this.setSelected(this.selected + 1); }
   selectPrev(){ this.setSelected(this.selected - 1); }
 
+  firstPlayDestination(){
+    return firstPlayDestination({tutorialComplete:hasCompletedTutorial(),
+      campaignStashes:campaignStashes(),joinedCrew:hasWindowOnboarding()});
+  }
+
   launchCard(card){
     const cam = this.cameras.main;
     // Prevent multiple launches - check if camera is already fading
@@ -2022,7 +2027,16 @@ export class MenuScene extends Phaser.Scene {
       return; // Already launching, ignore
     }
 
-    const k = card.modeKey;
+    let k = card.modeKey;
+    if(k === 'runner' && card.runKind !== 'rivals') {
+      const destination=this.firstPlayDestination();
+      if(destination === 'WINDOW') {
+        this.fadeOutStreetSounds();
+        this.scene.start('WINDOW', {firstVisit:true});
+        return;
+      }
+      if(destination === 'TUTORIAL_MINI') k='learn';
+    }
 
     if (k === 'learn'){
       // Fade out street sounds

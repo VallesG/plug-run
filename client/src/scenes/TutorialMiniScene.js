@@ -1,5 +1,7 @@
 // Runner tutorial: four lessons, sharing the main game's presentation.
 import Phaser from 'phaser';
+import { markTutorialComplete } from '../utils/tutorialProgress.js';
+import { getUserID } from '../utils/userManager.js';
 import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import GameUI from '../controllers/GameUI.js';
@@ -419,6 +421,7 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   create(){
     console.log('[Tutorial] create() called, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop());
+    this._trainingUserID = getUserID();
     // Reset modal pause state on scene create/restart
     this.pausedForModal = false;
     this.userTookOver = false;
@@ -1929,11 +1932,12 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.bulletsPlug = [];
       }
 
+      markTutorialComplete(this._trainingUserID);
       this.showModal("You're ready!", [
-        'You know how to move, find the real stash and escape the Plug.',
-        'The daily block has 15 houses. See how far you can get.'
-      ], 'Main Menu', () => {
-        this.scene.transition({ target:'MENU', duration:200, moveBelow:true });
+        'Grab the stash. Lose the Plug. Make it to the car.',
+        'Next stop: The Window. Meet Auntie Ro, join a crew, and start bringing bags home for your people.'
+      ], 'Go to The Window  >>', () => {
+        this.scene.transition({ target:'WINDOW', duration:200, moveBelow:true, data:{firstVisit:true} });
       }, { complete:true });
     }
   }

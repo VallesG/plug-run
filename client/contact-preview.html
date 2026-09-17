@@ -23,7 +23,8 @@ button.on{border-color:#e2b45f;background:#23313a}
 <script type="module">
 import Phaser from 'phaser';
 import { CONTACTS, CONTACT_BEATS, contactCue, gangContacts, contact } from './src/logic/contacts.js';
-import { crewSeason, seasonChapter, seasonCue, seasonFinish } from './src/logic/crewSeason.js';
+import { crewSeason, seasonChapter } from './src/logic/crewSeason.js';
+import { campaignContactCue as seasonCue, campaignContactFinish as seasonFinish } from './src/logic/campaignContacts.js';
 import { showContactPanel } from './src/controllers/ContactPanel.js';
 
 const SIZES = [[390, 844, 'iPhone portrait'], [280, 480, 'smallest supported'], [900, 640, 'desktop']];

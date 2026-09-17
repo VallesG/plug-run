@@ -1,3 +1,23 @@
+## Landing-first onboarding and crew banter — Codex (2026-09-17)
+
+Read FIRST_PLAY_AND_CREW_BANTER.md for the current flow and review checklist.
+MENU is always the front door; its primary action guides untrained players into
+Tutorial, then The Window for Auntie Ro and crew choice. Real terminal tutorial
+completion is account-scoped; proven legacy campaign clears avoid forced retraining.
+The tutorial ending no longer calls the stash real or describes an obsolete daily loop.
+
+campaignContacts.js adds 30 fixed two-character exchanges (one per chapter per
+crew), retaining future-house teases and all mandatory House 9 briefs. The chapter
+3 duo finish invites all crews to Block Rivals without changing the 45-stash gate.
+ProgressionManager and contact-preview use the same wrapper. Original authored
+season data, claim IDs, chapters, bank and gameplay stay intact.
+
+Measured with adapted V8: firstPlay 27, campaignContacts 1009, tutorial 34,
+crewSeason 4459, contactFlow 1900, landingLayout 120, Window 61; six runtime parses.
+Native execution is still blocked; native verify/build and phone flow are unverified.
+Both new tests are in npm test. No recording-bank writes or concurrent build.
+master untouched.
+
 ## Block Rivals: measured matchmaking, skill evidence, 3-block unlock — Claude (2026-09-17)
 
 > **Resuming the bank recording?** Read `RIVALS_BANK_RECORDING_HANDOFF.md`
