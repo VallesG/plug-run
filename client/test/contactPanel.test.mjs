@@ -45,6 +45,8 @@ for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
   const data = stub(new Set([pair.primary.portraitKey, pair.secondary.portraitKey,
     expressionArt(pair.primary.id).key, expressionArt(pair.secondary.id).key]));
   let advanced = 0;
+  let audioStarts = 0, audioReleases = 0;
+  data.scene.audio = { beginContactMoment() { audioStarts++; return () => audioReleases++; } };
   const panel = show(data.scene, {
     contact: pair.primary, contacts: [pair.primary, pair.secondary], celebration: true,
     pages: [{ text: 'Fifteen bags. You finished.', contact: pair.primary }, { text: 'The crew has your next run ready.', contact: pair.secondary }],
@@ -60,10 +62,12 @@ for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
     data.tweens.length === 5 && data.tweens.every(t => t.yoyo && t.repeat === 2 && t.duration === 300));
   data.tap();
   check('first contact page does not start next block ' + gangID, advanced === 0);
+  check('contact sound only once across page turns ' + gangID, audioStarts === 1 && audioReleases === 0);
   check('second contact is the speaker ' + gangID, data.nodes.some(n => n.active && n.kind === 'text' && n.args[2] === pair.secondary.name.toUpperCase()));
   data.tap();
   check('final page advances once ' + gangID, advanced === 1);
   panel.close(); data.handlers.shutdown();
+  check('contact mix restored exactly once ' + gangID, audioReleases === 1);
   check('close and shutdown cannot advance twice ' + gangID, advanced === 1);
   check('teardown destroys all tracked display objects ' + gangID, data.nodes.every(n => !n.active));
   check('shared portrait textures retained ' + gangID, data.removed.length === 0);

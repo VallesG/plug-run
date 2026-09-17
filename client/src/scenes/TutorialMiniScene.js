@@ -375,7 +375,9 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Audio
     try {
       // Background music
-      this.load.audio('learn_beat',   ['/audio/learn_beat.ogg',   '/audio/learn_beat.mp3']);
+      this.load.audio('bg_learn',   ['/audio/learn_beat.ogg',   '/audio/learn_beat.mp3']);
+      this.load.audio('bg_main', ['/audio/main_beat.ogg', '/audio/main_beat.mp3']);
+      this.load.audio('bg_plug', ['/audio/plug_beat2.ogg', '/audio/plug_beat2.mp3']);
 
       // Sound effects
       this.load.audio('gun_fire',     ['/audio/gun_fire.ogg',     '/audio/gun_fire.mp3']);
@@ -432,7 +434,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     try {
       this.audio = AudioManager.get(this);
       this.audio.ensureUnlocked(this);
-      this.audio.playMusic('bg_learn', { volume: 0.3, loop: true, fade: 800 });
+      this.audio.playGameplayMusic('tutorial', { volume: 0.3, loop: true, fade: 800 });
       this.audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
     } catch {}
 

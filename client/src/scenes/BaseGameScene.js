@@ -3073,7 +3073,12 @@ export class BaseGameScene extends Phaser.Scene {
     const round = this.pveRound;
 
     // Determine which music track to play
-    const musicKey = this.role === 'plug' ? 'bg_plug' : (this.mode === 'tutorial' ? 'bg_learn' : 'bg_main');
+    // Race state is shallow-copied after a clear; its course object is stable.
+    // A new race/rematch creates a new course object even on the same map.
+    const context = this.runKind === 'rivals' ? (this.rivalRace?.course || this.rivalRace)
+      : [this.runKind, this.role, this.currentRouteID, this.blockIndex].join('/');
+    const musicKey = this.audio?.selectGameplayMusic(context);
+    if (!musicKey) return;
 
     // Define base/max volumes per track
     let baseVol = 0.20;  // starting volume (round 1)

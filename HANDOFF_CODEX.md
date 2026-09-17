@@ -1,3 +1,29 @@
+## Music shuffle and moment cues — Codex (2026-09-17)
+
+Friends' existing main_beat, plug_beat2 and learn_beat assets are unchanged.
+The three-track shuffle consumes one choice per block/race, not per house or
+retry, avoids immediate repeats and does not touch seeded gameplay randomness.
+Tutorial preload now uses bg_learn, matching playback, and loads the full pool.
+New beats crossfade; existing SFX and menu street ambience remain. Contact
+panels halve music volume while open, restore it on close/shutdown, and get one
+quiet arrival earcon per panel, never per dialogue page. Block/city finish
+earcons are synthesized original D-minor tones and deduplicated across the duo
+cover and results; Rivals gets the block sting only on a win. All cues obey SFX
+mute/master settings and skip locked/suspended audio rather than bursting later.
+
+Fixed two older Phaser incompatibilities: sounds use manager, not game; the
+current TweenManager has no createTimeline. Volume/fade checks now accept real
+Phaser sounds and ducking queues supported ordinary tweens. A failed new track
+does not stop the current beat. No bank, race-clock, mission or reward changes.
+
+All 62 test suites passed; new shuffle/mix/transition tests are in npm test.
+Production preserveSymlinks build passed (plain build still has the existing
+isolated Windows realpath issue). Direct tutorial browser smoke loaded all
+three keys and started a real WebAudioSound; real sounds confirmed no .game.
+Phone listening/volume tuning remains to do. MUSIC_PRODUCTION_BRIEF.md gives
+friends a suggested 100 BPM / D minor palette, loop and delivery requirements;
+this is creative guidance, not analysis of existing track key or tempo.
+
 ## Tutorial presentation polish — Codex (2026-09-17)
 
 Tutorial walls now use the campaign's same visual-only ArenaWallInk depth pass.

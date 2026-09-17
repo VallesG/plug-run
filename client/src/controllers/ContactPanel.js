@@ -31,6 +31,8 @@ const COLORS = { ink: 0x080b0d, cream: 0xf1dfb0, paper: 0xe9dfc7, dim: 0x92a0a2 
 export function showContactPanel(scene, cue, onDone) {
   const objects = [];
   let finished = false;
+  let releaseAudio = null;
+  let audioStarted = false;
   let bgKey = null;
   let pageIndex = 0;
   const cast = cue.contacts || [cue.contact];
@@ -48,6 +50,8 @@ export function showContactPanel(scene, cue, onDone) {
     objects.length = 0;
   };
   const teardown = () => {
+    releaseAudio?.();
+    releaseAudio = null;
     clearObjects();
     // Release the room. Portrait atlases stay: they are small and The Window
     // uses them too, so removing them would only cause a reload.
@@ -253,6 +257,10 @@ export function showContactPanel(scene, cue, onDone) {
   };
 
   const compose = (key) => {
+    if (!audioStarted) {
+      audioStarted = true;
+      try { releaseAudio = scene.audio?.beginContactMoment?.(cue); } catch {}
+    }
     if (finished) return;
     if (cue.celebration) drawCelebration();
     else {

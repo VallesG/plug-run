@@ -465,6 +465,9 @@ export default class RivalsRace {
     this.showResult();
   }
   showResult() {
+    if (this.race.result === 'win') {
+      try { this.scene.audio?.playBlockClear?.(); } catch {}
+    }
     const recorded = this.race.opponentKind === 'recorded-bot';
     const who = 'RIVAL';
     const config={

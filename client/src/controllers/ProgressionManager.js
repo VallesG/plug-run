@@ -727,6 +727,7 @@ export default class ProgressionManager {
           : [{text:story.primaryFinish, contact:pair.primary}, {text:story.secondaryFinish, contact:pair.secondary}];
         const cue = {
           contact: pair.primary, contacts: [pair.primary, pair.secondary], celebration: true,
+          cityComplete: scene.blockIndex === cityForBlock(scene.blockIndex)?.lastBlock,
           speaker: finishPages[0].contact.name.toUpperCase(), text: finishPages[0].text,
           pages: finishPages,
           chapterLabel: 'CHAPTER ' + story.number + ' COMPLETE · ' + story.title.toUpperCase(),
@@ -740,6 +741,10 @@ export default class ProgressionManager {
   }
 
   showBlockCompleteResult() {
+    try { this.scene.audio?.playBlockClear?.({
+      cityComplete: this.scene.runKind === 'journey'
+        && this.scene.blockIndex === cityForBlock(this.scene.blockIndex)?.lastBlock
+    }); } catch {}
     const maps = PVE_BLOCK_MAPS;
     const journey = this.scene.runKind === 'journey';
     const gangID = journey ? (this.scene.blockGangID ?? getWindowState().gangID) : null;

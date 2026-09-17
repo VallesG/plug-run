@@ -1511,7 +1511,7 @@ export class MenuScene extends Phaser.Scene {
       try {
         const audio = AudioManager.get(this);
         audio.ensureUnlocked(this);
-        audio.playMusic('bg_learn', { volume: 0.3, loop: true, fade: 0 });
+        audio.playGameplayMusic('tutorial', { volume: 0.3, loop: true, fade: 800 });
         audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
       } catch {}
 

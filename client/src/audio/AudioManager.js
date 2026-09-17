@@ -1,4 +1,5 @@
 import { missionPickupSound } from '../logic/missionItem.js';
+import { GAMEPLAY_BEATS, selectBeat, momentNotes } from '../logic/musicPlaylist.js';
 import Phaser from 'phaser';
 
 // Lightweight audio scaffold with graceful fallbacks (no external assets required)
@@ -226,6 +227,62 @@ export class AudioManager {
     s.input?.once?.('pointerup', unlock);
   }
 
+  selectGameplayMusic(context) {
+    this._playlist = selectBeat(this._playlist, context,
+      GAMEPLAY_BEATS.filter(key => this.scene?.cache?.audio?.exists?.(key)));
+    return this._playlist?.key;
+  }
+
+  playGameplayMusic(context, options) {
+    const key = this.selectGameplayMusic(context);
+    if (key) this.playMusic(key, options);
+  }
+
+  playMoment(kind) {
+    const ctx = this.sound?.context || this._ctx;
+    if (this.isMuted() || this._volSfx <= 0 || !ctx?.createOscillator || ctx.state !== 'running') return false;
+    try {
+      for (const note of momentNotes(kind)) {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        const start = ctx.currentTime + note.delay, end = start + note.duration;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note.hz, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(Math.max(0.0001,
+          this.masterVolume * this._volSfx * note.volume), start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch {} };
+        osc.start(start); osc.stop(end);
+      }
+      return true;
+    } catch { return false; }
+  }
+
+  playBlockClear({ cityComplete = false } = {}) {
+    const s = this.scene;
+    const key = s?.runKind === 'rivals' ? (s.rivalRace?.course || s.rivalRace)
+      : [s?.runKind, s?.role, s?.currentRouteID, s?.blockIndex].join('/');
+    this._clearMoments ||= new Set();
+    if (this._clearMoments.has(key)) return false;
+    this._clearMoments.add(key);
+    if (this._clearMoments.size > 32) this._clearMoments.delete(this._clearMoments.values().next().value);
+    return this.playMoment(cityComplete ? 'city' : 'block');
+  }
+
+  beginContactMoment(cue = {}) {
+    this._contactTokens ||= new Set();
+    const token = {};
+    this._contactTokens.add(token);
+    this._applyMusicVolume();
+    if (cue.celebration) this.playBlockClear(cue);
+    else this.playMoment('contact');
+    return () => {
+      this._contactTokens.delete(token);
+      this._applyMusicVolume();
+    };
+  }
+
   // Background music with crossfade (respects master, music bus, ducking)
   playMusic(key, { volume = 0.5, loop = true, fade = 300 } = {}) {
     console.log('[AudioManager] playMusic called - key:', key, 'volume:', volume, 'scene:', this.scene?.sys?.config?.key);
@@ -293,7 +350,7 @@ export class AudioManager {
     // Prepare new sound - start with target volume to avoid tween race conditions
     let next = null;
     try {
-      next = this.sound.add(key, { loop: !!loop, volume: baseTarget });
+      next = this.sound.add(key, { loop: !!loop, volume: fade > 0 ? 0 : baseTarget });
       console.log('[AudioManager] Created sound with volume:', baseTarget);
       next.play();
       console.log('[AudioManager] Sound playing, isPlaying:', next.isPlaying);
@@ -306,6 +363,7 @@ export class AudioManager {
       try { console.info('[Audio] Could not start music for key:', key, e?.message || e); } catch {}
     }
 
+    if (!next) return; // Keep the existing beat if a replacement cannot start.
     const prev = this.music?.sound || null;
 
     // Kill any existing volume tweens before starting new music
@@ -325,7 +383,18 @@ export class AudioManager {
     if (next) {
       this.music = { key, sound: next };
       // Set base volume state to match what we just set
-      this._musicVolState.base = baseTarget;
+      this._duck.mult = 1;
+      this._duck.priority = -1;
+      this._musicVolState.base = fade > 0 ? 0 : baseTarget;
+      this._applyMusicVolume();
+      if (fade > 0 && this.scene?.tweens) {
+        this._musicVolTween = this.scene.tweens.add({ targets: this._musicVolState,
+          base: baseTarget, duration: fade, ease: 'Sine.easeOut',
+          onUpdate: () => this._applyMusicVolume() });
+      } else {
+        this._musicVolState.base = baseTarget;
+        this._applyMusicVolume();
+      }
       console.log('[AudioManager] Music started at volume:', baseTarget);
     } else {
       this.music = { key: null, sound: null };
@@ -343,7 +412,7 @@ export class AudioManager {
           ease: 'Sine.easeIn',
           onUpdate: () => {
             try {
-              if (prev && prev.game && !prev.pendingRemove) {
+              if (prev && !prev.pendingRemove) {
                 prev.setVolume(volState.vol);
               }
             } catch {}
@@ -392,7 +461,7 @@ export class AudioManager {
         ease: 'Sine.easeIn',
         onUpdate: () => {
           try {
-            if (prev && prev.game && !prev.pendingRemove) {
+            if (prev && !prev.pendingRemove) {
               prev.setVolume(volState.vol);
             }
           } catch {}
@@ -469,7 +538,7 @@ export class AudioManager {
     // Check if sound is still valid (not destroyed)
     try {
       console.log('[AudioManager] Sound state - game:', !!s.game, 'pendingRemove:', s.pendingRemove, 'isPlaying:', s.isPlaying, 'key:', s.key);
-      if (!s.game || s.pendingRemove) {
+      if (s.pendingRemove) {
         console.log('[AudioManager] Sound invalid or pending remove, returning');
         return;
       }
@@ -480,7 +549,8 @@ export class AudioManager {
 
     const duck = this._duck?.mult ?? 1;
     const base = this._musicVolState.base || 0;
-    const finalVol = Math.max(0, Math.min(1, base * duck));
+    const contactMix = this._contactTokens?.size ? 0.5 : 1;
+    const finalVol = this.muted || this.musicMuted ? 0 : Math.max(0, Math.min(1, base * duck * contactMix));
     console.log('[AudioManager] Setting volume - base:', base, 'duck:', duck, 'final:', finalVol);
     try { s.setVolume(finalVol); } catch {}
     console.log('[AudioManager] Volume set to:', s.volume);
@@ -505,8 +575,24 @@ export class AudioManager {
     this._duck.priority = priority;
 
     const targetMult = Math.max(0.0001, startMult * Math.max(0, Math.min(1, to)));
-    const tl = this.scene?.tweens?.createTimeline();
-    if (!tl) return;
+    if (!this.scene?.tweens?.add) return;
+    // Phaser 3.90 has no TweenManager.createTimeline. Queue ordinary tweens.
+    const steps = [];
+    let active = null, stopped = false;
+    const tl = {
+      add: (config) => { steps.push(config); },
+      stop: () => { stopped = true; active?.remove?.(); },
+      destroy: () => { stopped = true; active?.remove?.(); },
+      play: () => {
+        const advance = () => {
+          if (stopped || this._duck.token !== token || !steps.length) return;
+          const config = steps.shift();
+          const complete = config.onComplete;
+          active = this.scene.tweens.add({ ...config, onComplete: () => { complete?.(); advance(); } });
+        };
+        advance();
+      }
+    };
 
     // Attack
     tl.add({
@@ -612,7 +698,7 @@ export class AudioManager {
           ease: 'Sine.easeIn',
           onUpdate: () => {
             try {
-              if (idle && idle.game && !idle.pendingRemove) {
+              if (idle && !idle.pendingRemove) {
                 idle.setVolume(volState.vol);
               }
             } catch {}
