@@ -200,16 +200,33 @@ This is a real coverage problem, because slot 5 is also the **neediest** course
 — 5 shipped records, 15 short of the target. At the observed rate its 16
 planned races would yield roughly 5, leaving it near 10 rather than 20.
 
-**Update:** limits have since been doubled batch-wide (see above), which may
-close this on its own — Ghost reached 6/7 and Cautious 4/7 purely on the clock.
-Re-measure slot 5 from the assembler before deciding. If it is still short after
-the main batch, run a targeted top-up:
+**Update, and a correction.** Doubling the limits did NOT fix slot 5, and it is
+important not to assume it did. The same job was re-run under the doubled limit
+and produced the identical result:
+
+```
+slot5-ghost-phasedash   485s -> forfeit 4/7     (480s limit)
+slot5-ghost-phasedash   965s -> forfeit 4/7     (960s limit)
+```
+
+Twice the clock bought **zero** extra houses. On Blacktop Crown the same change
+turned a 6/7 forfeit into 2/2 valid, so the doubling was right — it just does
+not apply here. Slot 5 has a genuine wall around house 4-5, not a timeout.
+
+It is not impossible, only expensive: `slot5-cautious-phasephase` completed on
+its second race in 486s with **46 retries**, against 3-19 retries typical
+elsewhere. So slot 5 succeeds probabilistically, roughly one race in two or
+three, and the binding constraint is variance rather than time.
+
+**The remedy is therefore more RUNS, not more time.** Raising slot 5's limit
+further is proven not to help and only wastes hours. If slot 5 is still short
+after the main batch, top it up with more races per job at the current limits:
 
 ```sh
 node -e "const p=require('./tools/rivals-plan.json');
   require('fs').writeFileSync('tools/rivals-plan-slot5.json',
     JSON.stringify(p.filter(j=>j.slot===5).map(j=>({...j,
-      hardLimitMs:Math.round(j.hardLimitMs*2), indexBase:j.indexBase+5000})),null,1));"
+      runs:4, indexBase:j.indexBase+5000})),null,1));"
 node tools/rivals-record.mjs --plan tools/rivals-plan-slot5.json --parallel 3 \
   --url http://127.0.0.1:4173 --out tools/recordings
 ```
@@ -219,6 +236,7 @@ are additive, and a mid-flight restart throws away every race in progress.
 Raising a limit is legitimate: the limit is a give-up point, never a number
 written into a record. If slot 5 still falls short with doubled limits,
 **report the gap**; do not close it by relaxing what counts as a complete race.
+Switchyard Seven ending under 20 is a legitimate outcome to report.
 
 Rough cost: ~3–7 minutes per valid race, so the full 112-race plan is a
 multi-hour job (worst case ~8h at 3 workers). Rookie and Erratic run LAST in the
