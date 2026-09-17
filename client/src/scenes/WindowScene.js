@@ -152,19 +152,26 @@ export class WindowScene extends Phaser.Scene {
     return ro;
   }
 
-  drawGangPortrait(gangID,x,y,height) {
-    const source=gangID==='crossline'?['window_switch',0]:['window_cast',gangID==='iron-row'?'brick':'vee'];
-    if(!this.textures.exists(source[0])){
-      const gang=windowGang(gangID);
-      const fallback=this.add.circle(x,y,height*0.3,gang?.color||COLORS.teal,0.9).setDepth(10);
-      const initial=this.add.text(x,y,gang?.name?.[0]||'?',{fontFamily:'Georgia, serif',fontSize:height*0.32+'px',fontStyle:'bold',color:'#0b1012'}).setOrigin(0.5).setDepth(11);
-      this.keep(fallback,initial);
-      return fallback;
+  drawContactPortrait(contactID,x,bottom,width,height,flip=false) {
+    const source=contactID==='switch'?['window_switch',0]:['window_cast',contactID];
+    if(!this.textures.exists(source[0])) {
+      const size=Math.min(width,height);
+      const fallback=this.add.circle(x,bottom-size/2,size*0.3,COLORS.teal,0.9).setDepth(10);
+      const initial=this.add.text(x,bottom-size/2,contactID[0].toUpperCase(),{fontFamily:'Arial, sans-serif',fontSize:size*0.32+'px',color:'#0b1012'}).setOrigin(0.5).setDepth(11);
+      this.keep(fallback,initial);return fallback;
     }
-    const image=this.add.image(x,y,source[0],source[1]).setDepth(10);
-    image.setScale(height/(source[0]==='window_cast'?WINDOW_ART.cast.height:WINDOW_ART.switch.frameHeight));
+    const image=this.add.image(x,bottom,source[0],source[1]).setOrigin(0.5,1).setDepth(10);
+    const frame=image.frame;
+    const frameW=frame?.realWidth || frame?.width || (source[0]==='window_switch'?WINDOW_ART.switch.frameWidth:WINDOW_ART.cast.frames[contactID].width);
+    const frameH=frame?.realHeight || frame?.height || (source[0]==='window_switch'?WINDOW_ART.switch.frameHeight:WINDOW_ART.cast.height);
+    image.setScale(Math.min(width/frameW,height/frameH)).setFlipX(flip);
     this.keep(image);
     return image;
+  }
+
+  drawGangPortrait(gangID,x,bottom,width,height) {
+    const gang=windowGang(gangID);
+    return this.drawContactPortrait(gang.primary.toLowerCase(),x,bottom,width,height);
   }
 
   addButton(x,y,w,label,onClick,accent=COLORS.gold) {
@@ -224,32 +231,35 @@ export class WindowScene extends Phaser.Scene {
   showGangChoice() {
     this.clearView();
     const a=windowLayout(this.scale.width,this.scale.height);
-    const title=this.add.text(a.cx,a.panelTop+a.headerH+18,'WHO HAS YOUR BACK?',{
-      fontFamily:'Georgia, serif',fontSize:'20px',fontStyle:'bold',color:'#f1dfb0',
-      stroke:'#080b0d',strokeThickness:3,letterSpacing:1
+    const titleY=a.panelTop+a.headerH+18;
+    const heading=this.add.rectangle(a.cx,titleY,a.contentW,44,0x0d1417,0.96)
+      .setStrokeStyle(1,COLORS.gold,0.55).setDepth(7);
+    const title=this.add.text(a.cx,titleY,'WHO HAS YOUR BACK?',{
+      fontFamily:'Arial, sans-serif',fontSize:Math.max(18,Math.min(24,a.contentW*0.055))+'px',
+      fontStyle:'bold',color:'#fff0c7',align:'center'
     }).setOrigin(0.5).setDepth(8);
-    const sub=this.add.text(a.cx,title.y+27,'Identity and dialogue only · no gameplay advantage',{
-      fontFamily:'monospace',fontSize:'9px',color:'#92a0a2'
-    }).setOrigin(0.5).setDepth(8);
-    this.keep(title,sub);
+    this.keep(heading,title);
 
-    const availableH=a.panelBottom-a.pad-(sub.y+24)-58;
+    const cardsTop=titleY+34;
+    const availableH=a.panelBottom-a.pad-cardsTop-58;
     const cardH=Math.max(68,Math.min(118,(availableH-16)/3));
     WINDOW_GANGS.forEach((gang,i)=>{
-      const y=sub.y+32+cardH/2+i*(cardH+8);
+      const y=cardsTop+cardH/2+i*(cardH+8);
       this.addPanel(a.cx,y,a.contentW,cardH,gang.color);
-      const portraitH=cardH-8;
-      const portraitX=a.cx-a.contentW/2+Math.min(42,portraitH*0.42);
-      this.drawGangPortrait(gang.id,portraitX,y+4,portraitH);
-      const textX=a.cx-a.contentW/2+Math.min(88,portraitH*0.86);
+      const portraitH=cardH-12;
+      const portraitW=Math.min(80,a.contentW*0.23);
+      const cardLeft=a.cx-a.contentW/2;
+      const portraitX=cardLeft+8+portraitW/2;
+      this.drawGangPortrait(gang.id,portraitX,y+cardH/2-6,portraitW,portraitH);
+      const textX=cardLeft+portraitW+18;
       const name=this.add.text(textX,y-cardH/2+11,gang.name.toUpperCase(),{
-        fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',color:gang.css,letterSpacing:1
+        fontFamily:'Arial, sans-serif',fontSize:'17px',fontStyle:'bold',color:gang.css,letterSpacing:1
       }).setOrigin(0,0).setDepth(9);
-      const contacts=this.add.text(name.x,y-cardH/2+32,gang.primary+' · '+gang.jobs,{
-        fontFamily:'monospace',fontSize:'9px',color:'#b4bebf'
+      const contacts=this.add.text(name.x,y-cardH/2+34,gang.primary+' · '+gang.jobs,{
+        fontFamily:'Arial, sans-serif',fontSize:'10px',color:'#b4bebf'
       }).setOrigin(0,0).setDepth(9);
-      const pitch=this.add.text(name.x,y-cardH/2+48,gang.pitch,{
-        fontFamily:'Georgia, serif',fontSize:'11px',color:'#e9dfc7',
+      const pitch=this.add.text(name.x,y-cardH/2+51,cardH<100?gang.motto:gang.pitch,{
+        fontFamily:'Georgia, serif',fontSize:'12px',color:'#e9dfc7',
         wordWrap:{width:a.contentW-(textX-(a.cx-a.contentW/2))-10},lineSpacing:2
       }).setOrigin(0,0).setDepth(9);
       const hit=this.add.rectangle(a.cx,y,a.contentW,cardH,gang.color,0.001).setDepth(12)
@@ -273,24 +283,33 @@ export class WindowScene extends Phaser.Scene {
     const gang=windowGang(gangID);
     this.clearView();
     const a=windowLayout(this.scale.width,this.scale.height);
-    const y=a.cy-20;
-    this.addPanel(a.cx,y,a.contentW,220,gang.color);
-    const joined=this.add.text(a.cx,y-72,'YOU RUN WITH '+gang.name.toUpperCase(),{
-      fontFamily:'Georgia, serif',fontSize:'21px',fontStyle:'bold',color:gang.css,
-      stroke:'#080b0d',strokeThickness:3,align:'center',wordWrap:{width:a.contentW-30}
-    }).setOrigin(0.5).setDepth(8);
-    const line=this.add.text(a.cx,y-18,
+    const h=Math.min(430,a.panelH-a.headerH-92);
+    const top=a.panelTop+a.headerH+16;
+    this.addPanel(a.cx,top+h/2,a.contentW,h,gang.color);
+    const joined=this.add.text(a.cx,top+18,'YOU RUN WITH '+gang.name.toUpperCase(),{
+      fontFamily:'Arial, sans-serif',fontSize:a.contentW<300?'18px':'22px',fontStyle:'bold',color:gang.css,
+      align:'center',wordWrap:{width:a.contentW-24}
+    }).setOrigin(0.5,0).setDepth(11);
+    const artH=Math.min(180,h*0.44);
+    const artW=Math.min(170,(a.contentW-28)/2);
+    const artBottom=top+60+artH;
+    // Bottom-aligned, mirrored partners form a back-to-back crew silhouette.
+    const primary=this.drawContactPortrait(gang.primary.toLowerCase(),a.cx-artW/2,artBottom,artW,artH,true);
+    const secondary=this.drawContactPortrait(gang.jobs.toLowerCase(),a.cx+artW/2,artBottom,artW,artH,false);
+    if(primary?.displayWidth) primary.x=a.cx-primary.displayWidth*0.4;
+    if(secondary?.displayWidth) secondary.x=a.cx+secondary.displayWidth*0.4;
+    const line=this.add.text(a.cx,artBottom+16,
       gang.primary+' is your main contact.\n'+gang.jobs+' will bring the jobs.',{
-        fontFamily:'monospace',fontSize:'12px',color:'#e9dfc7',
-        align:'center',lineSpacing:7
-      }).setOrigin(0.5).setDepth(8);
-    const welcome=this.add.text(a.cx,y+43,
+        fontFamily:'Arial, sans-serif',fontSize:'12px',color:'#e9dfc7',
+        align:'center',lineSpacing:5
+      }).setOrigin(0.5,0).setDepth(11);
+    const welcome=this.add.text(a.cx,top+h-20,
       gang.id==='crossline'
         ? '“Name’s Switch. Tonight, the streets are talking about you.”'
         : '“You picked your people. Now give them something to talk about.”',{
-        fontFamily:'Georgia, serif',fontSize:'14px',fontStyle:'italic',color:'#f1dfb0',
-        align:'center',wordWrap:{width:a.contentW-38}
-      }).setOrigin(0.5).setDepth(8);
+        fontFamily:'Georgia, serif',fontSize:a.contentW<300?'12px':'14px',fontStyle:'italic',color:'#f1dfb0',
+        align:'center',wordWrap:{width:a.contentW-32}
+      }).setOrigin(0.5,1).setDepth(11);
     this.keep(joined,line,welcome);
     this.addButton(a.cx,a.panelBottom-a.pad-28,Math.min(220,a.contentW),'ENTER THE STREETS',()=>this.returnToMenu(),gang.color);
   }

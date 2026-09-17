@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import {
   WINDOW_GANGS, WINDOW_INTRO, WINDOW_ART, createWindowState, chooseWindowGang,
   windowGang, markWindowVisit, grantStoreCredit, spendStoreCredit, windowLayout
@@ -77,3 +78,58 @@ for (const [w,h] of [[280,480],[320,568],[390,844],[430,932],[768,1024],[1440,90
 check('invalid viewport falls back', Object.values(windowLayout(NaN, undefined)).every(Number.isFinite));
 
 console.log('the window: '+passed+' assertions passed');
+
+// Real selection/welcome rendering with only Phaser drawing stubbed.
+
+const sceneSource=readFileSync(new URL('../src/scenes/WindowScene.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/export /g,'');
+const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang',
+  sceneSource+';return WindowScene;')({Scene:class{}},WINDOW_GANGS,WINDOW_INTRO,WINDOW_ART,windowGang,windowLayout,
+  gangID=>({applied:true,state:createWindowState({gangID})}));
+function reviewScene(width,height){
+  const objects=[];
+  const node=(kind,x,y,w=0,h=0)=>{const o={kind,x,y,width:w,height:h,active:true,
+    setOrigin(x,y=x){this.originX=x;this.originY=y;return this;},setDepth(d){this.depth=d;return this;},
+    setScale(scale){this.displayWidth=this.width*scale;this.displayHeight=this.height*scale;return this;},
+    setFlipX(v){this.flipX=v;return this;},setStrokeStyle(){return this;},setInteractive(){return this;},
+    setFillStyle(){return this;},on(){return this;},destroy(){this.active=false;}};
+    objects.push(o);return o;};
+  const scene=new Scene();scene._view=[];scene.scale={width,height};
+  scene.textures={exists:()=>true};
+  scene.add={
+    rectangle:(x,y,w,h)=>node('rectangle',x,y,w,h),
+    circle:(x,y,r)=>node('circle',x,y,r*2,r*2),
+    image:(x,y,key,frame)=>{
+      const w=key==='window_switch'?WINDOW_ART.switch.frameWidth:WINDOW_ART.cast.frames[frame].width;
+      const h=key==='window_switch'?WINDOW_ART.switch.frameHeight:WINDOW_ART.cast.height;
+      const image=node('image',x,y,w,h);image.key=key;image.frameID=frame;image.frame={width:w,height:h};return image;
+    },
+    text:(x,y,text,style)=>{const o=node('text',x,y);o.text=text;o.style=style;return o;}
+  };
+  return {scene,objects};
+}
+for(const [width,height] of [[280,480],[390,844],[671,838],[1440,900]]){
+  const view=reviewScene(width,height);view.scene.showGangChoice();
+  const layout=windowLayout(width,height);
+  const active=view.objects.filter(o=>o.active);
+  const portraits=active.filter(o=>o.kind==='image');
+  check('three selection portraits '+width,portraits.length===3);
+  check('no identity subtitle '+width,!active.some(o=>/Identity and dialogue/.test(o.text||'')));
+  check('clear sans serif heading '+width,active.some(o=>o.text==='WHO HAS YOUR BACK?'&&o.style.fontFamily==='Arial, sans-serif'));
+  check('larger crew names '+width,WINDOW_GANGS.every(g=>active.some(o=>o.text===g.name.toUpperCase()&&o.style.fontSize==='17px')));
+  for(const portrait of portraits){
+    check('portrait inside selection horizontal bounds '+width,portrait.x-portrait.displayWidth/2>=layout.cx-layout.contentW/2&&portrait.x+portrait.displayWidth/2<=layout.cx+layout.contentW/2);
+    const hit=active.filter(o=>o.kind==='rectangle'&&o.depth===12).find(o=>portrait.y<=o.y+o.height/2&&portrait.y>o.y-o.height/2);
+    check('portrait inside its own card top and bottom '+width,hit&&portrait.y-portrait.displayHeight>=hit.y-hit.height/2&&portrait.y<=hit.y+hit.height/2);
+  }
+  for(const gang of WINDOW_GANGS){
+    view.scene.confirmGang(gang.id);
+    const visible=view.objects.filter(o=>o.active),pair=visible.filter(o=>o.kind==='image');
+    check('welcome shows both contacts '+width+'/'+gang.id,pair.length===2);
+    check('welcome mirrors partners outward '+width+'/'+gang.id,pair[0].flipX===true&&pair[1].flipX===false&&pair[0].x<pair[1].x);
+    check('welcome shares baseline '+width+'/'+gang.id,pair[0].y===pair[1].y);
+    check('welcome preserves main/job roles '+width+'/'+gang.id,visible.some(o=>o.text===gang.primary+' is your main contact.\n'+gang.jobs+' will bring the jobs.'));
+    check('welcome pair fits panel '+width+'/'+gang.id,pair.every(o=>o.x-o.displayWidth/2>=layout.cx-layout.contentW/2&&o.x+o.displayWidth/2<=layout.cx+layout.contentW/2));
+    check('welcome retains enter streets '+width+'/'+gang.id,visible.some(o=>o.text==='ENTER THE STREETS'));
+  }
+}
+console.log('Window crew presentation: '+passed+' total assertions passed');

@@ -1,3 +1,28 @@
+## Crew selection readability + two-contact welcome — Codex (2026-09-17)
+
+WindowScene selection now places WHO HAS YOUR BACK? on a dark high-contrast
+backing in bold sans serif; removes the Identity/dialogue subtitle; increases
+crew names to 17px and contacts to 10px. Portraits fit BOTH width and height,
+bottom-aligned with inset, so square Switch artwork cannot spill out of his
+card or into text. Short cards use existing crew mottos; larger cards keep
+the full pitches. Selection state, callbacks and economy unchanged.
+
+Welcome confirmation retains crew title, main/job roles, quote and ENTER
+THE STREETS, and adds both selected crew contacts in a mirrored back-to-back
+composition from existing WebP sprite frames. Partners share a bottom
+baseline; actual displayed widths determine overlap rather than assuming
+Switch and the cast atlas have identical aspect ratios. No new source rasters
+or public art assets. Contact portraits retain a missing-texture initial fallback.
+
+Adapted V8: existing window state/layout tests 61 plus actual WindowScene
+selection/confirmation presentation checks, 173 total assertions across
+280x480, 390x844, 671x838, 1440x900 and all three crews. Covers selection
+portrait bounds, removed subtitle, fonts, pair identity/flip/baseline,
+horizontal fit, retained roles and entry action. Runtime binding-aware parse
+passed. Native verify/build and visual phone/browser rendering remain
+unverified (execution helper blocked). Check header/pitch legibility, Switch
+crop, and whether each mirrored pair reads naturally with the existing poses.
+
 ## Picker mouse click isolation + Rivals retry power changes — Codex (2026-09-17)
 
 The custom RunnerLoadout ENTER HOUSE control bypassed GameUI's standard
