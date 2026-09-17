@@ -5,7 +5,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 203,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 7,
@@ -13,7 +13,7 @@
   "powers": "phase,decoy",
   "runs": 2,
   "indexBase": 206,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 2,
@@ -21,7 +21,7 @@
   "powers": "decoy,phase",
   "runs": 2,
   "indexBase": 209,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 4,
@@ -29,7 +29,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 212,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 3,
@@ -37,7 +37,7 @@
   "powers": "phase,decoy",
   "runs": 2,
   "indexBase": 215,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 6,
@@ -45,7 +45,7 @@
   "powers": "decoy,phase",
   "runs": 2,
   "indexBase": 218,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 1,
@@ -53,7 +53,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 221,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 5,
@@ -61,7 +61,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 224,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 7,
@@ -69,7 +69,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 227,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 2,
@@ -77,7 +77,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 230,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 4,
@@ -85,7 +85,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 233,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 3,
@@ -93,7 +93,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 236,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 6,
@@ -101,7 +101,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 239,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 1,
@@ -109,7 +109,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 242,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 5,
@@ -117,7 +117,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 245,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 7,
@@ -125,7 +125,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 248,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 2,
@@ -133,7 +133,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 251,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 4,
@@ -141,7 +141,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 254,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 3,
@@ -149,7 +149,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 257,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 6,
@@ -157,7 +157,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 260,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 1,
@@ -165,7 +165,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 263,
-  "hardLimitMs": 480000
+  "hardLimitMs": 960000
  },
  {
   "slot": 5,
@@ -173,7 +173,7 @@
   "powers": "phase,decoy",
   "runs": 2,
   "indexBase": 266,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 7,
@@ -181,7 +181,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 269,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 2,
@@ -189,7 +189,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 272,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 4,
@@ -197,7 +197,7 @@
   "powers": "decoy,dash",
   "runs": 2,
   "indexBase": 275,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 3,
@@ -205,7 +205,7 @@
   "powers": "phase,decoy",
   "runs": 2,
   "indexBase": 278,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 6,
@@ -213,7 +213,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 281,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 1,
@@ -221,7 +221,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 284,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 5,
@@ -229,7 +229,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 287,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 7,
@@ -237,7 +237,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 290,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 2,
@@ -245,7 +245,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 293,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 4,
@@ -253,7 +253,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 296,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 3,
@@ -261,7 +261,7 @@
   "powers": "phase,phase",
   "runs": 2,
   "indexBase": 299,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 6,
@@ -269,7 +269,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 302,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 1,
@@ -277,7 +277,7 @@
   "powers": "dash,dash",
   "runs": 2,
   "indexBase": 305,
-  "hardLimitMs": 420000
+  "hardLimitMs": 840000
  },
  {
   "slot": 5,
@@ -285,7 +285,7 @@
   "powers": "decoy,phase",
   "runs": 2,
   "indexBase": 308,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 7,
@@ -293,7 +293,7 @@
   "powers": "decoy,decoy",
   "runs": 2,
   "indexBase": 311,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 2,
@@ -301,7 +301,7 @@
   "powers": "decoy,dash",
   "runs": 2,
   "indexBase": 314,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 4,
@@ -309,7 +309,7 @@
   "powers": "decoy,phase",
   "runs": 2,
   "indexBase": 317,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 3,
@@ -317,7 +317,7 @@
   "powers": "decoy,decoy",
   "runs": 2,
   "indexBase": 320,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 6,
@@ -325,7 +325,7 @@
   "powers": "decoy,dash",
   "runs": 2,
   "indexBase": 323,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 1,
@@ -333,7 +333,7 @@
   "powers": "decoy,phase",
   "runs": 2,
   "indexBase": 326,
-  "hardLimitMs": 540000
+  "hardLimitMs": 1080000
  },
  {
   "slot": 5,
@@ -341,7 +341,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 329,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 7,
@@ -349,7 +349,7 @@
   "powers": "decoy,dash",
   "runs": 2,
   "indexBase": 332,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 2,
@@ -357,7 +357,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 335,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 4,
@@ -365,7 +365,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 338,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 3,
@@ -373,7 +373,7 @@
   "powers": "decoy,dash",
   "runs": 2,
   "indexBase": 341,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 6,
@@ -381,7 +381,7 @@
   "powers": "phase,dash",
   "runs": 2,
   "indexBase": 344,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 1,
@@ -389,7 +389,7 @@
   "powers": "dash,phase",
   "runs": 2,
   "indexBase": 347,
-  "hardLimitMs": 900000
+  "hardLimitMs": 1200000
  },
  {
   "slot": 5,

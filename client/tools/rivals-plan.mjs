@@ -26,9 +26,22 @@ import { RIVAL_DRIVER_STYLES } from '../src/logic/rivalPresets.js';
 const SLOT_ORDER = [5, 7, 2, 4, 3, 6, 1];
 
 // Seconds a style is given for one seven-house race.
+//
+// THESE ARE DELIBERATELY GENEROUS, AND THAT COSTS ALMOST NOTHING
+// A limit only binds on a race that would otherwise be REJECTED. Completed
+// races have a median of 145s, so doubling a 480s limit does not halve
+// throughput — it converts near-misses into valid records.
+//
+// The first set was derived from slot 1, the easiest course, and was too tight
+// everywhere else. Measured: Cautious forfeited at house 4 of 7 on Switchyard
+// Seven at 545s against a 540s limit; Ghost forfeited at house 6 of 7 on
+// Blacktop Crown at 485s against a 480s limit. In both the bot was still
+// progressing when the clock ran out — the limit was the binding constraint,
+// not the bot. Raising a limit is legitimate: it is a give-up point, never a
+// number written into a record.
 const LIMIT_S = {
-  cautious: 540, ghost: 480, dasher: 480, trickster: 540, balanced: 420,
-  sharp: 420, erratic: 900, rookie: 2400
+  cautious: 1080, ghost: 960, dasher: 960, trickster: 1080, balanced: 840,
+  sharp: 840, erratic: 1200, rookie: 2400
 };
 // Rookie and Erratic are the slowest and least certain; they go last.
 const STYLE_ORDER = ['cautious', 'ghost', 'dasher', 'balanced', 'sharp', 'trickster', 'erratic', 'rookie'];

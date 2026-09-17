@@ -159,11 +159,22 @@ it. Every output file records its own `environment.renderer`, `fpsMedian` and
 
 | style | limit | measured |
 | --- | --- | --- |
-| cautious | 540s | seven houses in 167s, 214s, 220s, 238s, 240s |
-| ghost | 480s | seven houses in 293s |
-| erratic | 900s | seven houses in 388s |
+| cautious | 1080s | seven houses in 167s, 214s, 220s, 238s, 240s |
+| ghost | 960s | seven houses in 293s |
+| erratic | 1200s | seven houses in 388s |
 | rookie | 2400s | reached house 3 of 7 in 785s (easiest course) |
-| dasher / balanced / sharp / trickster | 420–540s | not yet individually measured |
+| dasher / balanced / sharp / trickster | 840–1080s | not yet individually measured |
+
+**Limits were doubled after the first set proved too tight.** The first set was
+derived from slot 1, the easiest course. Measured on harder ones: Cautious
+forfeited at house 4 of 7 on Switchyard Seven at 545s against a 540s limit, and
+Ghost at house 6 of 7 on Blacktop Crown at 485s against a 480s limit. In both
+the bot was still progressing when the clock ran out, so the limit — not the
+bot — was the binding constraint.
+
+Doubling costs almost nothing. A limit only binds on a race that would otherwise
+be REJECTED, and completed races have a median of 145s, so the change converts
+near-misses into valid records rather than halving throughput.
 
 Completed-race durations so far: n=8, min 81s, median 145s, max 240s.
 Completion rate so far: **8 complete, 1 rejected (~89%)**. The rejection was
@@ -189,8 +200,10 @@ This is a real coverage problem, because slot 5 is also the **neediest** course
 — 5 shipped records, 15 short of the target. At the observed rate its 16
 planned races would yield roughly 5, leaving it near 10 rather than 20.
 
-The plan as written will not close that gap. After the main batch, run a
-targeted top-up for slot 5 with limits raised on the evidence above:
+**Update:** limits have since been doubled batch-wide (see above), which may
+close this on its own — Ghost reached 6/7 and Cautious 4/7 purely on the clock.
+Re-measure slot 5 from the assembler before deciding. If it is still short after
+the main batch, run a targeted top-up:
 
 ```sh
 node -e "const p=require('./tools/rivals-plan.json');
