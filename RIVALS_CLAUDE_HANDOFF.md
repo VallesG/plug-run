@@ -1,5 +1,9 @@
 ## Matchmaking, skill evidence and the 3-block unlock — 2026-09-17
 
+> **Resuming the bank recording?** Read `RIVALS_BANK_RECORDING_HANDOFF.md`
+> first — it is standalone and has the exact commands, measured limits and the
+> current per-course shortfall.
+
 Branch `claude/input-intent-layer`, commit `85d5636`. `npm run verify` ran
 natively and is green: 52 suites, build 20.2s, bundle 3.08 MB (gzip 768 kB).
 Nothing deployed; `master` untouched.

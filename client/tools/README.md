@@ -45,6 +45,12 @@ node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3 \
 | `--out` | `tools/recordings` | output directory |
 | `--width` / `--height` | 390 / 844 | viewport — full-height phone layout |
 | `--hardLimitMs` | per style | give-up point for one race |
+| `--resume` | off | skip jobs whose output already exists in `--out` |
+
+A multi-hour batch will be interrupted. `--resume` reads `--out`, treats any
+job with a matching output file as done, and records only what is left.
+Recording a job twice is harmless — more races is more coverage — so this only
+saves time, never correctness.
 
 **Renderer.** Chromium Canvas (`--disable-gpu`). WebGL through swiftshader ran
 at 9-18fps in this container, which changes what the bot can do; Canvas holds

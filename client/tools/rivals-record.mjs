@@ -3,6 +3,7 @@
 //
 //   node tools/rivals-record.mjs --slot 1 --style rookie --runs 3
 //   node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3
+//   node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3 --resume
 //
 // WHY A TOOL AND NOT A SCRIPT ON SOMEONE'S MACHINE
 // The bank is only trustworthy if anyone can reproduce it. This drives the
@@ -18,7 +19,7 @@
 // Requires: a served build or dev server (`npm run dev`, default :5173) and
 // playwright-core plus a Chromium binary. Install with:
 //   npm i -D playwright-core           (browser: PLAYWRIGHT_BROWSERS_PATH)
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const CHROMIUM_CANDIDATES = [
@@ -134,10 +135,28 @@ export async function recordJob(job, shared) {
 async function main() {
   const shared = await chromium();
   const plan = arg('plan');
-  const jobs = plan
+  let jobs = plan
     ? JSON.parse(readFileSync(plan, 'utf8'))
     : [{ slot: Number(arg('slot', 1)), style: arg('style', arg('skillPreset', 'street')),
          powers: arg('powers', 'phase,dash'), runs: Number(arg('runs', 3)) }];
+  // --resume: skip jobs whose output already exists, so a batch interrupted
+  // after hours can be picked up without re-running what it already recorded.
+  // Output files are named <slot>-<style>-<powers>-<timestamp>.json, so a job
+  // counts as done when any file carries its tag. Recording the same job twice
+  // is harmless (more races is more coverage) — this only saves the time.
+  const jobTag = j => `slot${j.slot}-${j.style}-${String(j.powers).replace(/,/g, '')}`;
+  const all = jobs.slice();
+  if (arg('resume', false)) {
+    const done = new Set();
+    if (existsSync(OPTIONS.out)) {
+      for (const name of readdirSync(OPTIONS.out)) {
+        const m = name.match(/^(.*)-\d+\.json$/);
+        if (m) done.add(m[1]);
+      }
+    }
+    jobs = jobs.filter(j => !done.has(jobTag(j)));
+    console.log(`resume: ${all.length - jobs.length} job(s) already recorded, ${jobs.length} left`);
+  }
   console.log(`${jobs.length} job(s), ${OPTIONS.parallel} at a time, ${OPTIONS.width}x${OPTIONS.height}, out ${OPTIONS.out}`);
   const results = [];
   let next = 0;

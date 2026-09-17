@@ -1,5 +1,9 @@
 # Claude: expand Plug Run's recorded rival drivers and bank
 
+> **Resuming the bank recording?** Read `RIVALS_BANK_RECORDING_HANDOFF.md`
+> first — it is standalone and has the exact commands, measured limits and the
+> current per-course shortfall.
+
 Continue on claude/input-intent-layer. Never touch master (live deployment).
 Read HANDOFF_CODEX.md from the top, then RIVALS_CLAUDE_HANDOFF.md,
 RIVALS_CITY_DESIGN.md and this document. Current shutdown/replay fixes supersede
