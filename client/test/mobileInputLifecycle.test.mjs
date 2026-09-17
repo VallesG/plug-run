@@ -2,6 +2,7 @@
 // The lost-release fixture must fail against the pre-fix source.
 import { readFileSync } from 'node:fs';
 import { CONTACTS, gangContacts, contactCue, contactPanelLayout, contactDialoguePages } from '../src/logic/contacts.js';
+import { expressionArt, expressionIndex, contactExpression } from '../src/logic/contactExpressions.js';
 
 const playerSource = readFileSync(new URL('../src/controllers/PlayerController.js', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\s*/gm, '').replace('export default class', 'class');
@@ -15,8 +16,9 @@ let now = 1000;
 const Player = new Function('corridorAssist', 'performance', playerSource + '\nreturn PlayerController;')(
   () => {}, { now: () => now });
 const Host = new Function('class Host {\n' + sceneSource.slice(methodsStart, methodsEnd) + '\n}\nreturn Host;')();
-const showPanel = new Function('CONTACTS', 'contactPanelLayout', 'contactDialoguePages', panelSource + '\nreturn showContactPanel;')(
-  CONTACTS, contactPanelLayout, contactDialoguePages);
+const showPanel = new Function('CONTACTS', 'contactPanelLayout', 'contactDialoguePages',
+  'expressionArt', 'expressionIndex', 'contactExpression', panelSource + '\nreturn showContactPanel;')(
+  CONTACTS, contactPanelLayout, contactDialoguePages, expressionArt, expressionIndex, contactExpression);
 
 let passed = 0;
 function check(name, ok) { if (!ok) throw Error(name); passed++; }

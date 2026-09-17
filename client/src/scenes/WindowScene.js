@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { expressionArt, expressionIndex } from '../logic/contactExpressions.js';
 import {
   WINDOW_GANGS, WINDOW_INTRO, WINDOW_ART, windowGang, windowLayout
 } from '../logic/window.js';
@@ -25,6 +26,11 @@ export class WindowScene extends Phaser.Scene {
   constructor() { super('WINDOW'); }
 
   preload() {
+    for (const id of ['ro','switch','mags','brick','rook','vee','sol']) {
+      const art=expressionArt(id);
+      if(!this.textures.exists(art.key))this.load.spritesheet(art.key,art.source,
+        {frameWidth:art.frameWidth,frameHeight:art.frameHeight});
+    }
     this.load.image('window_bodega', '/art/the-window/bodega-night.webp');
     this.load.spritesheet('window_ro', '/art/the-window/auntie-ro.webp', { frameWidth: WINDOW_ART.ro.frameWidth, frameHeight: WINDOW_ART.ro.frameHeight });
     this.load.spritesheet('window_switch', '/art/the-window/switch.webp', { frameWidth: WINDOW_ART.switch.frameWidth, frameHeight: WINDOW_ART.switch.frameHeight });
@@ -125,15 +131,19 @@ export class WindowScene extends Phaser.Scene {
 
   drawRo(x,y,scale=1,expression=0) {
     const size=176*scale;
+    const art=expressionArt('ro'),expressive=this.textures.exists(art.key);
     const shadow=this.add.ellipse(x+5,y+size*0.42,size*0.72,size*0.16,COLORS.ink,0.7).setDepth(3.8);
-    if(!this.textures.exists('window_ro')){
+    if(!expressive&&!this.textures.exists('window_ro')){
       const fallback=this.add.graphics({x,y}).setDepth(4);
       fallback.fillStyle(COLORS.teal,1).fillRoundedRect(-size*0.2,-size*0.05,size*0.4,size*0.48,size*0.08);
       fallback.fillStyle(0x8b5a43,1).fillCircle(0,-size*0.16,size*0.16);
       this.keep(shadow,fallback);
       return fallback;
     }
-    const sprite=this.add.image(x,y,'window_ro',Math.max(0,Math.min(2,expression))).setDepth(4).setScale(size/WINDOW_ART.ro.frameHeight);
+    const emotion=expression===1?'unimpressed':expression===2?'amused':'neutral';
+    const sprite=this.add.image(x,y,expressive?art.key:'window_ro',
+      expressive?expressionIndex(emotion):Math.max(0,Math.min(2,expression)))
+      .setDepth(4).setScale(size/(expressive?art.frameHeight:WINDOW_ART.ro.frameHeight));
     this.keep(shadow,sprite);
     return sprite;
   }
@@ -152,8 +162,10 @@ export class WindowScene extends Phaser.Scene {
     return ro;
   }
 
-  drawContactPortrait(contactID,x,bottom,width,height,flip=false) {
-    const source=contactID==='switch'?['window_switch',0]:['window_cast',contactID];
+  drawContactPortrait(contactID,x,bottom,width,height,flip=false,expression='neutral') {
+    const art=expressionArt(contactID);
+    const source=art&&this.textures.exists(art.key)?[art.key,expressionIndex(expression)]
+      :contactID==='switch'?['window_switch',0]:['window_cast',contactID];
     if(!this.textures.exists(source[0])) {
       const size=Math.min(width,height);
       const fallback=this.add.circle(x,bottom-size/2,size*0.3,COLORS.teal,0.9).setDepth(10);
@@ -294,8 +306,8 @@ export class WindowScene extends Phaser.Scene {
     const artW=Math.min(170,(a.contentW-28)/2);
     const artBottom=top+60+artH;
     // Bottom-aligned, mirrored partners form a back-to-back crew silhouette.
-    const primary=this.drawContactPortrait(gang.primary.toLowerCase(),a.cx-artW/2,artBottom,artW,artH,true);
-    const secondary=this.drawContactPortrait(gang.jobs.toLowerCase(),a.cx+artW/2,artBottom,artW,artH,false);
+    const primary=this.drawContactPortrait(gang.primary.toLowerCase(),a.cx-artW/2,artBottom,artW,artH,true,'hyped');
+    const secondary=this.drawContactPortrait(gang.jobs.toLowerCase(),a.cx+artW/2,artBottom,artW,artH,false,'hyped');
     if(primary?.displayWidth) primary.x=a.cx-primary.displayWidth*0.4;
     if(secondary?.displayWidth) secondary.x=a.cx+secondary.displayWidth*0.4;
     const line=this.add.text(a.cx,artBottom+16,

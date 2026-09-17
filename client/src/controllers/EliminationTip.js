@@ -1,5 +1,6 @@
 import { contact } from '../logic/contacts.js';
 import { eliminationTipLayout } from '../logic/eliminationTips.js';
+import { expressionArt, expressionIndex } from '../logic/contactExpressions.js';
 
 // One cached portrait, no room download and no wait before retry is usable.
 const RO={id:'ro',name:'Auntie Ro',accent:0xe2b45f,css:'#e2b45f',
@@ -7,7 +8,10 @@ const RO={id:'ro',name:'Auntie Ro',accent:0xe2b45f,css:'#e2b45f',
   frame:{width:724,height:724,x:0},expressions:3};
 export function drawEliminationTip(scene,modal,cue) {
   if(!modal?.contentBounds || !modal.registerExtra)return null;
-  const c=contact(cue.contactID)||RO,a=eliminationTipLayout(modal.contentBounds);
+  const original=contact(cue.contactID)||RO,art=expressionArt(original.id);
+  const c={...original,portraitKey:art.key,portraitSource:art.source,
+    frame:{width:art.frameWidth,height:art.frameHeight,x:0},expressions:5};
+  const a=eliminationTipLayout(modal.contentBounds);
   const objects=[];let closed=false;
   const lifecycle={active:true,visible:true,
     destroy(){if(closed)return;closed=true;this.active=false;
@@ -34,7 +38,7 @@ export function drawEliminationTip(scene,modal,cue) {
   const settle=()=>{
     if(closed || scene._touchSceneClosing || portrait || !scene.textures?.exists(c.portraitKey))return;
     const texture=scene.textures.get(c.portraitKey);
-    const frame=c.expressions>1?0:c.id;
+    const frame=expressionIndex('concerned');
     if(c.expressions===1&&!texture.has(frame))texture.add(frame,0,c.frame.x,0,c.frame.width,c.frame.height);
     portrait=add(scene.add.image(a.portraitX,a.portraitBottom,c.portraitKey,frame).setOrigin(0.5,1));
     portrait.setScale(Math.min(a.portraitW/c.frame.width,a.portraitH/c.frame.height));

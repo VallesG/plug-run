@@ -1,11 +1,14 @@
 // Controller lifecycle against a tiny display-list stub, not visual Phaser proof.
 import { readFileSync } from 'node:fs';
 import { CONTACTS, gangContacts, contactCue, contactPanelLayout, contactDialoguePages } from '../src/logic/contacts.js';
+import { expressionArt, expressionIndex, contactExpression } from '../src/logic/contactExpressions.js';
 let passed = 0;
 function check(name, ok) { if (!ok) throw Error(name); passed++; }
 const source = readFileSync(new URL('../src/controllers/ContactPanel.js', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\s*/gm, '').replace(/export default showContactPanel;/, '').replace('export function', 'function');
-const show = new Function('CONTACTS', 'contactPanelLayout', 'contactDialoguePages', source + '\nreturn showContactPanel;')(CONTACTS, contactPanelLayout, contactDialoguePages);
+const show = new Function('CONTACTS', 'contactPanelLayout', 'contactDialoguePages',
+  'expressionArt', 'expressionIndex', 'contactExpression', source + '\nreturn showContactPanel;')
+  (CONTACTS, contactPanelLayout, contactDialoguePages, expressionArt, expressionIndex, contactExpression);
 function stub(existing) {
   const nodes = [], timers = [], removed = [], frames = [], requests = [], handlers = {}, tweens = [];
   const node = (kind, args = []) => {
@@ -39,7 +42,8 @@ function stub(existing) {
 }
 for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
   const pair = gangContacts(gangID);
-  const data = stub(new Set([pair.primary.portraitKey, pair.secondary.portraitKey]));
+  const data = stub(new Set([pair.primary.portraitKey, pair.secondary.portraitKey,
+    expressionArt(pair.primary.id).key, expressionArt(pair.secondary.id).key]));
   let advanced = 0;
   const panel = show(data.scene, {
     contact: pair.primary, contacts: [pair.primary, pair.secondary], celebration: true,
@@ -48,6 +52,8 @@ for (const gangID of ['crossline', 'iron-row', 'afterlight']) {
     chapterLabel: 'CHAPTER 1 COMPLETE', action: 'SEE THE BLOCK  >>'
   }, () => advanced++);
   check('celebration uses both approved portrait frames ' + gangID, data.nodes.filter(n => n.active && n.kind === 'image').length === 2);
+  check('both partners use hyped expression ' + gangID,
+    data.nodes.filter(n => n.active && n.kind === 'image').every(n => n.args[3] === 2));
   check('pair scene downloads no new background raster ' + gangID, data.requests.length === 0);
   check('finish text is live, not baked in art ' + gangID, data.nodes.some(n => n.active && n.kind === 'text' && n.args[2] === '15 / 15'));
   check('celebration has bounded comic sparkles ' + gangID,

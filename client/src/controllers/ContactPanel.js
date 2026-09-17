@@ -17,6 +17,7 @@
 // still reads. Nothing here can strand a player between houses.
 import Phaser from 'phaser';
 import { CONTACTS, contactPanelLayout, contactDialoguePages } from '../logic/contacts.js';
+import { expressionArt, expressionIndex, contactExpression } from '../logic/contactExpressions.js';
 
 const DEPTH = 24_000;          // above GameUI modals (20k), below replay (30k)
 const COLORS = { ink: 0x080b0d, cream: 0xf1dfb0, paper: 0xe9dfc7, dim: 0x92a0a2 };
@@ -33,10 +34,10 @@ export function showContactPanel(scene, cue, onDone) {
   let bgKey = null;
   let pageIndex = 0;
   const cast = cue.contacts || [cue.contact];
-  const pages = (cue.pages?.length ? cue.pages : [cue.text]).flatMap(value => {
+  const pages = (cue.pages?.length ? cue.pages : [cue.text]).flatMap((value, sourcePage) => {
     const entry = typeof value === 'string' ? { text: value, contact: cue.contact } : value;
     return contactDialoguePages(entry.text, scene.scale.gameSize.width, scene.scale.gameSize.height)
-      .map(text => ({ ...entry, text }));
+      .map(text => ({ ...entry, text, expression: contactExpression(cue, entry, sourcePage) }));
   });
   const page = () => pages[pageIndex];
   let a;
@@ -98,11 +99,15 @@ export function showContactPanel(scene, cue, onDone) {
   };
 
   const drawPortrait = (c = cue.contact, x = a.cx, duo = false) => {
+    const art = expressionArt(c.id);
+    const expressive = art && scene.textures.exists(art.key);
+    const frameW = expressive ? art.frameWidth : c.frame.width;
+    const frameH = expressive ? art.frameHeight : c.frame.height;
     const portraitH = duo
-      ? Math.min(a.portraitH, a.panelW * 0.5 * c.frame.height / c.frame.width)
+      ? Math.min(a.portraitH, a.panelW * 0.5 * frameH / frameW)
       : a.portraitH;
     const portraitY = a.portraitBaseY - portraitH / 2;
-    const key = c.portraitKey;
+    const key = expressive ? art.key : c.portraitKey;
     if (!scene.textures.exists(key)) {
       const circle = track(scene.add.circle(x, portraitY, portraitH * 0.26, c.accent, 0.9)
         .setScrollFactor(0).setDepth(DEPTH + 1));
@@ -115,10 +120,11 @@ export function showContactPanel(scene, cue, onDone) {
     track(scene.add.ellipse(x + 5, a.portraitBaseY - portraitH * 0.02,
       portraitH * 0.42, portraitH * 0.09, COLORS.ink, 0.55)
       .setScrollFactor(0).setDepth(DEPTH + 0.9));
-    const frameName = c.expressions > 1 ? (duo ? 2 : 0) : c.id;
+    const frameName = expressive ? expressionIndex(duo ? 'hyped' : page().expression)
+      : c.expressions > 1 ? (duo ? 2 : 0) : c.id;
     const sprite = track(scene.add.image(x, portraitY, key, frameName)
       .setScrollFactor(0).setDepth(DEPTH + 1));
-    sprite.setScale(portraitH / c.frame.height);
+    sprite.setScale(portraitH / frameH);
     return sprite;
   };
 
@@ -264,7 +270,9 @@ export function showContactPanel(scene, cue, onDone) {
   const needRoom = !cue.celebration && !scene.textures.exists(key);
   const missingPortraits = cast.filter((c, i) => cast.findIndex(other => other.portraitKey === c.portraitKey) === i &&
     !scene.textures.exists(c.portraitKey));
-  const needPortrait = missingPortraits.length > 0;
+  const missingExpressions = [...new Set(cast.map(c => c.id))].map(expressionArt)
+    .filter(art => art && !scene.textures.exists(art.key));
+  const needPortrait = missingPortraits.length > 0 || missingExpressions.length > 0;
 
   // Named crops on the shared cast sheet. Registered once per texture; the
   // frame bounds come from the tested contact contract, never from guesses.
@@ -290,6 +298,8 @@ export function showContactPanel(scene, cue, onDone) {
     // A slow or failed network cannot hold the player between houses.
     const guard = scene.time?.delayedCall?.(2500, settle);
     if (needRoom) scene.load.image(key, cue.contact.background);
+    for (const art of missingExpressions) scene.load.spritesheet(art.key, art.source,
+      { frameWidth: art.frameWidth, frameHeight: art.frameHeight });
     for (const c of missingPortraits) {
       if (c.expressions > 1) {
         scene.load.spritesheet(c.portraitKey, c.portraitSource,

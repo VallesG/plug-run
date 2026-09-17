@@ -81,10 +81,11 @@ console.log('the window: '+passed+' assertions passed');
 
 // Real selection/welcome rendering with only Phaser drawing stubbed.
 
+const {expressionArt,expressionIndex}=await import('../src/logic/contactExpressions.js');
 const sceneSource=readFileSync(new URL('../src/scenes/WindowScene.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/export /g,'');
-const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang',
+const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang','expressionArt','expressionIndex',
   sceneSource+';return WindowScene;')({Scene:class{}},WINDOW_GANGS,WINDOW_INTRO,WINDOW_ART,windowGang,windowLayout,
-  gangID=>({applied:true,state:createWindowState({gangID})}));
+  gangID=>({applied:true,state:createWindowState({gangID})}),expressionArt,expressionIndex);
 function reviewScene(width,height){
   const objects=[];
   const node=(kind,x,y,w=0,h=0)=>{const o={kind,x,y,width:w,height:h,active:true,
@@ -99,8 +100,8 @@ function reviewScene(width,height){
     rectangle:(x,y,w,h)=>node('rectangle',x,y,w,h),
     circle:(x,y,r)=>node('circle',x,y,r*2,r*2),
     image:(x,y,key,frame)=>{
-      const w=key==='window_switch'?WINDOW_ART.switch.frameWidth:WINDOW_ART.cast.frames[frame].width;
-      const h=key==='window_switch'?WINDOW_ART.switch.frameHeight:WINDOW_ART.cast.height;
+      const w=key.startsWith('expression_')?320:key==='window_switch'?WINDOW_ART.switch.frameWidth:WINDOW_ART.cast.frames[frame].width;
+      const h=key.startsWith('expression_')?400:key==='window_switch'?WINDOW_ART.switch.frameHeight:WINDOW_ART.cast.height;
       const image=node('image',x,y,w,h);image.key=key;image.frameID=frame;image.frame={width:w,height:h};return image;
     },
     text:(x,y,text,style)=>{const o=node('text',x,y);o.text=text;o.style=style;return o;}
@@ -125,6 +126,7 @@ for(const [width,height] of [[280,480],[390,844],[671,838],[1440,900]]){
     view.scene.confirmGang(gang.id);
     const visible=view.objects.filter(o=>o.active),pair=visible.filter(o=>o.kind==='image');
     check('welcome shows both contacts '+width+'/'+gang.id,pair.length===2);
+    check('welcome celebrates with hyped portraits '+width+'/'+gang.id,pair.every(p=>p.frameID===2&&p.key.startsWith('expression_')));
     check('welcome mirrors partners outward '+width+'/'+gang.id,pair[0].flipX===true&&pair[1].flipX===false&&pair[0].x<pair[1].x);
     check('welcome shares baseline '+width+'/'+gang.id,pair[0].y===pair[1].y);
     check('welcome preserves main/job roles '+width+'/'+gang.id,visible.some(o=>o.text===gang.primary+' is your main contact.\n'+gang.jobs+' will bring the jobs.'));

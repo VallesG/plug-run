@@ -26,7 +26,7 @@ function fixture(cached=true){
   const scene={textures:{exists:()=>cached,get:()=>({has:()=>true})},
     add:{text:(x,y,text,style)=>{const o=node('text',x,y);o.text=text;o.style=style;return o;},
       circle:(x,y,r)=>node('circle',x,y,r*2,r*2),
-      image:(x,y,key,frame)=>{const c=key==='window_ro'?{frame:{width:724,height:724}}:key==='contact_switch'?contact('switch'):contact(frame);const o=node('image',x,y,c.frame.width,c.frame.height);o.key=key;return o;}},
+      image:(x,y,key,frame)=>{const c=key.startsWith('expression_')?{frame:{width:320,height:400}}:key==='window_ro'?{frame:{width:724,height:724}}:key==='contact_switch'?contact('switch'):contact(frame);const o=node('image',x,y,c.frame.width,c.frame.height);o.key=key;o.frameID=frame;return o;}},
     load:{once(k,fn){listeners[k]=fn;},off(k,fn){if(listeners[k]===fn)delete listeners[k];},
       image(...args){queued.push(args);},spritesheet(...args){queued.push(args);},start(){},isLoading:()=>false},
     events:{once(k,fn){shut=fn;},off(){shut=null;}}};
@@ -40,16 +40,16 @@ for(const bounds of [{x:20,y:100,width:208,height:110},{x:20,y:100,width:308,hei
 }
 let f=fixture();let life=drawEliminationTip(f.scene,f.modal,{contactID:'switch',text:RUNNER_TIPS[0]});
 check('cached portrait appears immediately',f.nodes.some(o=>o.kind==='image'&&o.active));
-check('cached portrait fits reserved width and height',f.nodes.filter(o=>o.kind==='image').every(o=>o.displayWidth<=62.4&&o.displayHeight<=102));
+check('cached portrait fits reserved width and height',f.nodes.filter(o=>o.kind==='image').every(o=>o.displayWidth<=62.4+1e-9&&o.displayHeight<=102+1e-9));
 check('no cached download',f.queued.length===0);
 life.destroy();check('modal destroys tip objects',f.nodes.every(o=>!o.active));
 f=fixture(false);life=drawEliminationTip(f.scene,f.modal,{contactID:'brick',text:RUNNER_TIPS[1]});
 check('missing portrait never delays text/actions',f.nodes.some(o=>o.text===RUNNER_TIPS[1])&&f.nodes.some(o=>o.kind==='circle'));
-check('only portrait queued not room',f.queued.length===1&&f.queued[0][1].endsWith('/cast.webp'));
+check('only selected portrait queued not room',f.queued.length===1&&f.queued[0][1].endsWith('/expressions/brick.webp'));
 const late=f.listeners.complete;life.destroy();f.cache();late();
 check('late download cannot resurrect dismissed screen',!f.nodes.some(o=>o.kind==='image')&&!f.listeners.complete);
 f=fixture(false);life=drawEliminationTip(f.scene,f.modal,{contactID:'switch',text:RUNNER_TIPS[2]});
-check('Switch uses framed spritesheet',f.queued[0][2].frameWidth===724);
+check('Switch uses optimized expression spritesheet',f.queued[0][2].frameWidth===320&&f.queued[0][2].frameHeight===400);
 f.shutdown();check('shutdown tears down pending tip',!life.active&&!f.listeners.complete);
 const source=readFileSync(new URL('../src/controllers/ProgressionManager.js',import.meta.url),'utf8');
 const begin=source.indexOf('  async showPvEGameOver('),end=source.indexOf('  checkExtractionProgress(',begin);
@@ -85,7 +85,7 @@ console.log('elimination tips: '+passed+' assertions passed');
 f=fixture();const frameAdds=[];
 f.scene.textures.get=()=>({has:()=>false,add:(...args)=>frameAdds.push(args)});
 life=drawEliminationTip(f.scene,f.modal,{contactID:'rook',text:RUNNER_TIPS[0]});
-check('shared cast atlas adds exact Rook crop',frameAdds[0].join()==='rook,0,1587,0,396,793');
+check('Rook uses concerned expression without old cast crop',frameAdds.length===0&&f.nodes.some(o=>o.kind==='image'&&o.key==='expression_rook'&&o.frameID===3));
 f=fixture(false);life=drawEliminationTip(f.scene,f.modal,{contactID:'switch',text:RUNNER_TIPS[0]});
 life.setVisible(false);f.cache();f.listeners.complete();
 check('late loaded portrait respects hidden modal',f.nodes.some(o=>o.kind==='image'&&o.visible===false));
@@ -94,7 +94,7 @@ check('show restores only live tip content',f.nodes.filter(o=>o.active).every(o=
 f=fixture(false);life=drawEliminationTip(f.scene,f.modal,{contactID:'brick',text:RUNNER_TIPS[0]});f.listeners.complete();
 check('failed portrait remains readable fallback',f.nodes.some(o=>o.kind==='circle'&&o.active)&&f.nodes.some(o=>o.text===RUNNER_TIPS[0]&&o.active));
 f=fixture();life=drawEliminationTip(f.scene,f.modal,{contactID:'ro',text:RUNNER_TIPS[0]});
-check('no chosen crew uses shared Auntie Ro art',f.nodes.some(o=>o.kind==='image'&&o.key==='window_ro'));
+check('no chosen crew uses concerned Auntie Ro art',f.nodes.some(o=>o.kind==='image'&&o.key==='expression_ro'&&o.frameID===3));
 console.log('elimination art lifecycle: '+passed+' total assertions passed');
 
 const replaySource=readFileSync(new URL('../src/controllers/ReplaySystem.js',import.meta.url),'utf8');
