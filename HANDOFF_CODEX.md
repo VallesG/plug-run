@@ -1,3 +1,23 @@
+## Edge-exit car visibility follow-up — Codex (2026-09-17)
+
+Phone review caught the previous outward cosmetic offset clipping N/S cars.
+carParkCenter now receives scale.gameSize and clamps the full rotated roof plus
+ink-outline extents inside the viewport. Normal unconstrained driveway offsets
+remain the same; extremely small dimensions center rather than invert bounds.
+Because clamping can overlap the guard's pad again, parked car depth is now 9
+and its ink copies 8, below character containers at 10. The Plug remains visible
+in front of the roof; no actor displacement or altered guard logic.
+Extraction sensors, grid, layout sizing, gameplay RNG and bank unchanged.
+The previous departure-outline and occasional skid fixes remain intact.
+
+Adapted V8: getawayCar 848 assertions, including 36 edge placements across
+phone/desktop viewports and three cell sizes, full horizontal/vertical ink
+bounds, tiny viewport and foreground character contract. Existing mobile
+lifecycle 251 and missionExit 335 passed; two runtime modules parsed.
+Native verify/build and actual phone rendering remain unverified (execution
+helper blocked). Recheck top/bottom exit visibility and whether the new
+character-over-car layering reads clearly on phone before shipping.
+
 ## Getaway car no longer hides the exit guard or leaves a black silhouette — Codex (2026-09-17)
 
 The Plug's guard/intercept target is deliberately unchanged. The roof used to

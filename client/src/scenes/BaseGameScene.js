@@ -1443,14 +1443,16 @@ export class BaseGameScene extends Phaser.Scene {
     else { ang = -90; dx=-1; dy=0; }
     // Park outside the guard's pad center. This is a visual offset only:
     // keep egress, extraction thresholds, AI targets and collision unchanged.
-    const parked = carParkCenter(ex, ey, { x: dx, y: dy }, this.cell);
+    const parked = carParkCenter(ex, ey, { x: dx, y: dy }, this.cell, this.scale.gameSize);
     cx = parked.x;
     cy = parked.y;
 
     // Cosmetic paint/stripe textures preserve the original car silhouette.
     const carKey = ensureGangSkin(this).car;
     const carLen = this.cell*2.6; // larger silhouette
-    const car = this.add.image(cx, cy, carKey).setDepth(1200);
+    // Edge clamping can overlap the guard pad: characters (depth 10)
+    // stay in front of the parked roof rather than disappearing under it.
+    const car = this.add.image(cx, cy, carKey).setDepth(9);
     car.setDisplaySize(carLen, this.cell*1.4).setTint(carKey === 'car_blue' ? (this.theme?.carTint ?? 0xffffff) : 0xffffff);
     car.setAngle(ang);
     // Ink outline, same treatment as the characters. Four copies is plenty at
@@ -1461,7 +1463,7 @@ export class BaseGameScene extends Phaser.Scene {
         .setDisplaySize(carLen, this.cell * 1.4)
         .setTint(PALETTE.ink)
         .setAngle(ang)
-        .setDepth(1199));
+        .setDepth(8));
     this.car = car;
     this.carOutDir = { x:dx, y:dy };
     // REAL / BUNK STASH PATCH: ensure car beacon starts off

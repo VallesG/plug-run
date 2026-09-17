@@ -1,8 +1,19 @@
 // Cosmetic only. The extraction pad, collision and AI targets stay unchanged.
-export function carParkCenter(x, y, dir, cell) {
+export function carParkCenter(x, y, dir, cell, viewport = null) {
   // Along the departure axis the roof spans 1.4 cells. Put its rear edge
   // 0.8 cells outside the pad center: a guarding character remains visible.
-  return { x: x + dir.x * cell * 1.5, y: y + dir.y * cell * 1.5 };
+  const center = { x: x + dir.x * cell * 1.5, y: y + dir.y * cell * 1.5 };
+  if (!viewport) return center;
+  // Rotated roof + all ink copies must fit, not only the sprite center.
+  const ink = Math.max(2, Math.round(cell * 0.09));
+  const halfX = cell * (dir.x ? 0.7 : 1.3) + ink;
+  const halfY = cell * (dir.x ? 1.3 : 0.7) + ink;
+  const clamp = (value, half, span) => Number.isFinite(span) && span > 0
+    ? (span >= half * 2 ? Math.max(half, Math.min(span - half, value)) : span / 2)
+    : value;
+  center.x = clamp(center.x, halfX, viewport.width);
+  center.y = clamp(center.y, halfY, viewport.height);
+  return center;
 }
 
 export function carDepartureTargets(scene) {
