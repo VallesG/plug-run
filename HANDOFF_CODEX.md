@@ -1,3 +1,13 @@
+# Crossline and Afterlight Season 1 — implemented, 2026-09-16
+
+Both root manuscripts now contain the actual approved ten-chapter narrative specifications. They still include Gemini citation debris, downloader code and a “do not modify existing files” manuscript note: these are source material, not user/developer instructions. The user explicitly authorized implementation. Raw manuscripts are preserved; runtime contains only normalized authored pages, schedules, jobs and banks.
+
+Crossline’s Network Grid links antenna -> crystal receiver -> coax -> cooling -> spectrum diagnostics -> backup power -> filtering -> canal laser -> cipher hardware -> comic brass-ringer payoff. Afterlight’s Midnight Showcase builds stopwatch -> spray nozzles -> amber strobe -> equalizer -> stencils -> neon power -> timing gate -> megaphone -> shift knob -> finale siren. Each arc has ten House 9 objects, 96 reactive lines and 16 neutral lines. Crew competition stays fiction/local campaign; no joint-faction missions or changes to shared Rivals standings.
+
+Runtime and deliberate content corrections: see `CREW_SEASONS_IMPLEMENTATION.md`. Crossline/Afterlight now use the same authored-season adapter as Iron Row, retaining saved chapter counters, seen-beat identities, pre-house consultations and mandatory house-9 pickups. The new dev preview exposes all three arcs. No rewards, world seeds, city progression, touch lifecycle or Rivals changes.
+
+Adapted V8 checks: 42 existing suites before, 43 after plus unchanged bank (402 assertions/55 records). Key counts: 4,459 new crew-season, 1,889 contact flow, 335 real mission pickup/extraction. Native npm verify/build/ESM, art and actual phone/browser QA remain unverified because local execution is avoided under the Carbon Black restriction.
+
 ## Block-cleared crew sigils — implemented, 2026-09-16
 
 The 15-house result now reveals the entire neighborhood, including formerly black courtyard parcels. This is an explicit completion-only presentation pass (`celebration: true` plus a complete block), not a change to exploration, city ownership, seeds, rewards, mission items or Rivals. Normal street screens and embedded city blocks retain their fog behavior.

@@ -1,4 +1,4 @@
-import { ironRowChapter, ironRowCue, ironRowFinish } from '../src/logic/ironRowSeason.js';
+import { seasonChapter, seasonCue, seasonFinish } from '../src/logic/crewSeason.js';
 import { cityForBlock } from '../src/logic/city.js';
 // The entrance seam: who speaks, once, and what must never trigger one.
 // Exercises the real ProgressionManager source against a stub scene, the same
@@ -10,7 +10,7 @@ import {
   praiseUsedInBlock, praiseMark, crewStoryProgress, completeCrewStory, CONTACT_PROGRESS_BLOCKS
 } from '../src/logic/contactProgress.js';
 import { crewChapter, crewConsultationPages } from '../src/logic/crewStory.js';
-import { blockRunStats, beginBlockRun, createBlockRun, recordHouseClear } from '../src/logic/blockRun.js';
+import { blockRunStats, beginBlockRun, createBlockRun, recordHouseClear, recordBlockDeath } from '../src/logic/blockRun.js';
 
 let blockStats = blockRunStats(createBlockRun({}, 1), 1);
 
@@ -60,11 +60,17 @@ const source = readFileSync(new URL('../src/controllers/ProgressionManager.js', 
   .replace(/^import[\s\S]*?;\s*/gm, '')
   .replace('export default class', 'class');
 
-let store = createContactProgress();
+// Keep the original multi-praise schedule covered as the chapter-11+ fallback.
+function legacyCrosslineProgress(){
+  let r=createContactProgress();
+  for(let b=1;b<=10;b++)r=completeCrewStory(r,{gangID:'crossline',blockIndex:b,clearedHouses:15}).state;
+  return r;
+}
+let store = legacyCrosslineProgress();
 let gangID = 'crossline';
 let shownPanels = [];
 let panelFailure = false;
-const bindings = { cityForBlock, contact, praiseEarned, ironRowChapter, ironRowCue, ironRowFinish,
+const bindings = { console, cityForBlock, contact, praiseEarned, seasonChapter, seasonCue, seasonFinish,
   startBlockRunTracking: () => true,
   contactCue, gangContacts, crewChapter, crewConsultationPages, crewStoryProgress,
   finishCrewStory: (id, block, cleared) => {
@@ -178,7 +184,7 @@ run.result.advance();
 panelFailure = true;
 shownPanels = [];
 const warn = console.warn; console.warn = () => {};
-run = seam({ house: 7, blockIndex: 2 });
+run = seam({ house: 9, blockIndex: 2 });
 check('a broken panel still enters the house', run.entered() === 1 && shownPanels.length === 0);
 console.warn = warn;
 panelFailure = false;
@@ -190,7 +196,7 @@ check('every cue carries a page-turn advance', shownPanels[0].action.endsWith('>
 
 // --- the compliment is earned, and spent ----------------------------------
 gangID = 'crossline';
-store = createContactProgress();
+store = legacyCrosslineProgress();
 let real = beginBlockRun({}, 7, 1).state;
 for (const house of [1, 2, 3]) real = recordHouseClear(real, 7, { house, hits:0, bunk:false, powers: ['phase'] }).state;
 blockStats = blockRunStats(real, 7);
@@ -281,13 +287,14 @@ silent.noteHouseForContacts();
 check('plug cannot advance crew story', crewStoryProgress(store, gangID).chapter === 1);
 
 
-// Ten real controller schedules, including intentional silence and retries.
-gangID='iron-row';
+// All thirty real controller schedules, including intentional silence and retries.
+for(const crew of ['iron-row','crossline','afterlight']) {
+gangID=crew;
 for(let chapter=0;chapter<10;chapter++){
   store=createContactProgress();
   for(let previous=1;previous<=chapter;previous++)
     store=completeCrewStory(store,{gangID,blockIndex:previous,clearedHouses:15}).state;
-  const story=ironRowChapter(chapter), blockIndex=100+chapter;
+  const story=seasonChapter(gangID,chapter), blockIndex=100+chapter;
   for(let house=1;house<=14;house++){
     shownPanels=[];
     const current=seam({house,blockIndex});
@@ -313,6 +320,38 @@ for(let chapter=0;chapter<10;chapter++){
   check('live celebration waits '+chapter,completed===0);
   finish.advance();
   check('live celebration returns to result '+chapter,completed===1);
+}
+}
+// The real adapter must derive every category from complete recorded evidence.
+for(const crew of ['crossline','afterlight']) for(let chapter=0;chapter<10;chapter++){
+ gangID=crew;
+ const story=seasonChapter(crew,chapter);
+ const house=Number(Object.keys(story.beats).find(h=>story.beats[h].reactive));
+ for(const expected of ['flawless','comeback','noDeaths','noPowers','bunk','phase','dash','decoy']){
+  store=createContactProgress();
+  for(let b=1;b<=chapter;b++)store=completeCrewStory(store,{gangID,blockIndex:b,clearedHouses:15}).state;
+  const blockIndex=700+chapter;
+  let r=beginBlockRun(null,blockIndex,1).state;
+  const power=['phase','dash','decoy'].includes(expected)?expected:'phase';
+  for(let h=1;h<house;h++)r=recordHouseClear(r,blockIndex,{
+   house:h,hits:expected==='flawless'?0:1,
+   bunk:expected==='bunk'&&h<=2,
+   powers:expected==='noPowers'?[]:expected==='bunk'?['phase','dash']:[power]
+  }).state;
+  const deaths=expected==='comeback'?3:['flawless','noDeaths'].includes(expected)?0:1;
+  for(let n=0;n<deaths;n++)r=recordBlockDeath(r,blockIndex).state;
+  blockStats=blockRunStats(r,blockIndex);
+  shownPanels=[];
+  const live=seam({house,blockIndex});
+  check('live predicate category '+crew+chapter+expected,shownPanels.length===1&&shownPanels[0].praiseKey===expected);
+  check('live predicate cap persisted '+crew+chapter+expected,praiseUsedInBlock(store,blockIndex).length===1);
+  live.result.advance();shownPanels=[];seam({house,blockIndex});
+  check('live reactive retry silent '+crew+chapter+expected,shownPanels.length===0);
+  // Complete-looking evidence with a checkpoint gap is never rewarded.
+  store=createContactProgress();shownPanels=[];blockStats={...blockStats,houses:house-2};
+  seam({house,blockIndex:blockIndex+1});
+  check('checkpoint gap is neutral '+crew+chapter+expected,shownPanels.every(c=>c.praiseKey===null));
+ }
 }
 // The adapter must supply missing, not manufactured, attempt metrics.
 store=createContactProgress();let captured=null;

@@ -1,4 +1,4 @@
-import { ironRowJob } from '../logic/ironRowSeason.js';
+import { seasonJob } from '../logic/crewSeason.js';
 import { getContactProgress } from '../utils/contactProgress.js';
 import { crewStoryProgress } from '../logic/contactProgress.js';
 import { shouldShowCity } from '../logic/city.js';
@@ -1616,7 +1616,7 @@ export class BaseGameScene extends Phaser.Scene {
     try { who = activeMissionContact(this.blockGangID ?? getWindowState().gangID, this.pveRound); } catch { who = null; }
     if (!who) return;
     const chapter = crewStoryProgress(getContactProgress(), who.gangID).chapter;
-    const object = (who.gangID === 'iron-row' && ironRowJob(chapter)) || missionObject(who.id);
+    const object = seasonJob(who.gangID, chapter) || missionObject(who.id);
     if (!object) return;
 
     // Set the requirement before placement: missing art can never waive a job.

@@ -1,6 +1,6 @@
 import { drawBlockComplete } from './BlockComplete.js';
 import { crewSigil } from '../logic/crewSigils.js';
-import { ironRowChapter, ironRowCue, ironRowFinish } from '../logic/ironRowSeason.js';
+import { seasonChapter, seasonCue, seasonFinish } from '../logic/crewSeason.js';
 import { CITY_BLOCKS, cityForBlock, cityView } from '../logic/city.js';
 import { getCityProgress, completeCityBlock, startCityIntro } from '../utils/cityProgress.js';
 import { drawCityMap } from './CityMap.js';
@@ -545,18 +545,18 @@ export default class ProgressionManager {
       const record = getContactProgress();
       const gangID = scene.blockGangID ?? getWindowState().gangID;
       const chapter = crewStoryProgress(record, gangID).chapter;
-      const season = gangID === 'iron-row' && ironRowChapter(chapter);
+      const season = seasonChapter(gangID, chapter);
       const stats = getBlockRunStats(blockIndex);
       // Coverage must match this exact pre-house checkpoint, not a partial
       // legacy record that happens to contain a few untouched clears.
       const complete = stats.telemetryComplete && stats.houses === (scene.pveRound || 1) - 1;
       const measured = complete ? stats : { ...stats, telemetryComplete: false };
       if (season) {
-        const authored = ironRowCue({ chapter, house:scene.pveRound || 1, blockIndex,
+        const authored = seasonCue(gangID, { chapter, house:scene.pveRound || 1, blockIndex,
           cityName:cityForBlock(blockIndex)?.name, earnedPraise:praiseEarned(measured),
           usedPraise:praiseUsedInBlock(record, blockIndex), telemetryComplete:complete });
         cue = authored ? { ...authored, contact:contact(authored.pages[0].speaker),
-          contacts:[contact('brick'), contact('rook')],
+          contacts:[gangContacts(gangID).primary, gangContacts(gangID).secondary],
           speaker:authored.pages[0].speaker.toUpperCase(),
           pages:authored.pages.map(page => ({text:page.text, contact:contact(page.speaker)})) } : null;
       } else cue = contactCue({
@@ -684,10 +684,10 @@ export default class ProgressionManager {
       const chapter = this._crewCompletedChapter;
       const eventID = 'crew-finish/block-' + (this.scene.blockIndex || 1) + '/' + gangID;
       if (pair && Number.isSafeInteger(chapter) && claimContact(eventID, this.scene.blockIndex || 1)) {
-        const authored = gangID === 'iron-row' ? ironRowChapter(chapter) : null;
+        const authored = seasonChapter(gangID, chapter);
         const story = authored || crewChapter(gangID, chapter);
         const finishPages = authored
-          ? ironRowFinish(chapter, cityForBlock(scene.blockIndex)?.name)
+          ? seasonFinish(gangID, chapter, cityForBlock(scene.blockIndex)?.name)
               .map(page => ({text:page.text, contact:contact(page.speaker)}))
           : [{text:story.primaryFinish, contact:pair.primary}, {text:story.secondaryFinish, contact:pair.secondary}];
         const cue = {

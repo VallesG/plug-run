@@ -1,5 +1,5 @@
-import { ironRowJob } from '../src/logic/ironRowSeason.js';
-import { crewStoryProgress, createContactProgress } from '../src/logic/contactProgress.js';
+import { seasonJob } from '../src/logic/crewSeason.js';
+import { crewStoryProgress, createContactProgress, completeCrewStory } from '../src/logic/contactProgress.js';
 import { readFileSync } from 'node:fs';
 import { missionExitAllowed, placeMissionItem, placeRequiredMissionItem, missionItemSeed, missionObject, MISSION_ITEM_COLOR } from '../src/logic/missionItem.js';
 import { activeMissionContact, CONTACT_TARGET_HOUSE } from '../src/logic/contacts.js';
@@ -71,13 +71,14 @@ for (const dual of [false,true]) {
 
 // Actual placement/pickup methods, not a separate simulated mission model.
 const start=source.indexOf('  makeMissionItem(){'),finish=source.indexOf('  addCarryPackage(){',start);
-let gangID='crossline', overlap=true;
-const inputs={ironRowJob, crewStoryProgress, getContactProgress:()=>createContactProgress(), placeRequiredMissionItem,missionItemSeed,missionObject,MISSION_ITEM_COLOR,
+let gangID='crossline', overlap=true, missionChapter=0;
+const missionProgress=()=>{let r=createContactProgress();for(let b=1;b<=missionChapter;b++)r=completeCrewStory(r,{gangID,blockIndex:b,clearedHouses:15}).state;return r;};
+const inputs={seasonJob, crewStoryProgress, getContactProgress:missionProgress, placeRequiredMissionItem,missionItemSeed,missionObject,MISSION_ITEM_COLOR,
   activeMissionContact,getWindowState:()=>({gangID}),PALETTE:{ink:0x080b0d},
   rectsOverlap:()=>overlap,performance:{now:()=>1000},console:{warn(){}}};
 const Host = new Function(...Object.keys(inputs),'class Host {\n'+source.slice(start,finish)+'\n}\nreturn Host;')(...Object.values(inputs));
-for (const gang of ['crossline','iron-row','afterlight']) {
-  gangID=gang;
+for (const gang of ['crossline','iron-row','afterlight']) for(let chapter=0;chapter<10;chapter++) {
+  gangID=gang;missionChapter=chapter;
   const host=new Host(),nodes=[],sounds=[],tweens=[];
   const make=(kind,args)=>{
     const target={kind,args,x:args[0]||0,y:args[1]||0,active:true,visible:true,alpha:1,
@@ -96,6 +97,7 @@ for (const gang of ['crossline','iron-row','afterlight']) {
     time:{now:1000},showCarBeacon(){}});
   host.makeMissionItem();
   const cell=JSON.stringify(host.missionCell),object=host.missionObject;
+  check('live pickup agrees with season job '+gang+chapter,object.name===seasonJob(gang,chapter).name&&object.short===seasonJob(gang,chapter).short);
   check('required item exists even in tight room ' + gang,host.requiresMissionItem && host.missionItem);
   host.checkMissionItemPickup();
   check('menu cannot collect job item ' + gang,!host.hasMissionItem && sounds.length===0);
