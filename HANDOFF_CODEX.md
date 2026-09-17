@@ -1,3 +1,40 @@
+## Campaign joke cadence — Codex (2026-09-17)
+
+Season 1's campaign wrapper now preserves every authored cue and its legacy
+claim ID, keeps the existing chapter banter/tease pages and full House 9 job,
+and fills longer silent gaps with short unconditional crew jokes from the
+reviewed Meta bank. Import-free campaignCadence.js includes House 1 and uses
+a maximum THREE-house interval, counting the finish as checkpoint 16.
+Added two/three-house steps vary deterministically by block/chapter; no RNG.
+Original manuscripts/season data and praise predicates are untouched.
+
+New gap-fill IDs are contact/v1/block-N/cadence-house-H/PRIMARY. They use the
+existing claim-before-show and account-scoped two-block contact record; no
+new storage keys. New cues have no praise key, one or two named-speaker pages,
+and no item prerequisites or optional romance. The real ProgressionManager
+journey/runner guard remains authoritative: Daily, Tutorial, Rivals and Plug
+are unchanged. Post-Season-1 legacy fallback retains its existing cadence.
+
+contact-preview.html now offers every pre-house checkpoint plus a distinct
+finish value 16 (previously 15 ambiguously meant finish), so added cues can
+be reviewed. Do not rebuild a static dist underneath Claude's recording jobs.
+
+Adapted V8: campaignCadence 25,150 assertions across 3 crews x 10 chapters x
+20 block indices, maximum gaps through finish, legacy IDs/full job identity,
+unique filler per block, deterministic schedules, claimed/reloaded capacity
+and actual pre-house callback/mode-isolation checks. campaignContacts 1,075,
+contactFlow 1,900, crewSeason 4,459, contactStorage 16, contactPanel 47,
+mobile lifecycle 251, missionExit 335 and rivalsFlow 146 passed.
+New cadence suite is registered in npm test's explicit chain.
+
+Native npm run verify could not start: sandbox helper SetNamedSecurityInfoW
+failed with error 5. Build/real ESM, full current 160-record bank and actual
+phone/browser cadence remain unverified in this environment. No bank/driver,
+master, maze, rewards, mission item or race-clock changes. Run native verify
+when recording workers are idle; review short joke pacing and steering after
+dismissal on phone. The cadence guarantee concerns successful house progression,
+not retries (which deliberately remain silent).
+
 ## Regular elimination screen: contact + rotating advice — Codex (2026-09-17)
 
 ProgressionManager.showPvEGameOver now uses a short ELIMINATED/defense heading

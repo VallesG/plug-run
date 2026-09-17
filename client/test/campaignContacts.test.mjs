@@ -1,4 +1,4 @@
-import { campaignContactCue, campaignContactFinish } from '../src/logic/campaignContacts.js';
+import { campaignContactCue, campaignContactFinish, campaignContactHouses } from '../src/logic/campaignContacts.js';
 import { crewSeason, seasonCue, seasonFinish } from '../src/logic/crewSeason.js';
 let passed=0;const check=(name,ok)=>{if(!ok)throw Error(name);passed++;};
 for(const gangID of ['crossline','iron-row','afterlight']){
@@ -8,7 +8,8 @@ for(const gangID of ['crossline','iron-row','afterlight']){
   for(let house=1;house<=15;house++){
    const options={chapter,house,blockIndex:chapter+1,earnedPraise:['flawless'],telemetryComplete:true};
    const base=seasonCue(gangID,options),cue=campaignContactCue(gangID,options);
-   check('no added slots '+gangID+chapter+house,Boolean(base)===Boolean(cue));
+   check('scheduled slots '+gangID+chapter+house,Boolean(cue)===campaignContactHouses(gangID,options).includes(house));
+   if(cue&&!base){check('added banter is unmeasured',cue.beat.kind==='banter'&&cue.praiseKey===null&&cue.lineID===null);continue;}
    if(!cue)continue;
    check('claim identity intact',base.eventID===cue.eventID);
    check('deterministic',JSON.stringify(cue)===JSON.stringify(campaignContactCue(gangID,options)));

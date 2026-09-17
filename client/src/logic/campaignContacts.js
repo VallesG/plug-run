@@ -1,6 +1,13 @@
 // Story-first presentation layer. Fixed chapter banter is not performance praise.
-// No new contact slots, claim IDs, persistence, rewards, RNG or gameplay changes.
+// Gap-filling banter adds stable claim IDs; existing authored identities stay intact.
 import { crewSeason, seasonChapter, seasonCue, seasonFinish } from './crewSeason.js';
+import { campaignCadenceHouses, campaignCadencePages } from './campaignCadence.js';
+export function campaignContactHouses(gangID,{chapter=0,blockIndex=1}={}) {
+ const story=seasonChapter(gangID,chapter);
+ if(!story)return [];
+ const block=Number.isSafeInteger(blockIndex)&&blockIndex>0?blockIndex:1;
+ return campaignCadenceHouses(Object.keys(story.beats).map(Number),block+story.number);
+}
 const exchanges={
   "afterlight": [
     [
@@ -147,7 +154,23 @@ export function campaignContactCue(gangID, options={}) {
   const cue=seasonCue(gangID,options);
   const story=seasonChapter(gangID,options.chapter);
   const arc=crewSeason(gangID);
-  if(!cue||!story||!arc)return cue;
+  if(!story||!arc)return cue;
+  if(!cue){
+    const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
+    const houses=campaignContactHouses(gangID,options);
+    const added=houses.filter(h=>!story.beats[h]);
+    const pages=campaignCadencePages(gangID,options.house,added,block+story.number);
+    if(!pages)return null;
+    const id='cadence-house-'+options.house;
+    return {
+      eventID:'contact/v1/block-'+block+'/'+id+'/'+arc.primary,
+      beat:{id,house:options.house,kind:'banter'},
+      pages,text:pages[0].text,speaker:pages[0].speaker,praiseKey:null,lineID:null,
+      banterID:gangID+'/chapter-'+story.number+'/'+id,
+      chapterLabel:'CHAPTER '+story.number+' · '+story.title.toUpperCase(),
+      action:'VIEW THE BLOCK  >>'
+    };
+  }
   // One short exchange per chapter, at its first existing non-opening check-in.
   // Tease pages remain after the exchange; House 9 always keeps its full briefing.
   const slot=Object.keys(story.beats).map(Number).sort((a,b)=>a-b).find(h=>h!==1&&h!==9);

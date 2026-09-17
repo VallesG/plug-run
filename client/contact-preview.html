@@ -13,7 +13,7 @@ button.on{border-color:#e2b45f;background:#23313a}
 .cap{font-size:11px;color:#a7b3b0;padding:6px 8px;background:#111719}
 </style>
 <h1>Contact panels</h1>
-<p>The real <code>ContactPanel</code> controller and the real <code>logic/contacts.js</code> cues, rendered by Phaser at phone and desktop sizes. This is the review surface for portrait placement, desk occlusion, dialogue legibility and the bottom-right advance. Choose a crew chapter, house and measured condition to inspect the Season 1 script and duo finish. A silent slot is intentional. Advancing redraws; nothing writes gameplay progress or Cash.</p>
+<p>The real <code>ContactPanel</code> controller and the real <code>logic/contacts.js</code> cues, rendered by Phaser at phone and desktop sizes. This is the review surface for portrait placement, desk occlusion, dialogue legibility and the bottom-right advance. Choose a crew chapter, house and measured condition to inspect the Season 1 script and duo finish. Short gap-filling crew banter keeps campaign appearances within three houses; the schedule varies by block. Advancing redraws; nothing writes gameplay progress or Cash.</p>
 <div class="bar" id="who"></div>
 <div class="bar" id="beat"></div>
 <div class="bar" id="chapters"></div>
@@ -51,7 +51,7 @@ function render() {
       return { value: id, label: p.primary.gang.toUpperCase() + ' · ' + p.primary.name + ' / ' + p.secondary.name };
     }), gangID, v => { gangID = v; render(); });
   bar(document.getElementById('beat'),
-    [...CONTACT_BEATS.map(b => ({ value: b.house, label: 'HOUSE ' + b.house + ' · ' + b.kind })), {value:15,label:'BLOCK FINISH'}],
+    [...Array.from({length:15},(_,i)=>({value:i+1,label:'BEFORE HOUSE '+(i+1)})), {value:16,label:'BLOCK FINISH'}],
     house, v => { house = v; render(); });
 
   bar(document.getElementById('chapters'), crewSeason(gangID)
@@ -82,7 +82,7 @@ function render() {
     let cue = contactCue({ gangID, house, blockIndex: 1 });
     if (crewSeason(gangID)) {
       const story=seasonChapter(gangID,chapter);
-      const pages=house===15 ? seasonFinish(gangID,chapter, 'Duskport') : null;
+      const pages=house===16 ? seasonFinish(gangID,chapter, 'Duskport') : null;
       const authored=pages ? {pages, text:pages[0].text, celebration:true,
         chapterLabel:'CHAPTER '+story.number+' COMPLETE · '+story.title.toUpperCase(),
         action:'SEE THE BLOCK  >>', beat:{id:'finish'}} : seasonCue(gangID,{
