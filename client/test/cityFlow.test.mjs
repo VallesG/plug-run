@@ -1,7 +1,7 @@
 // Actual city, block, GameUI and progression renderers against display-list stubs.
 // Geometry/lifecycle proof only: this does not verify Phaser pixels or font metrics.
 import { readFileSync } from 'node:fs';
-import { CITY_BLOCKS, cityForBlock, cityView, cityMapLayout, cityZoomFrames, createCityState, claimCityBlock, claimCityIntro } from '../src/logic/city.js';
+import { CITY_BLOCKS, cityForBlock, cityView, cityMapLayout, cityZoomFrames, cityStreets, cityShoreline, cityStreetDistance, cityBlockConnector, cityClearedOwner, createCityState, claimCityBlock, claimCityIntro } from '../src/logic/city.js';
 import { advanceJourney, worldBlock } from '../src/logic/worldBlocks.js';
 import { windowGang } from '../src/logic/window.js';
 import { layoutBlock, buildFog, blockNoise, distanceToStreet } from '../src/logic/blockMap.js';
@@ -17,8 +17,10 @@ const blockSource=source('../src/controllers/BlockMap.js').replace('export funct
 const drawBlockMap=new Function('layoutBlock','buildFog','blockNoise','distanceToStreet','PALETTE','getCurrentRouteID','fullBlockReveal','drawCrewSigil',
  blockSource+'\nreturn drawBlockMap;')(layoutBlock,buildFog,blockNoise,distanceToStreet,PALETTE,()=>1,fullBlockReveal,drawCrewSigil);
 const mapSource=source('../src/controllers/CityMap.js').replace('export function','function');
-const drawCityMap=new Function('cityMapLayout','cityZoomFrames','blockNoise','worldBlock','windowGang','drawBlockMap',
- mapSource+'\nreturn drawCityMap;')(cityMapLayout,cityZoomFrames,blockNoise,worldBlock,windowGang,drawBlockMap);
+const cityMarks=[];
+const citySigil=(g,id,options)=>{cityMarks.push({id,options});return drawCrewSigil(g,id,options);};
+const drawCityMap=new Function('cityMapLayout','cityZoomFrames','blockNoise','worldBlock','windowGang','drawBlockMap','drawCrewSigil','cityStreets','cityShoreline','cityStreetDistance','cityBlockConnector','cityClearedOwner',
+ mapSource+'\nreturn drawCityMap;')(cityMapLayout,cityZoomFrames,blockNoise,worldBlock,windowGang,drawBlockMap,citySigil,cityStreets,cityShoreline,cityStreetDistance,cityBlockConnector,cityClearedOwner);
 const uiSource=source('../src/controllers/GameUI.js').replace('export default class','class');
 const managerSource=source('../src/controllers/ProgressionManager.js').replace('export default class','class');
 const UI=new Function(uiSource+'\nreturn GameUI;')();
@@ -170,3 +172,13 @@ check('completion uses frozen crew accent',f.configs.at(-1).accent===crewSigil('
 check('completion has one bright action',f.configs.at(-1).buttons.flatMap(b=>b.pair||[b]).filter(b=>b.variant==='primary').length===1);
 check('completion omits duplicate totals',f.configs.at(-1).lines.length===0);
 console.log('city flow: '+passed+' assertions passed');
+
+const branded=scene(),checkpoint={blockIndex:7,pveRound:1};
+const owned=createCityState({completedThrough:6,owners:{1:'crossline',2:'iron-row',3:'afterlight'}},checkpoint);
+cityMarks.length=0;
+const cityArt=drawCityMap(branded.s,{view:cityView(owned,checkpoint),checkpoint});
+check('only three saved cleared crews get city sigils',cityMarks.length===3&&cityMarks.map(m=>m.id).join(',')==='crossline,iron-row,afterlight');
+check('marks are translucent backlit vector overlays',cityMarks.every(m=>m.options.alpha===.72&&m.options.size>0));
+cityArt.destroy();
+check('city sigils clean up with container',branded.objects.every(o=>!o.active));
+console.log('city ownership rendering: '+passed+' total assertions passed');

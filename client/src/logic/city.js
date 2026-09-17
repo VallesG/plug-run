@@ -95,8 +95,8 @@ export function cityMapLayout(area = {}) {
   const height = Math.max(0, Number.isFinite(area.height) ? area.height : 0);
   const scale = Math.min(width / 760, height / 920);
   // Spatial order is deliberately unrelated to progression order.
-  const centers = [[150,359],[616,642],[378,132],[136,603],[626,388],
-    [136,126],[382,612],[616,156],[390,363],[374,826]];
+  const centers = [[154,350],[613,610],[385,112],[157,598],[610,377],
+    [159,115],[388,580],[609,124],[389,369],[365,817]];
   return { x: (Number.isFinite(area.x) ? area.x : 0) + (width - 760 * scale) / 2,
     y: (Number.isFinite(area.y) ? area.y : 0) + (height - 920 * scale) / 2,
     scale, width: 760, height: 920,
@@ -110,4 +110,48 @@ export function cityZoomFrames(area, node) {
     y: area.y + area.height / 2 - node.y * factor });
   return { overview, neighborhood: focus(Math.min(scale, overview.scale * 2.8)),
     block: focus(scale) };
+}
+
+// Cartographic geometry only: offset avenues, a diagonal boulevard and uneven
+// shoreline. Coordinates deliberately leave each actual exterior parcel intact.
+export function cityStreets() {
+  return [
+    [[252,20],[254,208],[270,450],[263,684],[241,908]],
+    [[494,18],[492,205],[497,467],[490,704],[478,910]],
+    [[712,24],[713,225],[704,476],[720,715],[698,909]],
+    [[58,224],[254,208],[492,205],[713,225]],
+    [[64,470],[270,450],[497,467],[704,476]],
+    [[76,716],[263,684],[490,704],[720,715]],
+    [[241,908],[478,910],[698,909]],
+    [[72,28],[79,223],[64,470],[76,716],[91,900]]
+  ];
+}
+export function cityShoreline() {
+  return [[0,0],[72,0],[67,112],[43,218],[58,330],[35,466],
+    [63,602],[45,730],[69,847],[55,920],[0,920]];
+}
+export function cityStreetDistance(x,y) {
+  let best=Infinity;
+  for(const route of cityStreets()) for(let i=1;i<route.length;i++){
+    const [ax,ay]=route[i-1], [bx,by]=route[i];
+    const t=Math.max(0,Math.min(1,((x-ax)*(bx-ax)+(y-ay)*(by-ay))/((bx-ax)**2+(by-ay)**2)));
+    best=Math.min(best,Math.hypot(x-ax-t*(bx-ax),y-ay-t*(by-ay)));
+  }
+  return best;
+}
+// Local exits join their district avenue instead of a single level-chain road.
+export function cityBlockConnector(node,mirror=false) {
+  const x=node.x-node.w/2+(mirror?168:32)*node.w/200,y=node.y+node.h/2;
+  const route=cityStreets()[node.y<240?3:node.y<480?4:node.y<740?5:6];
+  let best=null,distance=Infinity;
+  for(let i=1;i<route.length;i++){
+    const [ax,ay]=route[i-1],[bx,by]=route[i];
+    const t=Math.max(0,Math.min(1,(x-ax)/(bx-ax)));
+    const px=ax+t*(bx-ax),py=ay+t*(by-ay),d=Math.hypot(px-x,py-y);
+    if(d<distance){distance=d;best=[px,py];}
+  }
+  return [[x,y],best];
+}
+export function cityClearedOwner(block) {
+  return block?.status==='cleared'?gang(block.owner):null;
 }

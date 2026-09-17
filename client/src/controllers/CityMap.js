@@ -1,8 +1,9 @@
 // Automatic city -> neighborhood -> actual block. No browsing or gameplay RNG.
-import { cityMapLayout, cityZoomFrames } from '../logic/city.js';
+import { cityMapLayout, cityZoomFrames, cityStreets, cityShoreline, cityStreetDistance, cityBlockConnector, cityClearedOwner } from '../logic/city.js';
 import { blockNoise } from '../logic/blockMap.js';
 import { worldBlock } from '../logic/worldBlocks.js';
 import { windowGang } from '../logic/window.js';
+import { drawCrewSigil } from './CrewSigil.js';
 import { drawBlockMap } from './BlockMap.js';
 export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
   const width = scene.scale.gameSize.width, height = scene.scale.gameSize.height;
@@ -39,18 +40,17 @@ export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
     rect(n>.7?0x1d2820:n>.3?0x18221d:0x141c19,x,y,8,8);
   }
   // Waterfront, parks and rail spine; roads form a network, never a level chain.
-  rect(0x0b2027,0,0,54,920);
-  for(let y=0;y<920;y+=28) rect(0x26413e,42,y,12+(y%84)/7,20,.55);
+  g.fillStyle(0x0b2027,1).fillPoints(cityShoreline().map(([x,y])=>({x,y})),true);
+  const shore=cityShoreline().slice(1,-1);
+  for(let i=1;i<shore.length;i++)g.lineStyle(5,0x26413e,.65).lineBetween(...shore[i-1],...shore[i]);
   rect(0x243526,72,734,184,154); rect(0x223425,504,750,188,138);
-  for(const x of [258,502,710]) road(x,38,x,902);
-  for(const y of [242,486,728]) road(56,y,728,y);
-  road(58,52,258,242); road(502,728,710,898);
+  for(const route of cityStreets()) for(let i=1;i<route.length;i++)road(...route[i-1],...route[i]);
   g.lineStyle(2,0x525a4b,.65).lineBetween(740,0,740,920);
   g.lineStyle(2,0x525a4b,.65).lineBetween(748,0,748,920);
   for(let y=0;y<920;y+=14) rect(0x4e594a,736,y,16,3,.45);
   for(let y=35;y<900;y+=26) for(let x=70;x<710;x+=24) {
     if(a.nodes.some(n=>Math.abs(n.x-x)<n.w/2+12&&Math.abs(n.y-y)<n.h/2+12)) continue;
-    if([258,502,710].some(rx=>Math.abs(x-rx)<20)||[242,486,728].some(ry=>Math.abs(y-ry)<20)) continue;
+    if(cityStreetDistance(x,y)<25) continue;
     const n=blockNoise(x,y,view.city.number^0x817);
     if(n>.67) {
       rect(0x070d0d,x+3,y+4,14,18,.7);
@@ -63,12 +63,8 @@ export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
   // Each local street opens onto the city's shared arterial network.
   for(const [i,node] of a.nodes.entries()) {
     const mirror=(worldBlock(view.blocks[i].blockIndex).seed & 1)!==0;
-    const x=node.x-node.w/2+(mirror?168:32)*node.w/200;
-    const y=node.y+node.h/2;
-    const avenue=[242,486,728,914].find(ry=>ry>=y);
-    const junction=[258,502,710].reduce((best,rx)=>Math.abs(rx-x)<Math.abs(best-x)?rx:best,258);
-    road(x,y,x,avenue); road(x,avenue,junction,avenue);
-    if(avenue===914) road(junction,902,junction,914);
+    const connector=cityBlockConnector(node,mirror);
+    road(...connector[0],...connector[1]);
   }
   for(const [i,node] of a.nodes.entries()) {
     const block=view.blocks[i], current=block.blockIndex===checkpoint.blockIndex;
@@ -85,8 +81,13 @@ export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
     if(!current && block.status!=='cleared') {
       shade.fillStyle(0x07090b,.75).fillRect(node.x-node.w/2,node.y-node.h/2,node.w,node.h);
     }
-    const crew=windowGang(block.owner);
+    const owner=cityClearedOwner(block), crew=windowGang(owner);
     if(crew) {
+      // Soft backlight and a crisp vector stamp, never an inferred legacy owner.
+      const size=Math.min(node.w,node.h)*.66;
+      shade.fillStyle(crew.color,.07).fillCircle(node.x,node.y,size*.65);
+      shade.fillStyle(crew.color,.10).fillCircle(node.x,node.y,size*.48);
+      drawCrewSigil(shade,owner,{x:node.x-size/2,y:node.y-size/2,size,alpha:.72});
       shade.lineStyle(2,crew.color,.8).lineBetween(node.x-node.w/2,node.y+node.h/2,
         node.x+node.w/2,node.y+node.h/2);
     }

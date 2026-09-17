@@ -1,4 +1,5 @@
 import {
+  cityStreets, cityShoreline, cityStreetDistance, cityBlockConnector, cityClearedOwner,
   CITY_BLOCKS, CITY_HOUSES, cityForBlock, cityIdentity, createCityState,
   beginCityBlock, claimCityBlock, cityView, shouldShowCity, cityMapLayout, cityZoomFrames, claimCityIntro
 } from '../src/logic/city.js';
@@ -96,3 +97,25 @@ for(const [width,height] of [[244,324],[354,688],[1404,744]]) {
  check('geography is not monotonic ladder',a.nodes.some((n,i)=>i>0&&n.y<a.nodes[i-1].y));
 }
 console.log('city: '+passed+' assertions passed');
+
+const map=cityMapLayout({width:760,height:920});
+check('offset streets, not uniform full grid',cityStreets().filter(r=>r.length>2&&new Set(r.map(p=>p[0])).size>1&&new Set(r.map(p=>p[1])).size>1).length>=6);
+check('irregular shoreline',new Set(cityShoreline().map(p=>p[0])).size>5);
+check('street distance at shared junction',cityStreetDistance(254,208)===0);
+for(const node of map.nodes) {
+ for(const other of map.nodes.filter(n=>n!==node))check('parcels never overlap',Math.abs(node.x-other.x)>=(node.w+other.w)/2||Math.abs(node.y-other.y)>=(node.h+other.h)/2);
+ for(const mirror of [false,true]) {
+  const link=cityBlockConnector(node,mirror);
+  check('connector starts at actual local exit',link[0][1]===node.y+node.h/2&&link[0][0]>node.x-node.w/2&&link[0][0]<node.x+node.w/2);
+  check('connector reaches shared network',cityStreetDistance(...link[1])<1e-8);
+ }
+ for(let x=node.x-node.w/2+12;x<node.x+node.w/2-12;x+=12)
+  for(let y=node.y-node.h/2+12;y<node.y+node.h/2-12;y+=12)
+   check('arterials do not cut exterior interior',cityStreetDistance(x,y)>11);
+}
+for(const owner of ['crossline','iron-row','afterlight']){
+ check('cleared saved crew has sigil',cityClearedOwner({status:'cleared',owner})===owner);
+ for(const status of ['current','locked'])check('unfinished block has no sigil',cityClearedOwner({status,owner})===null);
+}
+for(const owner of [null,undefined,'bad','__proto__'])check('unknown legacy ownership never invented',cityClearedOwner({status:'cleared',owner})===null);
+console.log('irregular cartography: '+passed+' total assertions passed');

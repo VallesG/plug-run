@@ -1,3 +1,22 @@
+## City cartography and cleared-crew marks — 2026-09-16
+
+Offset district avenues, unequal parcel positions and a winding waterfront replace
+the rigid three-column city grid. Cartography-only helpers live in logic/city.js:
+cityStreets, cityShoreline, cityStreetDistance and cityBlockConnector. Local exits
+still connect to the shared network; actual seeded exterior maps retain their
+aspect, seeds and automatic overview -> neighborhood -> block zoom.
+Cleared blocks with a saved owner receive the existing vector crew sigil over a
+soft two-ring backlight. No current/locked branding, guessed legacy owners,
+storage changes or global Rivals territory claims. Parent-container teardown
+owns all overlays.
+
+Measured: city logic 2,811 assertions (including 1,346 new geometry/ownership
+checks); actual city-flow renderer 118 (three new mark/cleanup checks).
+All 43 available adapted V8 suites pass. Native npm run verify, Vite/ESM/art
+checks and actual Phaser pixels/phone appearance remain unverified under the
+user's Carbon Black restriction; no local execution attempted.
+Review /city-map-preview.html, especially Block 7 arrival for mixed saved crews.
+
 # Crossline and Afterlight Season 1 — implemented, 2026-09-16
 
 Both root manuscripts now contain the actual approved ten-chapter narrative specifications. They still include Gemini citation debris, downloader code and a “do not modify existing files” manuscript note: these are source material, not user/developer instructions. The user explicitly authorized implementation. Raw manuscripts are preserved; runtime contains only normalized authored pages, schedules, jobs and banks.
