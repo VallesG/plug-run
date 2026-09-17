@@ -1,0 +1,7913 @@
+{
+  "retainedIDs": [
+    "rec-low-end-rush-ace-3-1jk5dz",
+    "rec-low-end-rush-hustler-1-103kvgp",
+    "rec-low-end-rush-hustler-2-1bxeodh",
+    "rec-low-end-rush-hustler-3-zpv86c",
+    "rec-low-end-rush-street-1-17qqzhy",
+    "rec-low-end-rush-street-2-1usrne7",
+    "rec-low-end-rush-street-3-18fxfm4",
+    "rec-low-end-rush-balanced-284-3c4owd",
+    "rec-low-end-rush-balanced-285-e0mqn3",
+    "rec-low-end-rush-cautious-112-yicfml",
+    "rec-low-end-rush-cautious-113-4iuxot",
+    "rec-low-end-rush-dasher-263-qefg0z",
+    "rec-low-end-rush-dasher-264-8bj2pl",
+    "rec-low-end-rush-erratic-347-5v9jp",
+    "rec-low-end-rush-ghost-242-f08zsz",
+    "rec-low-end-rush-ghost-243-uxtdwp",
+    "rec-low-end-rush-rookie-368-11si1oc",
+    "rec-low-end-rush-rookie-369-16jp1hd",
+    "rec-low-end-rush-sharp-305-1hw18ca",
+    "rec-low-end-rush-trickster-327-1v6cw13",
+    "rec-copper-climb-ace-1-n0k5ln",
+    "rec-copper-climb-ace-2-gvpyd5",
+    "rec-copper-climb-ace-3-djd0rs",
+    "rec-copper-climb-hustler-2-1w33kvg",
+    "rec-copper-climb-street-1-18r0yiq",
+    "rec-copper-climb-street-2-1241hio",
+    "rec-copper-climb-street-3-6qho1d",
+    "rec-copper-climb-balanced-273-hmfyi5",
+    "rec-copper-climb-cautious-209-16jozb8",
+    "rec-copper-climb-cautious-210-afie3r",
+    "rec-copper-climb-dasher-251-ka37m0",
+    "rec-copper-climb-dasher-252-ddndm1",
+    "rec-copper-climb-erratic-335-71y9st",
+    "rec-copper-climb-erratic-336-qra9iq",
+    "rec-copper-climb-ghost-230-imu9yb",
+    "rec-copper-climb-ghost-231-1ahblg9",
+    "rec-copper-climb-rookie-356-d0ghpp",
+    "rec-copper-climb-rookie-357-1yhto02",
+    "rec-copper-climb-sharp-294-1mnevva",
+    "rec-copper-climb-trickster-315-1yqa26e",
+    "rec-freight-run-ace-1-1lytvfc",
+    "rec-freight-run-ace-2-17t3d90",
+    "rec-freight-run-ace-3-1lqnc13",
+    "rec-freight-run-hustler-1-sglwuv",
+    "rec-freight-run-hustler-2-1fheron",
+    "rec-freight-run-street-1-4iz6l1",
+    "rec-freight-run-street-2-1j8dpgt",
+    "rec-freight-run-street-3-1s6wqw2",
+    "rec-freight-run-balanced-278-1wc9eb5",
+    "rec-freight-run-balanced-279-1bg3gy8",
+    "rec-freight-run-cautious-215-1aez5ky",
+    "rec-freight-run-cautious-216-10utmpr",
+    "rec-freight-run-dasher-257-1ymaoil",
+    "rec-freight-run-dasher-258-1su44rt",
+    "rec-freight-run-erratic-342-pah43g",
+    "rec-freight-run-ghost-237-drq1bj",
+    "rec-freight-run-rookie-362-1v7w5wq",
+    "rec-freight-run-sharp-299-3838om",
+    "rec-freight-run-trickster-320-9x0qyg",
+    "rec-freight-run-trickster-321-1uotao2",
+    "rec-afterglow-mile-ace-2-1pot3bb",
+    "rec-afterglow-mile-ace-3-wtjkug",
+    "rec-afterglow-mile-hustler-2-249hjg",
+    "rec-afterglow-mile-hustler-3-lsuk7x",
+    "rec-afterglow-mile-street-1-guf6jt",
+    "rec-afterglow-mile-street-2-zxq40d",
+    "rec-afterglow-mile-street-3-a24n7w",
+    "rec-afterglow-mile-balanced-275-se1pc7",
+    "rec-afterglow-mile-cautious-212-49nh2x",
+    "rec-afterglow-mile-cautious-213-c4xrpw",
+    "rec-afterglow-mile-dasher-254-1de1a3q",
+    "rec-afterglow-mile-dasher-255-nu22u4",
+    "rec-afterglow-mile-erratic-338-bgq4hw",
+    "rec-afterglow-mile-erratic-339-93fwsy",
+    "rec-afterglow-mile-ghost-233-35d8pc",
+    "rec-afterglow-mile-ghost-234-13bzy0q",
+    "rec-afterglow-mile-rookie-359-haelw2",
+    "rec-afterglow-mile-sharp-297-1nirjd9",
+    "rec-afterglow-mile-trickster-317-1noa9pj",
+    "rec-afterglow-mile-trickster-318-8r8zdk",
+    "rec-switchyard-seven-ace-1-mdtuqa",
+    "rec-switchyard-seven-hustler-3-ulcs0o",
+    "rec-switchyard-seven-street-3-1j77ycs",
+    "rec-switchyard-seven-dasher-245-ug4hif",
+    "rec-switchyard-seven-erratic-330-1r1bf2t",
+    "rec-switchyard-seven-rookie-350-u6igmi",
+    "rec-switchyard-seven-sharp-287-6jrqj9",
+    "rec-switchyard-seven-erratic-2027-uvca76",
+    "rec-switchyard-seven-ghost-2007-hopwbo",
+    "rec-switchyard-seven-ghost-2012-amp2uo",
+    "rec-switchyard-seven-balanced-3042-b28o23",
+    "rec-switchyard-seven-cautious-3015-5phj96",
+    "rec-switchyard-seven-cautious-3016-177n308",
+    "rec-switchyard-seven-cautious-3020-1frnhyi",
+    "rec-switchyard-seven-ghost-3005-secdqf",
+    "rec-switchyard-seven-ghost-3012-1ljqm3k",
+    "rec-switchyard-seven-trickster-3025-haxzpx",
+    "rec-switchyard-seven-trickster-3026-1wuwquq",
+    "rec-switchyard-seven-trickster-3027-10j56k1",
+    "rec-switchyard-seven-trickster-3032-12ryell",
+    "rec-lastlight-loop-ace-1-wn95a5",
+    "rec-lastlight-loop-ace-2-172es5y",
+    "rec-lastlight-loop-hustler-1-s8y01d",
+    "rec-lastlight-loop-street-1-t75rtb",
+    "rec-lastlight-loop-street-2-6k7e4b",
+    "rec-lastlight-loop-street-3-g6f12k",
+    "rec-lastlight-loop-balanced-281-g5p5vx",
+    "rec-lastlight-loop-balanced-282-17qet7t",
+    "rec-lastlight-loop-cautious-218-125q1g1",
+    "rec-lastlight-loop-cautious-219-16fcck9",
+    "rec-lastlight-loop-dasher-260-1075h4d",
+    "rec-lastlight-loop-erratic-344-pvgixy",
+    "rec-lastlight-loop-erratic-345-19m1495",
+    "rec-lastlight-loop-ghost-239-af2fs9",
+    "rec-lastlight-loop-rookie-365-pxv65a",
+    "rec-lastlight-loop-rookie-366-1xkgqre",
+    "rec-lastlight-loop-sharp-302-15vb4np",
+    "rec-lastlight-loop-sharp-303-1ls3vwk",
+    "rec-lastlight-loop-trickster-323-lnlb42",
+    "rec-lastlight-loop-trickster-324-rui1lw",
+    "rec-blacktop-crown-ace-1-qm4jgz",
+    "rec-blacktop-crown-ace-3-hofows",
+    "rec-blacktop-crown-hustler-2-esou0w",
+    "rec-blacktop-crown-street-1-u41xz6",
+    "rec-blacktop-crown-street-2-10j00uj",
+    "rec-blacktop-crown-street-3-155bgp2",
+    "rec-blacktop-crown-balanced-269-1yhk4c7",
+    "rec-blacktop-crown-balanced-270-phozto",
+    "rec-blacktop-crown-cautious-206-da74ja",
+    "rec-blacktop-crown-cautious-207-ybhro3",
+    "rec-blacktop-crown-dasher-248-1xikc8t",
+    "rec-blacktop-crown-erratic-332-1fp1qlb",
+    "rec-blacktop-crown-erratic-333-11yz7lk",
+    "rec-blacktop-crown-ghost-227-vup380",
+    "rec-blacktop-crown-ghost-228-wznvk1",
+    "rec-blacktop-crown-rookie-353-1oznm8l",
+    "rec-blacktop-crown-rookie-354-1tf3ypw",
+    "rec-blacktop-crown-sharp-291-cydp3m",
+    "rec-blacktop-crown-trickster-311-1blmmhn",
+    "rec-blacktop-crown-trickster-312-gcuyjy"
+  ],
+  "removedIDs": [
+    "rec-low-end-rush-ace-1-jyh19s",
+    "rec-low-end-rush-ace-2-9zl8r1",
+    "rec-low-end-rush-erratic-348-mnc7sf",
+    "rec-low-end-rush-trickster-326-zxoslz",
+    "rec-copper-climb-hustler-1-1b4q5ju",
+    "rec-copper-climb-balanced-272-1xob1xo",
+    "rec-copper-climb-sharp-293-15urgg8",
+    "rec-copper-climb-trickster-314-6rrw48",
+    "rec-freight-run-hustler-3-15q6hhc",
+    "rec-freight-run-erratic-341-y9w2xc",
+    "rec-freight-run-ghost-236-6ehv58",
+    "rec-freight-run-rookie-363-13vhgpb",
+    "rec-freight-run-sharp-300-1ems5qp",
+    "rec-afterglow-mile-ace-1-1pd1vbr",
+    "rec-afterglow-mile-balanced-276-yn2ty4",
+    "rec-afterglow-mile-rookie-360-1ftkzdi",
+    "rec-afterglow-mile-sharp-296-15r20cy",
+    "rec-switchyard-seven-hustler-2-1qlek46",
+    "rec-switchyard-seven-street-1-1brtc5a",
+    "rec-switchyard-seven-balanced-266-19l8w3j",
+    "rec-switchyard-seven-balanced-267-1mx3ecf",
+    "rec-switchyard-seven-cautious-204-1ipibjx",
+    "rec-switchyard-seven-dasher-246-109lkoo",
+    "rec-switchyard-seven-rookie-351-1gyd54p",
+    "rec-switchyard-seven-trickster-308-v5d4qw",
+    "rec-switchyard-seven-trickster-309-cf0a4r",
+    "rec-switchyard-seven-cautious-2015-1o7bmje",
+    "rec-switchyard-seven-cautious-2016-12dxkge",
+    "rec-switchyard-seven-cautious-2017-1cudgyu",
+    "rec-switchyard-seven-erratic-2025-5pk3vb",
+    "rec-switchyard-seven-erratic-2026-ew1flv",
+    "rec-switchyard-seven-ghost-2005-qu2fl3",
+    "rec-switchyard-seven-ghost-2006-m7xxii",
+    "rec-switchyard-seven-ghost-2010-jmk3f6",
+    "rec-switchyard-seven-balanced-3035-1t3vnr9",
+    "rec-switchyard-seven-balanced-3037-1efsh4g",
+    "rec-switchyard-seven-balanced-3040-inpcnr",
+    "rec-switchyard-seven-balanced-3041-1gnubo0",
+    "rec-switchyard-seven-cautious-3017-1joitbi",
+    "rec-switchyard-seven-cautious-3021-1y43ff6",
+    "rec-switchyard-seven-ghost-3006-grbfv4",
+    "rec-switchyard-seven-ghost-3007-w32old",
+    "rec-switchyard-seven-ghost-3010-1vcq1yb",
+    "rec-switchyard-seven-trickster-3030-1qlychg",
+    "rec-switchyard-seven-trickster-3031-1az1jf",
+    "rec-lastlight-loop-ace-3-1sngg26",
+    "rec-lastlight-loop-hustler-2-w4whit",
+    "rec-lastlight-loop-hustler-3-1aez0ba",
+    "rec-lastlight-loop-dasher-261-2rtugh",
+    "rec-lastlight-loop-ghost-240-i6q225",
+    "rec-blacktop-crown-ace-2-1hkpbhm",
+    "rec-blacktop-crown-dasher-249-zuvzjd"
+  ],
+  "courses": [
+    {
+      "slot": 1,
+      "before": 24,
+      "after": 20,
+      "beforeBytes": 8010597,
+      "afterBytes": 5871959,
+      "protectedIDs": [
+        "rec-low-end-rush-ace-3-1jk5dz",
+        "rec-low-end-rush-balanced-284-3c4owd",
+        "rec-low-end-rush-cautious-113-4iuxot",
+        "rec-low-end-rush-dasher-264-8bj2pl",
+        "rec-low-end-rush-ghost-242-f08zsz",
+        "rec-low-end-rush-ghost-243-uxtdwp",
+        "rec-low-end-rush-hustler-2-1bxeodh",
+        "rec-low-end-rush-rookie-368-11si1oc",
+        "rec-low-end-rush-rookie-369-16jp1hd",
+        "rec-low-end-rush-sharp-305-1hw18ca",
+        "rec-low-end-rush-street-3-18fxfm4",
+        "rec-low-end-rush-trickster-327-1v6cw13"
+      ],
+      "bands": {
+        "steady": 12,
+        "fast": 1,
+        "middle": 7
+      }
+    },
+    {
+      "slot": 2,
+      "before": 24,
+      "after": 20,
+      "beforeBytes": 5671771,
+      "afterBytes": 4373409,
+      "protectedIDs": [
+        "rec-copper-climb-ace-1-n0k5ln",
+        "rec-copper-climb-ace-2-gvpyd5",
+        "rec-copper-climb-balanced-273-hmfyi5",
+        "rec-copper-climb-cautious-209-16jozb8",
+        "rec-copper-climb-cautious-210-afie3r",
+        "rec-copper-climb-erratic-335-71y9st",
+        "rec-copper-climb-erratic-336-qra9iq",
+        "rec-copper-climb-ghost-231-1ahblg9",
+        "rec-copper-climb-rookie-357-1yhto02",
+        "rec-copper-climb-street-2-1241hio",
+        "rec-copper-climb-street-3-6qho1d",
+        "rec-copper-climb-trickster-315-1yqa26e"
+      ],
+      "bands": {
+        "fast": 10,
+        "steady": 4,
+        "middle": 6
+      }
+    },
+    {
+      "slot": 3,
+      "before": 25,
+      "after": 20,
+      "beforeBytes": 3241539,
+      "afterBytes": 2465264,
+      "protectedIDs": [
+        "rec-freight-run-ace-1-1lytvfc",
+        "rec-freight-run-ace-2-17t3d90",
+        "rec-freight-run-balanced-278-1wc9eb5",
+        "rec-freight-run-balanced-279-1bg3gy8",
+        "rec-freight-run-dasher-257-1ymaoil",
+        "rec-freight-run-dasher-258-1su44rt",
+        "rec-freight-run-erratic-342-pah43g",
+        "rec-freight-run-hustler-1-sglwuv",
+        "rec-freight-run-rookie-362-1v7w5wq",
+        "rec-freight-run-street-1-4iz6l1",
+        "rec-freight-run-street-2-1j8dpgt"
+      ],
+      "bands": {
+        "steady": 5,
+        "middle": 6,
+        "fast": 9
+      }
+    },
+    {
+      "slot": 4,
+      "before": 24,
+      "after": 20,
+      "beforeBytes": 4953933,
+      "afterBytes": 3776785,
+      "protectedIDs": [
+        "rec-afterglow-mile-ace-2-1pot3bb",
+        "rec-afterglow-mile-ace-3-wtjkug",
+        "rec-afterglow-mile-balanced-275-se1pc7",
+        "rec-afterglow-mile-dasher-255-nu22u4",
+        "rec-afterglow-mile-erratic-339-93fwsy",
+        "rec-afterglow-mile-ghost-233-35d8pc",
+        "rec-afterglow-mile-ghost-234-13bzy0q",
+        "rec-afterglow-mile-hustler-2-249hjg",
+        "rec-afterglow-mile-hustler-3-lsuk7x",
+        "rec-afterglow-mile-street-1-guf6jt",
+        "rec-afterglow-mile-trickster-318-8r8zdk"
+      ],
+      "bands": {
+        "steady": 8,
+        "fast": 6,
+        "middle": 6
+      }
+    },
+    {
+      "slot": 5,
+      "before": 48,
+      "after": 20,
+      "beforeBytes": 17281524,
+      "afterBytes": 6433882,
+      "protectedIDs": [
+        "rec-switchyard-seven-balanced-3042-b28o23",
+        "rec-switchyard-seven-cautious-3015-5phj96",
+        "rec-switchyard-seven-cautious-3016-177n308",
+        "rec-switchyard-seven-erratic-2027-uvca76",
+        "rec-switchyard-seven-erratic-330-1r1bf2t",
+        "rec-switchyard-seven-ghost-2007-hopwbo",
+        "rec-switchyard-seven-ghost-3005-secdqf",
+        "rec-switchyard-seven-rookie-350-u6igmi",
+        "rec-switchyard-seven-sharp-287-6jrqj9",
+        "rec-switchyard-seven-street-3-1j77ycs",
+        "rec-switchyard-seven-trickster-3032-12ryell"
+      ],
+      "bands": {
+        "middle": 6,
+        "fast": 6,
+        "steady": 8
+      }
+    },
+    {
+      "slot": 6,
+      "before": 25,
+      "after": 20,
+      "beforeBytes": 3184157,
+      "afterBytes": 2218000,
+      "protectedIDs": [
+        "rec-lastlight-loop-ace-2-172es5y",
+        "rec-lastlight-loop-balanced-281-g5p5vx",
+        "rec-lastlight-loop-erratic-345-19m1495",
+        "rec-lastlight-loop-ghost-239-af2fs9",
+        "rec-lastlight-loop-hustler-1-s8y01d",
+        "rec-lastlight-loop-rookie-366-1xkgqre",
+        "rec-lastlight-loop-sharp-302-15vb4np",
+        "rec-lastlight-loop-sharp-303-1ls3vwk"
+      ],
+      "bands": {
+        "fast": 15,
+        "middle": 3,
+        "steady": 2
+      }
+    },
+    {
+      "slot": 7,
+      "before": 22,
+      "after": 20,
+      "beforeBytes": 5776582,
+      "afterBytes": 5018201,
+      "protectedIDs": [
+        "rec-blacktop-crown-ace-3-hofows",
+        "rec-blacktop-crown-balanced-269-1yhk4c7",
+        "rec-blacktop-crown-dasher-248-1xikc8t",
+        "rec-blacktop-crown-erratic-332-1fp1qlb",
+        "rec-blacktop-crown-erratic-333-11yz7lk",
+        "rec-blacktop-crown-hustler-2-esou0w",
+        "rec-blacktop-crown-sharp-291-cydp3m",
+        "rec-blacktop-crown-street-2-10j00uj",
+        "rec-blacktop-crown-trickster-311-1blmmhn"
+      ],
+      "bands": {
+        "middle": 9,
+        "fast": 1,
+        "steady": 10
+      }
+    }
+  ],
+  "beforeBytes": 48120103,
+  "afterBytes": 30157500,
+  "sourceCommit": "c4af9127bd65f6adae9cf523e4eecbb471d638f3",
+  "originalBands": [
+    {
+      "index": 0,
+      "label": "fast",
+      "minMs": 5444.5999999996275,
+      "maxMs": 8059.300000000745,
+      "count": 64
+    },
+    {
+      "index": 1,
+      "label": "middle",
+      "minMs": 8059.300000000745,
+      "maxMs": 9598,
+      "count": 64
+    },
+    {
+      "index": 2,
+      "label": "steady",
+      "minMs": 9598,
+      "maxMs": 15623.800000000745,
+      "count": 64
+    }
+  ],
+  "newBands": [
+    {
+      "index": 0,
+      "label": "fast",
+      "minMs": 5444.5999999996275,
+      "maxMs": 7996.799999999814,
+      "count": 46
+    },
+    {
+      "index": 1,
+      "label": "middle",
+      "minMs": 7996.799999999814,
+      "maxMs": 9657.200000000186,
+      "count": 47
+    },
+    {
+      "index": 2,
+      "label": "steady",
+      "minMs": 9657.200000000186,
+      "maxMs": 15623.800000000745,
+      "count": 47
+    }
+  ],
+  "rows": [
+    {
+      "id": "rec-low-end-rush-ace-1-jyh19s",
+      "slot": 1,
+      "style": "ace",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 11231.200000000186,
+      "elapsed": 433677.2999999998,
+      "retries": 46,
+      "bytes": 338408,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11231.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 14008.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9796.599999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6680.899999999441
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11733.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-ace-2-9zl8r1",
+      "slot": 1,
+      "style": "ace",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 10882,
+      "elapsed": 611280.2000000002,
+      "retries": 74,
+      "bytes": 478566,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7544.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 16809.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10882
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6725.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 15046.400000000373
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-ace-3-1jk5dz",
+      "slot": 1,
+      "style": "ace",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 10628.699999999255,
+      "elapsed": 224845.7999999998,
+      "retries": 13,
+      "bytes": 165953,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7213.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10628.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7228.700000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11980
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 71261
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-hustler-1-103kvgp",
+      "slot": 1,
+      "style": "hustler",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 10017.5,
+      "elapsed": 382228.5,
+      "retries": 30,
+      "bytes": 288251,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9178.400000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10017.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10723.700000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6741.399999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11329.69999999972
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-hustler-2-1bxeodh",
+      "slot": 1,
+      "style": "hustler",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7026.899999999907,
+      "elapsed": 183377.7999999998,
+      "retries": 13,
+      "bytes": 137447,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6626.100000000093
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10127.600000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7026.899999999907
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6582.600000000093
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11951.600000000093
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-hustler-3-zpv86c",
+      "slot": 1,
+      "style": "hustler",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9666.799999999814,
+      "elapsed": 214470.2999999998,
+      "retries": 18,
+      "bytes": 164424,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6998
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11581.69999999972
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9666.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6574.899999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11761.899999999907
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-street-1-17qqzhy",
+      "slot": 1,
+      "style": "street",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 9178.30000000028,
+      "elapsed": 231053.1000000001,
+      "retries": 18,
+      "bytes": 174446,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9178.30000000028
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10585.69999999972
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7453.700000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8798.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11011.299999999814
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-street-2-1usrne7",
+      "slot": 1,
+      "style": "street",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8960.399999999907,
+      "elapsed": 299118.6000000001,
+      "retries": 20,
+      "bytes": 228037,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7245.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11486.400000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8960.399999999907
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6705.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 16542.899999999907
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-street-3-18fxfm4",
+      "slot": 1,
+      "style": "street",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 10099,
+      "elapsed": 245673.09999999963,
+      "retries": 16,
+      "bytes": 185785,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 20174.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12792.100000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7439.199999999721
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6512.300000000279
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10099
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-balanced-284-3c4owd",
+      "slot": 1,
+      "style": "balanced",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 9934.599999999627,
+      "elapsed": 488061.69999999925,
+      "retries": 58,
+      "bytes": 375345,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6791.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9934.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14843.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8122.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 13408.799999998882
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-balanced-285-e0mqn3",
+      "slot": 1,
+      "style": "balanced",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 8954.799999998882,
+      "elapsed": 340065.19999999925,
+      "retries": 33,
+      "bytes": 257388,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7974.199999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11860.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6295.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8954.799999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 29020.299999998882
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-cautious-112-yicfml",
+      "slot": 1,
+      "style": "cautious",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 10018.700000000186,
+      "elapsed": 237625.2000000002,
+      "retries": 17,
+      "bytes": 181738,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7133.600000000093
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13824.700000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8135.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10018.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 16152.69999999972
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-cautious-113-4iuxot",
+      "slot": 1,
+      "style": "cautious",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8996.19999999972,
+      "elapsed": 167154.8999999999,
+      "retries": 12,
+      "bytes": 128030,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6711.600000000093
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12134.600000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8996.19999999972
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6527.899999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11222.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-dasher-263-qefg0z",
+      "slot": 1,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 10444.099999999627,
+      "elapsed": 370387.7999999998,
+      "retries": 42,
+      "bytes": 277516,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8898.600000000559
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10444.099999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12183.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10203.100000000559
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11023.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-dasher-264-8bj2pl",
+      "slot": 1,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 12092.100000000559,
+      "elapsed": 419262.89999999944,
+      "retries": 41,
+      "bytes": 315140,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 22730.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12092.100000000559
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6436
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6550.4000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 19275.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-erratic-347-5v9jp",
+      "slot": 1,
+      "style": "erratic",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 10264.699999999255,
+      "elapsed": 336874.7999999989,
+      "retries": 29,
+      "bytes": 255688,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10264.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 15302.200000001118
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7657
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7121
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12598.800000000745
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-erratic-348-mnc7sf",
+      "slot": 1,
+      "style": "erratic",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 9910,
+      "elapsed": 802094.5999999996,
+      "retries": 78,
+      "bytes": 617985,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9910
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12127.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7835.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8829.799999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 20190.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-ghost-242-f08zsz",
+      "slot": 1,
+      "style": "ghost",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 9337.900000000373,
+      "elapsed": 526295.0999999996,
+      "retries": 35,
+      "bytes": 389097,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6745.0999999996275
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9337.900000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10152.399999999441
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6549.399999999441
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14534.400000000373
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-ghost-243-uxtdwp",
+      "slot": 1,
+      "style": "ghost",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8997.400000000373,
+      "elapsed": 471777.7000000002,
+      "retries": 46,
+      "bytes": 342573,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8738.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10601.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6284.5999999996275
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8997.400000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14893.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-rookie-368-11si1oc",
+      "slot": 1,
+      "style": "rookie",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 12936.89999999851,
+      "elapsed": 885751.0999999978,
+      "retries": 96,
+      "bytes": 660753,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12936.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 15647.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7063.89999999851
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6627.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 19931.10000000149
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-rookie-369-16jp1hd",
+      "slot": 1,
+      "style": "rookie",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 14070.400000002235,
+      "elapsed": 341582.80000000075,
+      "retries": 27,
+      "bytes": 256309,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 14070.400000002235
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 14183.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9435
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10348.79999999702
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 31729.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-sharp-305-1hw18ca",
+      "slot": 1,
+      "style": "sharp",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8278.900000000373,
+      "elapsed": 631990.7999999989,
+      "retries": 35,
+      "bytes": 461926,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8278.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 19062.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7809.700000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7873.10000000149
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14842.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-trickster-326-zxoslz",
+      "slot": 1,
+      "style": "trickster",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 10371.299999998882,
+      "elapsed": 834625,
+      "retries": 80,
+      "bytes": 703679,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7787.10000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10371.299999998882
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10512.200000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7812.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 21684.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-low-end-rush-trickster-327-1v6cw13",
+      "slot": 1,
+      "style": "trickster",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 10531.5,
+      "elapsed": 746911.4000000004,
+      "retries": 69,
+      "bytes": 626113,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6924.300000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10531.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10042
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 12270.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 40664.79999999888
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-ace-1-n0k5ln",
+      "slot": 2,
+      "style": "ace",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 8026.5,
+      "elapsed": 171758.90000000037,
+      "retries": 15,
+      "bytes": 129803,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11980
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3315.2000000001863
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6408
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9041.600000000559
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8026.5
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-ace-2-gvpyd5",
+      "slot": 2,
+      "style": "ace",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 7996.799999999814,
+      "elapsed": 141317.7000000002,
+      "retries": 7,
+      "bytes": 103099,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11035.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7996.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7163.9000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6997.299999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 13064.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-ace-3-djd0rs",
+      "slot": 2,
+      "style": "ace",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 10175.200000000186,
+      "elapsed": 190926.59999999963,
+      "retries": 15,
+      "bytes": 142075,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10175.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8832.900000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15546.599999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6394.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 15077.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-hustler-1-1b4q5ju",
+      "slot": 2,
+      "style": "hustler",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 7715.799999999814,
+      "elapsed": 353149.8999999999,
+      "retries": 42,
+      "bytes": 263430,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6844.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7715.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12328.80000000028
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6296.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14685.899999999907
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-hustler-2-1w33kvg",
+      "slot": 2,
+      "style": "hustler",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8227.299999999814,
+      "elapsed": 214090.8999999999,
+      "retries": 18,
+      "bytes": 158588,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12592.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8199.399999999907
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8227.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6231.899999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 17352.30000000028
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-street-1-18r0yiq",
+      "slot": 2,
+      "style": "street",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 7026.799999999814,
+      "elapsed": 244638.7000000002,
+      "retries": 21,
+      "bytes": 181480,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6863.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9089.100000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7026.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5594.199999999721
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12220.30000000028
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-street-2-1241hio",
+      "slot": 2,
+      "style": "street",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 7649.899999999907,
+      "elapsed": 440867.1000000001,
+      "retries": 43,
+      "bytes": 318286,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10340.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4923.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7649.899999999907
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7432.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 25060.5
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-street-3-6qho1d",
+      "slot": 2,
+      "style": "street",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 6200.700000000186,
+      "elapsed": 175942.30000000028,
+      "retries": 15,
+      "bytes": 130864,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11071.80000000028
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5991
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5779.100000000093
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6200.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11186.30000000028
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-balanced-272-1xob1xo",
+      "slot": 2,
+      "style": "balanced",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 6827.0999999996275,
+      "elapsed": 330540.7000000011,
+      "retries": 43,
+      "bytes": 249815,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6827.0999999996275
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3464.60000000149
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6727.0999999996275
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7652
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11110
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-balanced-273-hmfyi5",
+      "slot": 2,
+      "style": "balanced",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 8843.700000001118,
+      "elapsed": 344343,
+      "retries": 31,
+      "bytes": 250226,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8843.700000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 15988.799999998882
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8694.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6356.799999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10766.800000000745
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-cautious-209-16jozb8",
+      "slot": 2,
+      "style": "cautious",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 6569.399999999907,
+      "elapsed": 219560.6000000001,
+      "retries": 6,
+      "bytes": 166976,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10585.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6569.399999999907
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4808.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5531
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9297.700000000186
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-cautious-210-afie3r",
+      "slot": 2,
+      "style": "cautious",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 6530.0999999996275,
+      "elapsed": 213663.3999999999,
+      "retries": 14,
+      "bytes": 171668,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11382.399999999907
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3284.2000000001863
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6530.0999999996275
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6137.800000000279
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11711.700000000186
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-dasher-251-ka37m0",
+      "slot": 2,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8191.5,
+      "elapsed": 190786.89999999944,
+      "retries": 13,
+      "bytes": 140626,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8191.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8566.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5931.700000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5981.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 20241.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-dasher-252-ddndm1",
+      "slot": 2,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8879.700000000186,
+      "elapsed": 292611.2999999998,
+      "retries": 23,
+      "bytes": 213397,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8879.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3477.899999999441
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10455.200000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6141.5999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 16663.700000000186
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-erratic-335-71y9st",
+      "slot": 2,
+      "style": "erratic",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7149.300000000745,
+      "elapsed": 603464.8000000007,
+      "retries": 54,
+      "bytes": 438467,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8141.4000000003725
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3870.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7149.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5802.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 16567.799999998882
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-erratic-336-qra9iq",
+      "slot": 2,
+      "style": "erratic",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 10980,
+      "elapsed": 329780.4000000004,
+      "retries": 22,
+      "bytes": 240033,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10980
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7550
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15567.89999999851
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8018.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 20466.099999999627
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-ghost-230-imu9yb",
+      "slot": 2,
+      "style": "ghost",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 9657.200000000186,
+      "elapsed": 251055.7000000002,
+      "retries": 19,
+      "bytes": 182101,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9657.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6537.100000000559
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10519.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8584.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14179.600000000559
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-ghost-231-1ahblg9",
+      "slot": 2,
+      "style": "ghost",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7835.799999999814,
+      "elapsed": 197502.7000000002,
+      "retries": 14,
+      "bytes": 145032,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6793.4000000003725
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3528.7999999998137
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8504.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7835.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14018.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-rookie-356-d0ghpp",
+      "slot": 2,
+      "style": "rookie",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8530.099999999627,
+      "elapsed": 322322.6000000015,
+      "retries": 31,
+      "bytes": 238533,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8530.099999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4130.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8912.400000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6326.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12045.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-rookie-357-1yhto02",
+      "slot": 2,
+      "style": "rookie",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 11099.699999999255,
+      "elapsed": 608789.3000000007,
+      "retries": 49,
+      "bytes": 448382,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9606.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11099.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 11597.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8803.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12169.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-sharp-293-15urgg8",
+      "slot": 2,
+      "style": "sharp",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8186.5999999996275,
+      "elapsed": 533313,
+      "retries": 41,
+      "bytes": 389521,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11577.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3519.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8186.5999999996275
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6244.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12526.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-sharp-294-1mnevva",
+      "slot": 2,
+      "style": "sharp",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8251.10000000149,
+      "elapsed": 302196.7000000011,
+      "retries": 25,
+      "bytes": 219925,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10186.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4785.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7159.799999998882
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8251.10000000149
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10291.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-trickster-314-6rrw48",
+      "slot": 2,
+      "style": "trickster",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 8647.300000000745,
+      "elapsed": 507282.5,
+      "retries": 36,
+      "bytes": 395596,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12211.599999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8920.900000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4985.9000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6219.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8647.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-copper-climb-trickster-315-1yqa26e",
+      "slot": 2,
+      "style": "trickster",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 6777.800000000745,
+      "elapsed": 447239.5999999996,
+      "retries": 36,
+      "bytes": 353848,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12991.300000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6662.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6777.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6499.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14690.400000000373
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-ace-1-1lytvfc",
+      "slot": 3,
+      "style": "ace",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 11157.800000000745,
+      "elapsed": 192442.10000000056,
+      "retries": 12,
+      "bytes": 142484,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8178.0999999996275
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 18469.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 11643.200000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11157.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7814.100000000559
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-ace-2-17t3d90",
+      "slot": 3,
+      "style": "ace",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9128.700000000186,
+      "elapsed": 76245.79999999981,
+      "retries": 2,
+      "bytes": 57943,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9128.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4327.700000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14592.899999999441
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9900.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6608.399999999441
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-ace-3-1lqnc13",
+      "slot": 3,
+      "style": "ace",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8264.099999999627,
+      "elapsed": 111982,
+      "retries": 6,
+      "bytes": 83734,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5613.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 16409.700000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10043.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8264.099999999627
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8225.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-hustler-1-sglwuv",
+      "slot": 3,
+      "style": "hustler",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7112.600000000559,
+      "elapsed": 232067.2000000002,
+      "retries": 21,
+      "bytes": 172355,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7112.600000000559
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3949.7000000001863
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10127.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7784.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5083.5
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-hustler-2-1fheron",
+      "slot": 3,
+      "style": "hustler",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7705.700000000186,
+      "elapsed": 100562.5,
+      "retries": 5,
+      "bytes": 75174,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7705.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4069
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9675.400000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10715.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4996
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-hustler-3-15q6hhc",
+      "slot": 3,
+      "style": "hustler",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7662.700000000186,
+      "elapsed": 241591.40000000037,
+      "retries": 23,
+      "bytes": 178333,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7196.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4097.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10028.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7662.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8347.399999999441
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-street-1-4iz6l1",
+      "slot": 3,
+      "style": "street",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9598,
+      "elapsed": 124631.89999999944,
+      "retries": 7,
+      "bytes": 93475,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6022.5999999996275
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6039.4000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9943.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 21641.299999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9598
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-street-2-1j8dpgt",
+      "slot": 3,
+      "style": "street",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8178.799999999814,
+      "elapsed": 158445.19999999925,
+      "retries": 13,
+      "bytes": 118261,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5454.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5899.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9284.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8844.399999999441
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8178.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-street-3-1s6wqw2",
+      "slot": 3,
+      "style": "street",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7890.5999999996275,
+      "elapsed": 88577.09999999963,
+      "retries": 4,
+      "bytes": 66457,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5731.899999999441
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4100.200000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13435.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7890.5999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10262.299999999814
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-balanced-278-1wc9eb5",
+      "slot": 3,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 10989.299999998882,
+      "elapsed": 178901.30000000075,
+      "retries": 11,
+      "bytes": 147069,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8073.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4034.2999999988824
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13513.900000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 12393
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10989.299999998882
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-balanced-279-1bg3gy8",
+      "slot": 3,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 7945.300000000745,
+      "elapsed": 72440.5,
+      "retries": 1,
+      "bytes": 61476,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9710.700000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8383.700000001118
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5786.0999999996275
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7945.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 3845.0999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-cautious-215-1aez5ky",
+      "slot": 3,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 10175.69999999972,
+      "elapsed": 82747.5,
+      "retries": 1,
+      "bytes": 67693,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10175.69999999972
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13616.600000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10564.599999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8464.30000000028
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9322.100000000093
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-cautious-216-10utmpr",
+      "slot": 3,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 7884.799999999814,
+      "elapsed": 101472.3999999999,
+      "retries": 5,
+      "bytes": 83081,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7780.800000000279
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4539.199999999721
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12802.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7884.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7942.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-dasher-257-1ymaoil",
+      "slot": 3,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 7186.9000000003725,
+      "elapsed": 267110.5,
+      "retries": 24,
+      "bytes": 194127,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10088.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4123.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9354.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7186.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4394.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-dasher-258-1su44rt",
+      "slot": 3,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 6959.100000000559,
+      "elapsed": 633686.7000000002,
+      "retries": 76,
+      "bytes": 459495,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6959.100000000559
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3981
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10379.700000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 15068.099999999627
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4282
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-erratic-341-y9w2xc",
+      "slot": 3,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 10908.599999999627,
+      "elapsed": 360974.30000000075,
+      "retries": 28,
+      "bytes": 293955,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11912.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7432.799999998882
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10908.599999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11451.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4986.5
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-erratic-342-pah43g",
+      "slot": 3,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 11329.300000000745,
+      "elapsed": 206096.59999999963,
+      "retries": 11,
+      "bytes": 169539,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12473.099999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11329.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 11720.900000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11017.700000001118
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9104.099999999627
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-ghost-236-6ehv58",
+      "slot": 3,
+      "style": "ghost",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7178.200000000186,
+      "elapsed": 147880.10000000056,
+      "retries": 12,
+      "bytes": 109407,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7178.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4277.200000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10653.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7894.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6894.0999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-ghost-237-drq1bj",
+      "slot": 3,
+      "style": "ghost",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7976.699999999255,
+      "elapsed": 99422.29999999981,
+      "retries": 6,
+      "bytes": 73953,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7976.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4174.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8795
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9078.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5690.299999999814
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-rookie-362-1v7w5wq",
+      "slot": 3,
+      "style": "rookie",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 6630.0999999996275,
+      "elapsed": 176332.30000000075,
+      "retries": 14,
+      "bytes": 130931,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6130.700000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4873.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12285.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8686.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6630.0999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-rookie-363-13vhgpb",
+      "slot": 3,
+      "style": "rookie",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9382.699999999255,
+      "elapsed": 132391.59999999963,
+      "retries": 9,
+      "bytes": 99487,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8290
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9382.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6867.9000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 14409.700000001118
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9502
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-sharp-299-3838om",
+      "slot": 3,
+      "style": "sharp",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8351.099999999627,
+      "elapsed": 123615.5,
+      "retries": 9,
+      "bytes": 92806,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11290
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4055.39999999851
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8351.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8771.400000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5742.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-sharp-300-1ems5qp",
+      "slot": 3,
+      "style": "sharp",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 10878,
+      "elapsed": 128465.29999999888,
+      "retries": 6,
+      "bytes": 95093,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5673.299999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13409.89999999851
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10878
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11256.60000000149
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6387.4000000003725
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-trickster-320-9x0qyg",
+      "slot": 3,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 9427.199999999255,
+      "elapsed": 96606.40000000037,
+      "retries": 3,
+      "bytes": 83355,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5746.799999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8725.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13375.89999999851
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10019.799999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9427.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-freight-run-trickster-321-1uotao2",
+      "slot": 3,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 9482.400000000373,
+      "elapsed": 106334.5,
+      "retries": 3,
+      "bytes": 91856,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9482.400000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6430.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10154.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 14292.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5690.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-ace-1-1pd1vbr",
+      "slot": 4,
+      "style": "ace",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 7593.399999999441,
+      "elapsed": 335005.80000000075,
+      "retries": 25,
+      "bytes": 245002,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12411.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6533.200000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8210.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7593.399999999441
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7380.600000000559
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-ace-2-1pot3bb",
+      "slot": 4,
+      "style": "ace",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 10149.5,
+      "elapsed": 653408.4999999991,
+      "retries": 65,
+      "bytes": 476992,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12760.300000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5151.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10149.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7289.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12197.400000000373
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-ace-3-wtjkug",
+      "slot": 4,
+      "style": "ace",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 11971.900000000373,
+      "elapsed": 361837.30000000075,
+      "retries": 27,
+      "bytes": 264191,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 16144.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7748.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 11971.900000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 16489.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6327.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-hustler-2-249hjg",
+      "slot": 4,
+      "style": "hustler",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 5675.699999999255,
+      "elapsed": 301703.9000000004,
+      "retries": 22,
+      "bytes": 220552,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8928.100000000559
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5380.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4562.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10778.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5675.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-hustler-3-lsuk7x",
+      "slot": 4,
+      "style": "hustler",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 9367.200000000186,
+      "elapsed": 113912.10000000056,
+      "retries": 4,
+      "bytes": 85361,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9367.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13163.400000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8600.100000000559
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 15779.299999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4860.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-street-1-guf6jt",
+      "slot": 4,
+      "style": "street",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8237.799999999814,
+      "elapsed": 149311.69999999925,
+      "retries": 10,
+      "bytes": 110132,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12004.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4281.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12819.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6797.399999999441
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8237.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-street-2-zxq40d",
+      "slot": 4,
+      "style": "street",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8401.400000000373,
+      "elapsed": 125380.40000000037,
+      "retries": 7,
+      "bytes": 93086,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10985.100000000559
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7115.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8401.400000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 13145.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5015.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-street-3-a24n7w",
+      "slot": 4,
+      "style": "street",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 10283.700000000186,
+      "elapsed": 225061.7000000002,
+      "retries": 14,
+      "bytes": 164340,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10283.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10663.200000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5231.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 14244.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5999.5
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-balanced-275-se1pc7",
+      "slot": 4,
+      "style": "balanced",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 7344.39999999851,
+      "elapsed": 260428.19999999925,
+      "retries": 21,
+      "bytes": 217415,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7308
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7699
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9755.700000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7059.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7344.39999999851
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-balanced-276-yn2ty4",
+      "slot": 4,
+      "style": "balanced",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 7480.60000000149,
+      "elapsed": 342552.7000000011,
+      "retries": 31,
+      "bytes": 285900,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7480.60000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7015.299999998882
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 11551.60000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11857.299999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6102.5
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-cautious-212-49nh2x",
+      "slot": 4,
+      "style": "cautious",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7518.899999999907,
+      "elapsed": 240296.69999999972,
+      "retries": 19,
+      "bytes": 177002,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10270.19999999972
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4952.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7742.9000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7518.899999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5417.899999999907
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-cautious-213-c4xrpw",
+      "slot": 4,
+      "style": "cautious",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 11176.700000000186,
+      "elapsed": 174290.7999999998,
+      "retries": 10,
+      "bytes": 127357,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11152.600000000093
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5866.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12895.899999999907
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 15113
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11176.700000000186
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-dasher-254-1de1a3q",
+      "slot": 4,
+      "style": "dasher",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 8972.799999999814,
+      "elapsed": 180482.2000000002,
+      "retries": 15,
+      "bytes": 133917,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8972.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11612.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7175.4000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11393.100000000559
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6738.9000000003725
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-dasher-255-nu22u4",
+      "slot": 4,
+      "style": "dasher",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 14686,
+      "elapsed": 217072.5,
+      "retries": 13,
+      "bytes": 159452,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9980.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 20320.400000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7805.700000000186
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 14686
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 14779.399999999441
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-erratic-338-bgq4hw",
+      "slot": 4,
+      "style": "erratic",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 9016.299999998882,
+      "elapsed": 286765.4000000004,
+      "retries": 16,
+      "bytes": 210582,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13265.599999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 17206.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5936.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9016.299999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8504.5
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-erratic-339-93fwsy",
+      "slot": 4,
+      "style": "erratic",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 14492.5,
+      "elapsed": 366133,
+      "retries": 32,
+      "bytes": 270332,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13046.300000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 19933.800000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14492.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 21362.299999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8248.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-ghost-233-35d8pc",
+      "slot": 4,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 15419.799999999814,
+      "elapsed": 366729.89999999944,
+      "retries": 28,
+      "bytes": 269682,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9913.299999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 16018
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19496.599999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 15419.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8257.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-ghost-234-13bzy0q",
+      "slot": 4,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7546.4000000003725,
+      "elapsed": 103760.70000000019,
+      "retries": 3,
+      "bytes": 79137,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9093.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5067.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7546.4000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10325.100000000559
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5565.4000000003725
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-rookie-359-haelw2",
+      "slot": 4,
+      "style": "rookie",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 10487.39999999851,
+      "elapsed": 386549.5,
+      "retries": 38,
+      "bytes": 284165,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10487.39999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10881.599999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6317.10000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 18618.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6902.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-rookie-360-1ftkzdi",
+      "slot": 4,
+      "style": "rookie",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 10194.200000001118,
+      "elapsed": 427624.30000000075,
+      "retries": 42,
+      "bytes": 311888,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10194.200000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12699.099999999627
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6279.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 17384.799999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6280.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-sharp-296-15r20cy",
+      "slot": 4,
+      "style": "sharp",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 13427.699999999255,
+      "elapsed": 456490.0999999996,
+      "retries": 44,
+      "bytes": 334358,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13427.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13505.799999998882
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8066.700000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 13910.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7059.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-sharp-297-1nirjd9",
+      "slot": 4,
+      "style": "sharp",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 7945.199999999255,
+      "elapsed": 244014.59999999963,
+      "retries": 18,
+      "bytes": 179151,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10224.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6139.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7945.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 18268.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6289.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-trickster-317-1noa9pj",
+      "slot": 4,
+      "style": "trickster",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 8419.099999999627,
+      "elapsed": 218505.3999999985,
+      "retries": 17,
+      "bytes": 182312,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9227.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7089.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8079.200000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8419.099999999627
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 13200.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-afterglow-mile-trickster-318-8r8zdk",
+      "slot": 4,
+      "style": "trickster",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 6841.299999998882,
+      "elapsed": 84570.20000000112,
+      "retries": 3,
+      "bytes": 71627,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7590.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4163.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9432.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6841.299999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5775.299999998882
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ace-1-mdtuqa",
+      "slot": 5,
+      "style": "ace",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8059.300000000745,
+      "elapsed": 150728.59999999963,
+      "retries": 13,
+      "bytes": 117449,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8126.60000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6583.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19312.200000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8059.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4246.4000000003725
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-hustler-2-1qlek46",
+      "slot": 5,
+      "style": "hustler",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7632.200000000186,
+      "elapsed": 327624.7000000002,
+      "retries": 44,
+      "bytes": 250061,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8254
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7632.200000000186
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19626.10000000056
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7330.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4195.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-hustler-3-ulcs0o",
+      "slot": 5,
+      "style": "hustler",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8580.400000000373,
+      "elapsed": 221026,
+      "retries": 8,
+      "bytes": 163364,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8580.400000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11663.299999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19165
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6441.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4158.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-street-1-1brtc5a",
+      "slot": 5,
+      "style": "street",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 10946.899999999441,
+      "elapsed": 447671.2999999998,
+      "retries": 59,
+      "bytes": 344935,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10946.899999999441
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13060.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 16269
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6827.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5134.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-street-3-1j77ycs",
+      "slot": 5,
+      "style": "street",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 6433.799999999814,
+      "elapsed": 699255.5,
+      "retries": 108,
+      "bytes": 538050,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8949.299999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6433.799999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12051.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5961.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4286.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-266-19l8w3j",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 9123.799999999814,
+      "elapsed": 356144.5999999996,
+      "retries": 31,
+      "bytes": 298294,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9210.400000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5765.5999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13080
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5381.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9123.799999999814
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-267-1mx3ecf",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 9505.800000000745,
+      "elapsed": 549221,
+      "retries": 52,
+      "bytes": 460695,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9652.199999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9505.800000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15699.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6139.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7017.700000001118
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-204-1ipibjx",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9000.100000000093,
+      "elapsed": 486278.10000000056,
+      "retries": 46,
+      "bytes": 370677,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10256
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7887.600000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17647.400000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8907.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9000.100000000093
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-dasher-245-ug4hif",
+      "slot": 5,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 10530.400000000373,
+      "elapsed": 441690.7999999998,
+      "retries": 57,
+      "bytes": 337796,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8257.599999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 15162.299999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 18502
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10530.400000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4760.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-dasher-246-109lkoo",
+      "slot": 5,
+      "style": "dasher",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8290.900000000373,
+      "elapsed": 549883.7000000002,
+      "retries": 79,
+      "bytes": 421709,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8290.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4705.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15026.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8863
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4226.9000000003725
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-erratic-330-1r1bf2t",
+      "slot": 5,
+      "style": "erratic",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 15623.800000000745,
+      "elapsed": 861499.1999999993,
+      "retries": 105,
+      "bytes": 656626,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 16008.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8011.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15818.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 15623.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5721.700000001118
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-rookie-350-u6igmi",
+      "slot": 5,
+      "style": "rookie",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 12170.300000000745,
+      "elapsed": 862413.5999999996,
+      "retries": 114,
+      "bytes": 660720,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 15799.200000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12170.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12383.799999998882
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8652.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6742.4000000003725
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-rookie-351-1gyd54p",
+      "slot": 5,
+      "style": "rookie",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8382,
+      "elapsed": 429450.19999999925,
+      "retries": 50,
+      "bytes": 334409,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8382
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10898.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14171.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6938.200000001118
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7732.0999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-sharp-287-6jrqj9",
+      "slot": 5,
+      "style": "sharp",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 8421.900000000373,
+      "elapsed": 214870.70000000112,
+      "retries": 14,
+      "bytes": 159118,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7723.4000000003725
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 15729.799999998882
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 31984.200000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8421.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4320.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-308-v5d4qw",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 8721.900000000373,
+      "elapsed": 317471.5,
+      "retries": 28,
+      "bytes": 266646,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8721.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12456.39999999851
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19263
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6837.4000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6539.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-309-cf0a4r",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 7812,
+      "elapsed": 247474.09999999963,
+      "retries": 22,
+      "bytes": 207929,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11500.299999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7812
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19016.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 4968.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5077.5999999996275
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-2015-1o7bmje",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 7455.599999997765,
+      "elapsed": 753875.9000000022,
+      "retries": 71,
+      "bytes": 625938,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12489.199999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7455.599999997765
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14512.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5634.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4403.89999999851
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-2016-12dxkge",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 7465.199999999255,
+      "elapsed": 308082.69999999925,
+      "retries": 22,
+      "bytes": 253251,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12840.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7465.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13107.099999997765
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5553.099999997765
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4602.800000000745
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-2017-1cudgyu",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 9363,
+      "elapsed": 695125.1999999993,
+      "retries": 68,
+      "bytes": 583301,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9363
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12002
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 16519.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 3481.2000000029802
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6257.400000002235
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-erratic-2025-5pk3vb",
+      "slot": 5,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 10519,
+      "elapsed": 348070.80000000075,
+      "retries": 27,
+      "bytes": 290401,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10519
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10852
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 24488.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7429
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 6710.20000000298
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-erratic-2026-ew1flv",
+      "slot": 5,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 10444.900000002235,
+      "elapsed": 692729.6999999993,
+      "retries": 62,
+      "bytes": 581907,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 15466.199999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10444.900000002235
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14700.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6118.60000000149
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4793.099999997765
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-erratic-2027-uvca76",
+      "slot": 5,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 14206.29999999702,
+      "elapsed": 430757.299999997,
+      "retries": 31,
+      "bytes": 355424,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 14206.29999999702
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 23066.20000000298
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17463.900000002235
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9310.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9208.10000000149
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-2005-qu2fl3",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 8151.300000000745,
+      "elapsed": 497482.69999999925,
+      "retries": 45,
+      "bytes": 417256,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8133
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 16125.400000002235
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17717.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8151.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4540.20000000298
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-2006-m7xxii",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 7902.39999999851,
+      "elapsed": 254878.30000000075,
+      "retries": 18,
+      "bytes": 211153,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7902.39999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8766.60000000149
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17215.89999999851
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5522.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4800.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-2007-hopwbo",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 6232.5,
+      "elapsed": 854123.8999999985,
+      "retries": 89,
+      "bytes": 722105,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9611.599999997765
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4685.900000002235
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12084.10000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6232.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4953.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-2010-jmk3f6",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9549.89999999851,
+      "elapsed": 671580.1999999993,
+      "retries": 90,
+      "bytes": 518623,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9549.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9878.39999999851
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19663.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 4779.39999999851
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7510.5
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-2012-amp2uo",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7327.699999999255,
+      "elapsed": 146096.30000000075,
+      "retries": 9,
+      "bytes": 110650,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8921.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4822.599999997765
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17433.10000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7327.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5546.5
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-3035-1t3vnr9",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 8774.099999997765,
+      "elapsed": 244236.59999999776,
+      "retries": 20,
+      "bytes": 207332,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8961.39999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8774.099999997765
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13152.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6269.900000002235
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7537.39999999851
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-3037-1efsh4g",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 9589.5,
+      "elapsed": 433143,
+      "retries": 44,
+      "bytes": 366902,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9589.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11594
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 16539.400000002235
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5165.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4122.400000002235
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-3040-inpcnr",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": true,
+      "pace": 9860.39999999851,
+      "elapsed": 370619.80000000075,
+      "retries": 31,
+      "bytes": 310912,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10816.099999997765
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9860.39999999851
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14591.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6101.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4228
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-3041-1gnubo0",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": true,
+      "pace": 8539.60000000149,
+      "elapsed": 438581.69999999925,
+      "retries": 36,
+      "bytes": 368491,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12723.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8539.60000000149
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 21053.39999999851
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6384.79999999702
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5169.599999997765
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-balanced-3042-b28o23",
+      "slot": 5,
+      "style": "balanced",
+      "mix": "phase+decoy",
+      "opening": true,
+      "pace": 8133.300000000745,
+      "elapsed": 312353.30000000075,
+      "retries": 23,
+      "bytes": 257839,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8251.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8133.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 16303.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5816.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4035.099999997765
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-3015-5phj96",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 10564.60000000149,
+      "elapsed": 583084.9000000022,
+      "retries": 55,
+      "bytes": 488576,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8576.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11786
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 18213
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7924.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10564.60000000149
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-3016-177n308",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 10941.5,
+      "elapsed": 956251.8000000007,
+      "retries": 90,
+      "bytes": 805051,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10941.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12548.79999999702
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 19971.599999997765
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7427.400000002235
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4889.5
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-3017-1joitbi",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 9416.89999999851,
+      "elapsed": 458491.799999997,
+      "retries": 44,
+      "bytes": 387734,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8142.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13282.20000000298
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15756.20000000298
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 4770.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9416.89999999851
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-3020-1frnhyi",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": true,
+      "pace": 12983.099999997765,
+      "elapsed": 201618.40000000224,
+      "retries": 10,
+      "bytes": 166448,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12983.099999997765
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 13415.70000000298
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 22528.400000002235
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6359.39999999851
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4189.5
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-cautious-3021-1y43ff6",
+      "slot": 5,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": true,
+      "pace": 8738.300000000745,
+      "elapsed": 527888.799999997,
+      "retries": 46,
+      "bytes": 443368,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8738.300000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9622.900000002235
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12726.400000002235
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5822.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8449
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-3005-secdqf",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 7681.300000000745,
+      "elapsed": 376345.19999999925,
+      "retries": 37,
+      "bytes": 318081,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11102.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7681.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13102.099999997765
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 3219
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 5465
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-3006-grbfv4",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 9521.39999999851,
+      "elapsed": 908503.200000003,
+      "retries": 89,
+      "bytes": 765117,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9521.39999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12651.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13832.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5856.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4191.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-3007-w32old",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 8189.400000002235,
+      "elapsed": 833569.1999999993,
+      "retries": 80,
+      "bytes": 694605,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11664.10000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8033.20000000298
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12263.60000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5654.099999997765
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8189.400000002235
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-3010-1vcq1yb",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": true,
+      "pace": 9683.300000000745,
+      "elapsed": 330871.80000000075,
+      "retries": 26,
+      "bytes": 279543,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9683.300000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9767.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17406
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7927.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4818.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-ghost-3012-1ljqm3k",
+      "slot": 5,
+      "style": "ghost",
+      "mix": "decoy+phase",
+      "opening": true,
+      "pace": 6539.10000000149,
+      "elapsed": 162906.29999999702,
+      "retries": 8,
+      "bytes": 134027,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8231.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6539.10000000149
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 17449.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5836.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4177.599999997765
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-3025-haxzpx",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 7826.10000000149,
+      "elapsed": 142737.8999999985,
+      "retries": 7,
+      "bytes": 125724,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8742.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7398.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 16155.89999999851
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7826.10000000149
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4207.599999997765
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-3026-1wuwquq",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 9884.5,
+      "elapsed": 192760.6000000015,
+      "retries": 10,
+      "bytes": 163256,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9884.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11897.60000000149
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12325
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6245.599999997765
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4900.89999999851
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-3027-10j56k1",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 8708.60000000149,
+      "elapsed": 99731.30000000075,
+      "retries": 3,
+      "bytes": 87677,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8708.60000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11477.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15447.60000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6195.699999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4524.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-3030-1qlychg",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": true,
+      "pace": 8897.89999999851,
+      "elapsed": 461303.700000003,
+      "retries": 33,
+      "bytes": 400290,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8897.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6732.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 21310.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 11258.10000000149
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 7651.5
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-3031-1az1jf",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": true,
+      "pace": 12170.800000000745,
+      "elapsed": 221210.09999999776,
+      "retries": 12,
+      "bytes": 186163,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13971.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 12170.800000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 22447.10000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5986.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4282.5
+        }
+      }
+    },
+    {
+      "id": "rec-switchyard-seven-trickster-3032-12ryell",
+      "slot": 5,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": true,
+      "pace": 9526.5,
+      "elapsed": 75154.69999999925,
+      "retries": 0,
+      "bytes": 65901,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9526.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 20052.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14653.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8104
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 4566.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-ace-1-wn95a5",
+      "slot": 6,
+      "style": "ace",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 6078.199999999255,
+      "elapsed": 135247.90000000037,
+      "retries": 10,
+      "bytes": 98506,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9427.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2716.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4881.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6078.199999999255
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9320.5
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-ace-2-172es5y",
+      "slot": 6,
+      "style": "ace",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 7736.699999999255,
+      "elapsed": 203387.40000000037,
+      "retries": 19,
+      "bytes": 148540,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7736.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6049.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 3568.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9276.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9695
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-ace-3-1sngg26",
+      "slot": 6,
+      "style": "ace",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 5997,
+      "elapsed": 288351.69999999925,
+      "retries": 23,
+      "bytes": 207025,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7478.700000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2736.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5997
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5364.0999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10626.200000001118
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-hustler-1-s8y01d",
+      "slot": 6,
+      "style": "hustler",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 5444.5999999996275,
+      "elapsed": 147476.5,
+      "retries": 13,
+      "bytes": 107480,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5944.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2686.4000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5444.5999999996275
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 4974.0999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10657.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-hustler-2-w4whit",
+      "slot": 6,
+      "style": "hustler",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 6150,
+      "elapsed": 304240.2999999998,
+      "retries": 31,
+      "bytes": 219026,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6150
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2937.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4334.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9376.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10764.199999999255
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-hustler-3-1aez0ba",
+      "slot": 6,
+      "style": "hustler",
+      "mix": "dash+dash",
+      "opening": false,
+      "pace": 5974.299999998882,
+      "elapsed": 268810.30000000075,
+      "retries": 29,
+      "bytes": 193612,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 5974.299999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2914.7000000001863
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4580
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9948.599999999627
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10676.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-street-1-t75rtb",
+      "slot": 6,
+      "style": "street",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 6488.5,
+      "elapsed": 204680.39999999944,
+      "retries": 16,
+      "bytes": 148443,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10258.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4503.299999999814
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4021.600000000559
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6488.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9222.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-street-2-6k7e4b",
+      "slot": 6,
+      "style": "street",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 5930.200000000186,
+      "elapsed": 73530.69999999925,
+      "retries": 4,
+      "bytes": 55060,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6078.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2764.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5727.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5930.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9160
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-street-3-g6f12k",
+      "slot": 6,
+      "style": "street",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 6131,
+      "elapsed": 121778,
+      "retries": 8,
+      "bytes": 90215,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6131
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5896.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4341.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7594.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10544.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-balanced-281-g5p5vx",
+      "slot": 6,
+      "style": "balanced",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 6456.199999999255,
+      "elapsed": 67735,
+      "retries": 2,
+      "bytes": 50850,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6456.199999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2627.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 3700.4000000003725
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8037.799999998882
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8761.300000000745
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-balanced-282-17qet7t",
+      "slot": 6,
+      "style": "balanced",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 6838.5,
+      "elapsed": 188605.70000000112,
+      "retries": 16,
+      "bytes": 138736,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6838.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2612.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 7019.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5992.5999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9533.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-cautious-218-125q1g1",
+      "slot": 6,
+      "style": "cautious",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 6006.899999999907,
+      "elapsed": 81025.29999999981,
+      "retries": 3,
+      "bytes": 68526,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9071.30000000028
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4417.899999999907
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5687.299999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6006.899999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10264.80000000028
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-cautious-219-16fcck9",
+      "slot": 6,
+      "style": "cautious",
+      "mix": "decoy+phase",
+      "opening": false,
+      "pace": 9334.899999999907,
+      "elapsed": 120781.5,
+      "retries": 5,
+      "bytes": 99174,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10572.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5130.300000000279
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6695.600000000093
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9334.899999999907
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 21925.100000000093
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-dasher-260-1075h4d",
+      "slot": 6,
+      "style": "dasher",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 6425.700000000186,
+      "elapsed": 94637.29999999981,
+      "retries": 4,
+      "bytes": 72769,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6425.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2656.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 3994.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 12793
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12591.399999999441
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-dasher-261-2rtugh",
+      "slot": 6,
+      "style": "dasher",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 5490.700000000186,
+      "elapsed": 236764.60000000056,
+      "retries": 18,
+      "bytes": 175120,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7085.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2683.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4471.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 5490.700000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12260.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-erratic-344-pvgixy",
+      "slot": 6,
+      "style": "erratic",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7451.300000000745,
+      "elapsed": 197436.59999999963,
+      "retries": 16,
+      "bytes": 145531,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10515.299999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7056.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5468.700000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7451.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 17629.5
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-erratic-345-19m1495",
+      "slot": 6,
+      "style": "erratic",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 6560,
+      "elapsed": 458221.4000000004,
+      "retries": 44,
+      "bytes": 334685,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10135.200000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6431
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5625.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6560
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 30940.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-ghost-239-af2fs9",
+      "slot": 6,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 7097.799999999814,
+      "elapsed": 121530.79999999981,
+      "retries": 8,
+      "bytes": 91244,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9430
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2387.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4011.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7097.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9718.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-ghost-240-i6q225",
+      "slot": 6,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 6514.200000000186,
+      "elapsed": 238265.19999999925,
+      "retries": 20,
+      "bytes": 171374,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6770.799999999814
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5737.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 6499.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6514.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9768.299999999814
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-rookie-365-pxv65a",
+      "slot": 6,
+      "style": "rookie",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 9715.70000000298,
+      "elapsed": 106596.20000000112,
+      "retries": 4,
+      "bytes": 79629,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10787.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4422.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5974.10000000149
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9715.70000000298
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10853.699999999255
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-rookie-366-1xkgqre",
+      "slot": 6,
+      "style": "rookie",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 8381.099999997765,
+      "elapsed": 162258.69999999925,
+      "retries": 11,
+      "bytes": 118997,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8381.099999997765
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6997.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10321.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6492.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12548.10000000149
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-sharp-302-15vb4np",
+      "slot": 6,
+      "style": "sharp",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7114.300000000745,
+      "elapsed": 139260.70000000112,
+      "retries": 8,
+      "bytes": 102115,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11817.099999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2785.5999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4400.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7114.300000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12977.299999998882
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-sharp-303-1ls3vwk",
+      "slot": 6,
+      "style": "sharp",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 11690.700000001118,
+      "elapsed": 147180.09999999963,
+      "retries": 8,
+      "bytes": 108720,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11690.700000001118
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7837
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 4788.200000001118
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 13194.400000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 13275.700000001118
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-trickster-323-lnlb42",
+      "slot": 6,
+      "style": "trickster",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 8436.400000000373,
+      "elapsed": 84099.40000000037,
+      "retries": 2,
+      "bytes": 70127,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10700.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2808.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8436.400000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7944.700000001118
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 13407.599999999627
+        }
+      }
+    },
+    {
+      "id": "rec-lastlight-loop-trickster-324-rui1lw",
+      "slot": 6,
+      "style": "trickster",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 6029.10000000149,
+      "elapsed": 105719.69999999925,
+      "retries": 6,
+      "bytes": 88653,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6029.10000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2699.5999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 5372.300000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9465.700000001118
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11883.5
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-ace-1-qm4jgz",
+      "slot": 7,
+      "style": "ace",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8897.199999999255,
+      "elapsed": 200701.30000000075,
+      "retries": 14,
+      "bytes": 149599,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13477.699999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3343.199999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8897.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6694.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9698
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-ace-2-1hkpbhm",
+      "slot": 7,
+      "style": "ace",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8431.400000000373,
+      "elapsed": 448197.7999999989,
+      "retries": 39,
+      "bytes": 331907,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7294.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2767.2000000011176
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12028.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8431.400000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9480
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-ace-3-hofows",
+      "slot": 7,
+      "style": "ace",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8771.799999998882,
+      "elapsed": 166983.09999999963,
+      "retries": 10,
+      "bytes": 124285,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9063.099999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5099.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8771.799999998882
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9879.400000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8087.5
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-hustler-2-esou0w",
+      "slot": 7,
+      "style": "hustler",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 7246.5999999996275,
+      "elapsed": 718482.5,
+      "retries": 70,
+      "bytes": 527761,
+      "band": "fast",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 6235.199999999255
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 7116.300000000745
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13878.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7246.5999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11131
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-street-1-u41xz6",
+      "slot": 7,
+      "style": "street",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8850.100000000559,
+      "elapsed": 158410.5,
+      "retries": 9,
+      "bytes": 117016,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 14145
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 8051.0999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8850.100000000559
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6826.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10909.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-street-2-10j00uj",
+      "slot": 7,
+      "style": "street",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8844.699999999255,
+      "elapsed": 222457.00000000093,
+      "retries": 17,
+      "bytes": 164243,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8377.299999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5018
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8844.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10225.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10864.200000001118
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-street-3-155bgp2",
+      "slot": 7,
+      "style": "street",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9332.299999998882,
+      "elapsed": 302676.69999999925,
+      "retries": 26,
+      "bytes": 228070,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9332.299999998882
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2748.5999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14107
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9127.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 15742.099999999627
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-balanced-269-1yhk4c7",
+      "slot": 7,
+      "style": "balanced",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 11681.899999999441,
+      "elapsed": 620739.9000000004,
+      "retries": 62,
+      "bytes": 456737,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12450.200000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 11681.899999999441
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10409
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7493.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12117.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-balanced-270-phozto",
+      "slot": 7,
+      "style": "balanced",
+      "mix": "phase+dash",
+      "opening": false,
+      "pace": 9908.199999999255,
+      "elapsed": 144949.80000000075,
+      "retries": 9,
+      "bytes": 108153,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 10764.5
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4469.5999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9908.199999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7636.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 11366.39999999851
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-cautious-206-da74ja",
+      "slot": 7,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 9813.600000000093,
+      "elapsed": 240131.69999999972,
+      "retries": 14,
+      "bytes": 194531,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13517.700000000186
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3492.899999999907
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10480.399999999907
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7078.799999999814
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9813.600000000093
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-cautious-207-ybhro3",
+      "slot": 7,
+      "style": "cautious",
+      "mix": "phase+decoy",
+      "opening": false,
+      "pace": 8116.5,
+      "elapsed": 144896.2000000002,
+      "retries": 8,
+      "bytes": 119875,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 7966.800000000279
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3847.600000000093
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 9932.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8116.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10965
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-dasher-248-1xikc8t",
+      "slot": 7,
+      "style": "dasher",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 10246.5,
+      "elapsed": 483398,
+      "retries": 46,
+      "bytes": 358203,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 12117.400000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 10246.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 18556.10000000056
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 10022.899999999441
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8952.5
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-dasher-249-zuvzjd",
+      "slot": 7,
+      "style": "dasher",
+      "mix": "dash+phase",
+      "opening": false,
+      "pace": 9808.099999999627,
+      "elapsed": 580475.5999999996,
+      "retries": 55,
+      "bytes": 426474,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9808.099999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 4135.5999999996275
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10713.799999999814
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8443.900000000373
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 12187.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-erratic-332-1fp1qlb",
+      "slot": 7,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 12052.900000000373,
+      "elapsed": 449841.2999999989,
+      "retries": 31,
+      "bytes": 358646,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 16209.89999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 6135.5
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 12052.900000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6689.800000000745
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 17451
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-erratic-333-11yz7lk",
+      "slot": 7,
+      "style": "erratic",
+      "mix": "decoy+dash",
+      "opening": false,
+      "pace": 11636.39999999851,
+      "elapsed": 592002,
+      "retries": 37,
+      "bytes": 470752,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11636.39999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 9715.900000000373
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 14596.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7127.9000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 19106.800000000745
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-ghost-227-vup380",
+      "slot": 7,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 9784.599999999627,
+      "elapsed": 155700.40000000037,
+      "retries": 7,
+      "bytes": 117611,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13433.099999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3165.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13440.5
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 9784.599999999627
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9621.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-ghost-228-wznvk1",
+      "slot": 7,
+      "style": "ghost",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8930.800000000745,
+      "elapsed": 391806.7999999998,
+      "retries": 32,
+      "bytes": 288921,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 14806.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2805.2000000001863
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 8930.800000000745
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8092.200000000186
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9961.200000000186
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-rookie-353-1oznm8l",
+      "slot": 7,
+      "style": "rookie",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 8762.900000000373,
+      "elapsed": 195884.5,
+      "retries": 12,
+      "bytes": 144623,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 11928.60000000149
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2887.4000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15107
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8231.5
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 8762.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-rookie-354-1tf3ypw",
+      "slot": 7,
+      "style": "rookie",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 10427,
+      "elapsed": 384263,
+      "retries": 30,
+      "bytes": 282219,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 13114.800000000745
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 3113
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 15084.099999999627
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 8487.099999999627
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 10427
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-sharp-291-cydp3m",
+      "slot": 7,
+      "style": "sharp",
+      "mix": "phase+phase",
+      "opening": false,
+      "pace": 13447.900000000373,
+      "elapsed": 771268.3000000007,
+      "retries": 42,
+      "bytes": 562478,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 28925.900000000373
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 2748.39999999851
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 13447.900000000373
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 6761.4000000003725
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 13809.10000000149
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-trickster-311-1blmmhn",
+      "slot": 7,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 9608.900000000373,
+      "elapsed": 110251.79999999888,
+      "retries": 4,
+      "bytes": 95902,
+      "band": "steady",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 9783.599999999627
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5460.9000000003725
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 10781.299999998882
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7298
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 9608.900000000373
+        }
+      }
+    },
+    {
+      "id": "rec-blacktop-crown-trickster-312-gcuyjy",
+      "slot": 7,
+      "style": "trickster",
+      "mix": "decoy+decoy",
+      "opening": false,
+      "pace": 8933.39999999851,
+      "elapsed": 174859.40000000037,
+      "retries": 8,
+      "bytes": 148576,
+      "band": "middle",
+      "byScale": {
+        "1": {
+          "scale": 1,
+          "houses": 3,
+          "clearMs": 8933.39999999851
+        },
+        "0.6": {
+          "scale": 0.6,
+          "houses": 1,
+          "clearMs": 5681.699999999255
+        },
+        "0.75": {
+          "scale": 0.75,
+          "houses": 1,
+          "clearMs": 11120.699999999255
+        },
+        "0.9": {
+          "scale": 0.9,
+          "houses": 1,
+          "clearMs": 7005.0999999996275
+        },
+        "0.95": {
+          "scale": 0.95,
+          "houses": 1,
+          "clearMs": 15434.199999999255
+        }
+      }
+    }
+  ],
+  "mode": "write",
+  "archive": "../rivals-bank-archive/2026-09-17-c4af9127"
+}

@@ -1,3 +1,36 @@
+## Current shipped bank: conservative pruning (2026-09-17)
+
+This section supersedes older counts and "bank not committed" notes below.
+The original validated bank at c4af9127 contained 192 accepted races.
+The shipped pool now contains 140 unchanged races, exactly 20 per course.
+52 redundant replay bundles are recoverably archived in
+client/rivals-bank-archive/2026-09-17-c4af9127/, outside public/ and dist.
+The archive includes all original indices, manifest, and selection-report.json;
+combine its removed bundles with the retained public bundles to reconstruct
+the original bank, or restore from the source commit. Do not deploy the archive.
+
+Replay bytes: 48,120,103 -> 30,157,500 (17,962,603 saved, 37.3%).
+Selection preserves every style, ordered power mix and opening-Decoy arm per
+course, at least three of each original measured band where available, and
+the fastest/slowest benchmark, race elapsed, retry and per-scale extremes.
+No frame, time, hash or provenance was modified. Archived races are NOT
+rejections; the prior 14 genuine forfeits remain a separate observation.
+Measured matchmaking cuts recalibrate from the retained population.
+
+Opening-Decoy's controlled experiment remains 11/12 control vs 10/12 treatment:
+no demonstrated completion benefit. Pruning is not a new experiment.
+
+From client/: node tools/rivals-prune.mjs is a read-only dry run.
+To apply after a future assembly, use --write --archive-key <fresh-key>
+--source-commit <the-bank-commit>. Existing archives are never overwritten.
+Assembler imports may restore redundant depth from raw captures; prune AFTER
+assembly, before verification/deploy. Constraints outrank the 20-course target.
+Pruning twice is a no-op. Never put source rasters or archived replays in public/.
+
+Verification: native bank integrity and pruning regression tests; full verify
+results recorded in the pruning commit. Phone matchmaking/replay/off-grid
+visibility remain unverified. The Cash ledger hazard remains out of scope.
+
 > New Decoy-first experiment and human retry power-switch details are at the
 > top of CLAUDE_RIVALS_BOT_BANK_HANDOFF.md. Existing recording jobs still
 > auto-retry with their fixed mix; do not change a running static build.

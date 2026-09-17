@@ -103,3 +103,15 @@ the slow ones, where it belongs. Change the bank and the bands move with it.
 | `public/rivals/v2/` | the shipped bank |
 
 `test/rivalBank.test.mjs` validates whatever is shipped. It must stay green.
+
+## Conservative deployment pruning
+
+Run `node tools/rivals-prune.mjs` from client/ for a read-only coverage/bytes
+report. Apply with `--write --archive-key <fresh-key> --source-commit <sha>`.
+The tool retains at least 20 per course while preserving styles, ordered mixes,
+opening-Decoy arms, measured-band coverage and timing/retry extremes. It validates
+every source bundle before changing anything and archives removed bundles plus
+original metadata in `client/rivals-bank-archive/`, never public/ or dist.
+No captured payload is rewritten. Re-running on the curated bank is a no-op.
+Assembly can re-import redundant raw captures: prune after assembly, then run
+`npm run verify`. See RIVALS_BANK_RECORDING_HANDOFF.md for recovery instructions.
