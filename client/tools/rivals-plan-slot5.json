@@ -1,0 +1,42 @@
+[
+ {
+  "slot": 5,
+  "style": "ghost",
+  "powers": "decoy,phase",
+  "runs": 3,
+  "indexBase": 2005,
+  "hardLimitMs": 960000
+ },
+ {
+  "slot": 5,
+  "style": "ghost",
+  "powers": "phase,phase",
+  "runs": 3,
+  "indexBase": 2010,
+  "hardLimitMs": 960000
+ },
+ {
+  "slot": 5,
+  "style": "cautious",
+  "powers": "phase,decoy",
+  "runs": 3,
+  "indexBase": 2015,
+  "hardLimitMs": 1080000
+ },
+ {
+  "slot": 5,
+  "style": "sharp",
+  "powers": "dash,dash",
+  "runs": 3,
+  "indexBase": 2020,
+  "hardLimitMs": 840000
+ },
+ {
+  "slot": 5,
+  "style": "erratic",
+  "powers": "decoy,dash",
+  "runs": 3,
+  "indexBase": 2025,
+  "hardLimitMs": 1200000
+ }
+]

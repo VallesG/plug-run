@@ -101,6 +101,11 @@ export const DEFAULTS = {
   // is cover on the other side of a wall. The shipped AI only phases to shorten
   // a route or to escape at 2-6 cells; neither says "I am pinned in the open".
   phaseEscapeCells: 9,
+  // Opening Decoy: fire a held Decoy shortly after a house becomes playable,
+  // instead of waiting for a defender to close. Off by default — a recording
+  // made with it on is a different driver behaviour, not a tuning tweak.
+  openingDecoy: false,
+  openingDecoyDelayMs: 900,
   // How many cells of wall the 600ms window can actually clear. At 7 cells/sec
   // (5.95 carrying) the ceiling is about four; three leaves margin. Phasing
   // into anything thicker strands the runner inside the geometry with the
@@ -201,6 +206,9 @@ export default class BotDriver {
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._nextPowerCheckAt = 0;
+    // Re-armed per house: an opening Decoy is an OPENING, so a retry on the
+    // same house gets its own one rather than inheriting the last attempt's.
+    this._openingDecoyDone = false;
     // Evasion commitment state — cleared per round so a dodge can't carry
     // across a restart.
     this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
@@ -613,6 +621,52 @@ export default class BotDriver {
 
   /* ---------------- main tick ---------------- */
 
+/**
+   * Fire a held Decoy at the start of a house, if this driver opts in.
+   *
+   * WHY IT IS NOT THE SHIPPED BEHAVIOUR
+   * RunnerAI.considerRunnerPowerUse only reaches for Decoy REACTIVELY: when a
+   * defender is already within 18 cells and no decoy exists. That is a sound
+   * panic button and a poor opening. This fires once per house, early, to pull
+   * the defender off its patrol before the runner commits to a route.
+   *
+   * HOW IT ACTIVATES
+   * Through scene.activateRunnerPowerByIndex — the same call a player's tap
+   * reaches, and the same one RunnerAI uses. It does NOT touch the loadout
+   * picker, and it cannot run before play is live: update() has already
+   * returned on roundOver and roundPausedForMenu, and the delay keeps it off
+   * the first frames while the house settles.
+   *
+   * It spends a real power from a real slot, so a race driven with it has one
+   * fewer Decoy in hand later. That is the trade being measured, not a bonus.
+   */
+  _maybeOpeningDecoy(now) {
+    if (!this.cfg.openingDecoy || this._openingDecoyDone) return false;
+    const s = this.scene;
+    if (s.role !== 'runner') return false;
+    if (now - this._startedAt < (this.cfg.openingDecoyDelayMs ?? 900)) return false;
+
+    const sel = s.runnerPowersSelected || [];
+    const used = s.runnerPowersConsumed || [];
+    const slot = sel.findIndex((p, i) => p === 'decoy' && !used[i]);
+    // No decoy in hand is not a failure and must not be retried every frame.
+    if (slot < 0) { this._openingDecoyDone = true; return false; }
+    if (s.decoySprite) return false;
+
+    this._openingDecoyDone = true;
+    console.log('[BOT] opening decoy from slot', slot);
+    // Snapshot BEFORE activating: `used` is the scene's own array, which
+    // activateRunnerPowerByIndex mutates in place, so reading it afterwards
+    // reports the post-activation value and the spend never gets traced.
+    // driveBorrowedAI copies for the same reason.
+    const wasUsed = used[slot] === true;
+    s.activateRunnerPowerByIndex?.(slot);
+    // Mid-spoof the scene skips its own intent record, exactly as it does for
+    // the borrowed AI, so log it here for the trace.
+    if (s.runnerPowersConsumed?.[slot] && !wasUsed) s.intent?.recordPower?.(slot);
+    return true;
+  }
+
   update(delta = 16.67) {
     const s = this.scene;
     if (!s.intent) return;
@@ -629,6 +683,8 @@ export default class BotDriver {
 
     const now = performance.now();
     this._now = now;
+
+    this._maybeOpeningDecoy(now);
 
     if (now - this._startedAt > this.cfg.maxRunMs) {
       console.warn('[BOT] maxRunMs exceeded — abandoning run');

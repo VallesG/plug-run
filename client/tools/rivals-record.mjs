@@ -84,7 +84,10 @@ export async function recordJob(job, shared) {
     rivalsRecord: '1', courseSlot: String(job.slot), skillPreset: job.style,
     powers: job.powers, runs: String(job.runs),
     hardLimitMs: String(job.hardLimitMs ?? OPTIONS.hardLimitMs),
-    opponentIndex: String(job.indexBase ?? OPTIONS.indexBase)
+    opponentIndex: String(job.indexBase ?? OPTIONS.indexBase),
+    // Opt-in driver behaviour. Recorded into driverConfig by the harness, so
+    // an opening-Decoy race is identifiable in the bank forever after.
+    ...(job.openingDecoy ? { openingDecoy: '1' } : {})
   });
   await page.goto(`${OPTIONS.url}/?${query}`, { waitUntil: 'load' });
 

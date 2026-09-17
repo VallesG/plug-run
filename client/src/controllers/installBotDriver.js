@@ -326,7 +326,7 @@ export function installBotDriver() {
   const rec = rivalsRecordConfig();
   // Recording mode drives the bot at a named preset; ?bot=1 knobs still win
   // when both are given so a preset can be probed without editing it.
-  const cfg = rec ? { ...rec.preset.knobs, modalDelayMs: 300, ...(botConfig() || {}) } : botConfig();
+  const cfg = rec ? { ...rec.preset.knobs, modalDelayMs: 300, openingDecoy: Boolean(rec.openingDecoy), ...(botConfig() || {}) } : botConfig();
   if (!cfg) return false;
 
   BaseGameScene.prototype.__botInstalled = true;
@@ -496,7 +496,10 @@ export function rivalsRecordConfig() {
       runs: Math.max(1, Math.round(Number(p.get('runs') || 3))),
       // A race that will not finish is not a race. 12 minutes is ~4x a slow clear.
       hardLimitMs: Math.max(60_000, Math.round(Number(p.get('hardLimitMs') || 12 * 60_000))),
-      indexBase: Math.max(1, Math.round(Number(p.get('opponentIndex') || 1)))
+      indexBase: Math.max(1, Math.round(Number(p.get('opponentIndex') || 1))),
+      // Opt-in driver behaviour, recorded in driverConfig so a bank entry
+      // always says whether it was driven with an opening Decoy.
+      openingDecoy: p.get('openingDecoy') === '1'
     };
   } catch { return null; }
 }
@@ -565,7 +568,7 @@ function installRivalsRecorder(rec, cfg) {
       },
       recordingID: rivalRecordingID(entry.slug, rec.preset.key, index, this.race.clearTimes),
       recordedAt: new Date().toISOString(),
-      driverConfig: { aiLevel: cfg.aiLevel, coverPenalty: cfg.coverPenalty, phaseEscapeCells: cfg.phaseEscapeCells, dangerCells: cfg.dangerCells }
+      driverConfig: { aiLevel: cfg.aiLevel, coverPenalty: cfg.coverPenalty, phaseEscapeCells: cfg.phaseEscapeCells, dangerCells: cfg.dangerCells, openingDecoy: Boolean(cfg.openingDecoy) }
     });
     const traces = (window.__plugRunTraces || []).slice(store._traceMark || 0);
     store._traceMark = (window.__plugRunTraces || []).length;

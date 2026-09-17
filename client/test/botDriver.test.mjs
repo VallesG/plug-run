@@ -547,6 +547,129 @@ function borrowScene() {
 
 /* ---------------- report ---------------- */
 
+/* ---------------- opening decoy ---------------- */
+// An opt-in driver behaviour. RunnerAI only reaches for Decoy reactively, when
+// a defender is already within 18 cells, so an opening Decoy is genuinely new
+// behaviour and a recording made with it is a different driver — not a tuning
+// tweak. These pin down that it fires through the ordinary power path, once,
+// and never while play is not live.
+
+const decoyScene = (powers, extra = {}) => {
+  const s = makeScene();
+  s.runnerPowersSelected = powers;
+  s.runnerPowersConsumed = powers.map(() => false);
+  s.fired = [];
+  s.activateRunnerPowerByIndex = function (i) {
+    s.fired.push(i);
+    s.runnerPowersConsumed[i] = true;
+  };
+  Object.assign(s, extra);
+  return s;
+};
+// Push the driver past its arming delay without waiting in real time.
+const arm = bot => { bot._startedAt = performance.now() - 5000; };
+
+{
+  const s = decoyScene(['decoy', 'phase']);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('opening decoy fires the held decoy slot', s.fired.length === 1 && s.fired[0] === 0);
+}
+{
+  const s = decoyScene(['phase', 'decoy']);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('it finds decoy in the second slot', s.fired.length === 1 && s.fired[0] === 1);
+}
+{
+  const s = decoyScene(['decoy', 'decoy']);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16); bot.update(16); bot.update(16);
+  check('it spends exactly one decoy, not both', s.fired.length === 1);
+}
+{
+  const s = decoyScene(['decoy', 'phase']);
+  const bot = new BotDriver(s, {});
+  arm(bot);
+  bot.update(16);
+  check('off by default: no decoy without the flag', s.fired.length === 0);
+}
+{
+  const s = decoyScene(['phase', 'dash']);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16); bot.update(16);
+  check('no decoy in hand fires nothing', s.fired.length === 0);
+}
+{
+  const s = decoyScene(['decoy', 'phase']);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  // Before the delay elapses the house is still settling.
+  bot.update(16);
+  check('it does not fire on the first frames', s.fired.length === 0);
+}
+{
+  const s = decoyScene(['decoy', 'phase'], { roundPausedForMenu: true });
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('it cannot fire while play is paused', s.fired.length === 0);
+}
+{
+  const s = decoyScene(['decoy', 'phase'], { roundOver: true });
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('it cannot fire once the round is over', s.fired.length === 0);
+}
+{
+  const s = decoyScene(['decoy', 'phase'], { decoySprite: {} });
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('it does not stack a second decoy on a live one', s.fired.length === 0);
+}
+{
+  const s = decoyScene(['decoy', 'decoy']);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('first house spends one decoy', s.fired.length === 1);
+  // A retry re-arms: an opening Decoy is an opening, per house.
+  s.runnerPowersConsumed = [false, false];
+  s.simTick = -1;            // a tick going backwards is a fresh round
+  bot.update(16);
+  arm(bot);
+  bot.update(16);
+  check('a retried house gets its own opening decoy', s.fired.length === 2);
+}
+{
+  // The scene skips its own intent record while the driver is spoofing roles,
+  // exactly as it does for the borrowed AI, so the driver must log the spend
+  // itself or the trace under-reports what the runner actually used.
+  const s = decoyScene(['decoy', 'phase']);
+  const recorded = [];
+  s.intent.recordPower = i => recorded.push(i);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('the spend is recorded on the intent trace',
+    recorded.length === 1 && recorded[0] === 0);
+}
+{
+  // And it must not log a spend that never happened.
+  const s = decoyScene(['phase', 'dash']);
+  const recorded = [];
+  s.intent.recordPower = i => recorded.push(i);
+  const bot = new BotDriver(s, { openingDecoy: true });
+  arm(bot);
+  bot.update(16);
+  check('nothing is traced when no decoy is spent', recorded.length === 0);
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 if (failures.length) {
   for (const f of failures) console.log(`  - ${f}`);

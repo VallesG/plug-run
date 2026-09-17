@@ -23,7 +23,7 @@ import { RIVAL_DRIVER_STYLES } from '../src/logic/rivalPresets.js';
 // Courses ordered by how far the shipped bank is from 20 races, neediest
 // first. From `node tools/rivals-assemble.mjs --dry` on the current bank:
 // slot5 5, slot7 7, slot2 8, slot4 8, slot3 9, slot6 9, slot1 11.
-const SLOT_ORDER = [5, 7, 2, 4, 3, 6, 1];
+const SLOT_ORDER_ALL = [5, 7, 2, 4, 3, 6, 1];
 
 // Seconds a style is given for one seven-house race.
 //
@@ -59,6 +59,10 @@ const argOf = (name, fallback = null) => {
 };
 const ONLY = (argOf('styles') || '').split(',').map(s => s.trim()).filter(Boolean);
 const INDEX_BASE = Number(argOf('indexBase', 200));
+// --slots 5        top up one course instead of all seven
+// --runs 3         races per job; a top-up wants RUNS, not a longer limit
+const ONLY_SLOTS = (argOf('slots') || '').split(',').map(s => Number(s.trim())).filter(Boolean);
+const RUNS = Number(argOf('runs', 2));
 
 // Ordered mixes, including duplicates and Decoy. A style's own mixes rotate so
 // the same style is not always recorded on the same pair.
@@ -73,11 +77,12 @@ for (let round = 0; round < styles.length; round++) {
   const def = RIVAL_DRIVER_STYLES[style];
   if (!def) throw new Error('unknown style ' + style);
   const mixes = def.mixes;
+  const SLOT_ORDER = ONLY_SLOTS.length ? ONLY_SLOTS : SLOT_ORDER_ALL;
   SLOT_ORDER.forEach((slot, i) => {
     jobs.push({
       slot, style,
       powers: mixes[(round + i) % mixes.length].join(','),
-      runs: 2,
+      runs: RUNS,
       indexBase: index += 3,
       hardLimitMs: LIMIT_S[style] * 1000
     });
