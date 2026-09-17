@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-17T09:00:07.748Z",
+ "generatedAt": "2026-09-17T10:18:37.303Z",
  "courses": [
   {
    "slot": 1,
@@ -110,8 +110,8 @@
    "opponents": 25,
    "bands": {
     "steady": 7,
-    "middle": 8,
-    "fast": 10
+    "middle": 9,
+    "fast": 9
    },
    "styles": {
     "ace": 3,
@@ -208,23 +208,24 @@
    "slot": 5,
    "name": "Switchyard Seven",
    "courseID": "rivals-v1-2143714553",
-   "opponents": 16,
+   "opponents": 27,
    "bands": {
-    "middle": 9,
-    "fast": 3,
-    "steady": 4
+    "middle": 12,
+    "fast": 8,
+    "steady": 7
    },
    "styles": {
     "ace": 1,
     "hustler": 2,
     "street": 2,
     "balanced": 2,
-    "cautious": 1,
+    "cautious": 4,
     "dasher": 2,
-    "erratic": 1,
+    "erratic": 4,
     "rookie": 2,
     "sharp": 1,
-    "trickster": 2
+    "trickster": 2,
+    "ghost": 5
    },
    "elapsedMs": [
     150728.59999999963,
@@ -242,7 +243,18 @@
     429450.19999999925,
     214870.70000000112,
     317471.5,
-    247474.09999999963
+    247474.09999999963,
+    753875.9000000022,
+    308082.69999999925,
+    695125.1999999993,
+    348070.80000000075,
+    692729.6999999993,
+    430757.299999997,
+    497482.69999999925,
+    254878.30000000075,
+    854123.8999999985,
+    671580.1999999993,
+    146096.30000000075
    ]
   },
   {

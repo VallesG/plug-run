@@ -82,21 +82,32 @@ function accept(candidate) {
 }
 
 const candidates = [...readExistingBank(), ...readNewRecordings()];
-const seen = new Set();
+const seen = new Map();
 const accepted = [];
+// A record already in the bank AND still present as a raw capture is the
+// normal state after a write pass, and re-importing it is a no-op, not a
+// rejection. Counting it as rejected made a clean run report 127 failures
+// against 7 real ones, which reads like data loss. Only a SAME id carrying
+// DIFFERENT bytes is a genuine collision worth refusing.
+let reimported = 0;
 for (const candidate of candidates) {
   if (candidate.rejected) { rejected.push({ tag: candidate.file, reason: candidate.reason, result: candidate.result, houses: candidate.houses }); continue; }
   const ok = accept(candidate);
   if (!ok) continue;
-  if (seen.has(ok.record.recordingID)) { rejected.push({ tag: ok.record.recordingID, reason: 'duplicate recordingID' }); continue; }
-  seen.add(ok.record.recordingID);
+  if (seen.has(ok.record.recordingID)) {
+    const first = seen.get(ok.record.recordingID);
+    if (first && rivalBytes(first.record) === rivalBytes(ok.record)) { reimported++; continue; }
+    rejected.push({ tag: ok.record.recordingID, reason: 'duplicate recordingID with different payload' });
+    continue;
+  }
+  seen.set(ok.record.recordingID, ok);
   accepted.push(ok);
 }
 
 // Report the bank the way the product asks: by course, measured band and mix.
 const benchmarks = accepted.map(a => recordBenchmark(a.record, a.course.scales)).filter(Boolean);
 const bands = measuredBands(benchmarks);
-const report = { total: accepted.length, rejected: rejected.length, bands, courses: [] };
+const report = { total: accepted.length, rejected: rejected.length, reimported, bands, courses: [] };
 for (const course of RIVAL_COURSE_POOL) {
   const mine = accepted.filter(a => a.record.courseID === course.courseID);
   const byBand = {}, byStyle = {}, byMix = {};
