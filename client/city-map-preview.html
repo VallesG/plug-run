@@ -8,6 +8,7 @@ select,button{background:#172124;color:#e9dfc7;border:1px solid #687769;padding:
 <header>City-map prototype · no saves
 <select id="size"><option>390x844</option><option>280x480</option><option>1440x900</option></select>
 <select id="state"><option value="start">First arrival</option><option value="mixed">Block 7 arrival</option><option value="finish">City 2 arrival</option><option value="legacy">City 3 arrival</option></select>
+<label><input id="hold" type="checkbox">Hold city overview</label>
 <button id="review">Review</button></header><div id="game"></div>
 <script type="module">
 import Phaser from 'phaser';
@@ -28,7 +29,7 @@ function review(){
   create(){
    this.role='runner'; this.worldBlock=worldBlock(checkpoint.blockIndex);
    const view=cityView(state,checkpoint);
-   drawCityMap(this,{view,checkpoint,onDone:()=> {
+   drawCityMap(this,{view,checkpoint,autoZoom:!document.querySelector('#hold').checked,onDone:()=> {
     this.add.text(width/2,36,'LANDED · '+this.worldBlock.name,{
      fontFamily:'Arial',fontSize:'16px',color:'#eee3c7'
     }).setOrigin(.5);

@@ -1,3 +1,7 @@
+import { crewSigil } from '../logic/crewSigils.js';
+import { rivalCityView, completeRivalDistrict, getRivalTerritory } from '../utils/rivalCityProgress.js';
+import { drawCityMap } from './CityMap.js';
+import { drawRivalDistrictMap } from './RivalDistrictMap.js';
 import {
   RIVAL_HOUSES, RIVAL_COUNTDOWN_MS, RIVAL_TRANSITION_MS, RIVAL_RETRY_MS,
   rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
@@ -31,6 +35,21 @@ export default class RivalsRace {
     this.scene.roundPausedForMenu = true;
     this.scene.input.keyboard.enabled = false;
     if (this.race.status === 'countdown') return;
+    this.scene.suspendTouchUI?.(true);
+    if(this.race.rivalCityIndex){
+      if(this.race.entryStage==='search'){this.findMatch();return;}
+      if(this.race.entryStage==='loadout'){this.openLoadout();return;}
+      this.race.entryStage='block';
+      if(!this.race.cityIntroShown){
+        this.race.cityIntroShown=true;
+        try{this.cityIntro=drawCityMap(this.scene,{
+          view:rivalCityView(this.race.rivalCityIndex),
+          checkpoint:{blockIndex:this.race.rivalCityIndex,pveRound:1},
+          onDone:()=>{this.cityIntro=null;if(!this.disposed)this.openDistrict();}
+        });}catch(error){console.warn('[Rivals city] Intro unavailable',error);this.openDistrict();}
+      }else this.openDistrict();
+      return;
+    }
     // Resolve the rival first so the picker can show their actual mix.
     // The player chooses independently; synchronous null needs no wait.
     const pending = resolveRivalOpponent(this.race);
@@ -41,16 +60,65 @@ export default class RivalsRace {
     }
     this.openLoadout();
   }
+  openDistrict(){
+    if(this.disposed||this.race.status!=='ready')return;
+    const modal=this.scene.gameUI.showModal({
+      fullScreen:true,title:this.race.course.name.toUpperCase(),
+      subtitle:'BLOCK RIVALS · SEVEN HOUSES · ONE RACE',
+      lines:[],buttons:[
+        {label:'LOOK FOR MATCH',variant:'primary',onClick:()=>{this.race.entryStage='loadout';this.openLoadout();}},
+        {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
+      ]
+    });
+    this.entryModal=modal;
+    drawRivalDistrictMap(this.scene,modal,this.race);
+  }
+  findMatch(){
+    if(this.disposed||this.searching||this.race.status!=='ready')return;
+    this.searching=true;this.race.entryStage='search';
+    this.entryModal?.destroy?.();
+    this.entryModal=this.scene.gameUI.showModal({
+      title:'FINDING YOUR RIVAL',subtitle:'Recorded opponent pool · not a live queue',
+      lines:['RIVAL','Choosing a run for this course.'],
+      buttons:[{label:'CANCEL',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}]
+    });
+    // An on-floor name card provides animation without re-creating modal input.
+    const w=this.scene.scale.gameSize.width,h=this.scene.scale.gameSize.height;
+    this.searchCard=this.scene.add.text(w/2,h*.47,'RIVAL',{
+      fontFamily:'Arial, sans-serif',fontSize:'22px',fontStyle:'bold',color:'#eee3c7',wordWrap:{width:w-70},
+      backgroundColor:'#111c23',padding:{x:20,y:12},align:'center'
+    }).setOrigin(.5).setScrollFactor(0).setDepth(22000);
+    this.objects.push(this.searchCard);
+    let settled=false,cycles=0;
+    let task;try{task=resolveRivalOpponent(this.race);}catch{task=null;}
+    Promise.resolve(task).catch(()=>false).then(()=>{settled=true;});
+    const cycle=()=>{
+      if(this.disposed||this.race.status!=='ready')return;
+      const names=this.race.searchNames?.length?this.race.searchNames:['RIVAL / 01','RIVAL / 02','RIVAL / 03','RIVAL / 04'];
+      this.searchCard.setText(this.rivalDisplayName(names[cycles%names.length]));cycles++;
+      if(settled&&cycles>=12){
+        this.searchCard.setText(this.rivalDisplayName(this.race.opponent?.displayName||'RIVAL PACE TRIAL')+(this.race.opponent?.orderedPowers?'\n'+this.race.opponent.orderedPowers.map(p=>p.toUpperCase()).join(' → '):''));
+        this.searchTimer=this.scene.time.delayedCall(550,()=>{
+          if(this.disposed)return;
+          this.searchCard?.destroy?.();this.entryModal?.destroy?.();
+          this.searching=false;this.race.entryStage='matched';this.preparePickupProgress();this.armCountdown();
+        });
+      }else this.searchTimer=this.scene.time.delayedCall(150,cycle);
+    };
+    cycle();
+  }
+  armCountdown(){
+    if(this.disposed||this.race.status!=='ready')return;
+    this.race.status='countdown';
+    this.race.countdownEndsAt=performance.now()+RIVAL_COUNTDOWN_MS;
+    this.scene.roundPausedForMenu=true;this.scene.input.keyboard.enabled=false;
+    this.scene.suspendTouchUI?.(true);
+  }
+  rivalDisplayName(name){return String(name).replace(/\bBOT\s*[·:—-]?\s*/gi,'RIVAL · ').replace(/\bAI\s+/gi,'');}
   openLoadout() {
     if (this.race.status !== 'ready') return;
     this.preparePickupProgress();
-    const armCountdown = () => {
-      this.race.status = 'countdown';
-      this.race.countdownEndsAt = performance.now() + RIVAL_COUNTDOWN_MS;
-      this.scene.roundPausedForMenu = true;
-      this.scene.input.keyboard.enabled = false;
-      this.scene.suspendTouchUI?.(true);
-    };
+    const armCountdown=()=>this.armCountdown();
     // Only explicit harness powers bypass selection. A bank recording never
     // supplies the player's loadout: competing mixes are part of the race.
     if (this.race.fixedPowers) {
@@ -65,10 +133,10 @@ export default class RivalsRace {
     }
     showRunnerLoadout(this.scene.gameUI, () => {
       this.race.powers = this.scene.runnerPowersSelected.slice();
-      armCountdown();
+      if(this.race.rivalCityIndex)this.findMatch();else armCountdown();
     }, {
       title:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
-      startLabel:'READY TO RACE',
+      startLabel:this.race.rivalCityIndex?'LOOK FOR MATCH':'READY TO RACE',
       helpText:this.race.opponent?.orderedPowers
         ? 'Rival: '+this.race.opponent.orderedPowers.map(id=>id.toUpperCase()).join(' → ')+'\nYour powers refill each house.'
         : 'Your powers refill each house and retry.',
@@ -314,6 +382,8 @@ export default class RivalsRace {
       opponent:{ id:'local-player', displayName:'You', kind:'human' },
       recordingID:'local-'+this.race.course.id+'-'+Math.round(this.race.finishedMs)
     });
+    this.territory=completeRivalDistrict(this.race);
+    this.race.territoryClaim=this.territory;
     this.saved=saveRivalResult({
       courseID:this.race.course.id,courseSlot:this.race.course.slot ?? null,result,elapsedMs:this.race.finishedMs,
       houses:this.race.clearTimes.length,retries:this.race.retries,
@@ -324,7 +394,8 @@ export default class RivalsRace {
   showResult() {
     const recorded = this.race.opponentKind === 'recorded-bot';
     const who = 'RIVAL';
-    this.scene.gameUI.showModal({
+    const config={
+      fullScreen:!!this.race.rivalCityIndex,
       title:({win:'YOU WIN',loss:who.toUpperCase()+' WINS',draw:'PHOTO FINISH',forfeit:'RACE ENDED'})[this.race.result] || 'RACE ENDED',
       subtitle:recorded ? 'Recorded rival run · not live' : 'Rival pace trial',
       lines:[
@@ -333,7 +404,9 @@ export default class RivalsRace {
         'Race time: '+rivalTimeLabel(this.race.finishedMs),
         'Rival: '+rivalTimeLabel(this.race.rivalTimes[RIVAL_HOUSES-1])
           +(recorded && Number.isFinite(this.race.opponent?.retries) ? ' \u00b7 '+this.race.opponent.retries+' retries' : ''),
-        ...(this.saved===false ? ['Local result could not be saved.'] : [])
+        ...(this.saved===false ? ['Local result could not be saved.'] : []),
+        ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED · NEXT BLOCK OPEN']:[]),
+        ...(this.race.territoryClaim?.saved===false?['Map progress is temporary; local save failed.']:[])
       ],
       buttons:[
         ...(recorded && (this.race.opponent?.replayURL || this.race.opponentBundle) ? [{
@@ -343,12 +416,27 @@ export default class RivalsRace {
           mode:'pve',role:'runner',runKind:'rivals',rivalSeed:this.race.course.seed,
           rivalOpponentID:this.race.opponent?.recordingID ?? undefined,...this.harnessRestartData()
         })},
-        {label:'NEW RACE',variant:'secondary',onClick:()=>this.scene.scene.restart({
-          mode:'pve',role:'runner',runKind:'rivals',rivalSlot:nextRivalSlot(this.race.course.slot),...this.harnessRestartData()
+        {label:this.race.rivalCityIndex?(this.race.result==='win'?'ENTER NEXT BLOCK':'TRY AGAIN'):'NEW RACE',variant:'secondary',onClick:()=>this.scene.scene.restart({
+          mode:'pve',role:'runner',runKind:'rivals',...(this.race.rivalCityIndex?{}:{rivalSlot:nextRivalSlot(this.race.course.slot)}),...this.harnessRestartData()
         })},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
-    });
+    };
+    if(this.race.rivalCityIndex){
+      config.completion=true;config.accent=crewSigil(this.race.territoryGang)?.color;
+      config.lines=[
+        'YOU '+this.race.clearTimes.length+'/7 · '+rivalTimeLabel(this.race.finishedMs)+' / RIVAL '+rivalTimeLabel(this.race.rivalTimes[6]),
+        ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED · NEXT BLOCK OPEN']:[]),
+        ...(this.saved===false||this.race.territoryClaim?.saved===false?['Local save unavailable. Map progress may be temporary.']:[])
+      ];
+      const rematch=config.buttons.find(b=>b.label==='REMATCH'),menu=config.buttons.find(b=>b.label==='MAIN MENU');
+      const next=config.buttons.find(b=>['ENTER NEXT BLOCK','TRY AGAIN'].includes(b.label));
+      rematch.variant='secondary';next.variant='primary';
+      const watch=config.buttons.find(b=>b.label.includes('WATCH RIVAL'));
+      config.buttons=[next,...(watch?[watch]:[]),{pair:[rematch,menu]}];
+    }
+    const modal=this.scene.gameUI.showModal(config);
+    if(this.race.rivalCityIndex)drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
   }
   /** Recording-mode options survive Rematch/New Race; a normal race carries none. */
   harnessRestartData() {
@@ -389,6 +477,9 @@ export default class RivalsRace {
     this.disposed=true;
     this.closeSettings(false);
     this.pending?.remove?.();
+    this.searchTimer?.remove?.();
+    this.cityIntro?.destroy?.();
+    this.entryModal?.destroy?.();
     this.objects.forEach(o=>o.destroy?.());
     clearTimeout(this.scene._resizeTimer);
   }

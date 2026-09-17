@@ -5,10 +5,11 @@ import { worldBlock } from '../logic/worldBlocks.js';
 import { windowGang } from '../logic/window.js';
 import { drawCrewSigil } from './CrewSigil.js';
 import { drawBlockMap } from './BlockMap.js';
-export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
+export function drawCityMap(scene, { view, checkpoint, onDone, autoZoom=true } = {}) {
   const width = scene.scale.gameSize.width, height = scene.scale.gameSize.height;
   const area = { x: 18, y: 94, width: Math.max(1,width-36), height: Math.max(1,height-156) };
-  const a = cityMapLayout(area), target = a.nodes[checkpoint.blockIndex-view.city.firstBlock];
+  const variant=view.mapVariant||'story';
+  const a = cityMapLayout(area,variant), target = a.nodes[checkpoint.blockIndex-view.city.firstBlock];
   let closed = false;
   const timers = [], objects = [];
   const own = o => { objects.push(o); return o; };
@@ -40,43 +41,65 @@ export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
     rect(n>.7?0x1d2820:n>.3?0x18221d:0x141c19,x,y,8,8);
   }
   // Waterfront, parks and rail spine; roads form a network, never a level chain.
-  g.fillStyle(0x0b2027,1).fillPoints(cityShoreline().map(([x,y])=>({x,y})),true);
+  g.fillStyle(0x0b2027,1).fillPoints(cityShoreline(variant).map(([x,y])=>({x,y})),true);
   const shore=cityShoreline().slice(1,-1);
   for(let i=1;i<shore.length;i++)g.lineStyle(5,0x26413e,.65).lineBetween(...shore[i-1],...shore[i]);
-  rect(0x243526,72,734,184,154); rect(0x223425,504,750,188,138);
-  for(const route of cityStreets()) for(let i=1;i<route.length;i++)road(...route[i-1],...route[i]);
-  g.lineStyle(2,0x525a4b,.65).lineBetween(740,0,740,920);
-  g.lineStyle(2,0x525a4b,.65).lineBetween(748,0,748,920);
-  for(let y=0;y<920;y+=14) rect(0x4e594a,736,y,16,3,.45);
-  for(let y=35;y<900;y+=26) for(let x=70;x<710;x+=24) {
-    if(a.nodes.some(n=>Math.abs(n.x-x)<n.w/2+12&&Math.abs(n.y-y)<n.h/2+12)) continue;
-    if(cityStreetDistance(x,y)<25) continue;
-    const n=blockNoise(x,y,view.city.number^0x817);
-    if(n>.67) {
-      rect(0x070d0d,x+3,y+4,14,18,.7);
-      rect(n>.85?0x4b5145:0x3a4640,x,y,14,18);
-      rect(0x78806a,x,y,14,1,.5);
-    } else if(n>.4) {
-      rect(0x101d15,x+1,y+2,12,12); rect(0x2e422b,x,y,10,10);
-    }
+  // Park, rail yard and dense downtown are scenery, not additional missions.
+  g.fillStyle(0x203222,.8).fillPoints([{x:70,y:35},{x:240,y:24},{x:246,y:110},{x:72,y:90}],true);
+  g.lineStyle(4,0x48503c,.45).lineBetween(85,60,228,75);
+  for(const route of cityStreets(variant)) for(let i=1;i<route.length;i++)road(...route[i-1],...route[i]);
+  // Bridge parapets pick out the river crossings without changing street paths.
+  for(const y of variant==='rivals'?[270,510,669,892]:[280,548,790,904]){
+    g.lineStyle(2,0x8b8568,.65).lineBetween(453,y-12,555,y-12);
+    g.lineStyle(2,0x8b8568,.65).lineBetween(453,y+12,555,y+12);
+  }
+  g.lineStyle(2,0x525a4b,.65).lineBetween(19,70,30,894);
+  g.lineStyle(2,0x525a4b,.65).lineBetween(27,70,38,894);
+  for(let y=70;y<894;y+=14)rect(0x4e594a,17+(y-70)*11/824,y,24,3,.45);
+  const water=cityShoreline(variant);
+  const inWater=(x,y)=>{
+    let inside=false;
+    for(let i=0,j=water.length-1;i<water.length;j=i++){
+      const [ax,ay]=water[i],[bx,by]=water[j];
+      if((ay>y)!==(by>y)&&x<(bx-ax)*(y-ay)/(by-ay)+ax)inside=!inside;
+    }return inside;
+  };
+  // Jittered buildings of mixed sizes; no repeated neighborhood-sized boxes.
+  for(let gy=20;gy<902;gy+=15)for(let gx=52;gx<728;gx+=17){
+    const n=blockNoise(gx,gy,view.city.number^0x817);
+    const x=gx+(n-.5)*10,y=gy+(blockNoise(gy,gx,91)-.5)*9;
+    const w=6+Math.floor(blockNoise(gx,gy,27)*13),h=7+Math.floor(blockNoise(gy,gx,49)*19);
+    if(inWater(x,y)||inWater(x+w,y+h)||cityStreetDistance(x,y,variant)<25)continue;
+    if(a.nodes.some(p=>Math.abs(p.x-(x+w/2))<p.w/2+w/2+8&&Math.abs(p.y-(y+h/2))<p.h/2+h/2+8))continue;
+    const downtown=x>285&&x<435&&y<570;
+    if(n>(downtown?.20:.48)){
+      rect(0x070d0d,x+3,y+4,w,h,.75);
+      rect(downtown?0x445052:n>.8?0x4b5145:0x35433d,x,y,w,h,.85);
+      rect(0x81836b,x+1,y,w-2,1,.4);
+      if(downtown&&w>10)rect(0x1d2e31,x+3,y+3,w-6,h-6,.7);
+      if(n>.78)rect(0xffd78a,x+2,y+h-2,2,1,.55);
+    }else if(n>.3){rect(0x102217,x,y,6,7);rect(0x29442c,x-1,y-1,5,5,.75);}
   }
   // Each local street opens onto the city's shared arterial network.
   for(const [i,node] of a.nodes.entries()) {
-    const mirror=(worldBlock(view.blocks[i].blockIndex).seed & 1)!==0;
-    const connector=cityBlockConnector(node,mirror);
+    const block=view.blocks[i];
+    const mapIdentity=block.course||worldBlock(block.blockIndex);
+    const mirror=(mapIdentity.seed & 1)!==0;
+    const connector=cityBlockConnector(node,mirror,variant);
     road(...connector[0],...connector[1]);
   }
   for(const [i,node] of a.nodes.entries()) {
     const block=view.blocks[i], current=block.blockIndex===checkpoint.blockIndex;
     // Embed the SAME exterior renderer and seed domain used by the entrance.
-    const facade = { worldBlock: worldBlock(block.blockIndex), currentRouteID: scene.currentRouteID,
+    const facade = { worldBlock: block.course||worldBlock(block.blockIndex), currentRouteID: scene.currentRouteID,
       add: scene.add, tweens: scene.tweens };
     drawBlockMap(facade, {
       contentBounds: { x:node.x-node.w/2,y:node.y-node.h/2,width:node.w,height:node.h },
       registerExtra: object => root.add(object)
-    }, { maps:15,cleared:block.status==='cleared'?15:current?checkpoint.pveRound-1:0,
+    }, { maps:variant==='rivals'?7:15,cleared:variant==='rivals'?7:block.status==='cleared'?15:current?checkpoint.pveRound-1:0,
       entering:current,animate:false,caption:false,labels:false,
-      overview:!current,fog:current,marker:current });
+      overview:!current,fog:variant!=='rivals'&&current,marker:variant!=='rivals'&&current,
+      celebration:variant==='rivals' });
     const shade=scene.add.graphics(); root.add(shade);
     if(!current && block.status!=='cleared') {
       shade.fillStyle(0x07090b,.75).fillRect(node.x-node.w/2,node.y-node.h/2,node.w,node.h);
@@ -100,7 +123,7 @@ export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
   own(scene.add.text(width/2,34,view.city.name.toUpperCase(),{
     fontFamily:'Arial, sans-serif',fontSize:'23px',fontStyle:'bold',color:'#eee3c7'
   }).setOrigin(.5).setScrollFactor(0).setDepth(21002));
-  const subtitle=own(scene.add.text(width/2,64,'CITY '+view.city.number+' · '+view.stashes+' / '+view.stashGoal+' STASHES',{
+  const subtitle=own(scene.add.text(width/2,64,variant==='rivals'?'RIVALS DISTRICT · '+view.clearedBlocks+' / 7 BLOCKS':'CITY '+view.city.number+' · '+view.stashes+' / '+view.stashGoal+' STASHES',{
     fontFamily:'Arial, sans-serif',fontSize:'11px',color:'#8ca7aa'
   }).setOrigin(.5).setScrollFactor(0).setDepth(21002));
   own(scene.add.text(width/2,height-28,'FINDING YOUR BLOCK',{
@@ -122,9 +145,9 @@ export function drawCityMap(scene, { view, checkpoint, onDone } = {}) {
       duration,ease:'Sine.easeInOut',onComplete:()=>{if(!closed)next();} });
   };
   if(!target) { close(true); return {destroy:()=>close(false)}; }
-  const frames=cityZoomFrames(area,target);
-  delay(800,()=> {
-    subtitle.setText(worldBlock(checkpoint.blockIndex).name.toUpperCase());
+  const frames=cityZoomFrames(area,target,variant);
+  if(autoZoom)delay(1100,()=> {
+    subtitle.setText((view.blocks.find(b=>b.blockIndex===checkpoint.blockIndex)?.course||worldBlock(checkpoint.blockIndex)).name.toUpperCase());
     // The map stays opaque throughout; this is a camera move, not a fade.
     objects.filter(o=>o!==root&&o.parentContainer===root).forEach(o=>o.setVisible(false));
     move(frames.neighborhood,850,()=>move(frames.block,850,()=>delay(250,()=>close(true))));

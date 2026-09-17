@@ -90,20 +90,22 @@ export function claimCityIntro(value, checkpoint = {}) {
     || block <= state.introThrough) return { state, applied: false };
   return { state: { ...state, introThrough: block }, applied: true };
 }
-export function cityMapLayout(area = {}) {
+export function cityMapLayout(area = {}, variant = 'story') {
   const width = Math.max(0, Number.isFinite(area.width) ? area.width : 0);
   const height = Math.max(0, Number.isFinite(area.height) ? area.height : 0);
   const scale = Math.min(width / 760, height / 920);
   // Spatial order is deliberately unrelated to progression order.
-  const centers = [[154,350],[613,610],[385,112],[157,598],[610,377],
-    [159,115],[388,580],[609,124],[389,369],[365,817]];
+  const centers = variant==='rivals'
+    ? [[156,174],[329,334],[149,596],[359,754],[643,173],[637,463],[610,802]]
+    : [[180,220],[615,695],[360,160],[180,620],[650,400],
+      [110,420],[365,710],[650,140],[340,415],[585,850]];
   return { x: (Number.isFinite(area.x) ? area.x : 0) + (width - 760 * scale) / 2,
     y: (Number.isFinite(area.y) ? area.y : 0) + (height - 920 * scale) / 2,
     scale, width: 760, height: 920,
-    nodes: centers.map(([x,y],i) => ({ local: i + 1, x,y,w:144,h:158.4 })) };
+    nodes: centers.map(([x,y],i) => ({ local: i + 1, x,y,w:100,h:110 })) };
 }
-export function cityZoomFrames(area, node) {
-  const overview = cityMapLayout(area);
+export function cityZoomFrames(area, node, variant='story') {
+  const overview = cityMapLayout(area,variant);
   const scale = Math.min(area.width / node.w, area.height / node.h);
   const focus = factor => ({ scale: factor,
     x: area.x + area.width / 2 - node.x * factor,
@@ -112,41 +114,54 @@ export function cityZoomFrames(area, node) {
     block: focus(scale) };
 }
 
-// Cartographic geometry only: offset avenues, a diagonal boulevard and uneven
-// shoreline. Coordinates deliberately leave each actual exterior parcel intact.
-export function cityStreets() {
+// Each district has its own irregular street network. The river cuts through
+// the middle of town; transverse boulevards become bridges at its banks.
+export function cityStreets(variant='story') {
+  if(variant==='rivals')return [
+    [[40,250],[220,248],[255,220],[260,80],[430,60]],
+    [[40,490],[244,490],[430,510],[713,540]],
+    [[244,490],[248,659],[280,687],[443,669],[700,677]],
+    [[280,687],[275,881],[446,892],[705,875]],
+    [[220,248],[251,267],[256,410],[244,490]],
+    [[430,60],[447,270],[430,510],[443,669],[446,892]],
+    [[550,45],[560,266],[551,388],[550,600],[528,894]],
+    [[560,266],[715,275],[713,540],[700,677],[705,875]],
+    [[251,267],[447,270],[560,266],[715,275]]
+  ];
   return [
-    [[252,20],[254,208],[270,450],[263,684],[241,908]],
-    [[494,18],[492,205],[497,467],[490,704],[478,910]],
-    [[712,24],[713,225],[704,476],[720,715],[698,909]],
-    [[58,224],[254,208],[492,205],[713,225]],
-    [[64,470],[270,450],[497,467],[704,476]],
-    [[76,716],[263,684],[490,704],[720,715]],
-    [[241,908],[478,910],[698,909]],
-    [[72,28],[79,223],[64,470],[76,716],[91,900]]
+    [[48,298],[102,300],[235,287],[282,279],[432,280],[568,290],[711,270]],
+    [[282,279],[280,30]],
+    [[48,530],[255,532],[432,548],[568,544],[715,538]],
+    [[255,532],[264,788],[438,790],[545,775],[715,782]],
+    [[264,788],[252,903],[438,904],[715,914]],
+    [[48,298],[42,530],[74,784],[252,903]],
+    [[255,532],[246,350],[282,279]],
+    [[432,280],[428,30]],
+    [[432,548],[438,790],[438,904]],
+    [[568,290],[574,48],[720,38],[711,270],[715,538],[715,782],[715,914]]
   ];
 }
-export function cityShoreline() {
-  return [[0,0],[72,0],[67,112],[43,218],[58,330],[35,466],
-    [63,602],[45,730],[69,847],[55,920],[0,920]];
+export function cityShoreline(variant='story') {
+  const line=variant==='rivals'
+    ? [[490,0],[510,125],[490,290],[478,440],[510,595],[478,760],[487,920]]
+    : [[499,0],[477,164],[511,323],[484,490],[524,641],[490,785],[480,920]];
+  return [...line.map(([x,y])=>[x-28,y]),...line.slice().reverse().map(([x,y])=>[x+28,y])];
 }
-export function cityStreetDistance(x,y) {
+export function cityStreetDistance(x,y,variant='story') {
   let best=Infinity;
-  for(const route of cityStreets()) for(let i=1;i<route.length;i++){
+  for(const route of cityStreets(variant)) for(let i=1;i<route.length;i++){
     const [ax,ay]=route[i-1], [bx,by]=route[i];
     const t=Math.max(0,Math.min(1,((x-ax)*(bx-ax)+(y-ay)*(by-ay))/((bx-ax)**2+(by-ay)**2)));
     best=Math.min(best,Math.hypot(x-ax-t*(bx-ax),y-ay-t*(by-ay)));
   }
   return best;
 }
-// Local exits join their district avenue instead of a single level-chain road.
-export function cityBlockConnector(node,mirror=false) {
+export function cityBlockConnector(node,mirror=false,variant='story') {
   const x=node.x-node.w/2+(mirror?168:32)*node.w/200,y=node.y+node.h/2;
-  const route=cityStreets()[node.y<240?3:node.y<480?4:node.y<740?5:6];
   let best=null,distance=Infinity;
-  for(let i=1;i<route.length;i++){
+  for(const route of cityStreets(variant))for(let i=1;i<route.length;i++){
     const [ax,ay]=route[i-1],[bx,by]=route[i];
-    const t=Math.max(0,Math.min(1,(x-ax)/(bx-ax)));
+    const t=Math.max(0,Math.min(1,((x-ax)*(bx-ax)+(y-ay)*(by-ay))/((bx-ax)**2+(by-ay)**2)));
     const px=ax+t*(bx-ax),py=ay+t*(by-ay),d=Math.hypot(px-x,py-y);
     if(d<distance){distance=d;best=[px,py];}
   }

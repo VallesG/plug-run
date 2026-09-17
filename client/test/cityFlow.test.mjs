@@ -182,3 +182,22 @@ check('marks are translucent backlit vector overlays',cityMarks.every(m=>m.optio
 cityArt.destroy();
 check('city sigils clean up with container',branded.objects.every(o=>!o.active));
 console.log('city ownership rendering: '+passed+' total assertions passed');
+
+const districtSource=source('../src/controllers/RivalDistrictMap.js').replace('export function','function');
+const districtRenderer=new Function('drawBlockMap',districtSource+';return drawRivalDistrictMap;')(drawBlockMap);
+for(const [width,height] of [[280,480],[390,844],[1440,900]]){
+ const f=scene(width,height);
+ const modal=f.s.gameUI.showModal({fullScreen:true,completion:true,title:'YOU WIN',subtitle:'Recorded rival run · not live',
+ lines:['YOU 7/7 · 0:55.0 / RIVAL 1:02.0','BLOCK CLAIMED · NEXT BLOCK OPEN'],
+ buttons:[{label:'ENTER NEXT BLOCK',variant:'primary'},{label:'WATCH RIVAL REPLAY',variant:'secondary'},
+ {pair:[{label:'REMATCH',variant:'secondary'},{label:'MAIN MENU',variant:'secondary'}]}]});
+ check('rival result retains map area '+width,modal.contentBounds.height>50);
+ districtRenderer(f.s,modal,{course:{seed:2722422571,id:'rivals-v1-2722422571'},territoryGang:'iron-row'},{won:true});
+ check('rival result map fully revealed '+width,!f.objects.some(o=>o.kind==='graphics'&&o.depth===20003));
+ modal.destroy();check('rival map registered for replay teardown '+width,f.objects.every(o=>!o.active));
+}
+const held=scene();
+const heldArt=drawCityMap(held.s,{view:cityView({}, {blockIndex:1,pveRound:1}),checkpoint:{blockIndex:1,pveRound:1},autoZoom:false});
+check('preview hold never schedules zoom',held.delays.length===0&&held.tweens.length===0);
+heldArt.destroy();check('held preview still tears down',held.objects.every(o=>!o.active));
+console.log('city / rivals preview geometry: '+passed+' total assertions passed');

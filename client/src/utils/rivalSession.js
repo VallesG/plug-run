@@ -1,3 +1,6 @@
+import { getRivalTerritory } from './rivalCityProgress.js';
+import { rivalDistrict } from '../logic/rivalCity.js';
+import { getWindowState } from './windowProgress.js';
 import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, nextRivalSlot, validRivalPowers } from '../logic/rivals.js';
 import { validateRivalRunRecord, rivalRecordMatchesCourse, validateRivalReplayBundle, RIVAL_MAX_BUNDLE_BYTES } from '../logic/rivalRecords.js';
 import { validateReplaySegment } from '../logic/rivalReplay.js';
@@ -26,7 +29,9 @@ export function lastRivalSlot() {
 const historyKey = () => 'pr_rivals_results_v1_' + getUserID();
 
 export function createRivalSession(selection = {}) {
-  const course = selectRivalCourse(selection);
+  const district=rivalDistrict(getRivalTerritory().completed+1);
+  const territoryMode=!selection.recording && !selection.powers;
+  const course = selectRivalCourse(territoryMode && selection.seed==null && selection.slot==null ? {slot:district.slot}:selection);
   if (!course) throw new Error('No enabled Rival course');
   const metrics = course.seeds.map((houseSeed,i) => {
     const arena = generateSquareMaze(course.cols,course.rows,{
@@ -56,6 +61,8 @@ export function createRivalSession(selection = {}) {
   race.recording = !!selection.recording;
   race.wantRecordingID = typeof selection.recordingID === 'string' ? selection.recordingID : null;
   race.opponentResolved = race.recording;
+  if(territoryMode){race.rivalCityIndex=(district.city-1)*7+course.slot;race.territoryIndex=course.slot===district.slot?district.index:null;
+    race.territoryGang=getWindowState().gangID||null;race.territoryUser=getUserID();}
   return race;
 }
 
@@ -113,10 +120,12 @@ function rivalHistory() {
  * The race object is mutated in place before the countdown can start.
  */
 export function resolveRivalOpponent(race) {
+  if(race?.opponentPending)return race.opponentPending;
   if (!race || race.opponentResolved || race.status !== 'ready') return null;
   race.opponentResolved = true;
-  return loadRivalOpponents(race.course).then(entries => {
+  const pending=loadRivalOpponents(race.course).then(entries => {
     if (!entries.length || race.status !== 'ready') return false;
+    race.searchNames=entries.map(e=>e.record.opponent.displayName);
     const history = rivalHistory();
     const played = history.filter(r => r?.courseID === race.course.id).length;
     const pick = chooseRivalOpponent(entries.map(e => e.record), {
@@ -138,6 +147,9 @@ export function resolveRivalOpponent(race) {
     // chooses a separate mix; never mutate hashed bank records to match it.
     return true;
   }).catch(e => { console.warn('[Rivals] opponent resolution failed', e); return false; });
+  race.opponentPending=pending;
+  pending.then(()=>{if(race.opponentPending===pending)race.opponentPending=null;});
+  return pending;
 }
 /** Validate once per race. Cache state survives the shallow copy on a clear. */
 export async function loadRivalReplay(race) {

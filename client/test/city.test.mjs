@@ -101,7 +101,7 @@ console.log('city: '+passed+' assertions passed');
 const map=cityMapLayout({width:760,height:920});
 check('offset streets, not uniform full grid',cityStreets().filter(r=>r.length>2&&new Set(r.map(p=>p[0])).size>1&&new Set(r.map(p=>p[1])).size>1).length>=6);
 check('irregular shoreline',new Set(cityShoreline().map(p=>p[0])).size>5);
-check('street distance at shared junction',cityStreetDistance(254,208)===0);
+check('street distance at shared junction',cityStreetDistance(282,279)===0);
 for(const node of map.nodes) {
  for(const other of map.nodes.filter(n=>n!==node))check('parcels never overlap',Math.abs(node.x-other.x)>=(node.w+other.w)/2||Math.abs(node.y-other.y)>=(node.h+other.h)/2);
  for(const mirror of [false,true]) {

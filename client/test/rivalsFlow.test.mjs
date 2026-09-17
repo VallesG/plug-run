@@ -9,7 +9,10 @@ let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, re
 const source=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const bindings={
-  ...rules, ...presets, ...capture, performance:{now:()=>now}, clearTimeout:()=>{},
+  ...rules, ...presets, ...capture,
+  crewSigil:()=>null,completeRivalDistrict:()=>({applied:false}),
+  rivalCityView:index=>({index}),drawCityMap:(s,o)=>{s.cityOptions=o;return {destroy(){s.cityDestroyed=true;}};},
+  drawRivalDistrictMap:(s,m,r,o)=>{s.districtDraws=(s.districtDraws||0)+1;}, performance:{now:()=>now}, clearTimeout:()=>{},
   saveRivalResult:(result,record,runRecord)=>{saved.push({result,record,runRecord});return true;},
   resolveRivalOpponent:(race)=>resolver(race), loadRivalReplay:(race)=>replayLoader(race), playRivalReplay:(scene,opts)=>{played.push(opts);return {end(){}};},
   showRunnerLoadout:(ui,done,options)=>{loadouts++;lastPicker={ui,done,options};},
@@ -273,3 +276,42 @@ const explicit={...rules.newRivalRace(course,splits),fixedPowers:['phase','phase
 await chooseOpponent(explicit);
 check('actual loader preserves explicit harness pair',explicit.fixedPowers.join()==='phase,phase' && explicit.opponent.orderedPowers.join()==='dash,phase');
 console.log(passed+' total rival flow assertions passed');
+
+now=1000;
+const entry={...rules.newRivalRace(rules.rivalPoolCourse(1),splits),rivalCityIndex:1,territoryIndex:1};
+const oldLoadouts=loadouts, city=setup(entry);
+check('normal rivalry opens city before picker',city.scene.cityOptions.view.index===1&&loadouts===oldLoadouts);
+check('city presentation claimed on race before resize',entry.cityIntroShown&&entry.entryStage==='block');
+city.scene.cityOptions.onDone();
+check('city lands on seven-house district',city.scene.districtDraws===1&&city.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
+check('no opponent selection until look-for-match',loadouts===oldLoadouts);
+city.modals.at(-1).buttons[0].onClick();
+check('mix chosen before the opponent carousel',loadouts===oldLoadouts+1&&lastPicker.options.startLabel==='LOOK FOR MATCH');
+city.scene.runnerPowersSelected=['dash','decoy'];lastPicker.done();
+await Promise.resolve();await Promise.resolve();
+check('search does not start race clock',entry.status==='ready'&&entry.startedAt===null&&entry.entryStage==='search');
+for(let i=0;i<20&&entry.status!=='countdown';i++)city.events.at(-1).fn();
+check('opponent reveal starts countdown automatically',entry.status==='countdown'&&loadouts===oldLoadouts+1&&entry.powers.join()==='dash,decoy');
+check('search keeps movement frozen',city.scene.roundPausedForMenu&&!city.scene.input.keyboard.enabled);
+city.controller.dispose();
+check('search timer removed on shutdown',city.events.at(-1).removed);
+const canceled=setup({...rules.newRivalRace(rules.rivalPoolCourse(2),splits),rivalCityIndex:2});
+const callbacks=canceled.scene.cityOptions;
+canceled.controller.dispose();callbacks.onDone();
+check('canceled city callback cannot open block',!canceled.scene.districtDraws&&canceled.scene.cityDestroyed);
+const resumed=setup({...rules.newRivalRace(rules.rivalPoolCourse(1),splits),rivalCityIndex:1,cityIntroShown:true,entryStage:'block'});
+check('resized block entrance skips city and keeps match button',!resumed.scene.cityOptions&&resumed.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
+resumed.controller.dispose();
+console.log('Rivals district entry: '+passed+' total assertions passed');
+
+let finishOpponents,requests=0;
+const delayedBindings={...chooseBindings,fetch:()=>{requests++;return new Promise(r=>{finishOpponents=r;});}};
+const delayedResolve=new Function(...Object.keys(delayedBindings),sessionSource+';return resolveRivalOpponent;')(...Object.values(delayedBindings));
+const shared=rules.newRivalRace(rules.rivalPoolCourse(1),splits);
+const lookup=delayedResolve(shared),afterResize=delayedResolve(shared);
+check('resize shares pending opponent lookup',lookup===afterResize&&requests===1);
+finishOpponents({ok:true,text:async()=>JSON.stringify({schemaVersion:1,rulesVersion:rules.RIVAL_RULES_VERSION,opponents:[{record:opponentRecord,replay:null}]})});
+await lookup;
+check('shared lookup settles and clears pending',shared.opponentPending===null&&shared.opponentKind==='recorded-bot');
+check('carousel display does not expose implementation labels',city.controller.rivalDisplayName('BOT · Street')==='RIVAL · Street');
+console.log('Rivals async continuity: '+passed+' total assertions passed');
