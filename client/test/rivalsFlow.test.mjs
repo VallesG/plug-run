@@ -278,6 +278,88 @@ check('bank input is not decorated',JSON.stringify(opponentRecord)===bankSnapsho
 const explicit={...rules.newRivalRace(course,splits),fixedPowers:['phase','phase']};
 await chooseOpponent(explicit);
 check('actual loader preserves explicit harness pair',explicit.fixedPowers.join()==='phase,phase' && explicit.opponent.orderedPowers.join()==='dash,phase');
+
+// CALIBRATED SELECTION, END TO END
+// The stub above hands the loader no skill samples, so it exercises only the
+// legacy fallback. Here the player has real measured houses and the bank holds
+// several eligible records, which is the path a real save takes.
+const attemptsFor = perHouseMs => Array.from({ length: 7 }, (_, i) => ({
+  house: i + 1, outcome: 'extracted', startedMs: i * 100000, endedMs: i * 100000 + perHouseMs
+}));
+const bankRecord = (id, perHouseMs) => ({
+  recordingID: id, clearTimes: [1, 2, 3, 4, 5, 6, 7].map(n => n * perHouseMs),
+  retries: 1, elapsedMs: perHouseMs * 7, attempts: attemptsFor(perHouseMs),
+  opponent: { kind: 'bot', displayName: 'BOT · ' + id, skillPreset: 'street' },
+  orderedPowers: ['dash', 'phase']
+});
+// 5s through 12s per house; the player below sits at 8s.
+const bank = [5000, 6000, 7000, 8000, 9000, 10000, 12000].map((ms, i) => ({
+  record: bankRecord('rec-' + ms, ms), replay: 'replays/rec-' + ms + '.json'
+}));
+const playerSamples = { houses: 40, attempts: 46, deaths: 6, clearMs: 8000,
+  byScale: Object.fromEntries(course.scales.map(sc => [sc, { scale: sc, houses: 6, clearMs: 8000 }])) };
+
+let stored = {};
+const calibratedBindings = { ...rules, ...presets, ...skill, console, setTimeout, clearTimeout,
+  getSkillSamples: () => playerSamples,
+  getUserID: () => 'calibrated-runner',
+  localStorage: { getItem: k => stored[k] ?? null, setItem: (k, v) => { stored[k] = v; } },
+  validateRivalRunRecord: () => ({ ok: true }), rivalRecordMatchesCourse: () => true,
+  fetch: async () => ({ ok: true, text: async () => JSON.stringify({
+    schemaVersion: 1, rulesVersion: rules.RIVAL_RULES_VERSION, opponents: bank }) }) };
+const calibrated = new Function(...Object.keys(calibratedBindings),
+  sessionSource + '\nreturn resolveRivalOpponent;')(...Object.values(calibratedBindings));
+
+const bankSnapshot2 = JSON.stringify(bank);
+let history = [];
+calibratedBindings.localStorage.getItem = k => k.startsWith('pr_rivals_results')
+  ? JSON.stringify(history) : (stored[k] ?? null);
+
+const paired = { ...rules.newRivalRace(course, splits) };
+check('calibrated loader resolves an opponent', await calibrated(paired) === true);
+check('pairing lands near the player, not at the extremes',
+  Math.abs(Number(paired.opponent.recordingID.split('-')[1]) - 8000) <= 2000);
+check('the opponent carries a measured benchmark', Number.isFinite(paired.opponent.benchmarkMs));
+check('the player estimate is reported, not the opponent pace',
+  paired.playerSkill.clearMs === 8000 && paired.playerSkill.provisional === false);
+check('calibration does not decorate the bank', JSON.stringify(bank) === bankSnapshot2);
+check('calibration never locks the human pair', paired.fixedPowers == null);
+
+// A rematch is the same race, every time.
+const again = { ...rules.newRivalRace(course, splits), wantRecordingID: paired.opponent.recordingID };
+await calibrated(again);
+check('a rematch returns the same recording', again.opponent.recordingID === paired.opponent.recordingID);
+check('a rematch keeps the same recorded times', again.rivalTimes.join() === paired.rivalTimes.join());
+
+// Repeated searches rotate rather than serving one opponent forever.
+const seen = new Set();
+for (let i = 0; i < 6; i++) {
+  history = [...seen].map(id => ({ courseID: course.id, recordingID: id }));
+  const race = { ...rules.newRivalRace(course, splits) };
+  await calibrated(race);
+  seen.add(race.opponent.recordingID);
+}
+check('repeated searches do not serve one opponent forever', seen.size >= 3);
+
+// Ineligible records never reach the pairing at all.
+const ineligibleBindings = { ...calibratedBindings,
+  validateRivalRunRecord: r => ({ ok: r.recordingID === 'rec-8000' }) };
+const strict = new Function(...Object.keys(ineligibleBindings),
+  sessionSource + '\nreturn resolveRivalOpponent;')(...Object.values(ineligibleBindings));
+const onlyValid = { ...rules.newRivalRace(course, splits) };
+await strict(onlyValid);
+check('an invalid record is never paired', onlyValid.opponent.recordingID === 'rec-8000');
+
+const noneBindings = { ...calibratedBindings, validateRivalRunRecord: () => ({ ok: false }) };
+const empty = new Function(...Object.keys(noneBindings),
+  sessionSource + '\nreturn resolveRivalOpponent;')(...Object.values(noneBindings));
+const nothing = { ...rules.newRivalRace(course, splits) };
+check('an empty eligible pool resolves to no rival', await empty(nothing) === false);
+// It keeps its simulated splits and says so: that is the PACE TRIAL the result
+// screen reports, never a recorded rival the player did not actually race.
+check('no rival means no opponent is invented',
+  !nothing.opponent && !nothing.opponentRecord && nothing.opponentKind === 'simulated-ai');
+
 console.log(passed+' total rival flow assertions passed');
 
 now=1000;
