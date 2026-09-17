@@ -43,11 +43,12 @@ courses.** Report the real number. Never pad it.
 ## 2. Where the recording stands
 
 **All seven courses are at the 20-record checkpoint.** Measured from
-`tools/rivals-assemble.mjs --dry`, not from arithmetic:
+`tools/rivals-assemble.mjs --dry`, not from arithmetic. 192 accepted, 14
+rejected (all genuine forfeits), 137 re-imported no-ops:
 
 | slot | course | records | styles | mixes |
 | --- | --- | --- | --- | --- |
-| 5 | Switchyard Seven | 27 | 11 | 7 |
+| 5 | Switchyard Seven | 48 | 11 | 8 |
 | 3 | Freight Run | 25 | 11 | 6 |
 | 6 | Lastlight Loop | 25 | 11 | 6 |
 | 1 | Low End Rush | 24 | 11 | 5 |
@@ -55,8 +56,7 @@ courses.** Report the real number. Never pad it.
 | 4 | Afterglow Mile | 24 | 11 | 5 |
 | 7 | Blacktop Crown | 22 | 11 | 6 |
 
-**171 accepted, 11 rejected, 116 re-imported.** All 11 rejections are genuine
-forfeits. "Re-imported" means a byte-identical record was read from both the
+All rejections are genuine forfeits. "Re-imported" means a byte-identical record was read from both the
 bank and the raw capture that produced it — a no-op, not a failure. Do not read
 it as loss: an earlier version of the assembler counted those as rejections and
 reported 127 failures on a clean run.
@@ -192,9 +192,9 @@ near-misses into valid records rather than halving throughput.
 
 | band | range | records |
 | --- | --- | --- |
-| fast | 5.4-7.9s | 57 |
-| middle | 7.9-9.6s | 57 |
-| steady | 9.6-15.6s | 57 |
+| fast | 5.4-8.1s | 64 |
+| middle | 8.1-9.6s | 64 |
+| steady | 9.6-15.6s | 64 |
 
 The steady ceiling was 12.0s before this work and is now 15.6s: slow,
 mistake-prone opponents are in the bank, not only quick ones. That is the whole
@@ -281,12 +281,44 @@ later — that is the trade being measured, not a bonus. Enable per job with
 it is part of the job tag so an A/B pair does not collapse to one tag under
 `--resume`.
 
-**Result: not yet known.** `tools/rivals-plan-decoy-ab.json` is four matched
-pairs, 24 races, identical style/mix/course/limit on both sides with only the
-flag differing — which is what the observational split above cannot give you.
-It is run WITHOUT `--resume`, so both arms are captured on one build. If it is
-unfinished, re-run it whole rather than resuming half of it against an older
-build.
+**Result: it does NOT improve completion. Do not enable it expecting one.**
+
+`tools/rivals-plan-decoy-ab.json`, four matched pairs, 24 races, both arms on
+one build, identical style/mix/course/limit, only the flag differing:
+
+| pair | control | openingDecoy |
+| --- | --- | --- |
+| balanced `phase,decoy` | 2/3 | 3/3 |
+| cautious `phase,decoy` | 3/3 | 2/3 |
+| ghost `decoy,phase` | 3/3 | 2/3 |
+| trickster `decoy,decoy` | 3/3 | 3/3 |
+| **total** | **11/12** | **10/12** |
+
+One race apart across 24, with pairs pointing in both directions. That is
+noise, and it is the OPPOSITE of what the observational 13/13 vs 9/18 split
+implied. That split was confounded exactly as suspected: swapping Decoy into a
+mix also swaps a Phase or Dash out, so it never isolated Decoy. The controlled
+test is the one to believe.
+
+**A secondary signal worth a later look, not yet a finding.** Three of four
+pairs finished FASTER with fewer retries when the flag was on:
+
+| pair | control elapsed / retries | openingDecoy elapsed / retries |
+| --- | --- | --- |
+| ghost `decoy,phase` | 833s / 80 | 330s / 26 |
+| cautious `phase,decoy` | 583s / 55 | 527s / 46 |
+| balanced `phase,decoy` | 433s / 44 | 370s / 31 |
+| trickster `decoy,decoy` | 142s / 7 | 221s / 12 |
+
+With n=3 per arm and trickster going the other way this is not a result. But
+"may reduce time-to-clear without changing whether you clear" is a sharper
+hypothesis than the one it replaced, and it is cheap to test with more runs.
+
+The flag is verified working end to end: it fired 13, 63, 10 and 18 times in
+those jobs, and every accepted record carries `driverConfig.openingDecoy`. Ten
+records in the bank are openingDecoy runs; they are real races and stay in.
+Fire counts are per ATTEMPT, not per house — a retry re-arms it — so a race
+with 20 retries fires it about 20 times.
 
 ## 6. Remaining jobs and exact resume commands
 
@@ -329,16 +361,12 @@ single build per batch, and `dist` was never rebuilt under live workers. Keep
 it that way: run `npm test` alone while a batch is live and save
 `npm run verify` (which builds) for when workers are idle.
 
-**openingDecoy is unproven in a browser.** The flag has unit coverage (13
-assertions in `botDriver.test.mjs`) and the URL and config chain were read
-end to end, but at the time of writing no completed opening-Decoy race had been
-inspected. Verify from the data before trusting it: a treatment record must
-show `driverConfig.openingDecoy === true`, and the per-job log line reports how
-many times it fired. Note the counter only prints when a JOB finishes, so
-mid-job silence means nothing.
+**openingDecoy is verified working and measured not to help completion.** See
+the section above before spending any more time on it. It stays in the code,
+off by default, because the time-to-clear question is still open.
 
-**Deployment size is the live risk.** `dist` is now 67 MB, of which the bank is
-41 MB, essentially all replays (171 files). This is past the ~69 MB that caused
+**Deployment size is the live risk.** `dist` is now 74 MB, of which the bank is
+48 MB, essentially all replays (192 files). This is past the ~69 MB that caused
 trouble before. Replays are fetched per opponent, so runtime is unaffected, but
 the deploy is not. No races were dropped to make this smaller — it needs a
 decision, and the options are pruning per-course depth, compressing replays, or
