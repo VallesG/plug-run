@@ -33,12 +33,30 @@ const LIMIT_S = {
 // Rookie and Erratic are the slowest and least certain; they go last.
 const STYLE_ORDER = ['cautious', 'ghost', 'dasher', 'balanced', 'sharp', 'trickster', 'erratic', 'rookie'];
 
+// SPLITTING THE WORK ACROSS TWO MACHINES
+//   --styles rookie,erratic,trickster   only those styles
+//   --indexBase 1000                    keep recording IDs from two machines apart
+// Partition by STYLE, not by course: every style still covers all seven
+// courses, so neither machine ends up with a course nobody recorded. Two
+// machines must never record the same style — that is duplicated hours, not
+// more coverage.
+const argOf = (name, fallback = null) => {
+  const i = process.argv.indexOf('--' + name);
+  return i < 0 ? fallback : (process.argv[i + 1] ?? fallback);
+};
+const ONLY = (argOf('styles') || '').split(',').map(s => s.trim()).filter(Boolean);
+const INDEX_BASE = Number(argOf('indexBase', 200));
+
 // Ordered mixes, including duplicates and Decoy. A style's own mixes rotate so
 // the same style is not always recorded on the same pair.
 const jobs = [];
-let index = 200;
-for (let round = 0; round < STYLE_ORDER.length; round++) {
-  const style = STYLE_ORDER[round];
+let index = INDEX_BASE;
+const styles = ONLY.length ? STYLE_ORDER.filter(s => ONLY.includes(s)) : STYLE_ORDER;
+if (ONLY.length && styles.length !== ONLY.length) {
+  throw new Error('unknown style in --styles: ' + ONLY.filter(s => !STYLE_ORDER.includes(s)).join(','));
+}
+for (let round = 0; round < styles.length; round++) {
+  const style = styles[round];
   const def = RIVAL_DRIVER_STYLES[style];
   if (!def) throw new Error('unknown style ' + style);
   const mixes = def.mixes;

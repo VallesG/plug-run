@@ -82,6 +82,28 @@ tail -f /tmp/bank.log | grep -E "saved |REJECTED|job failed"
 
 Full flag reference: `client/tools/README.md`.
 
+### If a second machine is helping
+
+Partition by **style**, never by course — every style covers all seven courses,
+so neither machine leaves a course nobody recorded. Two machines recording the
+same style is duplicated hours, not more coverage.
+
+The split in use: the second machine takes `rookie`, `erratic` and `trickster`
+(`client/tools/rivals-plan-codex.json`, 21 jobs / 42 races, indexBase 1000+ so
+recording IDs cannot collide). This machine then resumes with the other five:
+
+```sh
+node tools/rivals-plan.mjs --styles cautious,ghost,dasher,balanced,sharp \
+  > tools/rivals-plan.json
+node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3 \
+  --url http://127.0.0.1:4173 --out tools/recordings --resume
+```
+
+**Only one machine runs the assembler**, over both machines' captures in a
+single pass. Two assemblers would fight over the same bank files.
+
+`CODEX_BANK_RECORDING_PROMPT.md` is the ready-made brief for the second agent.
+
 ### Then assemble and report
 
 ```sh
