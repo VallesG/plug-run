@@ -96,4 +96,6 @@ for(const desktop of [false,true]){
  eq(state.pausedForModal,true);finish();eq(state.pausedForModal,false);
  eq(state.started,desktop?undefined:3);eq(state._ignoreNextPowerClick,true);
 }
+eq(sceneText.includes('Grab the stash. Lose the Plug. Make it to the car.'),false);
+eq(sceneText.includes('Next stop: The Window. Meet Auntie Ro, join a crew'),true);
 console.log('mobileTutorialGuide:',checks,'assertions passed');

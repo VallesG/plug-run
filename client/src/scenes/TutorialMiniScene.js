@@ -1967,7 +1967,6 @@ export class TutorialMiniScene extends Phaser.Scene {
 
       markTutorialComplete(this._trainingUserID);
       this.showModal("You're ready!", [
-        'Grab the stash. Lose the Plug. Make it to the car.',
         'Next stop: The Window. Meet Auntie Ro, join a crew, and start bringing bags home for your people.'
       ], 'Go to The Window  >>', () => {
         this.scene.transition({ target:'WINDOW', duration:200, moveBelow:true, data:{firstVisit:true} });
