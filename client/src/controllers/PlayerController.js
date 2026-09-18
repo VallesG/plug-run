@@ -350,14 +350,26 @@ export default class PlayerController {
     if (previous && distance(previous.angle) <= radians(previous.cardinal ? 28 : 17)) {
       return previous.vector;
     }
+    // A hold just broke, or this is a fresh gesture. A FRESH gesture (no
+    // previous) uses the tight bands below (22 / ~15 degrees) so a first
+    // touch still has real free-angle room between them. A BROKEN hold uses
+    // the same width as the hold band it just left (28 / 17), so leaving one
+    // snapped direction always lands in the contiguous adjacent one instead
+    // of falling through the gap between the tight bands — that gap is what
+    // let a smooth, continuous drag (no new gesture at all) jump from a held
+    // cardinal straight to an arbitrary unsnapped angle the instant the hold
+    // gave out, e.g. 28 degrees held dead straight, then one more degree of
+    // ordinary thumb drift reporting a ~29-degree half-diagonal.
     const cardinal = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
-    if (distance(cardinal) <= radians(22)) {
+    const cardinalBand = previous ? 28 : 22;
+    if (distance(cardinal) <= radians(cardinalBand)) {
       const vector = { x: Math.round(Math.cos(cardinal)), y: Math.round(Math.sin(cardinal)) };
       this._runnerDragSnap = { angle: cardinal, cardinal: true, vector };
       return vector;
     }
     const nearest = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
-    if (distance(nearest) < 0.26) {
+    const diagonalBand = previous ? radians(17) : 0.26;
+    if (distance(nearest) < diagonalBand) {
       const vector = { x: Math.cos(nearest), y: Math.sin(nearest) };
       this._runnerDragSnap = { angle: nearest, cardinal: false, vector };
       return vector;

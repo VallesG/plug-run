@@ -99,6 +99,48 @@ for (const axis of [0,90,180,-90]) {
  pc.runnerDragDirection(56,0);pc.resetTouchGestures();
  check(pc._runnerDragSnap===null,'modal reset clears snap history');
 }
+
+// Actual bug: a held cardinal survives jitter up to 28 degrees (hold band),
+// but escaping that hold used to fall through to the much tighter FRESH
+// bands (22 / ~15 degrees). A smooth, continuous 1-degree-per-step drag with
+// no new gesture at all -- no release, no direction flick, just ordinary
+// thumb drift -- crossed straight from 28 degrees (held cardinal) to 29
+// degrees and reported an arbitrary half-diagonal (0.875, 0.485) that is
+// neither the cardinal nor a clean diagonal: exactly "nudges the runner into
+// diagonal movement without a new steering gesture." Escaping a hold must
+// land in the CONTIGUOUS adjacent snap, never the gap between the fresh
+// bands (that gap is legitimate and stays intact for a brand-new gesture,
+// checked separately below).
+for (const axis of [0,90,180,-90]) {
+ const {pc}=make();
+ const vector = degrees => {const a=(axis+degrees)*Math.PI/180;return pc.runnerDragDirection(56*Math.cos(a),56*Math.sin(a));};
+ const isCardinalOrDiagonal = v => {
+  const onCardinal = (Math.abs(v.x)===1 && v.y===0) || (v.x===0 && Math.abs(v.y)===1);
+  const onDiagonal = Math.abs(Math.abs(v.x)-Math.SQRT1_2)<1e-9 && Math.abs(Math.abs(v.y)-Math.SQRT1_2)<1e-9;
+  return onCardinal || onDiagonal;
+ };
+ for (let deg=0; deg<=28; deg++) check(equalDir(vector(deg),{x:Math.round(Math.cos(axis*Math.PI/180)),y:Math.round(Math.sin(axis*Math.PI/180))}),
+   'continuous drift holds cardinal through '+deg+' degrees at axis '+axis);
+ // The hold just broke by a single extra degree of ordinary drift -- no
+ // release and no new gesture -- so the result must still be a clean
+ // snapped direction, never an arbitrary unsnapped angle.
+ const justBroke = vector(29);
+ check(isCardinalOrDiagonal(justBroke), 'leaving a cardinal hold via continuous drift lands on a snap, not a raw angle, at axis '+axis);
+ check(!equalDir(justBroke,{x:Math.round(Math.cos(axis*Math.PI/180)),y:Math.round(Math.sin(axis*Math.PI/180))}),
+   'the broken hold genuinely left cardinal at axis '+axis);
+}
+// A brand-new gesture (no prior hold to preserve) keeps its documented free
+// angle in the same 22-30 degree gap -- only the "coming from a hold"
+// transition changed.
+{
+ const {pc}=make();
+ const a=27*Math.PI/180;
+ const fresh=pc.runnerDragDirection(56*Math.cos(a),56*Math.sin(a));
+ const onCardinal=(Math.abs(fresh.x)===1&&fresh.y===0)||(fresh.x===0&&Math.abs(fresh.y)===1);
+ const onDiagonal=Math.abs(Math.abs(fresh.x)-Math.SQRT1_2)<1e-9&&Math.abs(Math.abs(fresh.y)-Math.SQRT1_2)<1e-9;
+ check(!onCardinal && !onDiagonal, 'fresh gesture free-angle gap is unchanged');
+ check(equalDir(fresh,{x:Math.cos(a),y:Math.sin(a)}), 'fresh gesture in the gap still tracks the raw angle exactly');
+}
 return assertions;
 })();
 console.log('drag steering: '+assertions+' assertions passed');
