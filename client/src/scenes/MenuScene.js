@@ -1,10 +1,21 @@
+import { consumeModalPointer, guardModalDismissal } from '../utils/modalPointerGuard.js';
+import { getJourneyProgress } from '../utils/journeyProgress.js';
+import { firstPlayDestination } from '../logic/firstPlay.js';
+import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
+import { campaignStashes } from '../utils/rivalsUnlock.js';
+import { hasWindowOnboarding } from '../utils/windowProgress.js';
 // LANDING / MENUSCENE
 // LANDING / MENUSCENE (rexUI)
 import Phaser from 'phaser';
+import { landingLayout, landingSession, titleBackdrop } from '../logic/landingLayout.js';
+import { rivalsMenuState } from '../utils/rivalsUnlock.js';
+import { drawPowerIcon } from '../controllers/PowerIcons.js';
+import { PALETTE as INK } from '../logic/palette.js';
+import { PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUserID, ensureProvisionedIdentity, getRecoveryCode, hasProvisionedIdentity, restoreFromRecoveryCode } from '../utils/userManager.js';
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores, getLeaderboard, getAllTimeLeaderboard, formatNumber } from '../utils/leaderboardManager.js';
-import { getSessionState } from '../utils/routeProgress.js';
+import { getSessionState, clearSessionState } from '../utils/routeProgress.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation } from '../utils/analytics.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
@@ -29,8 +40,9 @@ export class MenuScene extends Phaser.Scene {
   constructor(){ super('MENU'); }
 
   preload(){
-    // Load emblem logo
-    this.load.image('emblem', '/emblem.png');
+    // The SVG is rasterized large, then this texture gets linear filtering so
+    // the smooth athletic wordmark does not inherit the game's pixel-art scale.
+    this.load.svg('plug_run_wordmark', '/brand/plug-run-wordmark.svg', { width: 1200, height: 384 });
 
     // Load character sprites for card visuals
     this.load.image('td_runner', '/sprites/td/runner.png');
@@ -41,6 +53,7 @@ export class MenuScene extends Phaser.Scene {
     // Music (provide multiple formats for browser compatibility if available)
     try {
       // Prefer .ogg/.mp3 (current files) in that order
+      AudioManager.preloadMoments(this);
       this.load.audio('bg_main',  ['/audio/main_beat.ogg',  '/audio/main_beat.mp3']);
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
@@ -52,6 +65,8 @@ export class MenuScene extends Phaser.Scene {
 
   init(){
     this.cards = [];
+    this._titleOptions = [];
+    this._titlePrimary = null;
     this.selected = 0;
     try {
       const saved = (typeof localStorage !== 'undefined') ? localStorage.getItem('lastMode') : null;
@@ -60,56 +75,22 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(){
+    // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
     // Night street background: asphalt road, curbs, scrolling lane dashes
     this.drawStreetBackground();
 
-    // Top logo text - styled like a street sign
-    const logoY = 36;
-    const logoSize = Math.max(26, Math.floor(H * 0.05));
+    const brand = landingLayout(W, H);
+    this.textures.get('plug_run_wordmark')?.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.logo = this.add.image(W/2, brand.logoY, 'plug_run_wordmark')
+      .setDisplaySize(brand.logoW, brand.logoH).setDepth(5);
 
-    // Street sign background (blue rectangle with white border - LA street sign style)
-    // Match card width proportions
-    const cardWidth = Math.min(520, Math.floor(W * 0.82));
-    const signW = cardWidth; // Same width as cards
-    const signH = logoSize * 2.2; // Taller for two lines
-    const signBg = this.add.rectangle(W/2, logoY + signH/2, signW, signH, 0x0047AB, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setDepth(4);
-
-    // Add subtle shadow for depth
-    const signShadow = this.add.rectangle(W/2 + 2, logoY + signH/2 + 2, signW, signH, 0x000000, 0.3)
-      .setDepth(3);
-
-    // Emblem - circular logo on the left side of the sign
-    const emblemSize = signH * 0.85; // Slightly smaller than sign height
-    this.emblem = this.add.image(
-      W/2 - signW/2 + emblemSize/2 + 8, // Left side with small padding
-      logoY + signH/2,
-      'emblem'
-    )
-      .setDisplaySize(emblemSize, emblemSize)
-      .setDepth(5);
-
-
-    // Main title
-    this.logo = this.add.text(W/2, logoY + signH/2, 'PLUG RUN', {
-      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
-      fontSize: logoSize + 'px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 2
-    }).setOrigin(0.5, 0.5).setDepth(5);
-
-
-    this.signBg = signBg;
-    this.signShadow = signShadow;
-
-    // Cards data - only show the two main game modes
+    // Plug mode is SHELVED, not removed: everything behind it still works, it
+    // just isn't offered until runner mode is good and people ask for it.
+    const SHOW_PLUG_MODE = false;
     const modes = [
-      { key:'runner', title:'Run the Block',      sub:'Grab the stash, escape before the Plug catches you.', showTimer: false },
-      { key:'plug',   title:'Defend the Block',   sub:'Stop the Runner before they get away.', showTimer: false }
+      { key:'runner', title:'Run the Block', sub:'Grab the stash. Lose the Plug. Get out.', showTimer: false },
+      ...(SHOW_PLUG_MODE ? [{ key:'plug', title:'Defend the Block', sub:'Stop the Runner before they get away.', showTimer: false }] : [])
     ];
 
     // Carousel root container to keep z-order tidy
@@ -130,16 +111,23 @@ export class MenuScene extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('A,D,ENTER,SPACE,ESC');
 
-    // Bottom-right settings button
-    this.settingsBtn = this.makeIconButton('⚙', () => this.openSettings());
+    // Settings lives in the main vertical title menu
+    this.settingsBtn = this.makeTitleOption('Settings', () => this.openSettings());
 
     // Leaderboard button for mobile (trophy icon - only visible on mobile)
-    this.leaderboardBtn = this.makeIconButton('🏆', () => this.scene.start('LEADERBOARD'));
+    this.leaderboardBtn = this.makeIconButton('trophy', () => this.scene.start('LEADERBOARD'));
 
     // Help button — explains the premise/leaderboard/replays for newcomers
     this.helpBtn = this.makeIconButton('?', () => this.openHelp());
 
-    // Tutorial button (large yellow button like in mockup)
+    // The Window is the neutral story/economy hub. Phase one only exposes
+    // onboarding and read-only previews; rewards are not wired here.
+    this.windowBtn = this.makeTitleOption('The Window', () => {
+      trackNavigation('the_window');
+      this.scene.start('WINDOW');
+    });
+
+    // Tutorial shares the quiet title-menu treatment
     this.tutorialBtn = this.makeTutorialButton();
 
     // User profile chip (clickable to show user's leaderboard position)
@@ -149,8 +137,8 @@ export class MenuScene extends Phaser.Scene {
     this.tickerChip = this.makeTickerChip();
 
     // Bottom dock bar (sidewalk strip anchoring chip + icon buttons)
-    this.dockBg = this.add.rectangle(0, 0, 10, 10, 0x1a1e28, 0.95).setDepth(5);
-    this.dockEdge = this.add.rectangle(0, 0, 10, 2, 0x343a4a, 1).setDepth(5);
+    this.dockBg = this.add.rectangle(0, 0, 10, 10, 0x1a1e28, 0).setDepth(5);
+    this.dockEdge = this.add.rectangle(0, 0, 10, 2, 0x343a4a, 0).setDepth(5);
 
     // Daily bonus button (styled like REP reward, hidden if already claimed today)
     this.dailyBonusBtn = this.makeDailyBonusButton();
@@ -185,10 +173,9 @@ export class MenuScene extends Phaser.Scene {
     // Initial layout to selected index
     this.layoutCards(0, false);
 
-    // Initialize desktop sidebars (only on desktop)
-    if (isDesktop()) {
-      this.initDesktopSidebars();
-    }
+    // The title screen is intentionally free of dashboard sidebars.
+    // Gameplay can recreate its own sidebars when it starts.
+    cleanupSidebars();
 
     // Keep menu silent; stop any residual gameplay music when returning
     try {
@@ -263,29 +250,29 @@ export class MenuScene extends Phaser.Scene {
   // dashes, and speckle noise. Rebuilt on resize.
   drawStreetBackground(){
     const W = this.scale.width, H = this.scale.height;
-    if (this._streetBg) { this._streetBg.destroy(true); this._streetBg = null; }
+    if (this._streetBg) this._streetBg.destroy(true);
     const c = this.add.container(0, 0).setDepth(0);
-
-    // Off-road base + asphalt strip
-    c.add(this.add.rectangle(W/2, H/2, W, H, 0x0d1016, 1));
-    const roadW = Math.min(600, Math.floor(W * 0.96));
-    c.add(this.add.rectangle(W/2, H/2, roadW, H, 0x191c22, 1));
-
-    // Curbs
-    const curbX = roadW/2 - 2;
-    c.add(this.add.rectangle(W/2 - curbX, H/2, 3, H, 0x262a33, 1));
-    c.add(this.add.rectangle(W/2 + curbX, H/2, 3, H, 0x262a33, 1));
-
-    // Asphalt speckle noise
-    const speck = this.add.graphics();
-    speck.fillStyle(0x0d0f13, 0.55);
-    for (let i = 0; i < 70; i++){
-      const sx = W/2 - roadW/2 + 6 + Math.random() * (roadW - 12);
-      const sy = Math.random() * H;
-      speck.fillRect(sx, sy, 2, 2);
+    c.add(this.add.rectangle(W/2, H/2, W, H, 0x070c0f, 1));
+    for (const p of titleBackdrop(W, H)) {
+      const texture = p.role === 'plug' ? 'td_plug' : 'td_runner';
+      if (!this.textures.exists(texture)) continue;
+      const sprite = this.add.image(p.x, p.y, texture);
+      sprite.setScale(p.size / Math.max(sprite.width, sprite.height))
+        .setTint(p.role === 'plug' ? 0x704148 : 0x377080)
+        .setAlpha(p.alpha).setAngle(p.angle);
+      c.add(sprite);
     }
-    c.add(speck);
-
+    // Quiet stepped vignette; no moving particles behind menu hit targets.
+    const shade = this.add.graphics();
+    for (let i=0;i<6;i++) {
+      const edge = (6-i) * Math.min(W,H) * 0.018;
+      shade.fillStyle(0x000000, 0.055);
+      shade.fillRect(0,0,edge,H);
+      shade.fillRect(W-edge,0,edge,H);
+      shade.fillRect(0,0,W,edge);
+      shade.fillRect(0,H-edge,W,edge);
+    }
+    c.add(shade);
     this._streetBg = c;
   }
 
@@ -298,7 +285,7 @@ export class MenuScene extends Phaser.Scene {
     const t = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
       fontSize: '12px',
-      color: '#7ee0a3',
+      color: '#b6bbaa',
       letterSpacing: 1
     }).setOrigin(0.5);
     c.add([bg, t]);
@@ -306,7 +293,8 @@ export class MenuScene extends Phaser.Scene {
     c._text = t;
     c._update = () => {
       if (!t.active) return;
-      t.setText(`NEW BLOCK IN ${this.getTimeUntilReset()}`);
+      const progress = getJourneyProgress();
+      t.setText(`BLOCK ${progress.blockIndex} · HOUSE ${progress.pveRound} / 15`);
       const w = Math.max(190, t.width + 28);
       bg.setSize(w, h);
     };
@@ -349,31 +337,93 @@ export class MenuScene extends Phaser.Scene {
 
   // MENU: UI helpers -------------------------------------------------
   // Simple card with background and text overlay
-  makeCard(title, sub, modeKey, showTimer = false){
-    const W = this.scale.width, H = this.scale.height;
-    const cw = Math.min(480, Math.floor(W * 0.82));
+  makeTitleOption(label, onClick, locked = null){
+    const a = landingLayout(this.scale.width, this.scale.height);
+    const c = this.add.container(0, 0).setSize(a.menuW, a.rowH).setDepth(6);
+    const bg = this.add.rectangle(0, 0, a.menuW, a.rowH, 0x182329, 0.2)
+      .setInteractive({ cursor: locked ? 'default' : 'pointer' });
+    const line = this.add.rectangle(0, a.rowH/2, a.menuW-24, 1, 0x506064, 0.15);
+    const tx = this.add.text(0, 0, label, {
+      fontFamily: 'Arial, sans-serif', fontSize: '21px', color: locked ? '#6b7478' : '#a6b0b6'
+    }).setOrigin(0.5);
+    c.add([bg,line,tx]);
+    // A locked row stays visible and says how far along you are. One line, no
+    // popup, no explanation of a system the player has not met yet.
+    if (locked) {
+      c._locked = true;
+      const note = this.add.text(0, a.rowH * 0.3, locked, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#6b7478', letterSpacing: 1
+      }).setOrigin(0.5);
+      c.add(note);
+      c._note = note;
+    }
+    c._bg = bg;
+    c._text = tx;
+    c._setSelected = selected => {
+      if (c._locked) return;
+      bg.setFillStyle(0x182329, selected ? 0.6 : 0.2);
+      tx.setColor(selected ? '#f1ca82' : '#a6b0b6');
+      line.setFillStyle(selected ? 0xf1ca82 : 0x506064, selected ? 0.45 : 0.15);
+    };
+    if (!locked) {
+      this._titleOptions.push(c);
+      bg.on('pointerover', () => this.focusTitleOption(c));
+      bg.on('pointerout', () => this.focusTitleOption(this._titlePrimary));
+      bg.on('pointerup', onClick);
+    }
+    return c;
+  }
 
-    // Intelligently scale cards based on available vertical space
-    // Mobile/smaller screens: 34% | Desktop/larger screens: up to 38%
-    const baseHeight = H * 0.34;
-    const maxHeight = H * 0.38;
-    const ch = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+  focusTitleOption(option){
+    for (const item of this._titleOptions) {
+      if (item.active) item._setSelected(item === option);
+    }
+  }
+
+  makeRunnerTitleMenu(){
+    const a = landingLayout(this.scale.width, this.scale.height);
+    const cont = this.add.container(0,0).setSize(a.menuW,a.rowH+a.rowGap).setDepth(3);
+    cont.modeKey = 'runner';
+    cont.runKind = 'journey';
+    // Keep the front door consistent; launchCard still applies onboarding policy.
+    const start = this.makeTitleOption('PLAY', () => this.launchCard(cont));
+    cont.add(start);
+    cont._startBg = start._bg;
+    cont._startText = start._text;
+    this._titlePrimary = start;
+    this.focusTitleOption(start);
+    // Block Rivals opens after three complete blocks. The row is always
+    // visible so the player knows it exists; it simply is not theirs yet.
+    const unlock = rivalsMenuState();
+    const rivals = this.makeTitleOption('Block Rivals',
+      () => this.launchCard({ modeKey:'runner', runKind:'rivals' }),
+      unlock.unlocked ? null : unlock.progressText)
+      .setPosition(0,a.rowGap);
+    cont.add(rivals);
+    return cont;
+  }
+
+  makeCard(title, sub, modeKey, showTimer = false){
+    if (modeKey === 'runner') return this.makeRunnerTitleMenu();
+    const W = this.scale.width, H = this.scale.height;
+    const { cardW: cw, cardH: ch } = landingLayout(W, H);
 
     // Create container first
     const cont = this.add.container(0, 0).setSize(cw, ch).setDepth(3);
     // Cards are not interactive - only buttons control navigation
 
-    // Dark panel body
-    const bg = this.add.rectangle(0, 0, cw, ch, 0x10131a, 0.92);
-    bg.setStrokeStyle(1, 0x2e3442, 1);
+    // Dark panel body with the in-game grammar: ink line, hard offset shadow.
+    const bgShadow = this.add.rectangle(6, 7, cw, ch, INK.ink, 0.55);
+    cont.add(bgShadow);
+    const bg = this.add.rectangle(0, 0, cw, ch, 0x10131a, 0.96);
+    bg.setStrokeStyle(3, INK.ink, 1);
     cont.add(bg);
 
-    // Add animated sprite visuals (single line of sprites)
     this.addCardVisuals(cont, modeKey, cw, ch);
 
     // Title at TOP (LA street sign font with blue background bar)
     const titleText = String(title).toUpperCase();
-    const titleSize = Math.max(12, Math.floor(ch * 0.12)); // Proportional to smaller card height
+    const titleSize = Math.min(25, Math.max(20, Math.floor(cw * 0.058))); // Proportional to smaller card height
 
     // Static street numbers for each mode (consistent each time)
     const streetAddresses = {
@@ -388,24 +438,23 @@ export class MenuScene extends Phaser.Scene {
     const suffix = address.suffix;
 
     // Mode-colored street sign header (green = runner, red = plug)
-    const SIGN_COLORS = { runner: 0x1a7a3c, plug: 0xa32d2d };
+    const SIGN_COLORS = { runner: 0x17262d, plug: 0x382329 };
     const signColor = SIGN_COLORS[modeKey] ?? 0x0047AB;
 
     // Single-line bar: street name left, address right
     const titleBgHeight = Math.floor(titleSize * 1.7);
     const titleBg = this.add.rectangle(0, -ch * 0.5 + titleBgHeight/2, cw, titleBgHeight, signColor, 1)
-      .setStrokeStyle(3, 0xffffff)
+      .setStrokeStyle(3, INK.ink)
       .setOrigin(0.5, 0.5);
 
     const titleObj = this.add.text(0, -ch * 0.5 + titleBgHeight/2, titleText, {
       color: '#ffffff',
-      fontFamily: '"Highway Gothic", "Arial Narrow", "Helvetica Narrow", sans-serif',
+      fontFamily: 'Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: titleSize + 'px',
-      stroke: '#000000',
-      strokeThickness: 2
+      stroke: INK.inkCss,
+      strokeThickness: 1
     }).setOrigin(0.5, 0.5);
-
 
     cont.add(titleBg);
     cont.add(titleObj);
@@ -426,7 +475,7 @@ export class MenuScene extends Phaser.Scene {
 
       const cols = [
         ["TODAY'S BEST", stats.daily ? formatNumber(stats.daily.stash ?? 0) : '—', '#f0f2f7'],
-        ['BEST ROUND',   String(stats.daily?.round ?? stats.alltime?.round ?? '—'), '#f0f2f7'],
+        ['BEST MAP',     String(stats.daily?.round ?? stats.alltime?.round ?? '—'), '#f0f2f7'],
         ['YOUR RANK',    '—', '#8a93a8']
       ];
       const colW = cw / cols.length;
@@ -458,32 +507,55 @@ export class MenuScene extends Phaser.Scene {
     }
 
     // START button at BOTTOM (near full width like the mockup)
-    const btnWidth = Math.min(400, Math.floor(cw * 0.88));
-    const btnHeight = Math.max(38, Math.floor(ch * 0.18));
-    const btnY = (ch / 2) - (btnHeight / 2) - 8; // Position at bottom edge with small padding
+    const btnWidth = cw - 32;
+    const btnHeight = 44;
+    const btnY = (ch / 2) - (btnHeight / 2) - 14; // Position at bottom edge with small padding
 
-    const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 6, 0xfbbf24, 1)
-      .setStrokeStyle(3, 0xf59e0b)
+    // Comic button: flat yellow, ink line, hard shadow underneath.
+    const startShadow = this.rexUI.add.roundRectangle(4, btnY + 5, btnWidth, btnHeight, 6, INK.ink, 0.6);
+    const startBg = this.rexUI.add.roundRectangle(0, btnY, btnWidth, btnHeight, 4, 0xf1ca82, 1)
+      .setStrokeStyle(2, INK.ink)
       .setInteractive({ cursor: 'pointer' });
 
-    // Set button text based on mode
+    // The button speaks in blocks and maps. A session past the end of the
+    // block is a leftover from the endless ladder and reads as a fresh start.
     let buttonText = 'START';
+    let resumable = false;
     if (modeKey === 'runner' || modeKey === 'plug') {
-      const base = modeKey === 'runner' ? 'PLAY AS RUNNER' : 'PLAY AS PLUG';
       let sess = null;
       try { sess = getSessionState(modeKey); } catch {}
-      buttonText = sess && sess.pveRound > 1 ? `${base} \u2014 ROUND ${sess.pveRound}` : base;
+      const n = sess?.pveRound ?? 1;
+      resumable = n > 1 && n <= PVE_BLOCK_MAPS;
+      buttonText = resumable ? `CONTINUE \u2014 MAP ${n} / ${PVE_BLOCK_MAPS}` : 'START BLOCK';
     }
 
     const startText = this.add.text(0, btnY, buttonText, {
-      fontFamily: '"Highway Gothic", "Arial Narrow", sans-serif',
+      fontFamily: 'Arial, sans-serif',
       fontSize: Math.max(16, Math.floor(btnHeight * 0.42)) + 'px',
-      color: '#1e293b',
+      color: INK.inkCss,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
+    cont.add(startShadow);
     cont.add(startBg);
     cont.add(startText);
+
+    // Mid-block? Offer a clean restart too. Clears the saved session and
+    // launches through the same path, so the game falls back to map 1.
+    if (resumable) {
+      const over = this.add.text(0, btnY - btnHeight / 2 - 11, 'start over from map 1', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#aab3c8'
+      }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+      over.on('pointerover', () => over.setColor('#ffffff'));
+      over.on('pointerout',  () => over.setColor('#aab3c8'));
+      over.on('pointerup', () => {
+        try { clearSessionState(modeKey); } catch {}
+        startText.setText('START BLOCK');
+        over.destroy();
+        this.launchCard(cont);
+      });
+      cont.add(over);
+    }
 
     // Store references
     cont._bg = bg;
@@ -497,14 +569,8 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Hover effects
-    startBg.on('pointerover', () => {
-      startBg.setFillStyle(0xfcd34d); // Lighter yellow
-      startBg.setStrokeStyle(3, 0xfbbf24);
-    });
-    startBg.on('pointerout', () => {
-      startBg.setFillStyle(0xfbbf24); // Original yellow
-      startBg.setStrokeStyle(3, 0xf59e0b);
-    });
+    startBg.on('pointerover', () => startBg.setFillStyle(0xffdf9f));
+    startBg.on('pointerout',  () => startBg.setFillStyle(0xf1ca82));
 
     return cont;
   }
@@ -1407,7 +1473,19 @@ export class MenuScene extends Phaser.Scene {
     const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, 0.92)
       .setStrokeStyle(2, PALETTE.stroke)
       .setInteractive({ cursor: 'pointer' });
-    const t = this.add.text(0, 0, label, { fontSize: Math.max(12, Math.floor(r*0.95)) + 'px', color: PALETTE.title }).setOrigin(0.5);
+    let t;
+    if (label === 'settings') {
+      t = drawPowerIcon(this, 0, 0, 'settings', 21, 0xb7c7cc, 6);
+    } else if (label === 'trophy') {
+      t = this.add.graphics();
+      t.lineStyle(2, 0xf1ca82, 1);
+      t.strokeRect(-5, -8, 10, 10);
+      t.lineBetween(-8, -7, -8, -1); t.lineBetween(-8, -1, -5, 1);
+      t.lineBetween(8, -7, 8, -1); t.lineBetween(8, -1, 5, 1);
+      t.lineBetween(0, 2, 0, 7); t.lineBetween(-6, 8, 6, 8);
+    } else {
+      t = this.add.text(0, 0, label, { fontSize: '18px', color: '#b7c7cc' }).setOrigin(0.5);
+    }
     const btn = this.add.container(0, 0, [bg, t]).setSize(r*2, r*2).setDepth(6);
 
     // Background handles interaction
@@ -1425,30 +1503,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   makeTutorialButton(){
-    // Ghost/secondary style — the two PLAY buttons are the stars
-    const W = this.scale.width;
-    const btnWidth = 170;
-    const btnHeight = Math.max(32, Math.floor(this.scale.height * 0.04));
-
-    const bg = this.rexUI.add.roundRectangle(0, 0, btnWidth, btnHeight, 6, 0x10131a, 0.6)
-      .setStrokeStyle(1, 0x3a4155)
-      .setInteractive({ cursor: 'pointer' });
-
-    const t = this.add.text(0, 0, 'PLAY TUTORIAL', {
-      fontFamily: 'monospace',
-      fontSize: Math.max(12, Math.floor(btnHeight * 0.38)) + 'px',
-      color: '#aab3c8',
-      letterSpacing: 1
-    }).setOrigin(0.5);
-
-    const btn = this.add.container(0, 0, [bg, t]).setSize(btnWidth, btnHeight).setDepth(6);
-
-    // Store references for hover effects
-    btn._bg = bg;
-    btn._text = t;
-
-    // Launch tutorial on click
-    bg.on('pointerup', () => {
+    const button = this.makeTitleOption('Tutorial', () => {
       // Fade out street sounds
       this.fadeOutStreetSounds();
 
@@ -1456,7 +1511,7 @@ export class MenuScene extends Phaser.Scene {
       try {
         const audio = AudioManager.get(this);
         audio.ensureUnlocked(this);
-        audio.playMusic('bg_learn', { volume: 0.3, loop: true, fade: 0 });
+        audio.playGameplayMusic('tutorial', { volume: 0.3, loop: true, fade: 800 });
         audio.setMusicFilterCutoff(600, 0); // Start muffled (adaptive music)
       } catch {}
 
@@ -1467,18 +1522,19 @@ export class MenuScene extends Phaser.Scene {
         this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
       });
     });
-
-    // Hover effects
-    bg.on('pointerover', () => {
-      bg.setStrokeStyle(1, 0x60a5fa);
-      t.setColor('#dce6fb');
-    });
-    bg.on('pointerout', () => {
-      bg.setStrokeStyle(1, 0x3a4155);
-      t.setColor('#aab3c8');
-    });
-
-    return btn;
+    this._tutorialHintNeeded = !hasCompletedTutorial() && campaignStashes() < 1;
+    this._tutorialHintArrow = null;
+    if (this._tutorialHintNeeded) {
+      const a = landingLayout(this.scale.width, this.scale.height);
+      const arrow = this.add.graphics().fillStyle(0x9bcdfb, 1);
+      arrow.fillTriangle(-7, -7, 3, 0, -7, 7);
+      arrow.fillRect(-13, -2, 8, 4);
+      arrow.setPosition(-a.menuW / 2 + 23, 0);
+      button.add(arrow); // Decorative only: no interactive hit area.
+      this._tutorialHintArrow = arrow;
+      this._tutorialHintReducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    }
+    return button;
   }
 
   makeChip(text, color){
@@ -1494,14 +1550,14 @@ export class MenuScene extends Phaser.Scene {
   makeUserProfileChip(){
     const username = getUsername();
     const c = this.add.container(0, 0).setDepth(6);
-    const w = Math.min(220, Math.max(160, Math.floor(this.scale.width * 0.35)));
+    const w = landingLayout(this.scale.width, this.scale.height).profileW;
     const h = Math.min(36, Math.max(32, Math.floor(this.scale.height * 0.042)));
     c._w = w;
 
     // Attention mode: unclaimed recovery code → amber chip + trailing "!"
     const unseen = (() => { try { return localStorage.getItem('pr_recovery_unseen') === 'true'; } catch { return false; } })();
-    const fillColor   = unseen ? 0x78500a : 0x1e3a8a;
-    const strokeColor = unseen ? 0xfbbf24 : 0x3b82f6;
+    const fillColor   = unseen ? 0x78500a : 0x1d303c;
+    const strokeColor = unseen ? 0xfbbf24 : 0x54798e;
     const strokeHover = unseen ? 0xfde68a : 0x60a5fa;
     const textColor   = unseen ? '#fde68a' : '#cbd1ff';
 
@@ -1509,7 +1565,10 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(2, strokeColor)
       .setInteractive({ cursor: 'pointer' });
 
-    const icon = this.add.text(-w/2 + h/2, 0, '👤', { fontSize: Math.floor(h * 0.6) + 'px' }).setOrigin(0.5);
+    const icon = this.add.graphics({ x: -w/2 + h/2, y: 0 });
+    icon.lineStyle(1.5, 0xb7c7cc, 1);
+    icon.strokeCircle(0, -5, 4);
+    icon.strokeRoundedRect(-7, 2, 14, 8, 3);
 
     // Username centered; if unseen, add a subtle "!" indicator to the right
     const nameOffset = unseen ? -6 : 0;
@@ -1519,6 +1578,7 @@ export class MenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
+    if (t.width > w - h - 18) t.setScale((w - h - 18) / t.width);
     c.add([bg, icon, t]);
 
     if (unseen) {
@@ -1870,6 +1930,18 @@ export class MenuScene extends Phaser.Scene {
 
   cardSpacing(){ return Math.min(520, Math.floor(this.scale.width * 0.82)) + Math.max(28, Math.floor(this.scale.width * 0.06)); }
 
+  /**
+   * Where card i sits. Two cards stack from 34% down, as before. A lone card
+   * is dropped toward the middle of the space between the ticker and the
+   * dock — shelving plug mode must not leave the runner card hugging the
+   * header over a hole.
+   */
+  cardCenterY(i, cardHeight){
+    const H = this.scale.height;
+    if ((this.cards?.length || 1) === 1) return landingLayout(this.scale.width, H).cardY;
+    return H * 0.34 + i * (cardHeight + 8);
+  }
+
   layoutCards(shift = 0, tweenBack = false){
     // New layout: Show both cards stacked vertically (no carousel)
     const W = this.scale.width;
@@ -1879,14 +1951,14 @@ export class MenuScene extends Phaser.Scene {
     // Calculate card spacing with intelligent sizing for desktop
     const baseHeight = H * 0.34;
     const maxHeight = H * 0.38;
-    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const cardHeight = landingLayout(W, H).cardH;
     const gap = 8; // Gap between cards
     const topOffset = H * 0.34; // Start lower to avoid overlap with PLUG RUN header
 
     this.cards.forEach((card, i)=>{
       // Stack cards vertically
       const x = cx;
-      const y = topOffset + (i * (cardHeight + gap));
+      const y = this.cardCenterY(i, cardHeight);
 
       if (tweenBack){
         this.tweens.add({
@@ -1912,7 +1984,7 @@ export class MenuScene extends Phaser.Scene {
 
       // All cards have same border style (no selection highlighting)
       if (card._bg) {
-        card._bg.setStrokeStyle(2, 0x2f3650, 1);
+        card._bg.setStrokeStyle(1, 0x435250, 1);
       }
 
       // Run animations on all cards
@@ -1933,7 +2005,7 @@ export class MenuScene extends Phaser.Scene {
     // Calculate card positions (same as layoutCards) with intelligent sizing
     const baseHeight = H * 0.34;
     const maxHeight = H * 0.38;
-    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
+    const cardHeight = landingLayout(W, H).cardH;
     const gap = 8;
     const topOffset = H * 0.34; // Start lower to avoid overlap with PLUG RUN header
 
@@ -1957,6 +2029,11 @@ export class MenuScene extends Phaser.Scene {
   selectNext(){ this.setSelected(this.selected + 1); }
   selectPrev(){ this.setSelected(this.selected - 1); }
 
+  firstPlayDestination(){
+    return firstPlayDestination({tutorialComplete:hasCompletedTutorial(),
+      campaignStashes:campaignStashes(),joinedCrew:hasWindowOnboarding()});
+  }
+
   launchCard(card){
     const cam = this.cameras.main;
     // Prevent multiple launches - check if camera is already fading
@@ -1964,7 +2041,16 @@ export class MenuScene extends Phaser.Scene {
       return; // Already launching, ignore
     }
 
-    const k = card.modeKey;
+    let k = card.modeKey;
+    if(k === 'runner' && card.runKind !== 'rivals') {
+      const destination=this.firstPlayDestination();
+      if(destination === 'WINDOW') {
+        this.fadeOutStreetSounds();
+        this.scene.start('WINDOW', {firstVisit:true});
+        return;
+      }
+      if(destination === 'TUTORIAL_MINI') k='learn';
+    }
 
     if (k === 'learn'){
       // Fade out street sounds
@@ -1986,7 +2072,7 @@ export class MenuScene extends Phaser.Scene {
           target: 'RUNNER',
           duration: 250,
           moveBelow: true,
-          data: { mode: 'pve' }
+          data: { mode: 'pve', role: 'runner', runKind: card.runKind || 'journey' }
         });
       });
     } else if (k === 'plug'){
@@ -2152,102 +2238,98 @@ export class MenuScene extends Phaser.Scene {
   }
 
   openHelp(){
-    const W = this.scale.width, H = this.scale.height;
-    const cx = this.cameras.main.centerX;
-    const cy = this.cameras.main.centerY;
-    const panelW = Math.min(400, W - 32);
-    const wrapW = panelW - 44;
-
-    // Sections: each line is an array of segments so role names can carry
-    // their own color/weight inline (Phaser text objects are single-style).
-    const ROLE_BLUE = '#4db2ff', ROLE_RED = '#ff6b6b';
-    const sections = [
-      { head: 'THE PREMISE', lines: [
-        [{ t: 'A daily arcade chase with two roles.' }],
-        [{ t: 'RUNNER: ', c: ROLE_BLUE, b: true }, { t: 'Grab the stash and reach the getaway car.' }],
-        [{ t: 'PLUG: ', c: ROLE_RED, b: true }, { t: 'Stop the Runner before they escape.' }],
-        [{ t: 'Each round gets harder.' }],
-      ]},
-      { head: 'THE DAILY BLOCK', lines: [
-        [{ t: 'A new route drops for each role every day. Everyone playing that role gets the same route.' }],
-      ]},
-      { head: 'LEADERBOARDS', lines: [
-        [{ t: 'Each role has daily and all-time rankings. Survive more rounds to climb higher.' }],
-      ]},
-      { head: 'REPLAYS', lines: [
-        [{ t: 'After every run, watch the replay and download the clip to share.' }],
-      ]},
-      { head: 'REP', lines: [
-        [{ t: 'Every run starts with the same amount of Rep. What you do in the round decides how much you walk away with.' }],
-      ]},
+    const W=this.scale.width,H=this.scale.height;
+    const cx=this.cameras.main.centerX,cy=this.cameras.main.centerY;
+    const panelW=Math.min(430,W-24);
+    const panelH=Math.min(520,H-24);
+    const pad=Math.max(12,Math.min(20,panelW*0.045));
+    const cream='#f1dfb0',muted='#a9b0aa',ink=0x090d0f,gold=0xe2b45f,teal=0x4e9b96;
+    const sections=[
+      {
+        number:'01',title:'RUN THE BLOCK',
+        copy:'Clear 15 houses. Find the real stash, lose the Plug, and reach the getaway car.'
+      },
+      {
+        number:'02',title:'BLOCK RIVALS',
+        copy:'Race the same seven houses and loadout. A half-lit rail means stash found; full means escaped.'
+      },
+      {
+        number:'03',title:'STASH + REP',
+        copy:'Stashes clear houses and unlock new blocks. REP is your leaderboard score.'
+      },
+      {
+        number:'04',title:'THE WINDOW',
+        copy:'Auntie Ro introduces the streets and your gang. Jobs and the cosmetic Shelf are coming next.'
+      }
     ];
 
-    const els = [];
-    const veil = this.add.rectangle(cx, cy, W, H, 0x000000, 0.65).setDepth(50).setInteractive();
-    els.push(veil);
+    const els=[];
+    const veil=this.add.rectangle(cx,cy,W,H,0x000000,0.76).setDepth(50).setInteractive();
+    const shadow=this.add.rectangle(cx+6,cy+7,panelW,panelH,ink,0.8).setDepth(51);
+    const panel=this.add.rectangle(cx,cy,panelW,panelH,0x111719,0.985)
+      .setDepth(52).setStrokeStyle(2,gold);
+    els.push(veil,shadow,panel);
 
-    // Measure pass: build all texts at local (xOff, yCursor); position later.
-    const mkStyle = (seg, availW) => ({
-      fontFamily: 'monospace', fontSize: '12px',
-      color: seg.c || '#aab3c8',
-      fontStyle: seg.b ? 'bold' : 'normal',
-      align: 'left', lineSpacing: 3,
-      wordWrap: availW ? { width: availW } : undefined
+    const top=cy-panelH/2;
+    const headerH=58;
+    const header=this.add.rectangle(cx,top+headerH/2,panelW,headerH,0x182329,0.98)
+      .setDepth(53).setStrokeStyle(1,0x705d37);
+    const title=this.add.text(cx,top+20,'HOW THE STREET WORKS',{
+      fontFamily:'Georgia, serif',fontSize:Math.max(17,Math.min(21,panelW*0.052))+'px',
+      fontStyle:'bold',color:cream,letterSpacing:1,stroke:'#090d0f',strokeThickness:3
+    }).setOrigin(0.5).setDepth(54);
+    const sub=this.add.text(cx,top+43,'GET THE BAG · GET OUT · BUILD YOUR NAME',{
+      fontFamily:'monospace',fontSize:'8px',color:'#c0a86e',letterSpacing:1
+    }).setOrigin(0.5).setDepth(54);
+    els.push(header,title,sub);
+
+    const buttonH=40,gap=7;
+    const contentTop=top+headerH+10;
+    const contentBottom=cy+panelH/2-buttonH-22;
+    const cardH=(contentBottom-contentTop-gap*(sections.length-1))/sections.length;
+    const cardW=panelW-pad*2;
+
+    sections.forEach((section,index)=>{
+      const y=contentTop+cardH/2+index*(cardH+gap);
+      const accent=index===1?0xc58a68:index===3?0x9b78d0:teal;
+      const cardShadow=this.add.rectangle(cx+3,y+3,cardW,cardH,ink,0.55).setDepth(53);
+      const card=this.add.rectangle(cx,y,cardW,cardH,0x0d1214,0.94)
+        .setDepth(54).setStrokeStyle(1,accent,0.75);
+      const badgeSize=Math.min(36,cardH-14);
+      const badgeX=cx-cardW/2+badgeSize/2+7;
+      const badge=this.add.rectangle(badgeX,y,badgeSize,badgeSize,accent,0.9)
+        .setDepth(55).setStrokeStyle(2,ink);
+      const number=this.add.text(badgeX,y,section.number,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#091012'
+      }).setOrigin(0.5).setDepth(56);
+      const textX=cx-cardW/2+badgeSize+16;
+      const heading=this.add.text(textX,y-cardH/2+9,section.title,{
+        fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',
+        color:index===3?'#c9a7ef':'#e7c981',letterSpacing:1
+      }).setOrigin(0,0).setDepth(56);
+      const copy=this.add.text(textX,y-cardH/2+27,section.copy,{
+        fontFamily:'monospace',fontSize:panelW<300?'8px':'9px',
+        color:muted,lineSpacing:2,wordWrap:{width:cardW-badgeSize-28}
+      }).setOrigin(0,0).setDepth(56);
+      els.push(cardShadow,card,badge,number,heading,copy);
     });
-    let y = 0;
-    const content = []; // { obj, xOff, yOff }
-    for (const sec of sections) {
-      const h = this.add.text(0, 0, sec.head, {
-        fontFamily: 'monospace', fontSize: '12px', color: '#86efac',
-        fontStyle: 'bold', letterSpacing: 1
-      }).setOrigin(0, 0).setDepth(52);
-      content.push({ obj: h, xOff: 0, yOff: y });
-      y += h.height + 4;
-      for (const line of sec.lines) {
-        let x = 0, lineH = 0;
-        line.forEach((seg, i) => {
-          const last = i === line.length - 1;
-          const obj = this.add.text(0, 0, seg.t, mkStyle(seg, last ? wrapW - x : null))
-            .setOrigin(0, 0).setDepth(52);
-          content.push({ obj, xOff: x, yOff: y });
-          x += obj.width;
-          lineH = Math.max(lineH, obj.height);
-        });
-        y += lineH + 3;
-      }
-      y += 11; // section gap
-    }
-    const contentH = y;
-    const titleH = 34, btnH = 40;
-    const panelH = Math.min(H - 60, contentH + titleH + btnH + 30);
 
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, PALETTE.panel, 0.97)
-      .setDepth(51).setStrokeStyle(2, 0x2f8fe0);
-    els.push(panel);
-    const title = this.add.text(cx, cy - panelH/2 + 20, 'HOW IT WORKS', {
-      color: PALETTE.title, fontSize: '16px', fontFamily: 'monospace', letterSpacing: 2, fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(52);
-    els.push(title);
-    const titleRule = this.add.rectangle(cx, cy - panelH/2 + 36, 130, 2, 0x2f8fe0, 1).setDepth(52);
-    els.push(titleRule);
+    const actionW=Math.min(132,panelW-2*pad);
+    const actionX=cx+panelW/2-pad-actionW/2;
+    const actionY=cy+panelH/2-buttonH/2-8;
+    const actionShadow=this.add.rectangle(actionX+3,actionY+4,actionW,buttonH,ink,0.7).setDepth(54);
+    const action=this.add.rectangle(actionX,actionY,actionW,buttonH,0x172126,1)
+      .setStrokeStyle(2,gold).setDepth(55).setInteractive({cursor:'pointer'});
+    const actionText=this.add.text(actionX,actionY,'GOT IT  >>',{
+      fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:cream,letterSpacing:1
+    }).setOrigin(0.5).setDepth(56);
+    els.push(actionShadow,action,actionText);
 
-    const contentX = cx - panelW/2 + 22;
-    const contentY = cy - panelH/2 + titleH + 6;
-    for (const { obj, xOff, yOff } of content) {
-      obj.setPosition(contentX + xOff, contentY + yOff);
-      els.push(obj);
-    }
-
-    const gotBg = this.add.rectangle(cx, cy + panelH/2 - btnH/2 - 10, Math.min(220, panelW - 60), btnH - 8, 0xfbbf24, 1)
-      .setStrokeStyle(2, 0xf59e0b).setDepth(52).setInteractive({ cursor: 'pointer' });
-    const gotTxt = this.add.text(gotBg.x, gotBg.y, 'GOT IT', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#1e293b', fontStyle: 'bold', letterSpacing: 1
-    }).setOrigin(0.5).setDepth(53);
-    els.push(gotBg, gotTxt);
-
-    const close = () => els.forEach(e => e.destroy());
-    gotBg.on('pointerup', close);
-    veil.on('pointerup', close);
+    const close=()=>els.forEach(object=>object?.destroy());
+    action.on('pointerover',()=>action.setFillStyle(gold,0.24));
+    action.on('pointerout',()=>action.setFillStyle(0x172126,1));
+    action.on('pointerup',(pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);close();});
+    veil.on('pointerup',(pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);close();});
   }
 
   openSettings(){
@@ -2285,7 +2367,7 @@ export class MenuScene extends Phaser.Scene {
       }
       this.toast('Music ' + (musicOn ? 'ON' : 'OFF'));
     };
-    musicBg.on('pointerdown', ()=> applyMusic(!musicOn));
+    musicBg.on('pointerdown', (pointer,x,y,event)=>{consumeModalPointer(pointer,event);applyMusic(!musicOn);});
 
     // Sounds toggle (game sound effects)
     const soundsLabel = this.add.text(cx - panelW/2 + 16, cy + 30, 'Sounds', { color: PALETTE.sub, fontSize:'14px' }).setOrigin(0,0.5).setDepth(52);
@@ -2328,14 +2410,14 @@ export class MenuScene extends Phaser.Scene {
     // Apply current setting on open
     applySounds(soundsOn);
 
-    soundsBg.on('pointerdown', ()=> applySounds(!soundsOn));
+    soundsBg.on('pointerdown', (pointer,x,y,event)=>{consumeModalPointer(pointer,event);applySounds(!soundsOn);});
 
     // Close button
     const closeBg = this.add.rectangle(cx, cy + panelH/2 - 22, 92, 28, 0x1a2038, 1).setStrokeStyle(1, PALETTE.stroke).setDepth(52).setInteractive({ useHandCursor:true });
     const closeTx = this.add.text(closeBg.x, closeBg.y, 'Close', { color:'#cbd1ff' }).setOrigin(0.5).setDepth(53);
     const destroyAll = ()=> { [veil, panel, title, titleRule, musicLabel, musicBg, musicTxt, soundsLabel, soundsBg, soundsTxt, closeBg, closeTx].forEach(o=>o?.destroy()); };
-    closeBg.on('pointerdown', destroyAll);
-    veil.on('pointerdown', destroyAll);
+    closeBg.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
   }
 
   // Pre-game tips modal (disabled for now - may re-enable with different UX later)
@@ -2443,7 +2525,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Allow clicking outside to cancel
-    veil.on('pointerdown', destroyAll);
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
   }
   */
 
@@ -2556,8 +2638,8 @@ export class MenuScene extends Phaser.Scene {
     const destroyAll = ()=> {
       baseElements.forEach(o=>o?.destroy());
     };
-    closeBg.on('pointerdown', destroyAll);
-    veil.on('pointerdown', destroyAll);
+    closeBg.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);destroyAll();});
   }
 
   openRestoreModal(){
@@ -2628,8 +2710,8 @@ export class MenuScene extends Phaser.Scene {
         status.setColor('#f87171');
       }
     });
-    cancelBg.on('pointerup', teardown);
-    veil.on('pointerdown', teardown);
+    cancelBg.on('pointerup', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);teardown();});
+    veil.on('pointerdown', (pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);teardown();});
   }
 
   createStatSection(cx, y, label, rank, score, panelW){
@@ -2699,38 +2781,25 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(){
-    // Slow lane-dash scroll for ambient motion
+    const arrow = this._tutorialHintArrow;
+    if (!arrow?.active || !this._tutorialHintNeeded) return;
+    // Menu overlays already use depths 50+. Keep the hint quiet behind them.
+    const overlay = this.children.list.some(child => child.active && child.visible && child.depth >= 50);
+    arrow.setVisible(!overlay);
+    if (!overlay) {
+      const pulse = this._tutorialHintReducedMotion ? 1 : 0.65 + 0.35 * Math.sin(this.time.now * Math.PI / 900);
+      arrow.setAlpha(pulse);
+    }
   }
 
   reposition(){
     const W = this.scale.width, H = this.scale.height;
     // Rebuild street background at new dimensions
     this.drawStreetBackground();
-    const logoY = Math.max(16, Math.floor(H*0.04));
-    const logoSize = Math.max(26, Math.floor(H * 0.05));
-    const signH = logoSize * 2.2; // Updated for two-line sign
-
-    // Reposition street sign elements
-    this.signShadow?.setPosition(W/2 + 2, logoY + signH/2 + 2);
-    this.signBg?.setPosition(W/2, logoY + signH/2);
-
-    // Reposition emblem
-    const cardWidth = Math.min(520, Math.floor(W * 0.82));
-    const signW = cardWidth;
-    const emblemSize = signH * 0.85;
-    this.emblem?.setPosition(W/2 - signW/2 + emblemSize/2 + 8, logoY + signH/2);
-    this.emblem?.setDisplaySize(emblemSize, emblemSize);
-
-    this.logo?.setPosition(W/2, logoY + signH/2);
-
-    // Ticker chip: midway between the sign and the first card, clamped so
-    // it never overlaps either (tall desktop windows compressed this gap)
-    {
-      const cardH0 = H > 900 ? Math.min(300, H * 0.38) : Math.min(265, H * 0.34);
-      const firstCardTop = H * 0.34 - cardH0 / 2;
-      const signBottom = logoY + signH;
-      this.tickerChip?.setPosition(W/2, Math.min(signBottom + 18, (signBottom + firstCardTop) / 2));
-    }
+    const brand = landingLayout(W, H);
+    this.logo?.setPosition(W/2, brand.logoY);
+    this.logo?.setDisplaySize(brand.logoW, brand.logoH);
+    this.tickerChip?.setPosition(W/2, brand.tickerY);
 
     // Bottom dock bar (sidewalk strip)
     const dockH = 56;
@@ -2742,36 +2811,10 @@ export class MenuScene extends Phaser.Scene {
     // Bottom elements
     const pad = Math.max(8, Math.floor(Math.min(W,H) * 0.02));
 
-    // Tutorial button positioned with gaps from both card above and widgets below
-    const baseHeight = H * 0.34;
-    const maxHeight = H * 0.38;
-    const cardHeight = H > 900 ? Math.min(300, maxHeight) : Math.min(265, baseHeight);
-    const gap = 8;
-    const topOffset = H * 0.34;
-    const bottomCardY = topOffset + (1 * (cardHeight + gap)); // Second card position
-    const bottomOfCard = bottomCardY + cardHeight/2; // Bottom edge of second card
-
-    const tutorialBtnHeight = Math.max(36, Math.floor(H * 0.045));
-    const widgetY = H - pad - 18; // Widget center position (lowered to create more space)
-    const widgetHeight = 48; // Approximate widget height
-    const topOfWidgets = widgetY - widgetHeight/2; // Top edge of widgets
-
-    const minGapFromCard = 8; // Minimum gap from card above
-    const minGapFromWidgets = 8; // Minimum gap from widgets below
-
-    // Calculate available space and center the button if there's room
-    const availableSpace = topOfWidgets - bottomOfCard;
-    const minNeededSpace = minGapFromCard + tutorialBtnHeight + minGapFromWidgets;
-
-    let tutorialY;
-    if (availableSpace > minNeededSpace + 20) {
-      // Plenty of space (desktop) - center the button in available space
-      tutorialY = bottomOfCard + availableSpace / 2;
-    } else {
-      // Tight space (mobile) - maintain minimum gaps, prioritize card gap
-      tutorialY = bottomOfCard + minGapFromCard + tutorialBtnHeight/2;
-    }
-    this.tutorialBtn?.setPosition(W / 2, tutorialY);
+    const windowRow = 2;
+    this.windowBtn?.setPosition(W/2, brand.menuY + windowRow * brand.rowGap);
+    this.tutorialBtn?.setPosition(W/2, brand.menuY + (windowRow + 1) * brand.rowGap);
+    this.settingsBtn?.setPosition(W/2, brand.menuY + (windowRow + 2) * brand.rowGap);
 
     // Bottom widgets — anchored to the ROAD STRIP, not the screen edges,
     // so on wide desktop monitors the chip and buttons stay together
@@ -2784,16 +2827,13 @@ export class MenuScene extends Phaser.Scene {
     // Leaderboard button (trophy icon) — all platforms now that the
     // desktop sidebar leaderboard is removed
     if (this.helpBtn) {
-      this.helpBtn.setPosition(railR - pad - 24 - 112, widgetBottomY); // Left of trophy
+      this.helpBtn.setPosition(railR - pad - 24 - 56, widgetBottomY); // Left of trophy
       this.helpBtn.setAlpha(1);
     }
     if (this.leaderboardBtn) {
-      this.leaderboardBtn.setPosition(railR - pad - 24 - 56, widgetBottomY); // Left of settings
+      this.leaderboardBtn.setPosition(railR - pad - 24, widgetBottomY); // Rightmost footer control
       this.leaderboardBtn.setAlpha(1);
     }
-
-    // Settings button at the road's right edge
-    this.settingsBtn?.setPosition(railR - pad - 24, widgetBottomY);
 
     // Profile chip at the road's left edge
     const chipW = this.profileChip?._w || 160;

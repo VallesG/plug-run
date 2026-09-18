@@ -1,4 +1,18 @@
+import { carParkCenter, carExtractionOverlap } from '../logic/getawayCar.js';
+import { seasonJob } from '../logic/crewSeason.js';
+import { getContactProgress } from '../utils/contactProgress.js';
+import { crewStoryProgress } from '../logic/contactProgress.js';
+import { shouldShowCity } from '../logic/city.js';
+import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
+import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
+import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout } from '../logic/rivals.js';
+import { createRivalSession } from '../utils/rivalSession.js';
+import RivalsRace from '../controllers/RivalsRace.js';
+import { advanceJourney, worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
+import { getJourneyProgress } from '../utils/journeyProgress.js';
 import Phaser from 'phaser';
+import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
+import { drawArenaWallInk } from '../controllers/ArenaWallInk.js';
 import inv, { loadInv, saveInv } from '../state/inventory.js';
 import {
   rectsOverlap,
@@ -11,10 +25,17 @@ import {
   randomCardinal
 } from '../utils/gameUtils.js';
 import { makeRunnerSprite, makePlugSprite, updateAvatarVisuals } from '../utils/spriteFactory.js';
-import { T, THEMES, generateSquareMaze, decorateArenaFurniture } from '../utils/mazeGenerator.js';
+import { T, THEMES, generateSquareMaze } from '../utils/mazeGenerator.js';
 import AudioManager from '../audio/AudioManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { updateRouteProgress, cleanupOldRoutes, isPremiumUser, recordRoundCompletion, saveSessionState, clearSessionState, getSessionState, getCurrentRouteProgress } from '../utils/routeProgress.js';
+import RunForensics from '../logic/runForensics.js';
+import { chooseAlternateSpawn } from '../logic/spawnChoice.js';
+import { hasDualOpponent, PVE_BLOCK_MAPS } from '../logic/blockFormat.js';
+import { placeRequiredMissionItem, missionExitAllowed, missionItemSeed, missionObject, MISSION_ITEM_COLOR } from '../logic/missionItem.js';
+import { activeMissionContact } from '../logic/contacts.js';
+import { getWindowState } from '../utils/windowProgress.js';
+import { PALETTE } from '../logic/palette.js';
 import { submitScore, submitAllTimeScore, getTopScores, getAllTimeTopScores } from '../utils/leaderboardManager.js';
 import { getCurrentUser, getCurrentUserSync, updateUserStats } from '../utils/userManager.js';
 import RepTracker from '../utils/repTracker.js';
@@ -33,6 +54,7 @@ import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } fr
 import { isDesktop, areSidebarsActive, getExistingSidebars, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setCurrentMode } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity, logRunnerExtract, logPlugStop, logRunnerEliminated, logBunkPickup, logPersonalBest } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
+import InputIntent from '../controllers/InputIntent.js';
 
 function makeRng(seed){
   let t = seed >>> 0;
@@ -52,20 +74,7 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   preload(){
-    // Legacy gangster sheets (leave for fallback)
-    this.load.spritesheet('g1_idle', '/sprites/g1/idle.png', { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g1_run',  '/sprites/g1/run.png',  { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g1_shot', '/sprites/g1/shot.png', { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g2_idle', '/sprites/g2/idle.png', { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet('g2_run',  '/sprites/g2/run.png',  { frameWidth: 128, frameHeight: 128 });
 
-    // Kenney replacements (smaller compact sprites): Runner=Player, Plug=Soldier
-    this.load.image('ken_player_idle',   '/sprites/kenney/player/idle.png');
-    this.load.image('ken_player_walk1',  '/sprites/kenney/player/walk1.png');
-    this.load.image('ken_player_walk2',  '/sprites/kenney/player/walk2.png');
-    this.load.image('ken_soldier_idle',  '/sprites/kenney/soldier/idle.png');
-    this.load.image('ken_soldier_walk1', '/sprites/kenney/soldier/walk1.png');
-    this.load.image('ken_soldier_walk2', '/sprites/kenney/soldier/walk2.png');
 
     // Direct top-down shooter sprites (final picks)
     this.load.image('td_runner', '/sprites/td/runner.png');
@@ -85,6 +94,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Audio SFX (use real files when present; falls back otherwise)
     try {
+      AudioManager.preloadMoments(this);
       this.load.audio('gun_fire',     ['/audio/gun_fire.ogg',     '/audio/gun_fire.mp3']);
       this.load.audio('impact',       ['/audio/impact.ogg',       '/audio/impact.mp3']);
       this.load.audio('pickup',       ['/audio/pickup.ogg',       '/audio/pickup.mp3']);
@@ -152,12 +162,25 @@ export class BaseGameScene extends Phaser.Scene {
     this.vfx = new VisualEffects(this);
     this.gameUI = new GameUI(this);
     this.progressionManager = new ProgressionManager(this);
+    this.intent = new InputIntent(this);
+
+    // Frame counter used as the trace timebase. Must be reset per round —
+    // a trace's tick 0 is its own round's start, not the session's.
+    this.simTick = 0;
 
     // Effects / options
     // Force high-contrast bullets ON for all players
     this.fxBulletHighContrast = true;
 
     // PvE session tracking
+    this.runKind = ['journey','rivals'].includes(initData?.runKind) ? initData.runKind : 'daily';
+    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID })) : null;
+    this.rivals = null;
+    this._blockEntranceShown = false;
+    this._showCityOnEntry = false;
+    this._cityMapOpen = false;
+    this.blockGangID = null;
+    this.worldBlock = null;
     this.mode = initData?.mode || 'pvp'; // 'pve' or 'pvp'
     console.log('[BaseGameScene] mode:', this.mode, 'role:', this.role);
 
@@ -173,15 +196,26 @@ export class BaseGameScene extends Phaser.Scene {
       // storage is keyed by routeID, so a new day simply misses).
       const menuEntry = initData?.pveRound == null && !initData?.savedSession;
       const entryRole = initData?.role ?? (this.scene.key === 'PLUG' ? 'plug' : 'runner');
-      const sess = initData?.savedSession ?? (menuEntry ? getSessionState(entryRole) : null);
+      let sess = this.runKind === 'rivals' ? null : initData?.savedSession ?? (menuEntry
+        ? (this.runKind === 'journey' ? getJourneyProgress() : getSessionState(entryRole)) : null);
+      if (this.runKind === 'daily' && sess?.pveRound > 15) sess = null;
+      this.blockIndex = initData?.blockIndex ?? sess?.blockIndex ?? 1;
+      if (this.runKind === 'journey') {
+        this.worldBlock = worldBlock(this.blockIndex);
+        if (entryRole === 'runner') this.blockGangID = startCityBlock({ blockIndex: this.blockIndex }, getWindowState().gangID);
+      }
       this.savedSession = sess;
 
       // Continue session or start new
-      this.pveRound = initData?.pveRound ?? sess?.pveRound ?? 1;
+      this.pveRound = this.runKind === 'rivals' ? Math.min(7, this.rivalRace.clearTimes.length + 1) : (initData?.pveRound ?? sess?.pveRound ?? 1);
       this.pveSessionStash = initData?.pveSessionStash ?? sess?.pveSessionStash ?? 0;
       this.pveSessionRep = initData?.pveSessionRep ?? sess?.pveSessionRep ?? 0;
       this.pveCleanStreak = initData?.pveCleanStreak ?? sess?.pveCleanStreak ?? 0;
+      this.eliminationTipTurn = Math.max(0,Math.floor(initData?.eliminationTipTurn || 0));
+      this.retryAfterElimination = initData?.retryAfterElimination ?? false;
       this.retryAfterDeath = initData?.retryAfterDeath ?? sess?.retryAfterDeath ?? false;
+      this._showCityOnEntry = shouldShowCity({ mode:this.mode, runKind:this.runKind,
+        role:entryRole, pveRound:this.pveRound, retryAfterDeath:this.retryAfterDeath });
       // One id per run, minted fresh when no restart data carries one —
       // the leaderboard uses it to scope write semantics to the run.
       this.runId = initData?.runId ?? this.savedSession?.runId
@@ -190,21 +224,23 @@ export class BaseGameScene extends Phaser.Scene {
       // Spawn cycle (Continue & Swap Spawns): 0 = original, 1 = take the
       // opponent's spot, 2 = take the second opponent's spot (round 8+),
       // then wraps back to original. Boolean swapSpawns kept for compat.
-      this.swapSpawnCycle = initData?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0);
+      this.swapSpawnCycle = this.runKind === 'rivals' ? 0 : (initData?.swapSpawnCycle ?? sess?.swapSpawnCycle ?? (initData?.swapSpawns ? 1 : 0));
       console.log('[BaseGameScene] PvE - Round:', this.pveRound, 'Stash:', this.pveSessionStash, 'Rep:', this.pveSessionRep, 'SpawnCycle:', this.swapSpawnCycle);
 
       // Use deterministic route seed for PvE (same daily route for all players globally, resets 12am PST)
       // Runner and plug modes get different seeds for balanced gameplay
       const routeID = getCurrentRouteID();
-      this.currentRouteID = routeID;
-      this.seed = getRouteSeed(routeID, this.pveRound, this.role);
+      this.currentRouteID = this.runKind === 'rivals' ? this.rivalRace.course.id : routeID;
+      this.seed = this.runKind === 'rivals' ? this.rivalRace.course.seeds[this.pveRound - 1] : this.runKind === 'journey'
+        ? worldHouseSeed(this.blockIndex, this.pveRound, 'runner')
+        : getRouteSeed(routeID, this.pveRound, this.role);
       console.log('[BaseGameScene] PvE Route ID:', routeID, 'Round:', this.pveRound, 'Role:', this.role, 'Seed:', this.seed);
 
       // Create seeded RNG for gameplay elements (AI targeting, etc.)
       this.gameplayRNG = createSeededRNG(this.seed ^ 0xABCDEF01); // XOR to create different sequence from maze gen
 
       // Cleanup old route data periodically (every new route start)
-      if (this.pveRound === 1) {
+      if (this.pveRound === 1 && this.runKind === 'daily') {
         cleanupOldRoutes();
       }
     } else {
@@ -462,15 +498,19 @@ export class BaseGameScene extends Phaser.Scene {
   computeLayoutFromViewport(){
     const { cols, rows } = this;
     const { width, height } = this.scale.gameSize;
-    const cellFit = Math.floor(Math.min(width / cols, height / rows));
-    const MIN_CELL = 12;
+    if(this.runKind==='rivals'){const layout=rivalArenaLayout(width,height,cols,rows);this.cell=layout.cell;this.pad=layout.pad;return;}
+    // Rival progress lives over the outer border; it does not tax arena height.
+    const hudHeight = 0;
+    const arenaHeight = Math.max(1,height);
+    const cellFit = Math.floor(Math.min(width / cols, arenaHeight / rows));
+    const MIN_CELL = this.runKind === 'rivals' ? 8 : 12;
     const cell = Math.max(MIN_CELL, cellFit);
     this.cell = cell;
     // Center the maze; leftover margins get painted with border brick
     // in drawNeonArena so the screen never shows empty space.
     this.pad = {
       x: Math.max(0, Math.floor((width  - cols*cell) / 2)),
-      y: Math.max(0, Math.floor((height - rows*cell) / 2))
+      y: hudHeight + Math.max(0, Math.floor((arenaHeight - rows*cell) / 2))
     };
   }
 
@@ -490,39 +530,12 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   create(){
-    // Ensure furniture textures are available (load once lazily)
-    const furnIds = [132,133,134,447,448,449,450,451,474,475,476,477,478,501,502,503,505,528,537];
-    const furn2Ids = [506,507,508,509,510,529,530,531,532,533];
-    const furnKeys = furnIds.map(id=> 'furn_'+id).concat(furn2Ids.map(id=>'f2_'+id));
-    const missing = furnKeys.filter(k => !this.textures.exists(k));
-    if (missing.length){
-      // load both directories based on prefix
-      furnIds.forEach(id=> this.load.image('furn_'+id, `/tiles/furn/tile_${id}.png`));
-      furn2Ids.forEach(id=> this.load.image('f2_'+id, `/tiles/furn2/tile_${id}.png`));
-      this.load.once('complete', ()=> this.scene.restart({
-        mode: this.mode,
-        role: this.role,
-        seed: this.seed,
-        pveRound: this.pveRound,
-        pveSessionStash: this.pveSessionStash,
-        pveSessionRep: this.pveSessionRep,
-        pveCleanStreak: this.pveCleanStreak || 0,
-        runId: this.runId,
-        pveBestRound: this.pveBestRound
-      }));
-      this.load.start();
-      return;
-    }
-    // One-time animations for sprites
-    const mkOnce = (key, cfg) => { if (!this.anims.exists(key)) this.anims.create({ key, ...cfg }); };
-    // Runner (Kenney Player)   simple 2-frame walk
-    mkOnce('runner-idle', { frames: [{ key:'ken_player_idle' }], frameRate: 1, repeat: -1 });
-    mkOnce('runner-run',  { frames: [{ key:'ken_player_walk1' }, { key:'ken_player_walk2' }], frameRate: 8, yoyo: true, repeat: -1 });
-    // Plug (Kenney Soldier)
-    mkOnce('plug-idle', { frames: [{ key:'ken_soldier_idle' }], frameRate: 1, repeat: -1 });
-    mkOnce('plug-run',  { frames: [{ key:'ken_soldier_walk1' }, { key:'ken_soldier_walk2' }], frameRate: 8, yoyo: true, repeat: -1 });
-    // Keep old 'plug-shot' anim for fallback if g1_shot exists
-    mkOnce('plug-shot', { frames: this.textures.exists('g1_shot') ? this.anims.generateFrameNumbers('g1_shot', { start: 0, end: 3 }) : [{ key:'ken_soldier_idle' }], frameRate: 18, repeat: 0 });
+    this._touchSceneClosing=false;
+    // Interior furniture is drawn in code; no asynchronous texture-loading restart.
+    // Characters are the td_* top-down set, animated by texture swap in
+    // updateAvatarVisuals. The Kenney and gangster sheets that used to be
+    // preloaded and wired into anims here were never drawn in play (every
+    // character is usesTD) — three art styles were shipping for one look.
     loadInv();
     this.roundOver = false;
 
@@ -596,7 +609,7 @@ export class BaseGameScene extends Phaser.Scene {
     const baseIdx = Math.floor(themeRng() * THEMES.length);
     const prevIdx = parseInt((typeof localStorage!== 'undefined' ? localStorage.getItem('pr_lastThemeIdx') : '-1') || '-1', 10);
     let idx = baseIdx;
-    if (THEMES.length > 1 && idx === prevIdx){
+    if (this.runKind !== 'rivals' && THEMES.length > 1 && idx === prevIdx){
       // rotate by at least 1, with a little RNG so it doesn't just flip-flop
       const shift = 1 + (((themeRng()*100)|0) % (THEMES.length - 1));
       idx = (idx + shift) % THEMES.length;
@@ -626,17 +639,30 @@ export class BaseGameScene extends Phaser.Scene {
       const dh = Math.abs(gameSize.height - this._lastLayoutH);
       if (dw < 40 && dh < 40) return; // ignore jitter (URL bar, etc.)
       clearTimeout(this._resizeTimer);
-      this._resizeTimer = setTimeout(() => this.scene.restart({
+      this._resizeTimer = setTimeout(() => {
+        if (this.rivals) { this.rivals.resize(); return; }
+        // A completed result may resize; never replay the already-earned finale.
+        // Death at house 15 cannot satisfy the persisted completion guard.
+        if (this.runKind === 'journey' && this.role === 'runner' && this.roundOver
+          && this.pveRound === PVE_BLOCK_MAPS && getCityProgress().completedThrough >= this.blockIndex) {
+          this.scene.restart({ mode:'pve', role:'runner', runKind:'journey',
+            ...advanceJourney({ blockIndex:this.blockIndex, pveRound:PVE_BLOCK_MAPS }) });
+          return;
+        }
+        this.scene.restart({
         mode: this.mode,
+        runKind: this.runKind, blockIndex: this.blockIndex,
         role: this.role,
         seed: this.seed,
+        retryAfterDeath: this.retryAfterDeath,
+        swapSpawnCycle: this.swapSpawnCycle,
         pveRound: this.pveRound,
         pveSessionStash: this.pveSessionStash,
         pveSessionRep: this.pveSessionRep,
         pveCleanStreak: this.pveCleanStreak || 0,
         runId: this.runId,
         pveBestRound: this.pveBestRound
-      }), 250);
+      }); }, 250);
     };
     this.scale.on('resize', this._onResizeCb);
 
@@ -644,7 +670,7 @@ export class BaseGameScene extends Phaser.Scene {
     // Early-round openness: fewer wall clusters while new players learn to
     // navigate. R1: 60% density, R2: 75%, R3: 90%, R4+: full. Deterministic
     // per round, so all players still share identical mazes.
-    const roundScale = this.mode === 'pve'
+    const roundScale = this.runKind === 'rivals' ? this.rivalRace.course.scales[this.pveRound - 1] : this.mode === 'pve'
       ? ([0, 0.6, 0.75, 0.9, 0.95][this.pveRound] ?? 1)
       : 1;
     const arena = generateSquareMaze(this.cols, this.rows, { rng: makeRng(this.seed), role: this.role, clusterScale: roundScale });
@@ -662,7 +688,7 @@ export class BaseGameScene extends Phaser.Scene {
     {
       const playerKey = this.role === 'plug' ? 'plug' : 'runner';
       const oppKey    = this.role === 'plug' ? 'runner' : 'plug';
-      const hasSecondAI = this.mode === 'pve' && this.pveRound >= 8;
+      const hasSecondAI = this.mode === 'pve' && hasDualOpponent(this.pveRound);
       const positions = hasSecondAI ? 3 : 2;
       const cycle = (this.swapSpawnCycle || 0) % positions;
       if (cycle === 1) {
@@ -683,6 +709,8 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.neutralizeWallTextures();
     this.drawNeonArena();
+    this.drawWallInk();
+    this.applyFrameVignette();
     this.makeObjectives(this.stashCell, this.extractCell);
     this.placeGetawayCar();
 
@@ -692,34 +720,49 @@ export class BaseGameScene extends Phaser.Scene {
     this.plugSpawnCell = { ...d };
     this.attacker = makeRunnerSprite(this, this.toWorldX(a.x), this.toWorldY(a.y), this.cell).setVisible(false);
     this.defender = makePlugSprite(this,   this.toWorldX(d.x), this.toWorldY(d.y), this.cell).setVisible(false);
+    // After the spawn is settled: placement measures its distance from there,
+    // so it cannot run before the runner has a cell to stand on.
+    this.makeMissionItem();
 
     console.log('[create] Round', this.pveRound, '- Created attacker, children count:', this.attacker.list.length);
 
-    // Dual AI: Spawn second opponent at round 8+ (PvE mode only).
-    // Rounds 8-12 the second AI spawns with reduced HP as a ramp;
-    // full HP from round 13 (the old dual-AI threshold).
+    // Dual AI: the second opponent is the FINALE, not a difficulty step.
+    //
+    // It used to arrive on every map from round 8 on, and that is precisely
+    // where the game stopped being winnable: per-map clear rate falls 50% ->
+    // 17% at that boundary, with defender2 taking 56-76% of the kills. It also
+    // changed what the game was — before it, 67% of deaths happen carrying the
+    // stash (a late flip); after it, 71% never reach the stash at all.
+    //
+    // Now it appears once, on the last map of the block, where the run is on
+    // the line and the spike is the point.
     this.attacker2 = null;
     this.defender2 = null;
-    if (this.mode === 'pve' && this.pveRound >= 8) {
+    if (this.mode === 'pve' && hasDualOpponent(this.pveRound)) {
       // Only spawn second AI opponent, not second player
       if (this.role === 'plug') {
         // Player is defender, spawn second runner (attacker)
-        const altRunnerSpawn = cycledOpp2Spawn || this.findAlternateSpawn(a, 'runner');
+        // Player is the plug here, so keep the second runner away from `d`.
+        const altRunnerSpawn = cycledOpp2Spawn || this.findAlternateSpawn(a, 'runner', d);
         this.attacker2 = makeRunnerSprite(this, this.toWorldX(altRunnerSpawn.x), this.toWorldY(altRunnerSpawn.y), this.cell).setVisible(false);
         // Full HP always — 1-HP enemies feel like popcorn, not opponents.
         // The ramp is SPEED instead: the second runner starts 20% slower
         // than the main one at round 8 and reaches full speed by round 13.
         this.attacker2.hp = 2;
-        this.attacker2._speedMul = Math.min(1, 0.8 + (this.pveRound - 8) * 0.04);
+        // The old 0.8 -> 1.0 ramp existed to soften rounds 8-13. There is only
+        // one dual map now and it is the finale, so it arrives at full speed.
+        this.attacker2._speedMul = 1;
         if (this.wallMask) this.attacker2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Plug Mode - Spawning second runner, children count:', this.attacker2.list.length);
       } else if (this.role === 'runner') {
         // Player is attacker, spawn second plug (defender)
-        const altPlugSpawn = cycledOpp2Spawn || this.findAlternateSpawn(d, 'plug');
+        // Player is the runner here, so keep the second plug away from `a`.
+        const altPlugSpawn = cycledOpp2Spawn || this.findAlternateSpawn(d, 'plug', a);
         this.defender2 = makePlugSprite(this, this.toWorldX(altPlugSpawn.x), this.toWorldY(altPlugSpawn.y), this.cell).setVisible(false);
         // Same philosophy for the second plug: full HP, speed ramp instead.
         this.defender2.hp = 3;
-        this.defender2._speedMul = Math.min(1, 0.8 + (this.pveRound - 8) * 0.04);
+        // Full speed: see the note on attacker2 above.
+        this.defender2._speedMul = 1;
         if (this.wallMask) this.defender2.setMask(this.wallMask);
         console.log('[DualAI] Round', this.pveRound, 'Runner Mode - Spawning second plug');
       }
@@ -817,7 +860,6 @@ export class BaseGameScene extends Phaser.Scene {
     });
 
     // split aims (player vs AI) and separate gun aim for desktop
-    this.playerAim    = { x:1, y:0 }; // movement aim (mobile + keyboard)
     this.playerGunAim = { x:1, y:0 }; // gun aim (desktop mouse)
     this.playerMoveDir = { x:1, y:0 }; // Actual movement direction (straight line)
     this.playerIntendedDir = { x:1, y:0 }; // Direction player swiped/chose (never forced to change)
@@ -829,7 +871,6 @@ export class BaseGameScene extends Phaser.Scene {
       const len = Math.hypot(x, y) || 1;
       const nx = x / len;
       const ny = y / len;
-      this.playerAim = { x: nx, y: ny };
       this.playerDrift = { x: nx, y: ny };
       this.playerMoveDir = { x: nx, y: ny }; // Set straight-line movement direction
       this.playerIntendedDir = { x: nx, y: ny }; // Track what player intended
@@ -840,6 +881,11 @@ export class BaseGameScene extends Phaser.Scene {
       }
       this._runnerInputDir = { x: nx, y: ny };
       this.userTookOver = true;
+      // Intent tap: keyboard direction change (discrete keydown, already deduped
+      // by the browser's own key-repeat suppression — the per-frame held-key
+      // path is recorded separately in PlayerController).
+      this.intent?.recordMove(nx, ny);
+      if (!(this.isDesktop && this.role === 'plug')) this.intent?.recordGun(nx, ny);
     };
     // WASD
     this.input.keyboard.on('keydown-W', ()=> setDir(0,-1));
@@ -896,7 +942,7 @@ export class BaseGameScene extends Phaser.Scene {
     // PvE runner mode: AI plug gets random weapon (no laser)
     if (this.mode === 'pve' && this.role === 'runner') {
       const aiWeapons = ['pistol', 'doublebarrel', 'rifle'];
-      const randomWeapon = aiWeapons[Math.floor(Math.random() * aiWeapons.length)];
+      const randomWeapon = aiWeapons[Math.floor((this.runKind === 'rivals' ? this.gameplayRNG() : Math.random()) * aiWeapons.length)];
       this.allowedGuns = [randomWeapon];
     } else {
       this.allowedGuns = [this.availableGuns[0]];
@@ -942,7 +988,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.antiCampTime      = 0;
     this.antiCampThreshold = 4000;
 
-    this.stake = inv.product > 0 ? 1 : 0;
+    this.stake = this.runKind !== 'rivals' && inv.product > 0 ? 1 : 0;
     if (this.stake > 0) { inv.product -= 1; saveInv(); this.pot = 2; } else { this.pot = 0; }
 
     this.meleeEnabled = false;
@@ -1138,6 +1184,13 @@ export class BaseGameScene extends Phaser.Scene {
 
   startMatch(role){
     this.role = role;
+    if (this.mode === 'pve' && this.runKind !== 'rivals' && role === 'runner' && !this._blockEntranceShown) {
+      this._blockEntranceShown = true;
+      this.roundPausedForMenu = true;
+      this.input.keyboard.enabled = false;
+      this.progressionManager.showBlockMap(() => this.startMatch(role));
+      return;
+    }
 
     // Start replay recording for this round (keeps the previous round's
     // finished replay intact until this one actually records something)
@@ -1164,6 +1217,11 @@ export class BaseGameScene extends Phaser.Scene {
     // Reset stash state for new round (do this AFTER removeCarryPackage)
     this.hasStash = false;
     this.stashCarrier = null;
+
+    // Forensics start here, not in create(): this is the point the round is
+    // actually playable, so spawn geometry is what the player is handed.
+    this.forensics = this.forensics || new RunForensics();
+    this.forensics.begin(this);
 
     console.log('[startMatch] AFTER reset - hasStash:', this.hasStash, 'stashCarrier:', this.stashCarrier ? 'EXISTS' : 'null', 'carrySprite:', this.carrySprite ? 'EXISTS' : 'null');
     this.destroyRunnerAbilityUI();
@@ -1194,7 +1252,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.input.keyboard.enabled = true;
 
-    if (this._pointerMoveHandler){ this.input.off('pointermove', this._pointerMoveHandler); }
+    if (this._pointerMoveHandler){ this.input?.off?.('pointermove', this._pointerMoveHandler); }
     if (this._pointerDownHandler){ this.input.off('pointerdown', this._pointerDownHandler); }
     if (this._pointerUpHandler){ this.input.off('pointerup', this._pointerUpHandler); }
     // make sure touch UI is fully reset between matches
@@ -1211,6 +1269,7 @@ export class BaseGameScene extends Phaser.Scene {
         // Direct update for instant response
         this.playerGunAim = { x: dx/L, y: dy/L };
         this.playerController.playerGunAim = { x: dx/L, y: dy/L };
+        this.intent?.recordGun(dx/L, dy/L);
       };
       this.input.on('pointermove', this._pointerMoveHandler);
       this._mouseDown = false;
@@ -1219,7 +1278,7 @@ export class BaseGameScene extends Phaser.Scene {
       this._pointerDownHandler = (p) => {
         if (p.button !== 0) return;
         // Ignore clicks while modal is open
-        if (this.roundPausedForMenu) return;
+        if (this.roundPausedForMenu || this.roundOver || this._modalDismissGuard) return;
         if (this.role === 'plug') {
           this._mouseDown = true; this.combatSystem.tryMouseFire();
         } else if (this.role === 'runner') {
@@ -1233,7 +1292,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this._pointerDownHandler);
     this.input.on('pointerup', this._pointerUpHandler);
     // Fallback: ensure left click fires even if desktop detection flips
-    this._mouseFireHandler = (p) => { if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu) this.combatSystem.tryMouseFire(); };
+    this._mouseFireHandler = (p) => { if (p.button===0 && this.role==='plug' && !this.roundPausedForMenu && !this.roundOver && !this._modalDismissGuard) this.combatSystem.tryMouseFire(); };
     this.input.on('pointerdown', this._mouseFireHandler);
     } else {
       this.makeMobileControls();
@@ -1251,6 +1310,8 @@ export class BaseGameScene extends Phaser.Scene {
       this._spaceBound = false;
     };
     this.events.once('shutdown', () => {
+      this._touchSceneClosing=true;
+      this.destroyTouchUI?.();
       this.unbindSpace();
       // Note: Don't cleanup sidebars here - the next scene will clean them up
       // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
@@ -1289,7 +1350,6 @@ export class BaseGameScene extends Phaser.Scene {
     // Set movement direction for straight-line movement
     this.playerMoveDir = { x: this._initDrift.x, y: this._initDrift.y };
     this.playerIntendedDir = { x: this._initDrift.x, y: this._initDrift.y }; // Track initial direction
-    this.playerAim = { x: this.playerDrift.x, y: this.playerDrift.y };
     this.playerGunAim = { x: this.playerDrift.x, y: this.playerDrift.y };
     if (this.role === 'runner') this._runnerInputDir = { x: this.playerDrift.x, y: this.playerDrift.y };
     // Flag flips to true after first user-controlled aim so initial drift never applies again
@@ -1319,7 +1379,12 @@ export class BaseGameScene extends Phaser.Scene {
       }
     };
 
-    if (this.role === 'plug') {
+    if (this.runKind === 'rivals') {
+      this.aiPlug.speed = rivalPixels(this.aiPlug.speed,this.cell);
+      this.aiPlug.maxRange = rivalPixels(this.aiPlug.maxRange,this.cell);
+      this.rivals = new RivalsRace(this);
+      this.rivals.prepare(startTimer);
+    } else if (this.role === 'plug') {
       // AI runner gets 2 random powers (consumable, used once each)
       if (!this.availableRunnerPowers?.length) this.availableRunnerPowers = Object.keys(this.runnerPowerStats || {});
       const choices = this.availableRunnerPowers.length ? this.availableRunnerPowers : ['phase','decoy'];
@@ -1354,176 +1419,9 @@ export class BaseGameScene extends Phaser.Scene {
    * were mathematically impossible. Grayscale-bright base fixes both:
    * full hue fidelity, full brightness, texture detail preserved.
    */
-  neutralizeWallTextures(){
-    this._wallFillKey = 'wall_fill';
-    this._wallEdgeKey = 'wall_edge';
-    try {
-      for (const [srcKey, outKey] of [['wall_fill', 'wall_fill_neon'], ['wall_edge', 'wall_edge_neon']]){
-        if (!this.textures.exists(srcKey)) continue;
-        if (!this.textures.exists(outKey)){
-          const img = this.textures.get(srcKey).getSourceImage();
-          const cv = document.createElement('canvas');
-          cv.width = img.width; cv.height = img.height;
-          const ctx = cv.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          const data = ctx.getImageData(0, 0, cv.width, cv.height);
-          const px = data.data;
-          for (let i = 0; i < px.length; i += 4){
-            const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-            const v = Math.min(255, lum * 2.6); // normalize toward white
-            px[i] = px[i + 1] = px[i + 2] = v;
-          }
-          ctx.putImageData(data, 0, 0);
-          this.textures.addCanvas(outKey, cv);
-        }
-        if (srcKey === 'wall_fill') this._wallFillKey = outKey;
-        else this._wallEdgeKey = outKey;
-      }
-    } catch (e) {
-      console.warn('[Textures] neutralize failed, using originals', e);
-    }
-  }
+  neutralizeWallTextures(){ return neutralizeArenaTextures.call(this); }
 
-  drawNeonArena(){
-    const { cell, cols, rows, pad } = this;
-    const W = cols*cell + pad.x*2, H = rows*cell + pad.y*2;
-
-    // Full-screen background per theme
-    const BG = this.theme?.bg ?? 0x080A10;
-    this.add.rectangle(W/2, H/2, W, H, BG, 1);
-
-    const NEON = [0x00E5FF, 0xA78BFA, 0xFF6AD5, 0x00FFA3, 0xFFC857, 0xFF7A00];
-    const COVER_FILL = 0x0B0F16;
-
-    this.walls = this.add.group();
-
-    // Build a geometry mask that hides ONLY wall tiles. We invert the mask so
-    // sprites remain visible everywhere except inside walls, avoiding the
-    // "cage" look from floor-only masks.
-    const maskG = this.make.graphics({ x: 0, y: 0, add: false });
-    maskG.fillStyle(0xffffff, 1);
-    // Inset the wall mask so we only clip when the sprite truly overlaps inside
-    // the wall tile, not when passing right beside it. This avoids the player
-    // appearing "behind" walls at edges while still preventing visual overlap.
-    const wallInset = Math.max(1, Math.floor(cell * 0.16));
-    for (let y=0; y<rows; y++){
-      for (let x=0; x<cols; x++){
-        if (this.grid[y][x] !== T.WALL) continue;
-        const wx = pad.x + x*cell + wallInset;
-        const wy = pad.y + y*cell + wallInset;
-        maskG.fillRect(wx, wy, cell - wallInset*2, cell - wallInset*2);
-      }
-    }
-    this.wallMask = new Phaser.Display.Masks.GeometryMask(this, maskG);
-    this.wallMask.invertAlpha = true;
-
-    // Full floor fill (wood planks pattern using tiles 96..101)
-    this.floors = this.add.group();
-    const WOOD = ['wood_96','wood_97','wood_98','wood_99','wood_100','wood_101'];
-    const CHECK = ['check_11','check_12','check_13','check_14'];
-    const useChecker = (this.theme?.floorSet === 'checker');
-    const checkerColors = (Array.isArray(this.theme?.checkerColors) && this.theme.checkerColors.length >= 2)
-      ? this.theme.checkerColors
-      : null;
-    // Fill floor one tile beyond the map to avoid empty black margin
-    for (let y=-1; y<=rows; y++){
-      for (let x=-1; x<=cols; x++){
-        const cx = pad.x + x*cell + cell/2;
-        const cy = pad.y + y*cell + cell/2;
-        if (useChecker && checkerColors){
-          // THEME PATCH: draw crisp two-tone checker without texture, for bright white/gray tiles
-          const color = (((x + y) & 1) === 0) ? checkerColors[0] : checkerColors[1];
-          const r = this.add.rectangle(cx, cy, cell, cell, color, 1).setDepth(1);
-          this.floors.add(r);
-        } else {
-          let key;
-          if (useChecker){
-            // Use a single checker tile per match (no alternating checkerboard)
-            key = this.floorKeySingle || CHECK[0];
-          } else {
-            const idx = ((((x%3)+3)%3) + 3 * ((((y%2)+2)%2))) % WOOD.length; // 3x2 plank
-            key = WOOD[idx];
-          }
-          const f = this.add.image(cx, cy, key).setDepth(1).setTint(this.theme?.floorTint ?? 0xffffff);
-          f.setDisplaySize(cell, cell);
-          this.floors.add(f);
-        }
-      }
-    }
-
-    // Walls (auto‑tiled edges) + furniture lines; border remains black boxes
-    const isWall = (cx,cy)=> (cy>=0 && cy<rows && cx>=0 && cx<cols && this.grid[cy][cx] === T.WALL);
-    const isBorder = (cx,cy)=> (cx===0||cy===0||cx===cols-1||cy===rows-1);
-    const drawDefaultCell = (cx,cy)=>{
-      const wx = pad.x + cx*cell + cell/2;
-      const wy = pad.y + cy*cell + cell/2;
-        const base = this.add.image(wx, wy, this._wallFillKey || 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
-        base.setDisplaySize(cell, cell);
-        this.walls.add(base);
-      const n = isWall(cx, cy-1), e = isWall(cx+1,cy), s = isWall(cx,cy+1), w = isWall(cx-1,cy);
-      const addEdge = (angle)=>{
-        // Brightened edge accent — the playable area should carry the color
-        // pop, not the frame around it.
-        const _et = this.theme?.wallEdgeTint ?? 0xffffff;
-        const _eb = ((((_et >> 16) & 255) + (255 - ((_et >> 16) & 255)) * 0.22) << 16
-                   | (((_et >> 8) & 255) + (255 - ((_et >> 8) & 255)) * 0.22) << 8
-                   | ((_et & 255) + (255 - (_et & 255)) * 0.22)) >>> 0;
-        const edge = this.add.image(wx, wy, this._wallEdgeKey || 'wall_edge').setDepth(4).setTint(_eb);
-        edge.setDisplaySize(cell, cell).setAngle(angle);
-        this.walls.add(edge);
-      };
-      if (!n) addEdge(0);
-      if (!e) addEdge(90);
-      if (!s) addEdge(180);
-      if (!w) addEdge(270);
-    };
-
-    decorateArenaFurniture(this, { cell, cols, rows, pad, isWall, isBorder, drawDefaultCell });
-
-    // Fill ALL margin space around the maze with border brick, so the
-    // fixed 16x35 grid never leaves visible empty space on any screen.
-    // The driveway gap stays open through every ring so the street runs
-    // to the screen edge.
-    const gapSide = this.egress?.side;
-    const gapW = this.egress?.width || 0;
-    const gapCenter = this.egress?.entry?.x ?? 0;
-    const gapCenterY = this.egress?.entry?.y ?? 0;
-    const gapLoX = Math.max(0, gapCenter  - Math.floor(gapW/2));
-    const gapHiX = Math.min(cols-1, gapCenter  + Math.floor(gapW/2));
-    const gapLoY = Math.max(0, gapCenterY - Math.floor(gapW/2));
-    const gapHiY = Math.min(rows-1, gapCenterY + Math.floor(gapW/2));
-    const ringsX = Math.ceil(pad.x / cell) + 1; // +1: cover sub-cell remainder
-    const ringsY = Math.ceil(pad.y / cell) + 1;
-    const inDrivewayCorridor = (x, y) => {
-      if (gapSide === 'N') return y < 0     && x >= gapLoX && x <= gapHiX;
-      if (gapSide === 'S') return y >= rows && x >= gapLoX && x <= gapHiX;
-      if (gapSide === 'W') return x < 0     && y >= gapLoY && y <= gapHiY;
-      if (gapSide === 'E') return x >= cols && y >= gapLoY && y <= gapHiY;
-      return false;
-    };
-    // Theme-independent "street reflector" dashes over the margin fill.
-    // (Some themes' wall tint happens to reveal texture flecks that look
-    // like this — this makes the effect deliberate and visible on ALL
-    // themes, including dark/black ones.)
-    const marks = this.add.graphics().setDepth(4);
-    marks.fillStyle(0xf5c542, 0.55);
-    const mw = Math.max(3, Math.floor(cell * 0.16));
-    const mh = Math.max(2, Math.floor(cell * 0.08));
-    for (let y = -ringsY; y < rows + ringsY; y++){
-      for (let x = -ringsX; x < cols + ringsX; x++){
-        if (x >= 0 && x < cols && y >= 0 && y < rows) continue;
-        if (inDrivewayCorridor(x, y)) continue;
-        const wx = pad.x + x*cell + cell/2;
-        const wy = pad.y + y*cell + cell/2;
-        const base = this.add.image(wx, wy, this._wallFillKey || 'wall_fill').setDepth(3).setTint(this.theme?.wallFillTint ?? 0xffffff);
-        base.setDisplaySize(cell, cell); this.walls.add(base);
-        // one dash per tile, offset toward top-left like a reflector stud
-        marks.fillRect(wx - cell*0.28, wy - cell*0.22, mw, mh);
-      }
-    }
-    this.walls.add(marks);
-    this.drawNeonPerimeter();
-  }
+  drawNeonArena(){ return drawArenaArt.call(this); }
 
   /**
    * Arena "plateau" edge: the playable map reads as a raised platform over
@@ -1533,113 +1431,43 @@ export class BaseGameScene extends Phaser.Scene {
    * drop shadow where the platform meets the street below — that shadow is
    * what sells the elevation. The driveway mouth stays open as the ramp.
    */
-  drawNeonPerimeter(){
-    const { cols, rows, cell, pad } = this;
-    const lighten = (c, t) => {
-      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
-      return ((r + (255 - r) * t) << 16 | (g + (255 - g) * t) << 8 | (b + (255 - b) * t)) >>> 0;
-    };
-    const darken = (c, t) => {
-      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
-      return ((r * (1 - t)) << 16 | (g * (1 - t)) << 8 | (b * (1 - t))) >>> 0;
-    };
-    const isGrayish = (c) => {
-      const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
-      return Math.max(r, g, b) - Math.min(r, g, b) < 40;
-    };
-    // Terrace colors are MIXED toward the theme's ambient bg so the
-    // platform reads as lit structure in the same scene lighting — the
-    // frame must never outshine the playable area.
-    const bg = this.theme?.bg ?? 0x080a10;
-    const mix = (c1, c2, t) => {
-      const r = ((c1 >> 16) & 255) * (1 - t) + ((c2 >> 16) & 255) * t;
-      const gg = ((c1 >> 8) & 255) * (1 - t) + ((c2 >> 8) & 255) * t;
-      const b = (c1 & 255) * (1 - t) + (c2 & 255) * t;
-      return (r << 16 | gg << 8 | b) >>> 0;
-    };
-    const cA = mix(this.theme?.wallEdgeTint ?? 0x00e5ff, bg, 0.45); // top terrace: muted accent
-    const rawB = this.theme?.carTint ?? 0xff4fd8;
-    const cB = mix(isGrayish(rawB) ? 0xff4fd8 : rawB, bg, 0.55);    // mid terrace: muted contrast
-    const cC = 0x333a48;                                            // base terrace: dark concrete (muted gold read as mustard)
-
-    const x0 = pad.x, y0 = pad.y;
-    const x1 = pad.x + cols * cell, y1 = pad.y + rows * cell;
-
-    // Driveway gap span (world coords along the gap side, slightly padded)
-    const side = this.egress?.side;
-    const gw = this.egress?.width || 0;
-    const gPad = cell * 0.4;
-    let gapLo = 0, gapHi = 0;
-    if (side === 'N' || side === 'S') {
-      const c0 = (this.egress?.entry?.x ?? 0) - Math.floor(gw / 2);
-      gapLo = pad.x + c0 * cell - gPad;
-      gapHi = pad.x + (c0 + gw) * cell + gPad;
-    } else if (side === 'W' || side === 'E') {
-      const c0 = (this.egress?.entry?.y ?? 0) - Math.floor(gw / 2);
-      gapLo = pad.y + c0 * cell - gPad;
-      gapHi = pad.y + (c0 + gw) * cell + gPad;
-    }
-
-    const g = this.add.graphics().setDepth(5);
-
-    // Fill one ring band spanning offsets [a, b] outside the map bounds,
-    // as 4 side rects (corners overlap harmlessly), split at the gap.
-    const band = (a, b, color, alpha = 1) => {
-      g.fillStyle(color, alpha);
-      const spans = (lo, hi, isGapSide) => {
-        if (!isGapSide) return [[lo, hi]];
-        const out = [];
-        if (gapLo > lo) out.push([lo, Math.min(gapLo, hi)]);
-        if (gapHi < hi) out.push([Math.max(gapHi, lo), hi]);
-        return out;
-      };
-      // top / bottom (full width incl. corners)
-      for (const [s, e] of spans(x0 - b, x1 + b, side === 'N')) g.fillRect(s, y0 - b, e - s, b - a);
-      for (const [s, e] of spans(x0 - b, x1 + b, side === 'S')) g.fillRect(s, y1 + a, e - s, b - a);
-      // left / right
-      for (const [s, e] of spans(y0 - b, y1 + b, side === 'W')) g.fillRect(x0 - b, s, b - a, e - s);
-      for (const [s, e] of spans(y0 - b, y1 + b, side === 'E')) g.fillRect(x1 + a, s, b - a, e - s);
-    };
-
-    const t = Math.max(8, Math.round(cell * 0.42)); // terrace thickness scales with cell
-
-    band(0, 3, lighten(cA, 0.28));                   // lip at the playable edge (subtle)
-    band(3, 3 + t, cA);                              // terrace 1 (accent)
-    band(3 + t, 3 + t * 2, darken(cB, 0.08));        // terrace 2 (a step lower)
-    band(3 + t * 2, 3 + t * 3, cC);                  // terrace 3 (concrete base)
-    // thin dark seams between terraces read as the ledge edges
-    band(3 + t - 1, 3 + t + 1, 0x000000, 0.35);
-    band(3 + t * 2 - 1, 3 + t * 2 + 1, 0x000000, 0.35);
-    // drop shadow onto the street — the depth-seller
-    band(3 + t * 3, 3 + t * 3 + 7, 0x000000, 0.30);
-    band(3 + t * 3 + 7, 3 + t * 3 + 14, 0x000000, 0.14);
-
-    this._neonPerimeter = g;
-  }
+  drawNeonPerimeter(){ return drawArenaPerimeter.call(this); }
 
   placeGetawayCar(){
     if (!this.egress) return;
     const side = this.egress.side;
     const ex = this.toWorldX(this.egress.entry.x);
     const ey = this.toWorldY(this.egress.entry.y);
-    // Determine outward direction (toward the street) and place car just INSIDE the house at the driveway mouth
+    // Determine outward direction (toward the street) and park at the driveway mouth
     let cx = ex, cy = ey, ang = 0, dx=0, dy=0;
     // Car art faces upward (headlights at top). Map angles accordingly so headlights point toward street.
     if (side==='N'){ ang = 0; dx=0; dy=-1; }
     else if (side==='S'){ ang = 180; dx=0; dy=1; }
     else if (side==='E'){ ang = 90; dx=1; dy=0; }
     else { ang = -90; dx=-1; dy=0; }
-    // Place car so its front is in the gap, centered at the driveway mouth with a small interior nudge
-    // Position center slightly toward the street so the nose sits in the gap
-    const forward = this.cell * 0.6;
-    cx = ex + dx * forward;
-    cy = ey + dy * forward;
+    // Park outside the guard's pad center. This is a visual offset only:
+    // keep egress, extraction thresholds, AI targets and collision unchanged.
+    const parked = carParkCenter(ex, ey, { x: dx, y: dy }, this.cell, this.scale.gameSize);
+    cx = parked.x;
+    cy = parked.y;
 
-    // Use blue car sprite
+    // Cosmetic paint/stripe textures preserve the original car silhouette.
+    const carKey = ensureGangSkin(this).car;
     const carLen = this.cell*2.6; // larger silhouette
-    const car = this.add.image(cx, cy, 'car_blue').setDepth(1200);
-    car.setDisplaySize(carLen, this.cell*1.4).setTint(this.theme?.carTint ?? 0xffffff);
+    // Edge clamping can overlap the guard pad: characters (depth 10)
+    // stay in front of the parked roof rather than disappearing under it.
+    const car = this.add.image(cx, cy, carKey).setDepth(9);
+    car.setDisplaySize(carLen, this.cell*1.4).setTint(carKey === 'car_blue' ? (this.theme?.carTint ?? 0xffffff) : 0xffffff);
     car.setAngle(ang);
+    // Ink outline, same treatment as the characters. Four copies is plenty at
+    // this size, and they sit one depth below so the tint never bleeds over.
+    const opx = Math.max(2, Math.round(this.cell * 0.09));
+    car._outline = [[opx, 0], [-opx, 0], [0, opx], [0, -opx]].map(([ox, oy]) =>
+      this.add.image(cx + ox, cy + oy, carKey)
+        .setDisplaySize(carLen, this.cell * 1.4)
+        .setTint(PALETTE.ink)
+        .setAngle(ang)
+        .setDepth(8));
     this.car = car;
     this.carOutDir = { x:dx, y:dy };
     // REAL / BUNK STASH PATCH: ensure car beacon starts off
@@ -1649,10 +1477,17 @@ export class BaseGameScene extends Phaser.Scene {
   // REAL / BUNK STASH PATCH: car beacon to guide extraction after pickup
   // REAL / BUNK STASH PATCH: car beacon to guide extraction after pickup (delegated to VFX controller)
   showCarBeacon(){
+    if (!this.canLeaveMissionHouse()) return;
     this.vfx.showCarBeacon();
   }
   hideCarBeacon(){
     this.vfx.hideCarBeacon();
+  }
+
+  canLeaveMissionHouse(){
+    return missionExitAllowed({ mode: this.mode, runKind: this.runKind, role: this.role,
+      required: this.requiresMissionItem || Boolean(this.missionObject),
+      tookItem: this.hasMissionItem, hasStash: this.hasStash });
   }
 
   startExtractionSequence(){
@@ -1670,6 +1505,8 @@ export class BaseGameScene extends Phaser.Scene {
       const container = this.add.container(x, y).setDepth(1000);
       // Invisible sensor for consistent overlap bounds
       const sensor = this.add.rectangle(0, 0, w, h, 0x000000, 0.0001);
+      // Hard ground shadow, same treatment as the characters.
+      const shadow = this.add.ellipse(this.cell * 0.05, h * 0.55, w * 1.05, h * 0.5, PALETTE.ink, 0.45);
       // Graphics-based rounded rectangle + tape stripe
       const g = this.add.graphics();
       const tan = 0xC8A97E;    // duffel/package color
@@ -1678,7 +1515,9 @@ export class BaseGameScene extends Phaser.Scene {
       const gloss = 0xE7D3B5;  // soft highlight
       // Draw duffel body
       g.fillStyle(tan, 1);
-      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.05)), tanDark, 1);
+      // Ink outline, not a darker tan: the duffel reads with the same line
+      // weight as the people instead of as a softer object in a harder scene.
+      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
       const rad = Math.max(4, Math.floor(this.cell * 0.14 * baseScale));
       g.fillRoundedRect(-w/2, -h/2, w, h, rad);
       g.strokeRoundedRect(-w/2, -h/2, w, h, rad);
@@ -1693,7 +1532,7 @@ export class BaseGameScene extends Phaser.Scene {
       const mark = this.add.text(-w*0.18, -h*0.06, '$', { fontSize: `${Math.max(10, Math.floor(this.cell*0.30*baseScale))}px`, color: '#2b2b2b' })
         .setAlpha(0.25)
         .setOrigin(0.5);
-      container.add([sensor, g, mark]);
+      container.add([sensor, shadow, g, mark]);
       // Mark so our logic can identify the object type
       container.isPackage = true;
       container.sensor = sensor;
@@ -1764,6 +1603,125 @@ export class BaseGameScene extends Phaser.Scene {
     this._drawExtractHalo = null;
   }
 
+  /**
+   * The job contact's object, for the one house they briefed.
+   *
+   * Placement is read-only over the finished grid from its own seed domain,
+   * so a house plays identically whether or not a mission is live. It is an
+   * extra pickup: it is never the real bag, never counts as stash, and the
+   * ring is violet precisely so nobody reads it as a duffel.
+   */
+  makeMissionItem(){
+    this.missionItem?.destroy?.();
+    this.missionItem = null;
+    this.missionHalo?.destroy?.();
+    this.missionHalo = null;
+    this._drawMissionHalo = null;
+    this.hasMissionItem = false;
+    this.requiresMissionItem = false;
+    this._missionExitHintAt = -Infinity;
+    this.missionObject = null;
+    if (this.mode !== 'pve' || this.runKind !== 'journey' || this.role !== 'runner') return;
+
+    let who = null;
+    try { who = activeMissionContact(this.blockGangID ?? getWindowState().gangID, this.pveRound); } catch { who = null; }
+    if (!who) return;
+    const chapter = crewStoryProgress(getContactProgress(), who.gangID).chapter;
+    const object = seasonJob(who.gangID, chapter) || missionObject(who.id);
+    if (!object) return;
+
+    // Set the requirement before placement: missing art can never waive a job.
+    this.requiresMissionItem = true;
+    this.missionObject = object;
+    const cell = placeRequiredMissionItem({
+      grid: this.grid,
+      spawn: this.runnerSpawnCell,
+      stash: this.stashCell, extract: this.extractCell,
+      egress: this.egress?.entry,
+      seed: missionItemSeed(this.seed, this.blockIndex || 1, this.pveRound || 1)
+    });
+    if (!cell) { console.warn('[Mission] No valid runner floor for required item'); return; }
+
+    this.missionObject = object;
+    this.missionCell = cell;
+    const x = this.toWorldX(cell.x), y = this.toWorldY(cell.y);
+    const size = this.cell * 0.52;
+    const container = this.add.container(x, y).setDepth(1000);
+    const sensor = this.add.rectangle(0, 0, size * 1.3, size * 1.3, 0x000000, 0.0001);
+    const shadow = this.add.ellipse(this.cell * 0.05, size * 0.5, size * 1.0, size * 0.4, PALETTE.ink, 0.45);
+    const g = this.add.graphics();
+    // A case, not a bag: hard ink line and a bright seam, so it reads as
+    // equipment at a glance instead of a third duffel.
+    g.fillStyle(0x2a2233, 1);
+    g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
+    g.fillRoundedRect(-size / 2, -size * 0.36, size, size * 0.72, Math.max(3, this.cell * 0.09));
+    g.strokeRoundedRect(-size / 2, -size * 0.36, size, size * 0.72, Math.max(3, this.cell * 0.09));
+    g.fillStyle(MISSION_ITEM_COLOR, 1);
+    g.fillRect(-size / 2 + 3, -size * 0.07, size - 6, Math.max(2, size * 0.14));
+    container.add([sensor, shadow, g]);
+    container.isMissionItem = true;
+    container.sensor = sensor;
+    this.missionItem = container;
+
+    this.missionHalo = this.add.graphics().setDepth(999);
+    this._drawMissionHalo = () => {
+      if (!this.missionHalo) return;
+      this.missionHalo.clear();
+      const item = this.missionItem;
+      if (!item || item.active === false || item.visible === false) return;
+      const t = (performance.now() % 1400) / 1400;
+      const r = this.cell * (0.6 + 0.14 * Math.sin(t * 2 * Math.PI));
+      const a = Math.max(0, Math.min(1, item.alpha ?? 1));
+      this.missionHalo.lineStyle(3, MISSION_ITEM_COLOR, 0.95 * a);
+      this.missionHalo.strokeCircle(item.x, item.y, r);
+      this.missionHalo.lineStyle(1, MISSION_ITEM_COLOR, 0.42 * a);
+      this.missionHalo.strokeCircle(item.x, item.y, r + 6);
+    };
+  }
+
+  /** Pickup. Additive: it never touches hasStash, the bag or the stash count. */
+  checkMissionItemPickup(){
+    const item = this.missionItem;
+    if (!item || this.hasMissionItem || this.roundOver || this.roundPausedForMenu) return;
+    const runner = this.attacker;
+    if (!runner || !runner.active || runner.visible === false) return;
+    if (!rectsOverlap(runner, item)) return;
+    this.hasMissionItem = true;
+    this.missionHalo?.clear?.();
+    this._drawMissionHalo = null;
+    try { this.audio?.playMissionItemPickup?.(this.missionObject.id); } catch {}
+    const label = this.add.text(item.x, item.y - this.cell * 0.65, this.missionObject.short + ' COLLECTED', {
+      fontSize: Math.max(13, Math.floor(this.cell * 0.5)) + 'px',
+      color: '#c9a6f5', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({ targets: label, y: label.y - this.cell * 0.55, alpha: 0, duration: 950,
+      ease: 'Cubic.easeOut', onComplete: () => label.destroy() });
+    this.tweens.add({ targets: item, alpha: 0, scale: 0.7, duration: 260, ease: 'Cubic.easeIn',
+      onComplete: () => { item.destroy(); this.missionItem = null; } });
+    const pulse = this.add.circle(item.x, item.y, this.cell * 0.45, MISSION_ITEM_COLOR, 0)
+      .setStrokeStyle(2, MISSION_ITEM_COLOR, 0.9).setDepth(2000);
+    this.tweens.add({ targets: pulse, scale: 1.8, alpha: 0, duration: 360,
+      onComplete: () => pulse.destroy() });
+    if (this.hasStash) this.showCarBeacon();
+  }
+
+  /** A quiet, throttled hint; no modal, no pause, no extraction side effects. */
+  showMissionExitHint(){
+    const now = this.time?.now ?? performance.now();
+    if (now - this._missionExitHintAt < 1600) return;
+    this._missionExitHintAt = now;
+    const label = this.add.text(this.cameras.main.centerX,
+      Math.max(this.cell * 2, (this.extract?.y ?? this.attacker?.y ?? this.cameras.main.centerY) - this.cell * 2),
+      this.hasMissionItem ? 'GRAB THE STASH BEFORE YOU LEAVE' :
+        (this.missionObject?.label || 'JOB ITEM') + ' REQUIRED\nFind the violet case', {
+        fontFamily: 'Arial, sans-serif', fontSize: '13px', fontStyle: 'bold',
+        color: '#d5b2ff', stroke: '#080b0d', strokeThickness: 3, align: 'center',
+        wordWrap: { width: Math.min(240, this.scale.gameSize.width - 40) }
+      }).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({ targets: label, alpha: 0, duration: 1400, ease: 'Cubic.easeIn',
+      onComplete: () => label.destroy() });
+  }
+
   addCarryPackage(){
     if (!this.attacker) return;
     console.log('[addCarryPackage] ===== CALLED =====');
@@ -1786,7 +1744,9 @@ export class BaseGameScene extends Phaser.Scene {
       const tan = 0xC8A97E, tanDark = 0xA9885F, tape = 0x8B7355, gloss = 0xE7D3B5;
       const rad = Math.max(3, Math.floor(this.cell * 0.10));
       g.fillStyle(tan, 1);
-      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.05)), tanDark, 1);
+      // Ink outline, not a darker tan: the duffel reads with the same line
+      // weight as the people instead of as a softer object in a harder scene.
+      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
       g.fillRoundedRect(-w/2, -h/2, w, h, rad);
       g.strokeRoundedRect(-w/2, -h/2, w, h, rad);
       g.fillStyle(tape, 1);
@@ -1898,13 +1858,28 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   getWeaponStats(weapon){
-    return this.weaponStats?.[weapon] || this.weaponStats?.pistol;
+    const stats = this.weaponStats?.[weapon] || this.weaponStats?.pistol;
+    return this.runKind === 'rivals' && stats
+      ? { ...stats, speed: rivalPixels(stats.speed,this.cell) } : stats;
   }
 
 
   beginRoundTimer(){
+    if (this.runKind === 'rivals') this._shootTicker = 0;
     this.endAt = performance.now() + this.timerMs;
     this.roundPausedForMenu = false;
+
+    // Start the intent trace here, not in create(): by this point the weapon
+    // and power-selection modals are closed, so tick 0 is the first frame the
+    // player can actually move. Anything earlier records menu noise and makes
+    // tick 0 mean something different on every run.
+    this.simTick = 0;
+    this._runStartedAt = performance.now();
+    // Active play for this attempt, accumulated per frame in update(). Wall
+    // clock would include the entrance map, contact dialogue, the loadout
+    // picker, settings and city zooms; matchmaking needs time at the sticks.
+    this._activePlayMs = 0;
+    this.intent?.start({ startedAt: Date.now() });
 
     // Initialize RepTracker for this round via ProgressionManager
     if (this.progressionManager) {
@@ -1914,6 +1889,56 @@ export class BaseGameScene extends Phaser.Scene {
     // Reset AI orientation timers for new round
     resetPlugOrientation(this);
     resetRunnerOrientation(this);
+  }
+
+  /**
+   * Close out a run: finalize the intent trace and emit one structured
+   * telemetry record.
+   *
+   * IDEMPOTENT BY DESIGN. A round can finish through several paths (extract,
+   * eliminated, timeout, AI runner extracted) and some of them overlap —
+   * startExtractionSequence sets roundOver and then endRound may also fire.
+   * intent.stop() returns null once already stopped, so the second and third
+   * call cost nothing. Call it liberally rather than trying to find the one
+   * true exit point; there isn't one.
+   *
+   * The emitted line is the dataset for sizing maps to a ~20s target: dump
+   * `window.__plugRunTelemetry` after a session, or scrape [RUN] from logs.
+   */
+  finalizeRun(outcome = 'unknown'){
+    const trace = this.intent?.stop();
+    if (!trace) return null;
+
+    const durationMs = Math.round(performance.now() - (this._runStartedAt || performance.now()));
+    const record = {
+      outcome,
+      durationMs,
+      ticks: this.simTick | 0,
+      role: this.role,
+      mode: this.mode,
+        runKind: this.runKind, blockIndex: this.blockIndex,
+      round: this.pveRound ?? null,
+      routeID: this.currentRouteID ?? null,
+      seed: this.seed ?? null,
+      cols: this.cols,
+      rows: this.rows,
+      gotStash: !!this.hasStash,
+      events: trace.events.length,
+      traceBytes: InputIntent.size(trace),
+      // Where the run actually went wrong, rather than only that it did.
+      forensics: this.forensics?.summary(this) ?? null
+    };
+
+    // Structured single-line output — greppable, and parseable straight out
+    // of a headless browser console by the bot harness.
+    console.log('[RUN]', JSON.stringify(record));
+
+    try {
+      (window.__plugRunTelemetry ||= []).push(record);
+      (window.__plugRunTraces ||= []).push(trace);
+    } catch {}
+
+    return { record, trace };
   }
 
   // Weapon selection prompt (delegated to GameUI controller)
@@ -1938,9 +1963,16 @@ export class BaseGameScene extends Phaser.Scene {
     if (used[idx]) return;
 
     const power = sel[idx];
+    this.forensics?.power(this, idx, power);
     // perform power immediately (no per-power cooldown; consumable)
     this.performRunnerPower(power);
     used[idx] = true;
+
+    // Only the human's activations belong in the trace. This same function
+    // drives the AI runner when the player is the plug (isAI above), and
+    // recording those would make the trace unreplayable — the AI is
+    // reconstructed from the seed, not from the input stream.
+    if (!isAI) this.intent?.recordPower(idx);
 
     // Update the correct property based on who's using it
     if (isAI) {
@@ -1991,6 +2023,8 @@ export class BaseGameScene extends Phaser.Scene {
         if (!this.inBoundsCell(nx, ny) || !this.isWalkableCell(nx, ny)) break;
         cx = nx; cy = ny;
       }
+      // JUICE: dust where the dash launched from, so the jump reads as a jump.
+      this.spawnDust(this.toWorldX(start.x), this.toWorldY(start.y));
       this.attacker.x = this.toWorldX(cx);
       this.attacker.y = this.toWorldY(cy);
     } else if (power === 'decoy'){
@@ -2052,13 +2086,60 @@ export class BaseGameScene extends Phaser.Scene {
   destroyRunnerAbilityUI(){ this.runnerAbilityText?.destroy?.(); this.runnerAbilityText=null; this.destroyAbilityButton(); return; /* HUD disabled */ }
 
   getRunnerFacing(){
-    const aim = this._runnerInputDir || this._runnerLastAim || this.playerAim || this._aiLastMoveDir || { x: 1, y: 0 };
+    const aim = this._runnerInputDir || this._runnerLastAim || this._aiLastMoveDir || { x: 1, y: 0 };
     const len = Math.hypot(aim.x, aim.y) || 1;
     return { x: aim.x / len, y: aim.y / len };
   }
 
   runnerIsPhasing(){
     return performance.now() < (this.phaseActiveUntil || 0);
+  }
+
+  /**
+   * Give the environment the grammar the characters now speak: ink line and
+   * hard shadow. Structural depth cues only — no wall or floor COLOUR is
+   * changed here; that is a taste retune to do with the game on screen.
+   *
+   * There used to be a third cue: a contact shade on every floor cell touching
+   * a wall. It was wrong. A one-cell corridor touches a wall along its whole
+   * length, so corridors went dark while rooms stayed light, and the floor
+   * read as two different surfaces — "is that a different path?" It was also
+   * redundant: the drop shadow already gives contact shading, in one
+   * consistent direction, only a few px deep, so it cannot tint a corridor.
+   *
+   * Depth slots, from the existing draw: floor 1, wall fill 3, wall edge 4,
+   * characters 10. Each layer is ONE Graphics object with alpha applied to the
+   * object, so overlapping tiles composite once instead of stacking darker.
+   */
+  drawWallInk(){ return drawArenaWallInk.call(this); }
+
+  /**
+   * Darken the frame edges so the eye sits on the board. One line of post-FX,
+   * WebGL only (Phaser.AUTO picks WebGL everywhere that matters; on Canvas this
+   * is simply absent rather than faked). Flagged on the camera, not the scene:
+   * the scene instance survives restart() and the camera does not.
+   */
+  applyFrameVignette(){
+    try {
+      const cam = this.cameras?.main;
+      if (!cam || cam._hasVignette) return;
+      if (this.renderer?.type !== Phaser.WEBGL || !cam.postFX) return;
+      cam.postFX.addVignette(0.5, 0.5, 0.92, 0.32);
+      cam._hasVignette = true;
+    } catch {}
+  }
+
+  /** A puff of ground dust. Visual only — nothing here touches sim state. */
+  spawnDust(x, y, n = 6){
+    for (let i = 0; i < n; i++){
+      const a = Math.random() * Math.PI * 2;
+      const r = this.cell * (0.35 + Math.random() * 0.5);
+      const c = this.add.circle(x, y, this.cell * (0.06 + Math.random() * 0.06), PALETTE.dust, 0.7).setDepth(9);
+      this.tweens.add({
+        targets: c, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, alpha: 0, scale: 0.3,
+        duration: 220 + Math.random() * 120, ease: 'Quad.easeOut', onComplete: () => c.destroy()
+      });
+    }
   }
 
   destroyDecoySprite(){
@@ -2097,18 +2178,13 @@ export class BaseGameScene extends Phaser.Scene {
 
     this.roundAmmo[weapon] -= 1;
 
-    // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
-    const aim = (this.playerController?.playerGunAim || this.playerAim) || { x: 1, y: 0 };
-    this.combatSystem.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
+    // Recorded after the ammo/weapon guards above, so the trace holds shots
+    // that actually left the barrel — not every trigger pull on an empty clip.
+    this.intent?.recordFire();
 
-    // Play a quick shooting animation if available
-    if (this.defender?.sprite?.anims && !this.defender?.usesTD){
-      this.defender.sprite.play('plug-shot', true);
-      if (this.defender.outline){ for (const o of this.defender.outline) o.play('plug-shot', true); }
-      this.defender.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        // resume appropriate loop based on motion handled in updateAvatarVisuals
-      });
-    }
+    // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
+    const aim = this.playerController?.playerGunAim || { x: 1, y: 0 };
+    this.combatSystem.spawnWeaponBurst(this.defender, aim, weapon, this.bulletsD);
 
     if (this.totalRoundsLeft() === 0) this.meleeEnabled = true;
   }
@@ -2123,6 +2199,18 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   update(_, delta){
+    if (this.rivals?.update()) return;
+    // Trace timebase. Advances once per rendered frame today; once update()
+    // steps at a fixed dt this becomes an exact time coordinate and traces
+    // become replayable across machines.
+    this.simTick = (this.simTick | 0) + 1;
+
+    // Active play only: a paused or finished frame is menu, dialogue, city or
+    // settings time, and matchmaking evidence must not count it.
+    if (this._activePlayMs != null && !this.roundPausedForMenu && !this.roundOver) {
+      this._activePlayMs += Number.isFinite(delta) ? delta : 0;
+    }
+
     // Replay recorder: samples world sprites ~15x/sec, auto-finalizes on round end
     try { ReplaySystem.tick(this, delta); } catch (e) { console.error('[Replay] tick error:', e); }
 
@@ -2136,6 +2224,8 @@ export class BaseGameScene extends Phaser.Scene {
     // Draw helper visuals each frame if enabled
     try {
       this._drawStashHalo?.();
+      this._drawMissionHalo?.();
+      this.checkMissionItemPickup();
       this._drawExtractHalo?.(); // kept for compatibility if re-enabled elsewhere
       this._drawCarBeacon?.();
     } catch (e) {
@@ -2213,7 +2303,10 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     const left = Math.max(0, this.endAt - now);
-    if (left <= 0) return this.endRound('defender');
+    if (left <= 0) {
+      this.forensics?.death(this, null, 'clock');
+      return this.endRound('defender');
+    }
 
     const moveSpeedRunner = this.runnerSpeed * (this.hasStash ? this.carrySlow : 1);
     let plugBaseSpeed = (this.meleeEnabled ? this.plugSpeedNoAmmo : this.plugSpeed);
@@ -2331,6 +2424,7 @@ export class BaseGameScene extends Phaser.Scene {
       const L = Math.hypot(dx, dy) || 1;
       this.playerGunAim = { x: dx/L, y: dy/L };
       this.playerController.playerGunAim = { x: dx/L, y: dy/L };
+      this.intent?.recordGun(dx/L, dy/L);
     }
 
     updateAvatarVisuals(this, dt);
@@ -2419,6 +2513,7 @@ export class BaseGameScene extends Phaser.Scene {
         this.attacker = pickupAttacker;
         console.log('[STASH PICKUP] AFTER swap - this.attacker:', this.attacker === this.attacker2 ? 'attacker2' : 'attacker', 'HP:', this.attacker.hp);
         this.hasStash = true;
+        this.forensics?.pickup(this, 'real');
         console.log('[STASH PICKUP] Set hasStash = true');
 
         this.aiRunnerTargetsBunkFirst = false;
@@ -2462,6 +2557,7 @@ export class BaseGameScene extends Phaser.Scene {
         const decoy = this.bunkStash;
         if (decoy && !decoy._fading){
           decoy._fading = true;
+          this.forensics?.pickup(this, 'bunk');
           this.aiRunnerTargetsBunkFirst = false;
           // Track bunk stash pickup for REP (runner got fooled)
           if (this.progressionManager?.repTracker && this.role === 'runner') {
@@ -2470,7 +2566,7 @@ export class BaseGameScene extends Phaser.Scene {
 
           // Log activity feed event: Player picked up bunk (only for human player)
           if (this.role === 'runner') {
-            logBunkPickup(this.pveRound || 1);
+            this.runKind === 'daily' && logBunkPickup(this.pveRound || 1);
           }
 
           // Play pickup sounds (generic pickup + bunk stash pickup)
@@ -2498,16 +2594,20 @@ export class BaseGameScene extends Phaser.Scene {
         // Dual AI mode: Only the STASH CARRIER needs to extract
         // The other runner can wait at the car but doesn't need to be there
         const carrier = this.stashCarrier;
-        if (carrier && carrier.active && carrier.hp > 0 && overlaps(carrier, this.extract)) {
-          return this.startExtractionSequence();
+        if (carrier && carrier.active && carrier.hp > 0 && carExtractionOverlap(carrier, this.extract)) {
+          if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
+          this.showMissionExitHint();
         }
       } else {
         // Single AI mode: Just one runner needs to extract
-        if (overlaps(this.attacker, this.extract)) {
-          return this.startExtractionSequence();
+        if (carExtractionOverlap(this.attacker, this.extract)) {
+          if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
+          this.showMissionExitHint();
         }
       }
     }
+
+    this.forensics?.tick(this);
 
     // Unstuck runner if inside wall and not phasing (only check alive attackers)
     try {
@@ -2671,6 +2771,7 @@ export class BaseGameScene extends Phaser.Scene {
     // Finalize the replay NOW — tick() won't get another chance before the
     // scene restarts into the next round and begin() resets the recorder.
     ReplaySystem.finalize();
+    this.finalizeRun('runner_eliminated');
 
     // Clean up active effects so the modal/restart feels calm
     this.destroyDecoySprite();
@@ -2819,6 +2920,8 @@ export class BaseGameScene extends Phaser.Scene {
   /* ------------- Mobile Controls: swipe + tap ------------- */
   makeMobileControls(){
     this.destroyTouchUI?.();
+    // Camera/Input plugins may already be gone during shutdown listener order.
+    if(this._touchSceneClosing||!this.cameras?.main||!this.input||!this.scale?.gameSize)return;
 
     // Thresholds adapted from 9/17 build that worked well on devices
     const SWIPE_DEAD_PX = 10;   // minimum movement to count as a swipe
@@ -2910,6 +3013,12 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   destroyTouchUI(){
+    // Do this even if no listeners remain: a removed/queued release can leave
+    // the controller holding a finger ID, rejecting every subsequent swipe.
+    this.playerController?.resetTouchGestures?.();
+    this._swipePid = null;
+    this._swipeStart = null;
+    this._aimDragActive = false;
     if (!this._touchHandlers) return;
     const { downHandler, moveHandler, upHandler, zone } = this._touchHandlers;
     try {
@@ -2922,7 +3031,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.input.off('pointermove', moveHandler);
     this.input.off('pointerup', upHandler);
     this.input.off('pointerupoutside', upHandler);
-    this.input.off('gameout', upHandler);
+    this.input?.off?.('gameout', upHandler);
     // remove DOM touch fallback
     const canvas = this.sys.game?.canvas || this.game?.canvas;
     if (this._domTouchHandlers){
@@ -2944,7 +3053,7 @@ export class BaseGameScene extends Phaser.Scene {
 
   suspendTouchUI(suspended){
     // Temporarily disable touch during modals
-    if (suspended){
+    if (suspended||this._touchSceneClosing||!this.cameras?.main){
       this.destroyTouchUI();
     } else {
       this.makeMobileControls();
@@ -2965,7 +3074,12 @@ export class BaseGameScene extends Phaser.Scene {
     const round = this.pveRound;
 
     // Determine which music track to play
-    const musicKey = this.role === 'plug' ? 'bg_plug' : (this.mode === 'tutorial' ? 'bg_learn' : 'bg_main');
+    // Race state is shallow-copied after a clear; its course object is stable.
+    // A new race/rematch creates a new course object even on the same map.
+    const context = this.runKind === 'rivals' ? (this.rivalRace?.course || this.rivalRace)
+      : [this.runKind, this.role, this.currentRouteID, this.blockIndex].join('/');
+    const musicKey = this.audio?.selectGameplayMusic(context);
+    if (!musicKey) return;
 
     // Define base/max volumes per track
     let baseVol = 0.20;  // starting volume (round 1)
@@ -3077,47 +3191,45 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   /* -------------- Dual AI Helper -------------- */
-  findAlternateSpawn(originalSpawn, role) {
-    // DETERMINISTIC: Return cell in the opposite quadrant (consistent between retries)
-    const oppositeX = this.cols - 1 - originalSpawn.x;
-    const oppositeY = this.rows - 1 - originalSpawn.y;
+  /**
+   * Where the round-8 second opponent spawns.
+   *
+   * @param avoidCell the PLAYER's spawn. Optional, and its absence was the bug:
+   *   this used to weigh only the stash and the extraction, so across 227 runs
+   *   the second plug landed within 6 cells of the runner on 24% of rounds 8+,
+   *   once at a single cell. Not one of the 47 runs that started that close was
+   *   ever survived. The first plug has always respected a minimum distance;
+   *   the second simply was not asked to.
+   *
+   *   Left null by the spawn-cycle path, which is deliberately moving the
+   *   player onto a known spot rather than placing an opponent away from them.
+   */
+  findAlternateSpawn(originalSpawn, role, avoidCell = null) {
+    const cell = chooseAlternateSpawn({
+      cols: this.cols,
+      rows: this.rows,
+      origin: originalSpawn,
+      avoid: avoidCell,
+      stash: this.stashCell,
+      extract: this.extractCell,
+      isWalkable: (x, y) => this.isWalkableCell(x, y)
+    });
 
-    // Helper: check if cell is far enough from objectives
-    const isSafeSpawn = (cx, cy) => {
-      if (!this.isWalkableCell(cx, cy)) return false;
-
-      // Don't spawn within 3 cells of stash
-      const distToStash = Math.abs(cx - this.stashCell.x) + Math.abs(cy - this.stashCell.y);
-      if (distToStash < 3) return false;
-
-      // Don't spawn within 2 cells of extract/car
-      const distToExtract = Math.abs(cx - this.extractCell.x) + Math.abs(cy - this.extractCell.y);
-      if (distToExtract < 2) return false;
-
-      return true;
-    };
-
-    // Find nearest safe walkable cell to opposite corner (always same result for same map)
-    for (let radius = 0; radius < Math.max(this.cols, this.rows); radius++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        for (let dy = -radius; dy <= radius; dy++) {
-          const cx = oppositeX + dx;
-          const cy = oppositeY + dy;
-          if (isSafeSpawn(cx, cy)) {
-            console.log('[findAlternateSpawn] Spawning second', role, 'at', cx, cy, '(dist to stash:', Math.abs(cx - this.stashCell.x) + Math.abs(cy - this.stashCell.y), ')');
-            return { x: cx, y: cy };
-          }
-        }
-      }
+    if (cell) {
+      console.log('[findAlternateSpawn] Spawning second', role, 'at', cell.x, cell.y,
+        avoidCell ? `(${Math.abs(cell.x - avoidCell.x) + Math.abs(cell.y - avoidCell.y)} from player)` : '');
+      return cell;
     }
 
-    // Last resort: return original spawn (will stack on top, but won't crash)
-    console.warn('[findAlternateSpawn] Could not find safe spawn, using original');
-    return { ...originalSpawn };
+    // Nothing legal anywhere — fall back to the opposite corner and let the
+    // unstick pass sort it out rather than returning nothing.
+    console.warn('[findAlternateSpawn] no legal cell found; using opposite corner');
+    return { x: this.cols - 1 - originalSpawn.x, y: this.rows - 1 - originalSpawn.y };
   }
 
   /* -------------- Scene lifecycle cleanup -------------- */
   shutdown(){
+    this._touchSceneClosing=true;
     console.log('[shutdown] Round', this.pveRound, '- Shutting down scene');
 
     // CRITICAL: Clean up carry sprite FIRST, before any containers are destroyed

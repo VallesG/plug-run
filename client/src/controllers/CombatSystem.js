@@ -41,6 +41,13 @@ export default class CombatSystem {
     const ax = aim?.x ?? 0;
     const ay = aim?.y ?? 0;
     const len = Math.hypot(ax, ay) || 1;
+
+    // JUICE: the figure kicks back along the shot and eases home over ~80ms.
+    // Consumed by updateAvatarVisuals as a decaying offset (see spriteFactory).
+    if (origin?.figure?.length) {
+      const k = this.scene.cell * 0.14;
+      origin._recoil = { x: -(ax / len) * k, y: -(ay / len) * k, t: 0.08, dur: 0.08 };
+    }
     const baseAngle = Math.atan2(ay / len, ax / len);
     const pellets = stats?.spreadAngles?.length ? stats.spreadAngles : [0];
 
@@ -127,7 +134,8 @@ export default class CombatSystem {
       const dy = Math.sin(ang);
       // Use high-contrast color based on floor theme
       const color = palette.fill;
-      const radius = Math.max(3, Math.floor(this.scene.cell * 0.13));
+      const radius = this.scene.runKind === 'rivals'
+        ? this.scene.cell * 0.13 : Math.max(3, Math.floor(this.scene.cell * 0.13));
       const bullet = this.scene.add.circle(origin.x, origin.y, radius, color, 1)
         .setDepth(10)
         .setBlendMode(useNormalBlend ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD);
@@ -139,6 +147,10 @@ export default class CombatSystem {
       bullet._radius = radius;
       bullet._trailAt = performance.now();
       bullet._repTracked = false; // Mark if we've tracked this bullet's outcome for REP
+      // Who fired it. Needed to attribute a kill to defender vs defender2 —
+      // from round 8 there are two of them, and "which one is doing the
+      // killing" is the question the round-8 cliff turns on.
+      bullet._from = origin;
 
       // Soft glow that follows the projectile
       bullet._glow = this.scene.add.circle(origin.x, origin.y, Math.floor(radius * 1.7), color, 0.28)
@@ -276,11 +288,14 @@ export default class CombatSystem {
           this.scene.progressionManager.repTracker.onBulletFired(true);
           b._repTracked = true;
         }
+        const from = b._from;
         b._glow?.destroy?.();
         b._rim?.destroy?.();
         b.destroy();
         if (this.scene.canDamage(this.scene.attacker)) {
+          this._lastShooter = from;
           this.hit(this.scene.attacker);
+          this._lastShooter = null;
         }
       }
       // Dual AI: Check collision with second attacker
@@ -318,6 +333,18 @@ export default class CombatSystem {
   /**
    * Apply damage to a character
    */
+  /** An expanding ring in the fallen one's colour. Visual only. */
+  deathRing(x, y, color = 0xffffff) {
+    const cell = this.scene.cell;
+    const ring = this.scene.add.circle(x, y, cell * 0.5, color, 0)
+      .setStrokeStyle(Math.max(2, cell * 0.1), color, 0.95)
+      .setDepth(12);
+    this.scene.tweens.add({
+      targets: ring, scale: 2.6, alpha: 0, duration: 320, ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    });
+  }
+
   hit(who) {
     if (!this.scene.canDamage(who)) return;
 
@@ -385,6 +412,13 @@ export default class CombatSystem {
     }
 
     if (who.hp <= 0) {
+      if (who === this.scene.attacker) {
+        const from = this._lastShooter;
+        const name = from
+          ? (from === this.scene.defender2 ? 'defender2' : 'defender')
+          : null;
+        this.scene.forensics?.death(this.scene, name, from ? 'bullet' : 'melee');
+      }
       if (who === this.scene.attacker || who === this.scene.attacker2) {
         if (this.scene.mode === 'pve' && this.scene.role === 'plug') {
           // Dual AI: Check if BOTH attackers are dead before ending round
@@ -403,6 +437,10 @@ export default class CombatSystem {
             console.log('[DualAI] One attacker defeated, stashCarrier:', this.scene.stashCarrier);
 
             // Hide the dead attacker FIRST before any other operations
+            // JUICE: a death is a moment, not a disappearance.
+            this.scene.spawnDust?.(who.x, who.y, 10);
+            this.deathRing(who.x, who.y, who.accent);
+            this.scene.cameras.main.shake(140, 0.012);
             who.setVisible(false);
             who.setActive(false);
 
@@ -508,19 +546,8 @@ export default class CombatSystem {
     this.scene.roundAmmo[weapon] -= 1;
 
     // Use playerGunAim for both desktop AND mobile when available (fixes drag-aim on mobile)
-    const aim = (this.scene.playerController?.playerGunAim || this.scene.playerAim) || { x: 1, y: 0 };
+    const aim = this.scene.playerController?.playerGunAim || { x: 1, y: 0 };
     this.spawnWeaponBurst(this.scene.defender, aim, weapon, this.scene.bulletsD);
-
-    // Play a quick shooting animation if available
-    if (this.scene.defender?.sprite?.anims && !this.scene.defender?.usesTD) {
-      this.scene.defender.sprite.play('plug-shot', true);
-      if (this.scene.defender.outline) {
-        for (const o of this.scene.defender.outline) o.play('plug-shot', true);
-      }
-      this.scene.defender.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        // resume appropriate loop based on motion handled in updateAvatarVisuals
-      });
-    }
 
     if (this.scene.totalRoundsLeft() === 0) this.scene.meleeEnabled = true;
   }

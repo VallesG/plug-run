@@ -3,6 +3,8 @@ import {
   applyCenterBias,
   toroDist
 } from '../utils/gameUtils.js';
+import { nearestPlug } from '../logic/threat.js';
+import { phaseSteer } from '../logic/steering.js';
 
 /**
  * RunnerAI - Attacker AI (Opponent in Plug Mode)
@@ -143,7 +145,8 @@ export function updateRunnerBehavior(scene, aiController, delta) {
   if (!isOrienting && (!aiController._aiPlanAt || now >= aiController._aiPlanAt)) {
     // Detect panic state (plug is close)
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
-    const plugCell = scene.toCell(scene.defender.x, scene.defender.y);
+    const threat = nearestPlug(scene, scene.attacker);
+    const plugCell = scene.toCell(threat.x, threat.y);
     const distToPlug = toroDist(attackerCell, plugCell, scene.cols, scene.rows);
     const isPanicking = distToPlug <= scene.aiRunner.panicThreshold;
 
@@ -270,7 +273,27 @@ export function updateRunnerBehavior(scene, aiController, delta) {
       dir = aiController._aiLastMoveDir;
     }
 
-    if (!isWalkableDirFrom(scene, scene.attacker, dir)) {
+    // PHASING: go through the wall, which is the entire point of the power.
+    //
+    // Everything above this plans over walkable cells only —
+    // findNextStepTowards runs BFS across floor, and the guard below refuses
+    // any direction that ends in a wall. Correct almost always, and exactly
+    // wrong while intangible: the AI decided to phase *because* a wall was in
+    // the way (shouldPhaseForTactics reasons explicitly about cutting through
+    // one), then politely routed around that same wall until the window
+    // expired. canMoveTo has always permitted the move; nothing ever asked it
+    // to. The power was spent, the sound played, the sprite faded, and the
+    // runner never passed through anything.
+    //
+    // The flip guard is deliberately above this: a phase window is short and
+    // committing to the cut matters more than direction smoothing.
+    const phasing = scene.runnerIsPhasing?.() === true;
+    if (phasing) {
+      const straight = phaseSteer(attackerCell, targetCell, scene.cols, scene.rows);
+      if (straight) dir = straight;
+    }
+
+    if (!phasing && !isWalkableDirFrom(scene, scene.attacker, dir)) {
       aiRunnerCruise(scene, aiController);
     } else {
       aiController._aiCruiseDir = dir;
@@ -474,8 +497,11 @@ export function considerRunnerPowerUse(scene, aiController, now) {
   const cooldown = 2000; // 2 seconds between power uses
   if (aiController._aiRunnerLastPowerAt && (now - aiController._aiRunnerLastPowerAt) < cooldown) return;
 
-  // Calculate distance to plug (defender)
-  const dist = Math.hypot(scene.defender.x - scene.attacker.x, scene.defender.y - scene.attacker.y);
+  // Calculate distance to the nearest plug. Every `dist` check below — panic
+  // phase, decoy range, defensive dash — is about the gun closest to us, which
+  // from round 8 in runner mode may be defender2.
+  const threat = nearestPlug(scene, scene.attacker);
+  const dist = Math.hypot(threat.x - scene.attacker.x, threat.y - scene.attacker.y);
   const distInCells = dist / scene.cell;
 
   console.log('[RunnerAI] Distance to plug:', distInCells.toFixed(2), 'cells');
@@ -485,8 +511,12 @@ export function considerRunnerPowerUse(scene, aiController, now) {
 
   // Helper function to check if phasing through walls would create a tactical advantage
   const shouldPhaseForTactics = () => {
-    // AI uses tactical phasing from round 1 for offensive plays
-    if (scene.aiRunner.powerSkill < 0.4) return false; // Very low skill rounds only
+    // No skill gate here. There used to be a `powerSkill < 0.4` bail with a
+    // "very low skill rounds only" comment, but powerSkill is
+    // min(0.95, 0.75 + (round-1) * 0.07) and the base stats start it at 0.75
+    // — it has never been below 0.4 at any round, so the branch never ran.
+    // Tactical phasing is on from round 1, which is what the comment beside
+    // it always claimed.
 
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
 
@@ -522,7 +552,7 @@ export function considerRunnerPowerUse(scene, aiController, now) {
     }
 
     // Evasive maneuver: Being chased and can phase to put wall between us and plug
-    const plugCell = scene.toCell(scene.defender.x, scene.defender.y);
+    const plugCell = scene.toCell(threat.x, threat.y);
     const distToPlug = toroDist(attackerCell, plugCell, scene.cols, scene.rows);
 
     if (distToPlug <= 6 && distToPlug > 2) {

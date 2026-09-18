@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run — city map review</title>
+<style>
+body{margin:0;background:#07090b;color:#e9dfc7;font:13px Arial,sans-serif}header{padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select,button{background:#172124;color:#e9dfc7;border:1px solid #687769;padding:8px}#game{margin:0 auto;max-width:100%;overflow:auto}
+</style>
+<header>City-map prototype · no saves
+<select id="size"><option>390x844</option><option>280x480</option><option>1440x900</option></select>
+<select id="state"><option value="start">First arrival</option><option value="mixed">Block 7 arrival</option><option value="finish">City 2 arrival</option><option value="legacy">City 3 arrival</option></select>
+<label><input id="hold" type="checkbox">Hold city overview</label>
+<button id="review">Review</button></header><div id="game"></div>
+<script type="module">
+import Phaser from 'phaser';
+import { drawBlockMap } from './src/controllers/BlockMap.js';
+import { worldBlock } from './src/logic/worldBlocks.js';
+import { drawCityMap } from './src/controllers/CityMap.js';
+import { cityView, createCityState } from './src/logic/city.js';
+let game;
+function review(){
+ game?.destroy(true);
+ const [width,height]=document.querySelector('#size').value.split('x').map(Number);
+ const choice=document.querySelector('#state').value;
+ const checkpoint=choice==='finish'?{blockIndex:11,pveRound:1}:choice==='mixed'?{blockIndex:7,pveRound:1}:choice==='legacy'?{blockIndex:24,pveRound:1}:{blockIndex:1,pveRound:1};
+ const owners=choice==='legacy'?{}:Object.fromEntries(Array.from({length:checkpoint.blockIndex-1},(_,i)=>[i+1,['crossline','iron-row','afterlight'][i%3]]));
+ const state=createCityState({completedThrough:checkpoint.blockIndex-1,owners},checkpoint);
+ class Preview extends Phaser.Scene{
+  constructor(){super('CITY_REVIEW');}
+  create(){
+   this.role='runner'; this.worldBlock=worldBlock(checkpoint.blockIndex);
+   const view=cityView(state,checkpoint);
+   drawCityMap(this,{view,checkpoint,autoZoom:!document.querySelector('#hold').checked,onDone:()=> {
+    this.add.text(width/2,36,'LANDED · '+this.worldBlock.name,{
+     fontFamily:'Arial',fontSize:'16px',color:'#eee3c7'
+    }).setOrigin(.5);
+    drawBlockMap(this,{
+     contentBounds:{x:18,y:94,width:width-36,height:height-156},
+     registerExtra:()=>{}
+    },{maps:15,cleared:0,entering:true,animate:false,caption:false,labels:false});
+   }});
+
+  }
+ }
+ game=new Phaser.Game({type:Phaser.AUTO,parent:'game',width,height,backgroundColor:'#07090b',pixelArt:true,scene:Preview});
+}
+document.querySelector('#review').onclick=review;review();
+</script></html>

@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run — Rivals territory preview</title>
+<style>body{margin:0;background:#07090b;color:#e9dfc7;font:13px Arial}header{padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}button,select{background:#172124;color:#e9dfc7;border:1px solid #687769;padding:8px}#game{margin:auto;width:max-content;max-width:100%;overflow:auto}</style>
+<header>Rivals map · preview only · no saves
+<select id="size"><option>390x844</option><option>280x480</option><option>1440x900</option></select>
+<select id="crew"><option value="crossline">Crossline</option><option value="iron-row">Iron Row</option><option value="afterlight">Afterlight</option></select>
+<label><input id="hold" type="checkbox" checked>Hold city overview</label>
+<button id="review">Review current block</button><button id="win">Simulate win / open next</button><button id="reset">Reset</button></header><div id="game"></div>
+<script type="module">
+import Phaser from 'phaser';
+import GameUI from './src/controllers/GameUI.js';
+import {drawCityMap} from './src/controllers/CityMap.js';
+import {drawRivalDistrictMap} from './src/controllers/RivalDistrictMap.js';
+import {rivalTerritory,rivalDistrict,claimRivalDistrict} from './src/logic/rivalCity.js';
+import {rivalPoolCourse} from './src/logic/rivals.js';
+let game,state=rivalTerritory();
+function review(){
+ game?.destroy(true);
+ const [width,height]=document.querySelector('#size').value.split('x').map(Number);
+ const index=state.completed+1,d=rivalDistrict(index),first=(d.city-1)*7+1;
+ const view={mapVariant:'rivals',city:{name:'Riverside Circuit',number:d.city,firstBlock:first},
+ clearedBlocks:state.completed-first+1,blocks:Array.from({length:7},(_,i)=>({blockIndex:first+i,
+ course:rivalPoolCourse(i+1),owner:state.owners[first+i]||null,
+ status:first+i<=state.completed?'cleared':first+i===index?'current':'locked'}))};
+ class Preview extends Phaser.Scene{
+ constructor(){super('RIVAL_MAP_REVIEW');}
+ create(){
+ this.role='runner';this.gameUI=new GameUI(this);
+ drawCityMap(this,{view,checkpoint:{blockIndex:index,pveRound:1},
+ autoZoom:!document.querySelector('#hold').checked,onDone:()=>{
+ const race={course:rivalPoolCourse(d.slot)};
+ const modal=this.gameUI.showModal({fullScreen:true,title:race.course.name.toUpperCase(),
+ subtitle:'SEVEN HOUSES · FULLY REVEALED',lines:[],
+ buttons:[{label:'SIMULATE WIN',variant:'primary',onClick:win},
+ {label:'REVIEW CITY',variant:'secondary',onClick:review}]});
+ drawRivalDistrictMap(this,modal,race);
+ }});
+ }}
+ game=new Phaser.Game({type:Phaser.AUTO,parent:'game',width,height,backgroundColor:'#07090b',pixelArt:true,scene:Preview});
+}
+function win(){const index=state.completed+1;state=claimRivalDistrict(state,{index,
+ courseSlot:rivalDistrict(index).slot,result:'win',houses:7,
+ gangID:document.querySelector('#crew').value}).state;review();}
+document.querySelector('#review').onclick=review;document.querySelector('#win').onclick=win;
+document.querySelector('#reset').onclick=()=>{state=rivalTerritory();review();};review();
+</script></html>

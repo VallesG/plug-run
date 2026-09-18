@@ -1,0 +1,170 @@
+[
+ {
+  "slot": 5,
+  "style": "trickster",
+  "powers": "decoy,decoy",
+  "runs": 2,
+  "indexBase": 1003,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 7,
+  "style": "trickster",
+  "powers": "decoy,dash",
+  "runs": 2,
+  "indexBase": 1006,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 2,
+  "style": "trickster",
+  "powers": "decoy,phase",
+  "runs": 2,
+  "indexBase": 1009,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 4,
+  "style": "trickster",
+  "powers": "decoy,decoy",
+  "runs": 2,
+  "indexBase": 1012,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 3,
+  "style": "trickster",
+  "powers": "decoy,dash",
+  "runs": 2,
+  "indexBase": 1015,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 6,
+  "style": "trickster",
+  "powers": "decoy,phase",
+  "runs": 2,
+  "indexBase": 1018,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 1,
+  "style": "trickster",
+  "powers": "decoy,decoy",
+  "runs": 2,
+  "indexBase": 1021,
+  "hardLimitMs": 540000
+ },
+ {
+  "slot": 5,
+  "style": "erratic",
+  "powers": "decoy,dash",
+  "runs": 2,
+  "indexBase": 1024,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 7,
+  "style": "erratic",
+  "powers": "phase,dash",
+  "runs": 2,
+  "indexBase": 1027,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 2,
+  "style": "erratic",
+  "powers": "dash,phase",
+  "runs": 2,
+  "indexBase": 1030,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 4,
+  "style": "erratic",
+  "powers": "decoy,dash",
+  "runs": 2,
+  "indexBase": 1033,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 3,
+  "style": "erratic",
+  "powers": "phase,dash",
+  "runs": 2,
+  "indexBase": 1036,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 6,
+  "style": "erratic",
+  "powers": "dash,phase",
+  "runs": 2,
+  "indexBase": 1039,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 1,
+  "style": "erratic",
+  "powers": "decoy,dash",
+  "runs": 2,
+  "indexBase": 1042,
+  "hardLimitMs": 900000
+ },
+ {
+  "slot": 5,
+  "style": "rookie",
+  "powers": "phase,phase",
+  "runs": 2,
+  "indexBase": 1045,
+  "hardLimitMs": 2400000
+ },
+ {
+  "slot": 7,
+  "style": "rookie",
+  "powers": "phase,dash",
+  "runs": 2,
+  "indexBase": 1048,
+  "hardLimitMs": 2400000
+ },
+ {
+  "slot": 2,
+  "style": "rookie",
+  "powers": "dash,dash",
+  "runs": 2,
+  "indexBase": 1051,
+  "hardLimitMs": 2400000
+ },
+ {
+  "slot": 4,
+  "style": "rookie",
+  "powers": "phase,phase",
+  "runs": 2,
+  "indexBase": 1054,
+  "hardLimitMs": 2400000
+ },
+ {
+  "slot": 3,
+  "style": "rookie",
+  "powers": "phase,dash",
+  "runs": 2,
+  "indexBase": 1057,
+  "hardLimitMs": 2400000
+ },
+ {
+  "slot": 6,
+  "style": "rookie",
+  "powers": "dash,dash",
+  "runs": 2,
+  "indexBase": 1060,
+  "hardLimitMs": 2400000
+ },
+ {
+  "slot": 1,
+  "style": "rookie",
+  "powers": "phase,phase",
+  "runs": 2,
+  "indexBase": 1063,
+  "hardLimitMs": 2400000
+ }
+]

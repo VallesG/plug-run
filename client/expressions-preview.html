@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run · expression review</title>
+<style>body{margin:0;background:#080b0d;color:#e9dfc7;font:16px system-ui}header{padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}select,button{font:inherit;background:#172126;color:#e9dfc7;border:1px solid #43b5c7;padding:8px}#stage{margin:auto;width:min(100vw,440px);height:min(780px,calc(100dvh - 120px))}canvas{display:block}#bank{padding:15px;max-width:900px;margin:auto}.row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.portrait{width:100%;aspect-ratio:4/5;background-size:500% 100%;background-repeat:no-repeat}small{color:#92a0a2}h2{font-size:16px}</style>
+<header><strong>Expression review</strong><select id="crew"><option value="crossline">Crossline</option><option value="iron-row">Iron Row</option><option value="afterlight">Afterlight</option></select>
+<select id="moment"><option value="brief">Job briefing</option><option value="joke">Crew joke</option><option value="praise">Praise pose sample</option><option value="comeback">Comeback pose sample</option><option value="bunk">Bunk pose sample</option><option value="celebration">Block celebration</option><option value="tip">Retry tip</option></select>
+<small>Dev-only. Pose samples do not record progress or earn praise.</small></header><div id="stage"></div><section id="bank"></section>
+<script type="module">
+import Phaser from 'phaser';
+import {showContactPanel} from './src/controllers/ContactPanel.js';
+import {drawEliminationTip} from './src/controllers/EliminationTip.js';
+import {contact,gangContacts} from './src/logic/contacts.js';
+import {campaignContactCue,campaignContactFinish,campaignContactHouses} from './src/logic/campaignContacts.js';
+import {expressionArt,CONTACT_EXPRESSIONS} from './src/logic/contactExpressions.js';
+import {eliminationTip} from './src/logic/eliminationTips.js';
+const crew=document.querySelector('#crew'),moment=document.querySelector('#moment');
+function cueFor(){
+ const gang=crew.value,pair=gangContacts(gang),m=moment.value;
+ if(m==='celebration')return {contact:pair.primary,contacts:[pair.primary,pair.secondary],celebration:true,
+  pages:campaignContactFinish(gang,0).map(p=>({...p,contact:contact(p.speaker)})),action:'REVIEW AGAIN  >>'};
+ let cue;
+ if(m==='joke')cue=campaignContactHouses(gang,{chapter:0}).map(h=>campaignContactCue(gang,{chapter:0,house:h})).find(c=>c?.banterID);
+ else cue=campaignContactCue(gang,{chapter:0,house:m==='brief'?9:10});
+ const pages=cue.pages.map(p=>({...p,contact:contact(p.speaker)}));
+ if(['praise','comeback','bunk'].includes(m)){
+  cue={...cue,banterID:null,praiseKey:m==='praise'?'flawless':m,beat:{kind:'story'}};
+  pages[0].text='Expression pose sample only. No performance or progress is recorded.';
+ }
+ return {...cue,pages,contact:pages[0].contact,contacts:[pair.primary,pair.secondary],action:'REVIEW AGAIN  >>'};
+}
+class Review extends Phaser.Scene{
+ constructor(){super('review')}
+ create(){
+  window.reviewScene=this;this.cameras.main.setBackgroundColor('#080b0d');
+  if(moment.value==='tip'){
+   const {width:w,height:h}=this.scale.gameSize,extras=[];
+   const cue=eliminationTip({gangID:crew.value,house:3});
+   const modal={contentBounds:{x:16,y:Math.max(90,h*.35),width:w-32,height:220},registerExtra:o=>extras.push(o)};
+   drawEliminationTip(this,modal,cue);
+   this.events.once('shutdown',()=>extras.forEach(o=>o.destroy()));
+  }else showContactPanel(this,cueFor(),()=>this.scene.restart());
+ }
+}
+const stage=document.querySelector('#stage');
+stage.style.height=Math.max(300,window.innerHeight-document.querySelector('header').getBoundingClientRect().height-16)+'px';
+const bounds=stage.getBoundingClientRect();
+window.reviewGame=new Phaser.Game({type:Phaser.CANVAS,parent:'stage',width:Math.floor(bounds.width),height:Math.floor(bounds.height),
+ transparent:false,scene:Review,audio:{noAudio:true},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH}});
+for(const control of [crew,moment])control.onchange=()=>window.reviewGame.scene.getScene('review').scene.restart();
+const bank=document.querySelector('#bank');
+for(const id of ['switch','mags','brick','rook','vee','sol','ro']){
+ const title=document.createElement('h2');title.textContent=id==='ro'?'Auntie Ro':id.toUpperCase();bank.append(title);
+ const row=document.createElement('div');row.className='row';bank.append(row);
+ CONTACT_EXPRESSIONS.forEach((emotion,i)=>{
+  const wrap=document.createElement('div'),portrait=document.createElement('div');portrait.className='portrait';
+  portrait.style.backgroundImage='url('+expressionArt(id).source+')';portrait.style.backgroundPosition=(i*25)+'% 0';
+  const label=document.createElement('small');label.textContent=emotion;wrap.append(portrait,label);row.append(wrap);
+ });
+}
+</script></html>

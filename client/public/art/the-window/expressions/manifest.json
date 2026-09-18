@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "expressions": [
+    "neutral",
+    "amused",
+    "hyped",
+    "concerned",
+    "unimpressed"
+  ],
+  "frameWidth": 320,
+  "frameHeight": 400,
+  "frames": 5,
+  "quality": 82,
+  "effort": 6,
+  "characters": [
+    {
+      "id": "switch",
+      "source": "/art/the-window/expressions/switch.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 119608,
+      "sourceSheet": "crossline",
+      "sha256": "b1998a797b592189d6e16a3fd457c4cd270385690c824e0713540349baa966d9"
+    },
+    {
+      "id": "mags",
+      "source": "/art/the-window/expressions/mags.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 143046,
+      "sourceSheet": "crossline",
+      "sha256": "d6909d5f5a4fb8aa5874d800c072fb356252d7ebffc6e9ef0cffc7a5467f6fa8"
+    },
+    {
+      "id": "brick",
+      "source": "/art/the-window/expressions/brick.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 109340,
+      "sourceSheet": "iron-row",
+      "sha256": "66d534fea5939b0ca270317fb7ee6893512f7368ddf8569ff516e9ed8cbc0ee5"
+    },
+    {
+      "id": "rook",
+      "source": "/art/the-window/expressions/rook.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 92022,
+      "sourceSheet": "iron-row",
+      "sha256": "d9c23e6076e59bc43ff54934113c2b16bba7fee78f74447cdaa613aed6c24308"
+    },
+    {
+      "id": "vee",
+      "source": "/art/the-window/expressions/vee.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 101424,
+      "sourceSheet": "afterlight",
+      "sha256": "33e956ddbe6b592a7ca134a112cf77ae087c52e591f68bd0524697b9e7daf2bb"
+    },
+    {
+      "id": "sol",
+      "source": "/art/the-window/expressions/sol.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 123000,
+      "sourceSheet": "afterlight",
+      "sha256": "a5312bffcd576493d4307c98f026a6f04b06db8489ebfeecc0972f78028aa53c"
+    },
+    {
+      "id": "ro",
+      "source": "/art/the-window/expressions/ro.webp",
+      "width": 1600,
+      "height": 400,
+      "bytes": 121988,
+      "sourceSheet": "auntie-ro",
+      "sha256": "3162e6cd971c2dbf0ec5cc57ae914ccab3ed8db688d34933889e7d77e58d1d0f"
+    }
+  ],
+  "sources": [
+    {
+      "name": "crossline",
+      "width": 1774,
+      "height": 887,
+      "bytes": 2401576,
+      "sha256": "f7c4e5816fd46a09b4f75618b48551e73720d10801ddb520af190a903c942d6f",
+      "transparentPixels": 461901,
+      "path": "art-sources/the-window/expressions/crossline.png"
+    },
+    {
+      "name": "iron-row",
+      "width": 1983,
+      "height": 793,
+      "bytes": 2175157,
+      "sha256": "9ca7db4bc2eacb48b747f4fb5838cb39c65dda0fc85943fd46ace8215d11a547",
+      "transparentPixels": 625272,
+      "path": "art-sources/the-window/expressions/iron-row.png"
+    },
+    {
+      "name": "afterlight",
+      "width": 1983,
+      "height": 793,
+      "bytes": 2232800,
+      "sha256": "a866bb540f7816c86f57ebb510a19764352cbd166fdecf4ad2a0e027606b7bf5",
+      "transparentPixels": 646515,
+      "path": "art-sources/the-window/expressions/afterlight.png"
+    },
+    {
+      "name": "auntie-ro",
+      "width": 2172,
+      "height": 724,
+      "bytes": 2070180,
+      "sha256": "3d0fc4d01d77d16670c113d166e3d10d68ac70c0c5d8819a5f2a6e1a16e0dee0",
+      "transparentPixels": 620979,
+      "path": "art-sources/the-window/expressions/auntie-ro.png"
+    }
+  ]
+}

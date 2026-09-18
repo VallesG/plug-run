@@ -1,448 +1,288 @@
 import Phaser from 'phaser';
 import {
-  getTopScores, getUserRank, getUserScore,
-  getAllTimeTopScores, getAllTimeRank, getAllTimeScore,
   getGlobalDailyLeaderboard, getGlobalAllTimeLeaderboard,
-  getGlobalDailyRank, getGlobalAllTimeRank,
-  formatNumber
+  getGlobalDailyRank, getGlobalAllTimeRank, formatNumber
 } from '../utils/leaderboardManager.js';
-import { getCurrentRouteID } from '../utils/seededRandom.js';
-import { getUsername, getUserID, getCurrentUser, getCurrentUserSync } from '../utils/userManager.js';
+import { getUserID } from '../utils/userManager.js';
 import { trackLeaderboardView } from '../utils/analytics.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
-import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats } from '../utils/desktopSidebars.js';
+import { boardLayout, boardPage } from '../logic/leaderboard.js';
 
-export default class LeaderboardScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'LEADERBOARD' });
-  }
+const C={
+  bg:0x070b0d,panel:0x111719,card:0x0d1214,ink:0x080b0d,
+  cream:'#f1dfb0',muted:'#98a4a4',gold:0xe2b45f,teal:0x4e9b96,
+  green:'#86efac',rep:'#ffd166'
+};
 
-  create() {
-    console.log('[Leaderboard] create() called, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop());
+export default class LeaderboardScene extends Phaser.Scene{
+  constructor(){super({key:'LEADERBOARD'});}
 
-    // Rebuild on real viewport changes (desktop zoom / window drags) —
-    // same self-healing pattern as MenuScene/BaseGameScene.
-    if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
-    this._lastW = this.scale.gameSize.width;
-    this._lastH = this.scale.gameSize.height;
-    this._onResizeCb = (gameSize) => {
-      if (Math.abs(gameSize.width - this._lastW) < 40 && Math.abs(gameSize.height - this._lastH) < 40) return;
-      clearTimeout(this._resizeTimer);
-      this._resizeTimer = setTimeout(() => this.scene.restart(), 250);
-    };
-    this.scale.on('resize', this._onResizeCb);
-    this.events.once('shutdown', () => {
-      clearTimeout(this._resizeTimer);
-      if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
-      this._onResizeCb = null;
-    });
-    const W = this.scale.width;
-    const H = this.scale.height;
-    const cx = W / 2;
-
-    // Background
-    this.add.rectangle(cx, H / 2, W, H, 0x080a10, 1);
-
-    // Portrait mode enforcement overlay for mobile landscape
+  create(){
+    this.currentTab='daily';
+    this.currentSort='stash';
+    this.currentPage=0;
+    this._scores=[];
+    this._dynamic=[];
+    this.layout=boardLayout(this.scale.width,this.scale.height);
+    this.drawBackground();
+    this.drawChrome();
     createPortraitOverlay(this);
 
-    // Title
-    this.add.text(cx, 50, 'THE BOARD', {
-      fontSize: '32px',
-      color: '#cbd1ff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Subtitle
-    this.titleRule = this.add.rectangle(cx, 71, 150, 2, 0x2f8fe0, 1);
-    this.add.text(cx, 85, 'Plug. Run. Climb. Streets watching.', {
-      fontSize: '14px',
-      color: '#aab5ff',
-      fontStyle: 'italic'
-    }).setOrigin(0.5);
-
-    // Tab buttons (closer to title, no stats bar)
-    this.currentTab = 'daily';
-    this.currentRole = 'runner';
-    this.currentSort = 'stash';
-    if (this.currentTab === 'pvp') this.currentTab = 'daily';
-    this.createTabButtons(cx, 125);
-    this.createRoleButtons(cx, 175);
-    this.applyAccents();
-
-    // Scrollable content container
-    this.contentContainer = this.add.container(0, 0);
-
-    this.refreshContent();
-
-    // Back button
-    const backBtn = this.add.rectangle(60, H - 40, 100, 40, 0x1a2038, 1)
-      .setStrokeStyle(2, 0x2f3660)
-      .setInteractive({ useHandCursor: true });
-
-    const backText = this.add.text(60, H - 40, 'Menu', {
-      fontSize: '16px',
-      color: '#cbd1ff'
-    }).setOrigin(0.5);
-
-    backBtn.on('pointerdown', () => {
-      this.scene.start('MENU');
-    });
-
-    this.backBtn = backBtn;
-    this.backText = backText;
-
-    // Initialize desktop sidebars
-    console.log('[Leaderboard] About to check isDesktop():', isDesktop());
-    if (isDesktop()) {
-      console.log('[Leaderboard] isDesktop() returned true, calling initDesktopSidebars()');
-      this.initDesktopSidebars();
-    } else {
-      console.log('[Leaderboard] isDesktop() returned false, skipping sidebars');
-    }
-
-    // Cleanup sidebars when leaving scene
-    this.events.once('shutdown', () => {
-      // Note: Don't cleanup sidebars here - the next scene will clean them up
-      // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
-    });
-  }
-
-  initDesktopSidebars() {
-    console.log('[Leaderboard] Initializing desktop sidebars');
-    // Clean up any existing sidebars first
-    cleanupSidebars();
-
-    // Left sidebar: Social feed
-    this.leftSidebar = createSidebarContainer('left');
-    createSocialFeed(this.leftSidebar);
-
-    // Right sidebar: Personal stats only (no leaderboard section since main scene shows full leaderboard)
-    this.rightSidebar = createSidebarContainer('right');
-    createPersonalStats(this.rightSidebar, null);
-    console.log('[Leaderboard] Sidebars initialized:', this.leftSidebar, this.rightSidebar);
-
-    // Initialize sidebar with current stats
-    this.refreshSidebarStats();
-  }
-
-  async refreshSidebarStats() {
-    // Update sidebar with TODAY's stats (from current route)
-    try {
-      // Import getUserScore dynamically
-      const { getUserScore } = await import('../utils/leaderboardManager.js');
-
-      // Fetch daily scores for both roles
-      const [runnerScore, plugScore] = await Promise.all([
-        getUserScore('runner'),
-        getUserScore('plug')
-      ]);
-
-      // Calculate today's totals
-      const bestRunner = runnerScore?.round || 0;
-      const bestPlug = plugScore?.round || 0;
-
-      // Rounds Today = total rounds played across both modes
-      const dailyRounds = bestRunner + bestPlug;
-
-      // STASH Today = highest runner round (you earn 1 stash per runner round)
-      const dailyStash = bestRunner;
-
-      // REP Today = total rep from both modes
-      const dailyRep = (runnerScore?.rep || 0) + (plugScore?.rep || 0);
-
-      updateStats({
-        totalRounds: dailyRounds,
-        totalStash: dailyStash,
-        repEarned: Math.round(dailyRep),
-        bestRunner,
-        bestPlug
-      });
-    } catch (err) {
-      console.warn('[LeaderboardScene] Failed to refresh sidebar stats:', err);
-      updateStats({
-        totalRounds: 0,
-        totalStash: 0,
-        repEarned: 0,
-        bestRunner: 0,
-        bestPlug: 0
-      });
-    }
-  }
-
-  // Selection accent follows the viewed role: runner blue / plug red —
-  // same branding the rest of the game speaks.
-  roleAccent() {
-    return this.currentRole === 'plug'
-      ? { stroke: 0xe14b4b, text: '#ff6b6b', fill: 0x2a1416 }
-      : { stroke: 0x4db2ff, text: '#4db2ff', fill: 0x121f30 };
-  }
-
-  applyAccents() {
-    const a = this.roleAccent();
-    const styleSet = (btns, txts, activeKey) => {
-      if (!btns) return;
-      Object.keys(btns).forEach(key => {
-        const isActive = key === activeKey;
-        btns[key].setFillStyle(isActive ? a.fill : 0x1a2038, 1)
-                 .setStrokeStyle(2, isActive ? a.stroke : 0x2f3660);
-        txts[key].setColor(isActive ? a.text : '#aab5ff')
-                 .setFontStyle(isActive ? 'bold' : '');
-      });
+    this._lastW=this.scale.gameSize.width;
+    this._lastH=this.scale.gameSize.height;
+    this._onResize=gameSize=>{
+      if(Math.abs(gameSize.width-this._lastW)<40&&Math.abs(gameSize.height-this._lastH)<40)return;
+      clearTimeout(this._resizeTimer);
+      this._resizeTimer=setTimeout(()=>this.scene.restart(),200);
     };
-    styleSet(this.tabButtons, this.tabTexts, this.currentTab);
-    styleSet(this.roleButtons, this.roleTexts, this.currentRole);
-    this.titleRule?.setFillStyle(a.stroke, 1);
-  }
-
-  createTabButtons(cx, y) {
-    const tabW = 100;
-    const tabH = 40;
-    const gap = 10;
-
-    const tabs = [
-      { key: 'daily', label: 'Daily', x: cx - tabW/2 - gap/2 },
-      { key: 'alltime', label: 'All-Time', x: cx + tabW/2 + gap/2 }
-    ];
-
-    this.tabButtons = {};
-    this.tabTexts = {};
-
-    tabs.forEach(tab => {
-      const isActive = tab.key === this.currentTab;
-      const bg = this.add.rectangle(tab.x, y, tabW, tabH, isActive ? 0x2a1a38 : 0x1a2038, 1)
-        .setStrokeStyle(2, isActive ? 0x60a5fa : 0x2f3660)
-        .setInteractive({ useHandCursor: true });
-
-      const text = this.add.text(tab.x, y, tab.label, {
-        fontSize: '14px',
-        color: isActive ? '#93c5fd' : '#aab5ff',
-        fontStyle: isActive ? 'bold' : ''
-      }).setOrigin(0.5);
-
-      bg.on('pointerdown', () => {
-        this.switchTab(tab.key);
-      });
-
-      this.tabButtons[tab.key] = bg;
-      this.tabTexts[tab.key] = text;
+    this.scale.on('resize',this._onResize);
+    this.events.once('shutdown',()=>{
+      clearTimeout(this._resizeTimer);
+      this.scale.off('resize',this._onResize);
+      this._requestToken=(this._requestToken||0)+1;
     });
-  }
 
-  createRoleButtons(cx, y) {
-    const roleW = 90;
-    const roleH = 36;
-    const gap = 10;
-
-    const roles = [
-      { key: 'runner', label: 'Runner', x: cx - roleW/2 - gap/2 },
-      { key: 'plug', label: 'Plug', x: cx + roleW/2 + gap/2 }
-    ];
-
-    this.roleButtons = {};
-    this.roleTexts = {};
-
-    roles.forEach(role => {
-      const isActive = role.key === this.currentRole;
-      const bg = this.add.rectangle(role.x, y, roleW, roleH, isActive ? 0x2a1a38 : 0x1a2038, 1)
-        .setStrokeStyle(2, isActive ? 0x60a5fa : 0x2f3660)
-        .setInteractive({ useHandCursor: true });
-
-      const text = this.add.text(role.x, y, role.label, {
-        fontSize: '13px',
-        color: isActive ? '#93c5fd' : '#aab5ff',
-        fontStyle: isActive ? 'bold' : ''
-      }).setOrigin(0.5);
-
-      bg.on('pointerdown', () => {
-        this.switchRole(role.key);
-      });
-
-      this.roleButtons[role.key] = bg;
-      this.roleTexts[role.key] = text;
-    });
-  }
-
-  switchTab(tab) {
-    this.currentTab = tab;
-    this.applyAccents();
-    trackLeaderboardView(tab, this.currentRole);
     this.refreshContent();
   }
 
-  switchRole(role) {
-    this.currentRole = role;
-    this.applyAccents();
-    trackLeaderboardView(this.currentTab, role);
-    this.refreshContent();
+  drawBackground(){
+    const a=this.layout;
+    this.add.rectangle(a.cx,a.h/2,a.w,a.h,C.bg,1);
+    const g=this.add.graphics();
+    g.lineStyle(1,0x273134,0.22);
+    for(let x=12;x<a.w;x+=24)g.lineBetween(x,0,x,a.h);
+    for(let y=14;y<a.h;y+=24)g.lineBetween(0,y,a.w,y);
+    g.fillStyle(0x000000,0.16);
+    for(let i=0;i<5;i++){
+      const edge=(5-i)*Math.min(a.w,a.h)*0.02;
+      g.fillRect(0,0,edge,a.h);g.fillRect(a.w-edge,0,edge,a.h);
+    }
   }
 
-
-  switchSort(sort) {
-    if (this.currentSort === sort) return;
-    this.currentSort = sort;
-    this.refreshContent();
-  }
-
-  async refreshContent() {
-    // Clear existing content
-    this.contentContainer?.removeAll(true);
-
-    const cx = this.scale.width / 2;
-    const W = this.scale.width;
-    let y = 225;
-
-    // Show single leaderboard for selected role and tab
-    const roleLabel = this.currentRole === 'runner' ? 'Runners' : 'Plugs';
-    const typeLabel = this.currentTab === 'daily' ? 'Today' : 'All-Time';
-    const title = `${roleLabel} - ${typeLabel}`;
-
-    const titleText = this.add.text(cx, y, title, {
-      fontSize: '20px',
-      color: this.roleAccent().text,
-      fontStyle: 'bold'
+  drawChrome(){
+    const a=this.layout;
+    const title=this.add.text(a.cx,a.titleY,'THE BOARD',{
+      fontFamily:'Georgia, serif',fontSize:'29px',fontStyle:'bold',
+      color:C.cream,letterSpacing:2,stroke:'#080b0d',strokeThickness:3
+    }).setOrigin(0.5);
+    this.add.rectangle(a.cx,a.titleY+24,154,2,C.gold,0.9);
+    this.add.text(a.cx,a.taglineY,'STASH MOVES BLOCKS · REP BUILDS YOUR NAME',{
+      fontFamily:'monospace',fontSize:a.panelW<300?'8px':'9px',
+      color:'#b9a875',letterSpacing:1
     }).setOrigin(0.5);
 
-    y += 40;
-
-    // Sort-aware fetch: STASH-ranked (default) or REP-ranked.
-    const sort = this.currentSort;
-    const topPayload = this.currentTab === 'daily'
-      ? await getGlobalDailyLeaderboard(this.currentRole, null, 20, sort)
-      : await getGlobalAllTimeLeaderboard(this.currentRole, 20, sort);
-    const topScores = topPayload?.entries || [];
-    const myRank = this.currentTab === 'daily'
-      ? await getGlobalDailyRank(this.currentRole, sort)
-      : await getGlobalAllTimeRank(this.currentRole, sort);
-
-    // YOU: #N badge — visible when player is on the board but past top-20
-    if (myRank && myRank > 20) {
-      const badge = this.add.text(cx, y - 10, `YOU: #${myRank}`, {
-        fontSize: '13px', color: '#fbbf24', fontStyle: 'bold'
+    const gap=8;
+    const tabW=Math.min(150,(a.panelW-gap)/2);
+    this.tabButtons={};this.tabTexts={};
+    [
+      ['daily','TODAY',a.cx-tabW/2-gap/2],
+      ['alltime','ALL-TIME',a.cx+tabW/2+gap/2]
+    ].forEach(([key,label,x])=>{
+      const shadow=this.add.rectangle(x+3,a.tabY+4,tabW,42,C.ink,0.7);
+      const bg=this.add.rectangle(x,a.tabY,tabW,42,C.panel,1)
+        .setInteractive({cursor:'pointer'});
+      const text=this.add.text(x,a.tabY,label,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',letterSpacing:1
       }).setOrigin(0.5);
-      this.contentContainer.add(badge);
-    }
+      bg.on('pointerup',()=>this.switchTab(key));
+      this.tabButtons[key]=bg;this.tabTexts[key]=text;
+    });
+    this.applyTabStyle();
 
-    const userId = getUserID();
+    this.summaryTitle=this.add.text(a.left,a.summaryY,'TODAY’S RUNNERS',{
+      fontFamily:'Georgia, serif',fontSize:'18px',fontStyle:'bold',color:'#d8e3df'
+    }).setOrigin(0,0.5);
+    this.rankChip=this.add.text(a.right,a.summaryY,'YOUR RANK  —',{
+      fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#e2b45f',
+      backgroundColor:'#151d1f',padding:{x:8,y:5}
+    }).setOrigin(1,0.5);
 
-    // Table header
-    const headerY = y;
-    const headerBg = this.add.rectangle(cx, y, Math.min(400, W - 40), 35, 0x1a2038, 0.5);
-    const rankHeader = this.add.text(cx - 180, y, 'RANK', {
-      fontSize: '12px',
-      color: '#6b7280'
-    }).setOrigin(0, 0.5);
-    const nameHeader = this.add.text(cx - 100, y, 'PLAYER', {
-      fontSize: '12px',
-      color: '#6b7280'
-    }).setOrigin(0, 0.5);
-    // Sortable column headers: tap STASH or REP to rank by that column.
-    // Active column carries the sort caret; inactive is brighter than the
-    // static labels so it reads as tappable.
-    const stashHeader = this.add.text(cx + 80, y, sort === 'stash' ? 'STASH \u25BE' : 'STASH', {
-      fontSize: '12px',
-      color: sort === 'stash' ? '#86efac' : '#8a93a8',
-      fontStyle: sort === 'stash' ? 'bold' : ''
-    }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
-    stashHeader.on('pointerdown', () => this.switchSort('stash'));
-    const repHeader = this.add.text(cx + 155, y, sort === 'rep' ? 'REP \u25BE' : 'REP', {
-      fontSize: '12px',
-      color: sort === 'rep' ? '#ffd166' : '#8a93a8',
-      fontStyle: sort === 'rep' ? 'bold' : ''
-    }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-    repHeader.on('pointerdown', () => this.switchSort('rep'));
-
-    this.contentContainer.add([titleText, headerBg, rankHeader, nameHeader, stashHeader, repHeader]);
-    y += 45;
-
-    // Entries
-    const entries = [];
-
-    if (topScores.length === 0) {
-      // Empty state lives INSIDE the framed panel: advance the y cursor so
-      // the panel bounds enclose it instead of clipping at the header.
-      const emptyH = 88;
-      const head = this.add.text(cx, y + emptyH / 2 - 11, 'NO SCORES YET', {
-        fontSize: '14px', color: '#8a93a8', fontStyle: 'bold', letterSpacing: 2
-      }).setOrigin(0.5);
-      const sub = this.add.text(cx, y + emptyH / 2 + 11, 'Be the first on the board', {
-        fontSize: '12px', color: '#6b7280', fontStyle: 'italic'
-      }).setOrigin(0.5);
-      entries.push(head, sub);
-      y += emptyH;
-    } else {
-      topScores.forEach((entry, index) => {
-        const rank = index + 1;
-        const isUser = entry.userId === userId;
-
-        // Row background
-        const bgColor = isUser ? 0x1a2a3a : 0x0a0d1a;
-        const bgAlpha = isUser ? 0.7 : 0.3;
-        const rowBg = this.add.rectangle(cx, y, Math.min(400, W - 40), 32, bgColor, bgAlpha);
-
-        // Rank
-        let rankColor = '#aab5ff';
-        if (rank === 1) rankColor = '#fbbf24';
-        else if (rank === 2) rankColor = '#cbd5e1';
-        else if (rank === 3) rankColor = '#d97706';
-
-        const rankText = this.add.text(cx - 180, y, `#${rank}`, {
-          fontSize: '14px',
-          color: rankColor,
-          fontStyle: rank === 1 ? 'bold' : ''
-        }).setOrigin(0, 0.5);
-
-        // Username
-        const maxLen = 15;
-        const displayName = entry.username.length > maxLen
-          ? entry.username.substring(0, maxLen) + '...'
-          : entry.username;
-
-        const nameText = this.add.text(cx - 100, y, displayName, {
-          fontSize: '14px',
-          color: isUser ? '#fbbf24' : '#cbd1ff',
-          fontStyle: isUser ? 'bold' : ''
-        }).setOrigin(0, 0.5);
-
-        // Ranked column: bold + full color; the other muted.
-        const stashValue = entry.stash;
-        const repValue = entry.rep;
-        const stashFormatted = stashValue != null ? formatNumber(stashValue) : '—';
-        const repFormatted = repValue != null
-          ? (Math.abs(repValue) >= 10000 ? formatNumber(repValue)
-             : (repValue % 1 === 0 ? String(repValue) : repValue.toFixed(2)))
-          : '—';
-        const stashActive = sort === 'stash';
-        const repActive   = sort === 'rep';
-        const stashText = this.add.text(cx + 80, y, stashFormatted, {
-          fontSize: '14px',
-          color: stashActive ? '#86efac' : '#4b5563',
-          fontStyle: stashActive ? 'bold' : ''
-        }).setOrigin(0.5, 0.5);
-        const repText = this.add.text(cx + 155, y, repFormatted, {
-          fontSize: '14px',
-          color: repActive ? '#ffd166' : '#4b5563',
-          fontStyle: repActive ? 'bold' : ''
-        }).setOrigin(1, 0.5);
-
-        entries.push(rowBg, rankText, nameText, stashText, repText);
-        y += 35;
-      });
-    }
-
-    this.contentContainer.add(entries);
-
-    // Stroked panel behind the table — same framed look as the in-round
-    // modals. Added after rows (height depends on entry count), inserted
-    // under them in the container's render order.
-    const tableTop = headerY - 22;
-    const tableBottom = y - 6;
-    const tablePanel = this.add.rectangle(
-      cx, (tableTop + tableBottom) / 2,
-      Math.min(400, W - 40) + 16, tableBottom - tableTop,
-      0x0d1016, 0.55
-    ).setStrokeStyle(2, 0x2e3442);
-    this.contentContainer.addAt(tablePanel, 1);
+    const backShadow=this.add.rectangle(a.left+55+3,a.backY+4,110,40,C.ink,0.7);
+    const back=this.add.rectangle(a.left+55,a.backY,110,40,C.panel,1)
+      .setStrokeStyle(2,0x627174).setInteractive({cursor:'pointer'});
+    const backText=this.add.text(a.left+55,a.backY,'<<  MENU',{
+      fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#d8e3df'
+    }).setOrigin(0.5);
+    back.on('pointerover',()=>back.setFillStyle(0x263235,1));
+    back.on('pointerout',()=>back.setFillStyle(C.panel,1));
+    back.on('pointerup',()=>this.scene.start('MENU'));
   }
 
+  applyTabStyle(){
+    for(const key of Object.keys(this.tabButtons||{})){
+      const active=key===this.currentTab;
+      this.tabButtons[key].setFillStyle(active?0x203033:C.panel,1)
+        .setStrokeStyle(2,active?C.gold:0x475356);
+      this.tabTexts[key].setColor(active?C.cream:'#8e9a9c');
+    }
+  }
+
+  switchTab(tab){
+    if(tab===this.currentTab)return;
+    this.currentTab=tab;
+    this.currentPage=0;
+    this.applyTabStyle();
+    trackLeaderboardView(tab,'runner');
+    this.refreshContent();
+  }
+
+  switchSort(sort){
+    if(sort===this.currentSort)return;
+    this.currentSort=sort;
+    this.currentPage=0;
+    this.refreshContent();
+  }
+
+  clearDynamic(){
+    for(const object of this._dynamic||[])try{object.destroy();}catch{}
+    this._dynamic=[];
+  }
+
+  keep(...objects){
+    this._dynamic.push(...objects.flat().filter(Boolean));
+    return objects[0];
+  }
+
+  async refreshContent(){
+    const token=(this._requestToken||0)+1;
+    this._requestToken=token;
+    this.clearDynamic();
+    this.summaryTitle.setText(this.currentTab==='daily'?'TODAY’S RUNNERS':'ALL-TIME RUNNERS');
+    this.rankChip.setText('YOUR RANK  …');
+
+    const loading=this.add.text(this.layout.cx,(this.layout.tableTop+this.layout.tableBottom)/2,'CHECKING THE BOARD…',{
+      fontFamily:'monospace',fontSize:'11px',color:'#8e9a9c',letterSpacing:1
+    }).setOrigin(0.5);
+    this.keep(loading);
+
+    try{
+      const role='runner',sort=this.currentSort;
+      const payload=this.currentTab==='daily'
+        ? await getGlobalDailyLeaderboard(role,null,20,sort)
+        : await getGlobalAllTimeLeaderboard(role,20,sort);
+      const rank=this.currentTab==='daily'
+        ? await getGlobalDailyRank(role,sort)
+        : await getGlobalAllTimeRank(role,sort);
+      if(token!==this._requestToken)return;
+      this._scores=payload?.entries||[];
+      this.myRank=rank||null;
+      this.renderBoard();
+    }catch(error){
+      if(token!==this._requestToken)return;
+      console.warn('[Leaderboard] Could not load board',error);
+      this._scores=[];
+      this.myRank=null;
+      this.renderBoard(true);
+    }
+  }
+
+  renderBoard(offline=false){
+    this.clearDynamic();
+    const a=this.layout;
+    this.rankChip.setText(this.myRank?'YOUR RANK  #'+this.myRank:'YOUR RANK  —');
+    const panelShadow=this.add.rectangle(a.cx+4,(a.tableTop+a.tableBottom)/2+5,a.panelW,a.tableBottom-a.tableTop,C.ink,0.75);
+    const panel=this.add.rectangle(a.cx,(a.tableTop+a.tableBottom)/2,a.panelW,a.tableBottom-a.tableTop,C.panel,0.97)
+      .setStrokeStyle(2,0x536064);
+    const header=this.add.rectangle(a.cx,a.tableTop+a.headerH/2,a.panelW-2,a.headerH,0x1a2328,1);
+    this.keep(panelShadow,panel,header);
+
+    const headerStyle={fontFamily:'monospace',fontSize:'9px',color:'#7f8b8d',letterSpacing:1};
+    const rankH=this.add.text(a.rankX,a.tableTop+a.headerH/2,'RANK',headerStyle).setOrigin(0,0.5);
+    const nameH=this.add.text(a.nameX,a.tableTop+a.headerH/2,'RUNNER',headerStyle).setOrigin(0,0.5);
+    const stashH=this.add.text(a.stashX,a.tableTop+a.headerH/2,this.currentSort==='stash'?'STASH  ▾':'STASH',{
+      ...headerStyle,color:this.currentSort==='stash'?C.green:'#8e9a9c',fontStyle:'bold'
+    }).setOrigin(0.5).setInteractive({cursor:'pointer'});
+    const repH=this.add.text(a.repX,a.tableTop+a.headerH/2,this.currentSort==='rep'?'REP  ▾':'REP',{
+      ...headerStyle,color:this.currentSort==='rep'?C.rep:'#8e9a9c',fontStyle:'bold'
+    }).setOrigin(1,0.5).setInteractive({cursor:'pointer'});
+    stashH.on('pointerup',()=>this.switchSort('stash'));
+    repH.on('pointerup',()=>this.switchSort('rep'));
+    this.keep(rankH,nameH,stashH,repH);
+
+    if(!this._scores.length){
+      this.renderEmptyState(offline);
+      this.renderPager(boardPage([],0,a.pageSize));
+      return;
+    }
+
+    const page=boardPage(this._scores,this.currentPage,a.pageSize);
+    this.currentPage=page.page;
+    const userID=getUserID();
+    page.entries.forEach((entry,index)=>{
+      const rank=page.start+index+1;
+      const y=a.bodyTop+a.rowH*(index+0.5);
+      const isUser=entry.userId===userID;
+      const stripe=index%2===0?0x0d1417:0x11191c;
+      const row=this.add.rectangle(a.cx,y,a.panelW-12,a.rowH-4,isUser?0x2a3327:stripe,isUser?0.96:0.82)
+        .setStrokeStyle(isUser?1:0,isUser?C.gold:stripe,isUser?0.9:0);
+      const medal=rank===1?'#f1ca82':rank===2?'#c8d0d0':rank===3?'#c98258':'#9aa5a7';
+      const rankText=this.add.text(a.rankX,y,'#'+rank,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:rank<=3?'bold':'normal',color:medal
+      }).setOrigin(0,0.5);
+      const raw=String(entry.username||'Runner');
+      const max=a.panelW<300?12:18;
+      const username=raw.length>max?raw.slice(0,max-1)+'…':raw;
+      const name=this.add.text(a.nameX,y,username,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:isUser?'bold':'normal',
+        color:isUser?'#f1dfb0':'#d2d9d7'
+      }).setOrigin(0,0.5);
+      const stash=entry.stash==null?'—':formatNumber(entry.stash);
+      const rep=entry.rep==null?'—':Math.abs(entry.rep)>=10000?formatNumber(entry.rep):
+        (entry.rep%1===0?String(entry.rep):entry.rep.toFixed(2));
+      const stashText=this.add.text(a.stashX,y,stash,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:this.currentSort==='stash'?'bold':'normal',
+        color:this.currentSort==='stash'?C.green:'#667274'
+      }).setOrigin(0.5);
+      const repText=this.add.text(a.repX,y,rep,{
+        fontFamily:'monospace',fontSize:'11px',fontStyle:this.currentSort==='rep'?'bold':'normal',
+        color:this.currentSort==='rep'?C.rep:'#667274'
+      }).setOrigin(1,0.5);
+      this.keep(row,rankText,name,stashText,repText);
+    });
+    this.renderPager(page);
+  }
+
+  renderEmptyState(offline){
+    const a=this.layout;
+    const centerY=(a.bodyTop+a.bodyBottom)/2-5;
+    const route=this.add.graphics();
+    route.lineStyle(3,C.teal,0.8);
+    route.beginPath();
+    route.moveTo(a.cx-34,centerY-25);route.lineTo(a.cx-8,centerY-25);
+    route.lineTo(a.cx-8,centerY-6);route.lineTo(a.cx+27,centerY-6);route.strokePath();
+    route.fillStyle(C.gold,1);route.fillCircle(a.cx+27,centerY-6,5);
+    const title=this.add.text(a.cx,centerY+13,offline?'BOARD OFFLINE':'NO RUNS ON THE BOARD YET',{
+      fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:C.cream,letterSpacing:1
+    }).setOrigin(0.5);
+    const sub=this.add.text(a.cx,centerY+33,offline?'Try again in a minute.':'Set the first mark for today.',{
+      fontFamily:'Georgia, serif',fontSize:'12px',fontStyle:'italic',color:'#8e9a9c'
+    }).setOrigin(0.5);
+    this.keep(route,title,sub);
+  }
+
+  renderPager(page){
+    const a=this.layout;
+    const y=a.tableBottom-a.pagerH/2;
+    const line=this.add.rectangle(a.cx,y-a.pagerH/2,a.panelW-12,1,0x3b4648,0.8);
+    const label=page.pages>1
+      ? 'PAGE '+(page.page+1)+' / '+page.pages
+      : (this._scores.length?'TOP '+this._scores.length+' RUNNERS':'SCORES POST AFTER A RUN');
+    const text=this.add.text(a.cx,y,label,{
+      fontFamily:'monospace',fontSize:'8px',color:'#778385',letterSpacing:1
+    }).setOrigin(0.5);
+    this.keep(line,text);
+    if(page.pages<=1)return;
+    const makeArrow=(x,label,delta)=>{
+      const bg=this.add.rectangle(x,y,42,30,C.card,1).setStrokeStyle(1,0x586568)
+        .setInteractive({cursor:'pointer'});
+      const tx=this.add.text(x,y,label,{fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',color:C.cream}).setOrigin(0.5);
+      bg.on('pointerup',()=>{
+        const next=Math.max(0,Math.min(page.pages-1,page.page+delta));
+        if(next!==page.page){this.currentPage=next;this.renderBoard();}
+      });
+      this.keep(bg,tx);
+    };
+    makeArrow(a.left+28,y,'<<',-1);
+    makeArrow(a.right-28,y,'>>',1);
+  }
 }

@@ -91,6 +91,7 @@ export function resetPlugOrientation(scene) {
  * Update AI plug behavior (movement and shooting)
  */
 export function updatePlugBehavior(scene, dt) {
+  const rng = scene.runKind === 'rivals' ? scene.gameplayRNG : Math.random;
   const d = scene.defender;
 
   // Determine target (runner or decoy with scaling difficulty)
@@ -105,7 +106,7 @@ export function updatePlugBehavior(scene, dt) {
     // Formula: 95% chance at round 1 → 5% chance at round 20+
     const decoyChance = Math.max(0.05, 0.95 - (round - 1) * 0.0474);
 
-    if (Math.random() < decoyChance) {
+    if (rng() < decoyChance) {
       targetX = scene.decoySprite.x;
       targetY = scene.decoySprite.y;
     }
@@ -154,12 +155,12 @@ export function updatePlugBehavior(scene, dt) {
       // relocated like a stash, so a permanent stonewall is prevented
       // behaviorally, giving the runner real extraction windows.
       const tNow = scene.time?.now ?? performance.now();
-      if (!d._guardSweepAt) d._guardSweepAt = tNow + 5000 + Math.random() * 3000;
+      if (!d._guardSweepAt) d._guardSweepAt = tNow + 5000 + rng() * 3000;
       const inSweep = tNow >= d._guardSweepAt && tNow < d._guardSweepAt + 2200;
       if (inSweep) {
         // pressure sweep: keep the predicted-chase move target as-is
       } else {
-        if (tNow >= d._guardSweepAt + 2200) d._guardSweepAt = tNow + 5000 + Math.random() * 3000;
+        if (tNow >= d._guardSweepAt + 2200) d._guardSweepAt = tNow + 5000 + rng() * 3000;
         moveX = scene.extract.x;
         moveY = scene.extract.y;
       }
@@ -272,9 +273,9 @@ export function updatePlugBehavior(scene, dt) {
       const hasClearShot = scene.hasLineOfSight?.(d.x, d.y, ax, ay);
       if (dist <= scene.aiPlug.maxRange && dist > 0 && hasClearShot) {
         const inaccuracy = scene.aiPlug.inaccuracy;
-        const rx = vx / dist + (Math.random() - 0.5) * inaccuracy;
-        const ry = vy / dist + (Math.random() - 0.5) * inaccuracy;
-        const weaponType = scene.allowedGuns[(Math.random() * scene.allowedGuns.length) | 0];
+        const rx = vx / dist + (rng() - 0.5) * inaccuracy;
+        const ry = vy / dist + (rng() - 0.5) * inaccuracy;
+        const weaponType = scene.allowedGuns[(rng() * scene.allowedGuns.length) | 0];
         if (scene.roundAmmo[weaponType] && scene.roundAmmo[weaponType] > 0) {
           // Decrement ammo (fixes infinite ammo bug)
           scene.roundAmmo[weaponType] -= 1;

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 192" role="img" aria-labelledby="title desc" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+<title id="title">Plug Run</title>
+<desc id="desc">Smooth italic ivory and runner-blue wordmark with a street route leading to a golden house marker.</desc>
+<g transform="translate(0 8)">
+  <path d="M20 135V85H64V36H94V108H50V154Z" fill="#34454c" stroke="#090d11" stroke-width="7"/>
+  <path d="M35 135V99H79V55" fill="none" stroke="#9ad1ff" stroke-width="3" stroke-dasharray="9 8"/>
+  <path d="M61 30L79 12L97 30V49L79 69L61 49Z" fill="#f1ca82" stroke="#090d11" stroke-width="5"/>
+  <path d="M71 34H87V47H71Z" fill="#151e24"/>
+  <path d="M70 33L79 25L88 33Z" fill="#151e24"/>
+</g>
+<path d="M128 167H555L573 154H146Z" fill="#213b4c"/>
+<g font-family="Impact, Haettenschweiler, 'Arial Narrow Bold', 'Helvetica Neue', Arial, sans-serif" font-style="italic" font-weight="900" paint-order="stroke fill" stroke="#07090b" stroke-width="4" stroke-linejoin="round">
+  <text x="137" y="91" font-size="94" letter-spacing="1" fill="#ede5d4">PLUG</text>
+  <text x="294" y="180" font-size="94" letter-spacing="1" fill="#9ad1ff">RUN</text>
+</g>
+<path d="M132 113H264M126 127H244M122 141H221" stroke="#f1ca82" stroke-width="5"/>
+<path d="M150 7H374" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/>
+</svg>

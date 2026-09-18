@@ -88,12 +88,11 @@ export function corridorAssist(scene, sprite, dir, dt) {
   }
 }
 
-// Manhattan distance with toroidal wraparound
-export function toroDist(a, b, cols, rows) {
-  const dx = Math.min(Math.abs(a.x - b.x), cols - Math.abs(a.x - b.x));
-  const dy = Math.min(Math.abs(a.y - b.y), rows - Math.abs(a.y - b.y));
-  return dx + dy;
-}
+// Manhattan distance with toroidal wraparound. Defined in logic/threat.js,
+// which imports nothing, and re-exported here so existing callers are
+// unaffected — this module pulls in Phaser, and the pathfinding maths has to
+// stay reachable from a headless test.
+export { toroDist } from '../logic/threat.js';
 
 // Randomly picks a cardinal direction unit vector
 export function randomCardinal() {

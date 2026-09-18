@@ -39,7 +39,6 @@ export default class PlayerController {
     // Legacy-style initial drift (fallback movement when no input)
     this._initDrift = null;
     this.playerDrift = null;
-    this.playerAim = null;
 
     // Input references (set by scene)
     this.cursors = null;
@@ -129,14 +128,17 @@ export default class PlayerController {
         if (sprite === this.scene.attacker) {
           this._runnerInputDir = { x: nx, y: ny };
         }
+
+        // Held-key path: runs EVERY frame a key is down. InputIntent dedups
+        // on direction, so a 3-second hold is one event, not 180.
+        this.scene.intent?.recordMove(nx, ny);
       }
     } else {
       // Legacy fallback: use player's aim or drift
       // After first user interaction, never fall back to initial drift
       const drift = this.scene.userTookOver ? (this.playerDrift || null) : (this.playerDrift || this._initDrift || null);
-      const aim = this.playerAim || drift;
-
-      // Only move if there's a valid aim/drift (don't default to right movement)
+      // Only move if there's a valid drift (don't default to right movement)
+      const aim = drift;
       if (aim) {
         const lenAim = Math.hypot(aim.x, aim.y);
         if (lenAim > 0.0001) {
@@ -146,53 +148,14 @@ export default class PlayerController {
       }
     }
 
-    // Apply corridor assist when not using keys (touch controls)
-    // Reduce strength when AI opponent is very close to prevent twitching
+    // Touch lane centering depends on geometry and the user's assist setting,
+    // never on opponent proximity: a stationary finger must keep its steering.
     if (!usingKeys && (vx || vy)) {
       const dir = (Math.abs(vx) > Math.abs(vy))
         ? { x: Math.sign(vx), y: 0 }
         : { x: 0, y: Math.sign(vy) };
-
-      // Calculate distance to opponent
-      const opponent = (this.scene.role === 'runner') ? this.scene.defender : this.scene.attacker;
-      const distToOpponent = Math.hypot(sprite.x - opponent.x, sprite.y - opponent.y);
-
-      // Check if we're in a tight corridor (1x1 entrance)
-      const spriteCell = this.scene.toCell(sprite.x, sprite.y);
-      let wallsOnSides = 0;
-      if (dir.x !== 0) {
-        // Moving horizontally - check for walls above and below
-        const northWall = this.scene.isWallAtWorld(sprite.x, sprite.y - this.scene.cell);
-        const southWall = this.scene.isWallAtWorld(sprite.x, sprite.y + this.scene.cell);
-        if (northWall) wallsOnSides++;
-        if (southWall) wallsOnSides++;
-      } else if (dir.y !== 0) {
-        // Moving vertically - check for walls left and right
-        const westWall = this.scene.isWallAtWorld(sprite.x - this.scene.cell, sprite.y);
-        const eastWall = this.scene.isWallAtWorld(sprite.x + this.scene.cell, sprite.y);
-        if (westWall) wallsOnSides++;
-        if (eastWall) wallsOnSides++;
-      }
-      const inTightCorridor = wallsOnSides === 2;
-
-      // Only reduce corridor assist when opponent is close AND we're NOT in a tight corridor
-      // In tight corridors, we need maximum assist to navigate properly
-      const proximityThreshold = this.scene.cell * 4; // 4 cells
-      const originalStrength = this.scene.corridorAssistStrength;
-
-      if (!inTightCorridor && distToOpponent < proximityThreshold) {
-        // Smoothly reduce assist from 1.0 → 0.3 as opponent gets closer
-        const proximityFactor = Math.max(0.3, distToOpponent / proximityThreshold);
-        this.scene.corridorAssistStrength = originalStrength * proximityFactor;
-      }
-
       corridorAssist(this.scene, sprite, dir, dt);
-
-      // Restore original strength
-      this.scene.corridorAssistStrength = originalStrength;
     }
-
-    // Legacy-style movement with sub-stepping to prevent tunneling
     this.applyLegacyMovement(sprite, vx, vy, dt);
 
     // Cache facing direction for runner powers when moving
@@ -213,7 +176,6 @@ export default class PlayerController {
     this.scene.playerGunAim = this.playerGunAim;
     this.scene.playerIntendedDir = this.playerIntendedDir;
     this.scene.playerDrift = this.playerDrift;
-    this.scene.playerAim = this.playerAim;
     this.scene._initDrift = this._initDrift;
     this.scene._runnerInputDir = this._runnerInputDir;
     this.scene._runnerMoveDir = this._runnerMoveDir;
@@ -346,7 +308,20 @@ export default class PlayerController {
   /**
    * Touch input handlers
    */
+  /** Cancel a gesture without steering, firing, or spending a power.
+   * Modal transitions can remove listeners before the matching release arrives.
+   * Reset controller-owned state, not just the scene's legacy swipe mirrors.
+   */
+  resetTouchGestures() {
+    this._swipePid = null;
+    this._swipeStart = null;
+    this._aimDragActive = false;
+    this._dragMoveActive = false;
+    this._lastTapAt = 0;
+  }
+
   beginSwipe(pointer) {
+    if (this.scene.roundPausedForMenu || this.scene.roundOver) return;
     // Track one touch ID at a time
     if (this._swipePid !== null) return;
     this._swipePid = pointer.id;
@@ -361,6 +336,7 @@ export default class PlayerController {
   }
 
   updateSwipe(pointer) {
+    if (this.scene.roundPausedForMenu || this.scene.roundOver) return;
     if (pointer.id !== this._swipePid || !pointer.isDown) return;
 
     if (this.scene.role === 'plug') {
@@ -400,6 +376,7 @@ export default class PlayerController {
           ? { x: Math.cos(nearest), y: Math.sin(nearest) }
           : { x: dx / L, y: dy / L };
         this.playerGunAim = aimVec;
+        this.scene.intent?.recordGun(aimVec.x, aimVec.y);
 
         // DRAG-MOVE COMMIT: has this gesture proven itself as a drag?
         // Committed either by holding past DRAG_COMMIT_MS OR by traveling
@@ -415,6 +392,7 @@ export default class PlayerController {
           this.playerDrift = aimVec;
           this.playerIntendedDir = aimVec;
           this.scene.userTookOver = true;
+          this.scene.intent?.recordMove(aimVec.x, aimVec.y);
         }
       }
       return;
@@ -465,11 +443,20 @@ export default class PlayerController {
         this._runnerInputDir = moveVec; // powers read this
         this.playerGunAim = moveVec;    // runner's "aim" tracks facing
         this.scene.userTookOver = true;
+        // Runner facing is derived from move, so one MOVE event covers both.
+        this.scene.intent?.recordMove(moveVec.x, moveVec.y);
       }
     }
   }
 
   endSwipe(pointer) {
+    if (this.scene.roundPausedForMenu || this.scene.roundOver || !pointer || pointer.id == null) {
+      this.resetTouchGestures();
+      return;
+    }
+    // Phaser and raw DOM touch events use different IDs. An unrelated release
+    // must not steer, spend a power, or clear the active finger's gesture.
+    if (pointer.id !== this._swipePid) return;
     // DRAG-MOVE END: gesture released. Drift already points where the
     // finger was heading; clearing the flag drops the aim slowdown so
     // post-release movement runs at full speed (per spec).
@@ -542,6 +529,10 @@ export default class PlayerController {
         if (who && this.scene.role === 'runner') {
           this._runnerInputDir = { x: nx, y: ny };
         }
+
+        // Quick-swipe path: cardinal only, one event per gesture.
+        this.scene.intent?.recordMove(nx, ny);
+        if (this.scene.role === 'plug') this.scene.intent?.recordGun(nx, ny);
       }
     }
 

@@ -56,3 +56,7 @@ coverage/
 
 # Production
 *.tgz
+
+# Raw bot recordings: intermediate capture output, assembled into
+# client/public/rivals/ by tools/rivals-assemble.mjs.
+client/tools/recordings/
