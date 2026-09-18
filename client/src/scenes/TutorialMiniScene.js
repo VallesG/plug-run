@@ -1499,6 +1499,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'CHOOSE POWERS' : lesson.stage===1 ? 'START TRAINING' : 'RUN THIS LESSON', () => {
       this.resumeFromModal();
       if (lesson.choosePowers) this.showPowerSelectionModal();
+      else if (!this.sys.game.device.os.desktop && idx === 4) this.startMobileGuide(4);
     }, { showReplay:lesson.stage>1 });
   }
   startMobileGuide(stage){

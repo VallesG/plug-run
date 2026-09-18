@@ -7,11 +7,12 @@ export function createMobileTutorialGuide(scene, stage) {
     fontFamily:'Arial, sans-serif',fontSize:'18px',color:'#e5f3ff',align:'center',
     stroke:'#080e16',strokeThickness:5,wordWrap:{width:Math.min(W-48,340)}
   }).setOrigin(0.5,0.5);
-  hud.add([ink,copy]);
+  const gestureLabel=scene.add.text(W/2,H/2,'',{fontFamily:'Arial, sans-serif',fontSize:'13px',fontStyle:'bold',color:'#9bcdfb',stroke:'#080e16',strokeThickness:4}).setOrigin(0.5);
+  hud.add([ink,copy,gestureLabel]);
   const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
   const original={zoom:cam?.zoom||1,x:cam?.scrollX||0,y:cam?.scrollY||0,bounds:cam?.useBounds};
-  if(cam && stage===1) cam.useBounds=false;
-  const guide={stage,phase:stage===1?'intro':stage===3?'power':'bagsIntro',elapsed:0,turns:0,
+  if(cam && (stage===1||stage===2)) cam.useBounds=false;
+  const guide={stage,phase:stage===1?'intro':stage===2?'bagsIntro':'swipe',elapsed:0,turns:0,
     acceptAfter:performance.now()+300,done:false};
   const resetTouch=()=>{
     scene._activePointerId=null;scene.pointer=null;scene._swipeStart=null;
@@ -59,9 +60,8 @@ export function createMobileTutorialGuide(scene, stage) {
     const end={x:t.x-ux*gap,y:t.y-uy*gap};
     if(!arrowStarts.has(target))arrowStarts.set(target,guide.elapsed);
     const age=Math.max(0,guide.elapsed-arrowStarts.get(target));
-    const pop=reduced?1:1+0.35*Math.exp(-age/260);
-    const bob=reduced?0:Math.sin(guide.elapsed/220)*5;
-    const sx=from.x-ux*bob,sy=from.y-uy*bob;
+    const pop=reduced?1:1+0.12*Math.sin(age/260)+0.25*Math.exp(-age/260);
+    const sx=end.x+(from.x-end.x)*pop,sy=end.y+(from.y-end.y)*pop;
     // Dark outline and broad blue arrow stay legible over the floor.
     for(const [width,color] of [[9,0x07101b],[5,0x9bcdfb]]){
       ink.lineStyle(width*pop,color,1);ink.lineBetween(sx,sy,end.x,end.y);
@@ -71,19 +71,20 @@ export function createMobileTutorialGuide(scene, stage) {
   };
   Object.defineProperties(guide,{
     waitingSwipe:{get:()=>guide.phase==='swipe'},
-    blocksGestures:{get:()=>['intro','reveal','bagsIntro'].includes(guide.phase)||performance.now()<guide.acceptAfter}
+    blocksGestures:{get:()=>['intro','reveal','bagsIntro','bagsReveal'].includes(guide.phase)||performance.now()<guide.acceptAfter}
   });
   guide.swipe=(direction,distance)=>{
     if(guide.phase!=='swipe')return true;
     if(distance<32||Math.abs(direction.x)+Math.abs(direction.y)!==1)return false;
-    guide.turns++;guide.elapsed=0;guide.phase=guide.turns>=2?'free':'coast';
+    guide.turns++;guide.elapsed=0;
+    guide.phase=stage===1?(guide.turns>=2?'free':'coast'):stage===2?'stash':stage===3?'powerCoast':'free';
     return true;
   };
   guide.tick=(delta)=>{
     if(guide.done)return false;
     if(scene._transitioning){ink.clear();ring.clear();copy.setText('');restoreCamera();return false;}
     guide.elapsed+=Math.min(100,Math.max(0,delta));
-    ink.clear();ring.clear();
+    ink.clear();ring.clear();gestureLabel.setText('');
     if(guide.phase==='intro'||guide.phase==='reveal'){
       const revealing=guide.phase==='reveal';
       const p=revealing?Math.min(1,guide.elapsed/(reduced?1:700)):0;
@@ -99,17 +100,27 @@ export function createMobileTutorialGuide(scene, stage) {
     }
     syncHud();
     let targets=[];
-    if(guide.phase==='bagsIntro'){
+    if(guide.phase==='bagsIntro'||guide.phase==='bagsReveal'){
       scene.playerDrift=null;
-      floatCopy('These are the bags. Touch one to find out what is inside.',[scene.stash,scene.bunkStash]);
-      arrow(scene.stash);arrow(scene.bunkStash);
-      if(guide.elapsed>=1400){guide.phase='stash';guide.elapsed=0;resetTouch();}
+      const bags=[scene.stash,scene.bunkStash].filter(Boolean);
+      const focus={x:bags.reduce((v,t)=>v+t.x,0)/(bags.length||1),y:bags.reduce((v,t)=>v+t.y,0)/(bags.length||1)};
+      const spanX=Math.abs((bags[0]?.x||0)-(bags[1]?.x||0))+scene.cell*6;
+      const spanY=Math.abs((bags[0]?.y||0)-(bags[1]?.y||0))+scene.cell*6;
+      const zoom=reduced?1:Math.max(1,Math.min(1.4,W/spanX,H/spanY));
+      const revealing=guide.phase==='bagsReveal';
+      const p=revealing?Math.min(1,guide.elapsed/(reduced?1:700)):0;
+      cam?.setZoom(1+(zoom-1)*(1-p));
+      cam?.setScroll((focus.x-W/2)*(1-p),(focus.y-H/2)*(1-p));syncHud();
+      floatCopy('These are the bags. One is real; one is bunk.',bags);
+      for(const bag of bags)arrow(bag);
+      if(!revealing&&guide.elapsed>=1800){guide.phase='bagsReveal';guide.elapsed=0;}
+      if(revealing&&p===1){restoreCamera();syncHud();guide.phase='swipe';guide.elapsed=0;resetTouch();}
       return true;
     }
-    if(guide.phase==='coast'){
+    if(guide.phase==='coast'||guide.phase==='powerCoast'){
       floatCopy('Lift your finger. You keep moving.');
       scene.handleMovement(Math.min(delta,50)/1000);
-      if(guide.elapsed>=650){guide.phase='swipe';guide.elapsed=0;resetTouch();}
+      if(guide.elapsed>=650){guide.phase=stage===3?'power':'swipe';guide.elapsed=0;resetTouch();}
       return true;
     }
     if(guide.phase==='swipe'){
@@ -122,6 +133,7 @@ export function createMobileTutorialGuide(scene, stage) {
       ink.fillStyle(0x9bcdfb,0.9);ink.fillCircle(x+d.x*(-28+p*56),y+d.y*(-28+p*56),6);
       return true;
     }
+    if(stage===4){copy.setText('');return false;}
     if(stage===1){
       targets=[scene.car];floatCopy('Reach the lit getaway car.\nSwipe anywhere to turn.',targets);
     }else if(stage===2){
@@ -135,9 +147,19 @@ export function createMobileTutorialGuide(scene, stage) {
         scene.playerDrift=null;
         const powers=scene.runnerPowersSelected||[];
         const y=floatCopy('Double-tap anywhere to use '+(powers[used]||'a power')+'.'+(used?'\nNow try your second power.':''));
-        const p=reduced?0.5:(guide.elapsed%1100)/1100;
-        ink.lineStyle(3,0x9bcdfb,0.9);ink.strokeCircle(W/2,y+58,10+(p%0.5)*22);
-        ink.fillStyle(0x9bcdfb,p%0.5<0.12?1:0.3);ink.fillCircle(W/2,y+58,6);
+        const beat=guide.elapsed%1400;
+        const press=!reduced&&((beat>120&&beat<240)||(beat>380&&beat<500));
+        const cy=Math.min(H-105,y+70),scale=press?0.88:1;
+        const obstacles=[scene.runner,scene.stash,scene.bunkStash,scene.car].filter(Boolean).map(screenPoint);
+        const clearance=x=>Math.min(...obstacles.map(t=>Math.hypot(x-t.x,cy-t.y)));
+        const cx=[W*0.22,W*0.5,W*0.78].reduce((best,x)=>clearance(x)>clearance(best)?x:best,W*0.22);
+        const outline=[[-12,18],[-19,3],[-14,-2],[-6,5],[-6,-25],[0,-29],[6,-25],[6,-3],[12,-8],[19,-6],[23,0],[24,16],[16,26],[-4,26],[-12,18]];
+        ink.lineStyle(3,0x9bcdfb,1);
+        for(let i=1;i<outline.length;i++){
+          const a=outline[i-1],b=outline[i];
+          ink.lineBetween(cx+a[0]*scale,cy+a[1]*scale,cx+b[0]*scale,cy+b[1]*scale);
+        }
+        gestureLabel.setPosition?.(cx,cy+45);gestureLabel.setText('TAP · TAP');
       }else{
         targets=[scene.hasPackage?scene.car:scene.stash];
         floatCopy(scene.hasPackage?'Both powers used. Bring the stash to the car.':'Both powers used. Find the real stash, then escape.',targets);
