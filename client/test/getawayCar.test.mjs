@@ -1,4 +1,4 @@
-import { carParkCenter, carDepartureTargets, carSkidLines } from '../src/logic/getawayCar.js';
+import { carParkCenter, carDepartureTargets, carSkidLines, carExtractionOverlap } from '../src/logic/getawayCar.js';
 import { readFileSync } from 'node:fs';
 let passed = 0;
 function check(name, ok) { if (!ok) throw Error(name); passed++; }
@@ -71,4 +71,14 @@ for (const dir of directions) {
   check('actual extraction draws two skid tracks',strokes.length===2);
   check('scene ends only once',scene.roundOver===true);
 }
+for(const cell of [16,24,48]) {
+ const pad={x:100,y:100,width:cell*2.8,height:cell*2.8};
+ for(const dir of directions) {
+  const runner={x:100+dir.x*cell,y:100+dir.y*cell};
+  check('fast arrival anywhere under car triggers '+cell+JSON.stringify(dir),carExtractionOverlap(runner,pad));
+  check('outside pad stays outside',!carExtractionOverlap({x:100+dir.x*(cell*1.4+13),y:100+dir.y*(cell*1.4+13)},pad));
+ }
+ check('center triggers in same pickup frame',carExtractionOverlap({x:100,y:100},pad));
+}
+check('missing runner and invalid coordinates stay false',!carExtractionOverlap(null,{})&&!carExtractionOverlap({x:NaN,y:0},{x:0,y:0}));
 console.log('getaway car: '+passed+' assertions passed');

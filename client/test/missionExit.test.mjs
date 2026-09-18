@@ -56,7 +56,7 @@ check('Rivals delegates without new requirement',rivalClears===1);
 // forensics checks later in the frame, otherwise standing at the car is safe.
 const source = readFileSync(new URL('../src/scenes/BaseGameScene.js',import.meta.url),'utf8');
 const begin=source.indexOf('    // extract win '),end=source.indexOf('    this.forensics?.tick(this);',begin);
-const extraction = new Function('overlaps',source.slice(begin,end)+'\nthis.afterExitCheck=true;');
+const extraction = new Function('carExtractionOverlap',source.slice(begin,end)+'\nthis.afterExitCheck=true;');
 for (const dual of [false,true]) {
   let starts=0,hints=0;
   const scene={roundOver:false,hasStash:true,attacker:{},extract:{},

@@ -155,6 +155,20 @@ export function campaignContactCue(gangID, options={}) {
   const story=seasonChapter(gangID,options.chapter);
   const arc=crewSeason(gangID);
   if(!story||!arc)return cue;
+  if(options.house===15){
+    const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
+    const warnings={
+      'iron-row':"Two Plugs in House 15. Watch both firing lines, grab the stash, and make the curb.",
+      crossline:"House 15 has two Plugs. Track both lanes and keep your route to the car in sight.",
+      afterlight:"Two Plugs behind this next door. Stay precise, find the stash, and commit to your exit."
+    };
+    const pages=[{speaker:arc.primary,text:warnings[gangID]},
+      {speaker:arc.secondary,text:"Finish this last house. We'll be waiting at the car."}];
+    return {eventID:'contact/v1/block-'+block+'/finale-warning/'+arc.primary,
+      beat:{id:'finale-warning',house:15,kind:'warning'},pages,text:pages[0].text,
+      speaker:arc.primary,praiseKey:null,lineID:null,
+      chapterLabel:'HOUSE 15 · TWO PLUGS',action:'VIEW THE BLOCK  >>'};
+  }
   if(!cue){
     const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
     const houses=campaignContactHouses(gangID,options);

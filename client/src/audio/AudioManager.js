@@ -239,6 +239,7 @@ export class AudioManager {
   }
 
   selectGameplayMusic(context) {
+    if (this._playlist?.context !== context) this._completionMusicHold = false;
     this._playlist = selectBeat(this._playlist, context,
       GAMEPLAY_BEATS.filter(key => this.scene?.cache?.audio?.exists?.(key)));
     return this._playlist?.key;
@@ -284,6 +285,14 @@ export class AudioManager {
     if (this._clearMoments.has(key)) return false;
     this._clearMoments.add(key);
     if (this._clearMoments.size > 32) this._clearMoments.delete(this._clearMoments.values().next().value);
+    this._completionMusicHold = true;
+    this.stopMusic?.(250);
+    const playVictory = () => {
+      if (this.scene === s && this._completionMusicHold && !this.music?.sound) {
+        this.playMoment(cityComplete ? 'city' : 'block');
+      }
+    };
+    if (s?.time?.delayedCall) { s.time.delayedCall(260, playVictory); return true; }
     return this.playMoment(cityComplete ? 'city' : 'block');
   }
 
@@ -308,6 +317,8 @@ export class AudioManager {
       console.log('[AudioManager] NO SCENE OR SOUND!');
       return;
     }
+
+    if (this._completionMusicHold) return; // Resume only when the next gameplay context starts.
 
     // Check if audio exists in cache
     const audioExists = this.scene?.cache?.audio?.exists?.(key);

@@ -3,7 +3,7 @@ export const CAMPAIGN_CONTACT_MAX_GAP = 3;
 // Existing authored slots are anchors. 16 represents the post-house-15 finish.
 // Step lengths alternate deterministically to avoid a fixed every-third-door list.
 export function campaignCadenceHouses(authored=[], variation=0) {
-  const anchors=[...new Set([1,...authored.filter(h=>Number.isInteger(h)&&h>=1&&h<=15),16])].sort((a,b)=>a-b);
+  const anchors=[...new Set([1,...authored.filter(h=>Number.isInteger(h)&&h>=1&&h<=15),15,16])].sort((a,b)=>a-b);
   const result=[],salt=Number.isSafeInteger(variation)&&variation>=0?variation:0;
   for(let i=0;i<anchors.length-1;i++){
     let h=anchors[i];result.push(h);

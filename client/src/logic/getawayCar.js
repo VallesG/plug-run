@@ -21,6 +21,14 @@ export function carDepartureTargets(scene) {
     scene.carLights, scene.vfx?.carBeacon].filter(Boolean))];
 }
 
+// Respect the actual extraction sensor, not a second fixed-size sprite hitbox.
+export function carExtractionOverlap(runner, pad) {
+  if (!runner || !pad || ![runner.x,runner.y,pad.x,pad.y].every(Number.isFinite)) return false;
+  const width = pad.displayWidth || pad.width || 24, height = pad.displayHeight || pad.height || 24;
+  if (![width,height].every(n => Number.isFinite(n) && n > 0)) return false;
+  return Math.abs(runner.x-pad.x) <= width/2+12 && Math.abs(runner.y-pad.y) <= height/2+12;
+}
+
 export function carSkidLines(seed, car, dir, cell) {
   if (!car || !dir || !(cell > 0)) return [];
   // Independent cosmetic hash; retries keep the same mark choice.

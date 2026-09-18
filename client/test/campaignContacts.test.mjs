@@ -9,6 +9,7 @@ for(const gangID of ['crossline','iron-row','afterlight']){
    const options={chapter,house,blockIndex:chapter+1,earnedPraise:['flawless'],telemetryComplete:true};
    const base=seasonCue(gangID,options),cue=campaignContactCue(gangID,options);
    check('scheduled slots '+gangID+chapter+house,Boolean(cue)===campaignContactHouses(gangID,options).includes(house));
+   if(house===15){check('finale always warns of two Plugs',cue?.beat.kind==='warning'&&cue.text.includes('two Plugs')||cue?.text.includes('Two Plugs'));check('finale has no jokes or praise',!cue.banterID&&cue.praiseKey===null&&cue.lineID===null);continue;}
    if(cue&&!base){check('added banter is unmeasured',cue.beat.kind==='banter'&&cue.praiseKey===null&&cue.lineID===null);continue;}
    if(!cue)continue;
    check('claim identity intact',base.eventID===cue.eventID);

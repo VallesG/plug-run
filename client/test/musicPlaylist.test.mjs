@@ -66,6 +66,24 @@ assert.equal(sampled.playMoment('block'), false); assert.equal(samples.length, 3
 const loads = []; Audio.preloadMoments({ load: { audio(key, url) { loads.push([key, url]); } } });
 assert.deepEqual(loads, [['contact_open', '/audio/contact_open.wav'],
   ['completion_cue', '/audio/completed.wav'], ['mission_pickup', '/audio/pickup.wav']]);
+const victoryTimers=[], victoryEvents=[];
+const victory=Object.assign(Object.create(Audio.prototype),{
+ scene:{runKind:'journey',role:'runner',blockIndex:1,time:{delayedCall(ms,fn){victoryTimers.push({ms,fn});}},
+   cache:{audio:{exists:()=>true}}}, sound:{},
+ _playlist:{context:'block1',key:'bg_main',bag:['bg_plug','bg_learn']},
+ stopMusic(ms){victoryEvents.push('fade-'+ms);this.music=null;},
+ playMoment(kind){victoryEvents.push(kind);return true;}
+});
+checkVictory();
+function checkVictory(){
+ assert.equal(victory.playBlockClear(),true);
+ assert.deepEqual(victoryEvents,['fade-250']);assert.equal(victoryTimers[0].ms,260);
+ assert.equal(victory.playBlockClear(),false);assert.equal(victoryTimers.length,1);
+ victoryTimers[0].fn();assert.deepEqual(victoryEvents,['fade-250','block']);
+ victory.playMusic('bg_main');assert.equal(victory.music,null);
+ victory.selectGameplayMusic('block2');assert.equal(victory._completionMusicHold,false);
+ victoryTimers[0].fn();assert.equal(victoryEvents.length,2);
+}
 const tutorial = readFileSync(new URL('../src/scenes/TutorialMiniScene.js', import.meta.url), 'utf8');
 const transitionTweens = [], created = [];
 const music = Object.assign(Object.create(Audio.prototype), { masterVolume: 0.8, _volMusic: 1,

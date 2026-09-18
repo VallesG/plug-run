@@ -1,4 +1,4 @@
-import { carParkCenter } from '../logic/getawayCar.js';
+import { carParkCenter, carExtractionOverlap } from '../logic/getawayCar.js';
 import { seasonJob } from '../logic/crewSeason.js';
 import { getContactProgress } from '../utils/contactProgress.js';
 import { crewStoryProgress } from '../logic/contactProgress.js';
@@ -2594,13 +2594,13 @@ export class BaseGameScene extends Phaser.Scene {
         // Dual AI mode: Only the STASH CARRIER needs to extract
         // The other runner can wait at the car but doesn't need to be there
         const carrier = this.stashCarrier;
-        if (carrier && carrier.active && carrier.hp > 0 && overlaps(carrier, this.extract)) {
+        if (carrier && carrier.active && carrier.hp > 0 && carExtractionOverlap(carrier, this.extract)) {
           if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
           this.showMissionExitHint();
         }
       } else {
         // Single AI mode: Just one runner needs to extract
-        if (overlaps(this.attacker, this.extract)) {
+        if (carExtractionOverlap(this.attacker, this.extract)) {
           if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
           this.showMissionExitHint();
         }
