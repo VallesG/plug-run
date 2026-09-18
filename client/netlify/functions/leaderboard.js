@@ -100,6 +100,41 @@ const kUserPayload = (userId)      => `user:${userId}:payload`; // hash of route
 const DAILY_EXPIRE_SEC = 60 * 60 * 24 * 8; // keep daily boards ~a week for late-cutoff queries
 
 // -----------------------------------------------------------------------
+// v2 boards: one per mode, each a single sorted set
+// -----------------------------------------------------------------------
+//
+// The v1 layout above keeps stash and REP in SEPARATE sets and splits every
+// board by role, so it cannot express "stash first, REP only on a tie" and a
+// player can hold two unrelated ranks. v2 is what the game shows:
+//
+//   Run the Block — one board. Stash is the score, REP breaks ties.
+//   Block Rivals  — one board. Wins, stacked.
+//
+// v1 keys are left untouched and still written, so nothing that reads them
+// breaks and no history is destroyed by shipping this.
+const kBlockBoard  = ()        => 'lb:v2:block';          // packed stash/REP
+const kRivalsBoard = ()        => 'lb:v2:rivals:wins';    // cumulative wins
+const kRivalsSeen  = (userId)  => `lb:v2:rivals:seen:${userId}`; // matchIds counted
+
+// MIRRORS client/src/logic/leaderboardScore.js. Kept in sync by
+// test/leaderboardScore.test.mjs, which reads this file and fails if the
+// constants drift — a Netlify function is CommonJS and cannot import the ESM
+// logic module, so the duplication is deliberate and guarded rather than
+// accidental.
+const REP_OFFSET = 2000;
+const REP_SPAN = 10000;
+const MAX_PACKED_STASH = 50000;
+
+function packBlockScore(stash, rep) {
+  const s = Number.isFinite(stash) ? Math.floor(stash) : null;
+  const r = Number.isFinite(rep) ? Math.floor(rep) : null;
+  if (s === null || r === null) return null;
+  if (s < 0 || s > MAX_PACKED_STASH) return null;
+  if (r < -REP_OFFSET || r > REP_OFFSET) return null;
+  return s * REP_SPAN + (r + REP_OFFSET);
+}
+
+// -----------------------------------------------------------------------
 // Handlers
 // -----------------------------------------------------------------------
 
@@ -179,9 +214,21 @@ async function handleSubmit(body) {
     meta.boardRuns = keep;
   }
 
+  // Run the Block, v2: one packed score. Best-only across runs, latest-wins
+  // within a run, matching the v1 semantics above so the two boards cannot
+  // disagree about who is ahead.
+  const blockKey = kBlockBoard();
+  const packed = packBlockScore(stash, rep);
+  let writeBlock = false;
+  if (packed !== null) {
+    const existingBlock = await redis(['ZSCORE', blockKey, userId]);
+    writeBlock = decide(blockKey, existingBlock, packed);
+  }
+
   const writeOps = [
     ['SET', kUserMeta(userId), JSON.stringify(meta)]
   ];
+  if (writeBlock) writeOps.push(['ZADD', blockKey, String(packed), userId]);
 
   // Payload snapshot (round + optional inputLog) keyed for later lookup
   const payload = {
@@ -419,6 +466,109 @@ async function handleRestore(body) {
 // Router
 // -----------------------------------------------------------------------
 
+/**
+ * Block Rivals: record a win. Wins stack; nothing else counts.
+ *
+ * Idempotent per matchId. A retried request, a double-tap or a client that
+ * resubmits after a dropped response must not inflate the tally — the board
+ * is a count of races won, and a count that can be nudged is not a count.
+ */
+async function handleRivalsWin(body) {
+  if (!body || typeof body !== 'object') return BAD('payload missing');
+  const { userId, username, matchId, token } = body;
+  if (typeof userId !== 'string' || !userId || userId.length > USERID_MAX_LEN) return BAD('userId');
+  if (typeof username !== 'string' || !username || username.length > USERNAME_MAX_LEN) return BAD('username');
+  if (typeof matchId !== 'string' || !matchId || matchId.length > 80) return BAD('matchId');
+
+  const metaRaw = await redis(['GET', kUserMeta(userId)]);
+  const meta = metaRaw ? JSON.parse(metaRaw) : null;
+  // Same token rule as score submission: an established player must prove the
+  // userId is theirs, a new one is minted a token on first contact.
+  if (meta) {
+    if (!token || meta.token !== token) return FORBID('bad token');
+  }
+
+  // SADD returns 1 when the member is new, 0 when it was already there. That
+  // is the idempotency check and the write, in one round trip.
+  const added = await redis(['SADD', kRivalsSeen(userId), matchId]);
+  if (Number(added) !== 1) {
+    const current = await redis(['ZSCORE', kRivalsBoard(), userId]);
+    return OK({ ok: true, counted: false, wins: Number(current) || 0 });
+  }
+
+  const next = meta || { username, token: crypto.randomUUID(), lastSubmitAt: 0 };
+  next.username = username;
+  const [wins] = await pipeline([
+    ['ZINCRBY', kRivalsBoard(), '1', userId],
+    ['SET', kUserMeta(userId), JSON.stringify(next)]
+  ]);
+  return OK({ ok: true, counted: true, wins: Number(wins) || 0, token: next.token });
+}
+
+/**
+ * Read a v2 board with usernames attached.
+ *
+ * `name` is 'block' or 'rivals'. Block scores are returned unpacked, so the
+ * client never has to know the packing to render a row.
+ */
+async function handleBoard(params) {
+  const name = params.get('name') || 'block';
+  const limit = Math.min(Math.max(parseInt(params.get('limit') || '25', 10) || 25, 1), 100);
+  if (name !== 'block' && name !== 'rivals') return BAD('name');
+
+  const key = name === 'block' ? kBlockBoard() : kRivalsBoard();
+  const flat = await redis(['ZREVRANGE', key, '0', String(limit - 1), 'WITHSCORES']);
+  if (!Array.isArray(flat) || !flat.length) return OK({ board: name, entries: [] });
+
+  const ids = [];
+  for (let i = 0; i < flat.length; i += 2) ids.push(flat[i]);
+  const metas = await pipeline(ids.map(id => ['GET', kUserMeta(id)]));
+
+  const entries = ids.map((userId, i) => {
+    const score = Number(flat[i * 2 + 1]) || 0;
+    let username = userId;
+    try { username = (JSON.parse(metas[i] || 'null') || {}).username || userId; } catch {}
+    const row = { rank: i + 1, userId, username };
+    if (name === 'block') {
+      row.stash = Math.floor(score / REP_SPAN);
+      row.rep = (score % REP_SPAN) - REP_OFFSET;
+    } else {
+      row.wins = score;
+    }
+    return row;
+  });
+  return OK({ board: name, entries });
+}
+
+/**
+ * Clear a board. Requires LEADERBOARD_ADMIN_SECRET to be set in the
+ * environment AND matched by the caller.
+ *
+ * This deletes real player data and cannot be undone, so it refuses unless
+ * the secret is configured (an unset secret must never mean "no check"), the
+ * caller matches it, and the request names the exact board. There is no
+ * "wipe everything" shortcut.
+ */
+async function handleWipe(body) {
+  const secret = process.env.LEADERBOARD_ADMIN_SECRET;
+  if (!secret) return FORBID('admin secret not configured');
+  if (!body || body.secret !== secret) return FORBID('bad secret');
+
+  const name = body.board;
+  const keys = {
+    block: [kBlockBoard()],
+    rivals: [kRivalsBoard()],
+    // v1 is every historical board; listing them explicitly beats a KEYS scan.
+    legacy: ['lb:all:runner:stash', 'lb:all:runner:rep', 'lb:all:plug:stash', 'lb:all:plug:rep']
+  }[name];
+  if (!keys) return BAD('board must be block, rivals or legacy');
+
+  // Report what was there, so a wipe leaves a record of what it removed.
+  const before = await pipeline(keys.map(k => ['ZCARD', k]));
+  await pipeline(keys.map(k => ['DEL', k]));
+  return OK({ ok: true, board: name, keys, removed: before.map(n => Number(n) || 0) });
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
 
@@ -443,6 +593,16 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST' && action === 'restore') {
       const body = event.body ? JSON.parse(event.body) : {};
       return await handleRestore(body);
+    }
+
+    if (event.httpMethod === 'GET' && action === 'board') return await handleBoard(url.searchParams);
+    if (event.httpMethod === 'POST' && action === 'rivals-win') {
+      const body = event.body ? JSON.parse(event.body) : {};
+      return await handleRivalsWin(body);
+    }
+    if (event.httpMethod === 'POST' && action === 'wipe') {
+      const body = event.body ? JSON.parse(event.body) : {};
+      return await handleWipe(body);
     }
 
     return BAD('unknown action');
