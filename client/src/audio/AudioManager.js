@@ -6,6 +6,12 @@ import Phaser from 'phaser';
 export class AudioManager {
   static _instance = null;
 
+  static preloadMoments(scene) {
+    scene.load.audio('contact_open', '/audio/contact_open.wav');
+    scene.load.audio('completion_cue', '/audio/completed.wav');
+    scene.load.audio('mission_pickup', '/audio/pickup.wav');
+  }
+
   static get(scene) {
     if (!AudioManager._instance) {
       console.log('[AudioManager] Creating NEW instance');
@@ -189,6 +195,11 @@ export class AudioManager {
     const notes = missionPickupSound(objectID);
     if (!notes || this.isMuted() || this._volSfx <= 0) return false;
     if (!this.canPlay('mission_' + objectID)) return false;
+    if (this.scene?.cache?.audio?.exists?.('mission_pickup')) {
+      if (this.sound?.locked || this.sound?.context?.state === 'suspended') return false;
+      this.play('mission_pickup', { volume: 0.5 });
+      return true;
+    }
     const ctx = this.sound?.context || this._ctx;
     if (!ctx?.createOscillator || ctx.state === 'suspended') {
       this.play('pickup', { volume: 0.6 });
@@ -241,6 +252,12 @@ export class AudioManager {
   playMoment(kind) {
     const ctx = this.sound?.context || this._ctx;
     if (this.isMuted() || this._volSfx <= 0 || !ctx?.createOscillator || ctx.state !== 'running') return false;
+    const stockKey = kind === 'contact' ? 'contact_open' : 'completion_cue';
+    if (this.scene?.cache?.audio?.exists?.(stockKey)) {
+      if (this.sound?.locked) return false;
+      this.play(stockKey, { volume: kind === 'contact' ? 0.24 : 0.55 });
+      return true;
+    }
     try {
       for (const note of momentNotes(kind)) {
         const osc = ctx.createOscillator(), gain = ctx.createGain();

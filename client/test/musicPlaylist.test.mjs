@@ -50,6 +50,22 @@ added[1].onComplete(); assert.equal(added.length, 3);
 added[2].onComplete(); assert.equal(audio._duck.mult, 1); assert.equal(audio._duck.timeline, null);
 audio.duckMusic({ priority: 4 }); audio.duckMusic({ priority: 1 }); assert.equal(added.length, 4);
 audio._duck.timeline.destroy(); assert.equal(removed, 1);
+const samples = [];
+const sampled = Object.assign(Object.create(Audio.prototype), { masterVolume: 0.8, muted: false, _volSfx: 1,
+  sound: { context: { state: 'running', createOscillator() { throw Error('stock must bypass synthesis'); } } },
+  scene: { cache: { audio: { exists: () => true } } }, play(key, options) { samples.push({ key, options }); } });
+assert.equal(sampled.playMoment('contact'), true);
+assert.equal(sampled.playMoment('block'), true);
+assert.equal(sampled.playMoment('city'), true);
+assert.deepEqual(samples.map(s => s.key), ['contact_open', 'completion_cue', 'completion_cue']);
+assert.equal(samples[0].options.volume, 0.24);
+sampled.muted = true; assert.equal(sampled.playMoment('contact'), false); assert.equal(samples.length, 3);
+sampled.muted = false; sampled.sound.locked = true; assert.equal(sampled.playMoment('contact'), false);
+sampled.sound.locked = false; sampled.sound.context.state = 'suspended';
+assert.equal(sampled.playMoment('block'), false); assert.equal(samples.length, 3);
+const loads = []; Audio.preloadMoments({ load: { audio(key, url) { loads.push([key, url]); } } });
+assert.deepEqual(loads, [['contact_open', '/audio/contact_open.wav'],
+  ['completion_cue', '/audio/completed.wav'], ['mission_pickup', '/audio/pickup.wav']]);
 const tutorial = readFileSync(new URL('../src/scenes/TutorialMiniScene.js', import.meta.url), 'utf8');
 const transitionTweens = [], created = [];
 const music = Object.assign(Object.create(Audio.prototype), { masterVolume: 0.8, _volMusic: 1,

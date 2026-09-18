@@ -94,6 +94,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // Audio SFX (use real files when present; falls back otherwise)
     try {
+      AudioManager.preloadMoments(this);
       this.load.audio('gun_fire',     ['/audio/gun_fire.ogg',     '/audio/gun_fire.mp3']);
       this.load.audio('impact',       ['/audio/impact.ogg',       '/audio/impact.mp3']);
       this.load.audio('pickup',       ['/audio/pickup.ogg',       '/audio/pickup.mp3']);

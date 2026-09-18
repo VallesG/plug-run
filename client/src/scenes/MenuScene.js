@@ -53,6 +53,7 @@ export class MenuScene extends Phaser.Scene {
     // Music (provide multiple formats for browser compatibility if available)
     try {
       // Prefer .ogg/.mp3 (current files) in that order
+      AudioManager.preloadMoments(this);
       this.load.audio('bg_main',  ['/audio/main_beat.ogg',  '/audio/main_beat.mp3']);
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);

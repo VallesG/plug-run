@@ -54,4 +54,14 @@ const fallback=manager();fallback.audio.sound.context=null;
 check('no WebAudio uses generic cached fallback',fallback.audio.playMissionItemPickup('tube')===false&&fallback.fallback.join(',')==='pickup');
 const unknown=manager();
 check('unknown ID stays silent',!unknown.audio.playMissionItemPickup('nope')&&unknown.oscillators.length===0);
+for(const id of ids){
+  const stock=manager();
+  stock.audio.scene={cache:{audio:{exists:key=>key==='mission_pickup'}}};
+  check('stock violet case sound '+id,stock.audio.playMissionItemPickup(id)===true
+    &&stock.fallback.join(',')==='mission_pickup'&&stock.oscillators.length===0);
+}
+const lockedStock=manager();
+lockedStock.audio.scene={cache:{audio:{exists:()=>true}}};
+lockedStock.audio.sound.locked=true;
+check('locked stock cue does not queue',lockedStock.audio.playMissionItemPickup('keys')===false&&lockedStock.fallback.length===0);
 console.log(passed+' mission foley assertions passed');
