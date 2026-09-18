@@ -36,7 +36,7 @@ for(const destination of ['TUTORIAL_MINI','WINDOW','RUNNER']){
  check('actual Play reaches '+destination,reached===destination);
 }
 let marked=null,completion=null;const goSource=tutorial.slice(tutorial.indexOf('  goNext(){'),tutorial.indexOf('  queueDash('));
-const go=new Function('nextTutorialStage','markTutorialComplete','Phaser','return function'+goSource.slice(goSource.indexOf('(')))(()=>null,id=>marked=id,{});
+const go=new Function('nextTutorialStage','markTutorialComplete','Phaser','const trackTutorial=()=>{},trackEvent=()=>{};return function'+goSource.slice(goSource.indexOf('(')))(()=>null,id=>marked=id,{});
 const training={stageIdx:4,_trainingUserID:'a',clearTutorialStats(){},showModal:(title,copy,label,callback)=>completion=callback,scene:{transition:opts=>marked+=':'+opts.target}};
 go.call(training);
 check('actual final lesson records completion before navigation',marked==='a'&&typeof completion==='function');

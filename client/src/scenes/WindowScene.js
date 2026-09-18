@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../utils/analytics.js';
 import { expressionArt, expressionIndex } from '../logic/contactExpressions.js';
 import {
   WINDOW_GANGS, WINDOW_INTRO, WINDOW_ART, windowGang, windowLayout
@@ -45,6 +46,7 @@ export class WindowScene extends Phaser.Scene {
 
   create() {
     this.state = recordWindowVisit(getCurrentRouteID());
+    trackEvent('window_visited');
     this.prepareArtFrames();
     this.drawBodega();
     this.events.once('shutdown', () => this.clearView());
@@ -292,6 +294,7 @@ export class WindowScene extends Phaser.Scene {
       return;
     }
     this.state=result.state;
+    trackEvent('crew_selected',{crew:gangID});
     const gang=windowGang(gangID);
     this.clearView();
     const a=windowLayout(this.scale.width,this.scale.height);
