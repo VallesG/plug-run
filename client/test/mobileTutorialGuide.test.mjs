@@ -40,7 +40,8 @@ const bags=fixture(),b=createMobileTutorialGuide(bags,2);
 eq(b.tick(16),true);eq(b.phase,'bagsIntro');
 for(let i=0;i<14;i++)b.tick(100);
 b.tick(16);eq(bags.circles.slice(-2),[[40,50],[60,70]]);
-bags.bunkStash.active=false;b.tick(16);eq(bags.texts.at(-1),'Bunk bags disappear. Touch the other bag.');
+bags.bunkStash=null;const ringsBefore=bags.circles.length;b.tick(16);
+eq(bags.texts.at(-1),'Bunk bags disappear. Touch the other bag.');eq(bags.circles.length,ringsBefore);
 bags.hasPackage=true;b.tick(16);eq(bags.circles.at(-1),[100,200]);b.destroy();
 const powers=fixture(),p=createMobileTutorialGuide(powers,3);
 p.tick(16);eq(powers.playerDrift,null);eq(powers.texts.at(-1).includes('Double-tap anywhere to use dash'),true);
@@ -52,6 +53,12 @@ powers._transitioning=true;p.tick(16);eq(powers.texts.at(-1),'');
 p.destroy();
 // Execute the actual stage-two pickup branch with both possible first contacts.
 const sceneText=readFileSync(new URL('../src/scenes/TutorialMiniScene.js',import.meta.url),'utf8');
+const clearBody=sceneText.split('    if (idx === 1) {')[1].split('    this.grid = arena.grid;')[0];
+const arena={grid:Array.from({length:8},()=>Array(6).fill(1))};
+new Function('arena','T',clearBody.slice(0,clearBody.lastIndexOf('}'))).call({cols:6,rows:8},arena,{FLOOR:0});
+eq(arena.grid.slice(1,-1).every(row=>row.slice(1,-1).every(tile=>tile===0)),true);
+eq(arena.grid[0].every(tile=>tile===1),true);
+eq(sceneText.includes('filtered[(rnd() * filtered.length) | 0]'),true);
 const branch=sceneText.split("} else if (this.stageIdx === 2){")[1].split("} else if (this.stageIdx === 3)")[0];
 const pickup=new Function(branch);
 function pickupFixture(first){

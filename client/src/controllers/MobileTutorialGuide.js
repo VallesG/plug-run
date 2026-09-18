@@ -38,6 +38,7 @@ export function createMobileTutorialGuide(scene, stage) {
     copy.setPosition?.(W/2,y);copy.setText(text);
     return y;
   };
+  const arrowStarts=new Map();
   const arrow=target=>{
     if(!target||target.active===false||target.visible===false)return;
     const t=screenPoint(target),z=cam?.zoom||1;
@@ -54,14 +55,18 @@ export function createMobileTutorialGuide(scene, stage) {
     from.x=Math.max(22,Math.min(W-22,from.x));from.y=Math.max(24,Math.min(H-24,from.y));
     const dx=t.x-from.x,dy=t.y-from.y,len=Math.hypot(dx,dy)||1;
     const ux=dx/len,uy=dy/len;
-    const end={x:t.x-ux*scene.cell*0.65*z,y:t.y-uy*scene.cell*0.65*z};
-    const bob=reduced?0:Math.sin(guide.elapsed/220)*3;
+    const gap=scene.cell*(target===scene.car?2:1.3)*z;
+    const end={x:t.x-ux*gap,y:t.y-uy*gap};
+    if(!arrowStarts.has(target))arrowStarts.set(target,guide.elapsed);
+    const age=Math.max(0,guide.elapsed-arrowStarts.get(target));
+    const pop=reduced?1:1+0.35*Math.exp(-age/260);
+    const bob=reduced?0:Math.sin(guide.elapsed/220)*5;
     const sx=from.x-ux*bob,sy=from.y-uy*bob;
     // Dark outline and broad blue arrow stay legible over the floor.
     for(const [width,color] of [[9,0x07101b],[5,0x9bcdfb]]){
-      ink.lineStyle(width,color,1);ink.lineBetween(sx,sy,end.x,end.y);
-      ink.lineBetween(end.x,end.y,end.x-ux*14-uy*9,end.y-uy*14+ux*9);
-      ink.lineBetween(end.x,end.y,end.x-ux*14+uy*9,end.y-uy*14-ux*9);
+      ink.lineStyle(width*pop,color,1);ink.lineBetween(sx,sy,end.x,end.y);
+      ink.lineBetween(end.x,end.y,end.x-ux*14*pop-uy*9*pop,end.y-uy*14*pop+ux*9*pop);
+      ink.lineBetween(end.x,end.y,end.x-ux*14*pop+uy*9*pop,end.y-uy*14*pop-ux*9*pop);
     }
   };
   Object.defineProperties(guide,{
@@ -120,7 +125,7 @@ export function createMobileTutorialGuide(scene, stage) {
     if(stage===1){
       targets=[scene.car];floatCopy('Reach the lit getaway car.\nSwipe anywhere to turn.',targets);
     }else if(stage===2){
-      targets=scene.hasPackage?[scene.car]:[scene.stash,scene.bunkStash];
+      targets=scene.hasPackage?[scene.car]:scene.bunkStash?[scene.stash,scene.bunkStash]:[];
       floatCopy(scene.hasPackage?'That is the real stash. Bring it to the car.':
         (!scene.bunkStash||scene.bunkStash.active===false)?'Bunk bags disappear. Touch the other bag.':
         'Touch a bag. One is real; one is bunk.',targets);

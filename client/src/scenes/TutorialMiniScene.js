@@ -219,7 +219,7 @@ function generateArenaMap(cols, rows, seed, clusterScale = 1){
   const extractCandidates = floors.filter(c => safe(c) && (manhattan(c, plug) + 3 < manhattan(c, runner)));
   const pickFrom = (arr, avoid, minD) => {
     const filtered = arr.length ? arr.filter(c => avoid.every(pt => manhattan(c, pt) >= minD)) : [];
-    if (filtered.length) return filtered[(Math.random() * filtered.length) | 0];
+    if (filtered.length) return filtered[(rnd() * filtered.length) | 0];
     return pickFar(avoid, minD);
   };
   let stash = pickFrom(stashCandidates, [runner, plug], Math.floor((cols + rows) / 10));
@@ -898,6 +898,13 @@ export class TutorialMiniScene extends Phaser.Scene {
     // stage 3 half-density, stages 4-5 full. Matches the main-game 1-3 curve.
     const stageOpenness = [1, 0.25, 0.35, 0.55, 0.9, 1][idx] ?? 1;
     const arena = generateArenaMap(this.cols, this.rows, seed, stageOpenness);
+    // Movement practice must never put a generated wall below the first turn.
+    // Keep the first lesson's entire interior clear; retain its boundary/egress.
+    if (idx === 1) {
+      for (let y = 1; y < this.rows - 1; y++) {
+        for (let x = 1; x < this.cols - 1; x++) arena.grid[y][x] = T.FLOOR;
+      }
+    }
     this.grid = arena.grid;
     this.egress = arena.egress;
     this.spawnRunnerCell = arena.spawns.runner;
