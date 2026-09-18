@@ -65,6 +65,40 @@ for (const role of ['runner','plug']) {
  pc.endSwipe({...p,x:origin.x,y:origin.y+56,isDown:false});
  check(equalDir(pc.playerDrift,turn),'release retains last turn instead of original heading');
 }
+
+
+{
+ const {pc}=make(),p={id:8,x:100,y:100,isDown:true};
+ pc.beginSwipe(p);now+=200;
+ const steer=degrees=>{
+  const a=degrees*Math.PI/180,origin={...pc._swipeStart};
+  const next={...p,x:origin.x+50*Math.cos(a),y:origin.y+50*Math.sin(a)};
+  pc.updateSwipe(next);return next;
+ };
+ steer(20);check(equalDir(pc.playerDrift,{x:1,y:0}),'actual drag favors cardinal for angled flick');
+ steer(26);check(equalDir(pc.playerDrift,{x:1,y:0}),'actual drag holds cardinal against jitter');
+ steer(35);check(equalDir(pc.playerDrift,{x:Math.SQRT1_2,y:Math.SQRT1_2}),'actual deliberate diagonal escapes cardinal');
+ const last=steer(29),dir={...pc.playerDrift};
+ check(equalDir(dir,{x:Math.SQRT1_2,y:Math.SQRT1_2}),'actual diagonal holds against jitter');
+ pc.endSwipe({...last,isDown:false});
+ check(equalDir(pc.playerDrift,dir),'sticky diagonal survives release');
+}
+
+for (const axis of [0,90,180,-90]) {
+ const {pc}=make();
+ const vector = degrees => {const a=degrees*Math.PI/180;return pc.runnerDragDirection(56*Math.cos(a),56*Math.sin(a));};
+ const expected={x:Math.round(Math.cos(axis*Math.PI/180)),y:Math.round(Math.sin(axis*Math.PI/180))};
+ check(equalDir(vector(axis+20),expected),'near-axis drag gets cardinal preference');
+ check(equalDir(vector(axis+26),expected),'cardinal holds through small angular jitter');
+ const diagonal=vector(axis+35);
+ check(!equalDir(diagonal,expected),'clear diagonal escapes cardinal preference');
+ check(equalDir(vector(axis+29),diagonal),'diagonal resists small boundary jitter');
+ check(equalDir(vector(axis+20),expected),'intentional return to cardinal works');
+ pc.beginSwipe({id:9,x:100,y:100,isDown:true});
+ check(pc._runnerDragSnap===null,'new gesture clears snap history');
+ pc.runnerDragDirection(56,0);pc.resetTouchGestures();
+ check(pc._runnerDragSnap===null,'modal reset clears snap history');
+}
 return assertions;
 })();
 console.log('drag steering: '+assertions+' assertions passed');

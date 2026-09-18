@@ -317,6 +317,7 @@ export default class PlayerController {
     this._swipeStart = null;
     this._aimDragActive = false;
     this._dragMoveActive = false;
+    this._runnerDragSnap = null;
     this._lastTapAt = 0;
   }
 
@@ -330,9 +331,39 @@ export default class PlayerController {
     // re-anchors past AIM_MAX_PX).
     this._swipeStart = { x: pointer.x, y: pointer.y, x0: pointer.x, y0: pointer.y, t: performance.now() };
     this._dragMoveActive = false;
+    this._runnerDragSnap = null;
     if (this.scene.role === 'plug') {
       this._aimDragActive = true;
     }
+  }
+
+  // Runner-only drag preference. Fresh gestures do not inherit old bias,
+  // and Plug aiming remains unchanged. Thresholds are an experimental feel
+  // setting, not a wall/collision correction.
+  runnerDragDirection(dx, dy) {
+    const length = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx);
+    const radians = degrees => degrees * Math.PI / 180;
+    const distance = other => Math.abs(Math.atan2(
+      Math.sin(angle - other), Math.cos(angle - other)));
+    const previous = this._runnerDragSnap;
+    if (previous && distance(previous.angle) <= radians(previous.cardinal ? 28 : 17)) {
+      return previous.vector;
+    }
+    const cardinal = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
+    if (distance(cardinal) <= radians(22)) {
+      const vector = { x: Math.round(Math.cos(cardinal)), y: Math.round(Math.sin(cardinal)) };
+      this._runnerDragSnap = { angle: cardinal, cardinal: true, vector };
+      return vector;
+    }
+    const nearest = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+    if (distance(nearest) < 0.26) {
+      const vector = { x: Math.cos(nearest), y: Math.sin(nearest) };
+      this._runnerDragSnap = { angle: nearest, cardinal: false, vector };
+      return vector;
+    }
+    this._runnerDragSnap = null;
+    return { x: dx / length, y: dy / length };
   }
 
   updateSwipe(pointer) {
@@ -420,14 +451,7 @@ export default class PlayerController {
     }
     const MOVE_DEAD_PX = 10;
     if (L >= MOVE_DEAD_PX) {
-      // 8-way soft snap — crisp diagonals in corridors, free aim elsewhere.
-      const ang = Math.atan2(dy, dx);
-      const step = Math.PI / 4;
-      const nearest = Math.round(ang / step) * step;
-      const SNAP_RAD = 0.26;
-      const moveVec = (Math.abs(ang - nearest) < SNAP_RAD)
-        ? { x: Math.cos(nearest), y: Math.sin(nearest) }
-        : { x: dx / L, y: dy / L };
+      const moveVec = this.runnerDragDirection(dx, dy);
 
       // Commit: hold past DRAG_COMMIT_MS OR travel past DRAG_COMMIT_PX
       // without release. Below that threshold it's still a quick-swipe;
