@@ -1,5 +1,6 @@
 // Runner tutorial: four lessons, sharing the main game's presentation.
 import Phaser from 'phaser';
+import { createMobileTutorialGuide } from '../controllers/MobileTutorialGuide.js';
 import { markTutorialComplete } from '../utils/tutorialProgress.js';
 import { getUserID } from '../utils/userManager.js';
 import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
@@ -680,6 +681,8 @@ export class TutorialMiniScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeCb);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this._mobileGuide?.destroy();
+      this._mobileGuide = null;
       clearTimeout(this._resizeTimer);
       this._tutorialModal?.destroy();
       try { this.audio?.stopEngineLoop(); } catch {}
@@ -780,6 +783,8 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   startStage(idx){
+    this._mobileGuide?.destroy();
+    this._mobileGuide = null;
     idx = tutorialStage(idx);
     this._transitioning = false;
     this._runnerLastTrailPos = null;
@@ -1029,6 +1034,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this._swipeStart = null;
       this._lastPointerTapAt = 0;
       this._pointerDownHandler = (p) => {
+        if (this.pausedForModal || this._mobileGuide?.blocksGestures) return;
         // Ignore if already tracking a pointer
         if (this._activePointerId !== null) return;
         const pid = getPid(p);
@@ -1037,6 +1043,7 @@ export class TutorialMiniScene extends Phaser.Scene {
         this._swipeStart = { x: p.x, y: p.y, t: performance.now() };
       };
       this._pointerMoveHandler = (p) => {
+        if (this.pausedForModal || this._mobileGuide?.waitingSwipe) return;
         const pid = getPid(p);
         if (pid !== this._activePointerId || !p?.isDown) return;
         this.pointer = p;
@@ -1146,6 +1153,10 @@ export class TutorialMiniScene extends Phaser.Scene {
               cardinalDir.y = dy > 0 ? 1 : -1;
             }
 
+            if (this._mobileGuide?.waitingSwipe && !this._mobileGuide.swipe(cardinalDir,moved)) {
+              this._activePointerId=null;this.pointer=null;this._swipeStart=null;this._lastPointerTapAt=0;
+              return;
+            }
             this.playerAim = cardinalDir;
             this.playerGunAim = cardinalDir;
             // In stage 5 (plug), only update aim, not drift (plug doesn't auto-move)
@@ -1471,11 +1482,23 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   showStageModal(idx){
     const lesson = tutorialLesson(idx, this.sys.game.device.os.desktop);
+    if (!this.sys.game.device.os.desktop && idx <= 3) {
+      this.pausedForModal = false;
+      this.resumeFromModal();
+      if (idx === 3) this.showPowerSelectionModal();
+      else this.startMobileGuide(idx);
+      return;
+    }
     this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'CHOOSE POWERS' : lesson.stage===1 ? 'START TRAINING' : 'RUN THIS LESSON', () => {
       this.resumeFromModal();
       if (lesson.choosePowers) this.showPowerSelectionModal();
     }, { showReplay:lesson.stage>1 });
   }
+  startMobileGuide(stage){
+    this._mobileGuide?.destroy();
+    this._mobileGuide=createMobileTutorialGuide(this,stage);
+  }
+
   showCharacterPreview(role){
     // Create character preview to the right of "You are the RUNNER/PLUG" text (like a tab indent)
     const width = this.scale.width;
@@ -1560,6 +1583,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.pausedForModal = false;
       this.input.keyboard.enabled = true;
       this._ignoreNextPowerClick = true;
+      if (!this.sys.game.device.os.desktop && this.stageIdx === 3) this.startMobileGuide(3);
       onStart?.();
     };
     const primary = { label:btn, variant:'primary', onClick:begin };
@@ -2765,6 +2789,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (!this.runner) return;
     const dt = delta / 1000;
     if (this.pausedForModal) return;
+    if (this._mobileGuide?.tick(delta)) return;
 
     // Desktop stage 5 (plug): Update gun aim from mouse position every frame for instant response
     if (this.sys.game.device.os.desktop && this.stageIdx === 5 && this.input.activePointer) {
