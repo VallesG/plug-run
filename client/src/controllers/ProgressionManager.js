@@ -37,7 +37,7 @@ import { drawBlockMap } from './BlockMap.js';
 import { SESSION_RULES, streakBonus } from '../utils/repTracker.js';
 import { getCurrentUser, updateUserStats } from '../utils/userManager.js';
 import { rectsOverlap, overlaps } from '../utils/gameUtils.js';
-import { trackGameStart, trackRoundComplete, trackGameOver } from '../utils/analytics.js';
+import { trackGameStart, trackRoundComplete, trackGameOver, trackScene } from '../utils/analytics.js';
 import { logRunnerExtract, logPlugStop } from '../utils/activityFeed.js';
 
 /**
@@ -73,9 +73,11 @@ export default class ProgressionManager {
    */
   startRound(roundNum) {
     if (this.scene.runKind === 'rivals') return;
+    this.scene.analyticsCrew=this.scene.blockGangID ?? getWindowState().gangID;
+    trackScene(this.scene,'house_started');
     // Track game start on round 1
     if (roundNum === 1) {
-      trackGameStart('pve', this.scene.role, roundNum);
+      trackGameStart('pve', this.scene.role, roundNum, this.scene);
     }
 
     if (!this.repTracker) {
@@ -161,7 +163,7 @@ export default class ProgressionManager {
     // PvE mode: update stats and show floating rewards, then continue with normal extraction
     if (this.scene.mode === 'pve') {
       // Track successful round completion
-      trackRoundComplete(this.scene.role, this.scene.pveRound || 1, true);
+      trackRoundComplete(this.scene.role, this.scene.pveRound || 1, true, this.scene);
       console.log('[PvE] Extraction! Round:', this.scene.pveRound, 'Mode:', this.scene.mode);
 
       // Track round completion for REP calculation
@@ -564,6 +566,7 @@ export default class ProgressionManager {
   noteDeathForContacts() {
     const scene = this.scene;
     if (scene.runKind !== 'journey' || scene.role !== 'runner') return;
+    trackScene(scene,'house_failed',{reason:'eliminated'});
     this._contactDeathsThisHouse = (this._contactDeathsThisHouse || 0) + 1;
     // A failed attempt still cost the player time on this house.
     this._contactFailedActiveMs = (this._contactFailedActiveMs || 0) + Math.round(scene._activePlayMs ?? 0);
@@ -710,6 +713,12 @@ export default class ProgressionManager {
    * daily leaderboard entry and a shared replay hang off.
    */
   showBlockComplete() {
+    if (!this._analyticsBlockReported) {
+      this._analyticsBlockReported=true;
+      trackScene(this.scene,'block_completed');
+      // This is the third-block milestone, not a claim about legacy-save unlock state.
+      if(this.scene.runKind==='journey' && this.scene.blockIndex===3) trackScene(this.scene,'rivals_unlock_milestone');
+    }
     const scene = this.scene;
     // The two-contact curtain call comes before the revealed block/result.
     // It never advances the story: only the actual final extraction does.
@@ -809,7 +818,8 @@ export default class ProgressionManager {
       this.scene.role,
       roundNumber,
       this.scene.pveSessionStash || 0,
-      this.scene.pveSessionRep || 0
+      this.scene.pveSessionRep || 0,
+      this.scene
     );
 
     // Track route progress for leaderboard

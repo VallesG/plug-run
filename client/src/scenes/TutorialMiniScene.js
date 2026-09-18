@@ -11,7 +11,7 @@ import GameUI from '../controllers/GameUI.js';
 import { showRunnerLoadout } from '../controllers/RunnerLoadout.js';
 import { tutorialStage, nextTutorialStage, tutorialLesson, TUTORIAL_STAGE_COUNT } from '../logic/tutorial.js';
 import AudioManager from '../audio/AudioManager.js';
-import { trackTutorial } from '../utils/analytics.js';
+import { trackTutorial, trackEvent } from '../utils/analytics.js';
 import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateSocialFeed } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
 import ProgressionManager from '../controllers/ProgressionManager.js';
@@ -426,6 +426,7 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   create(){
+    this._analyticsTutorialStarted = false;
     console.log('[Tutorial] create() called, window.innerWidth:', window.innerWidth, 'isDesktop:', isDesktop());
     this._trainingUserID = getUserID();
     // Reset modal pause state on scene create/restart
@@ -783,6 +784,8 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   startStage(idx){
+    if (!this._analyticsTutorialStarted) { this._analyticsTutorialStarted=true; trackEvent('tutorial_started',{game_mode:'tutorial'}); }
+    trackTutorial(idx,'start');
     this._mobileGuide?.destroy();
     this._mobileGuide = null;
     idx = tutorialStage(idx);
@@ -1927,6 +1930,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     // Prevent duplicate calls
     if (this._transitioning) return;
     this._transitioning = true;
+    trackTutorial(this.stageIdx,'complete');
 
     // Stop engine loop when transitioning to next stage
     try { this.audio?.stopEngineLoop(); } catch {}
@@ -1966,6 +1970,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       }
 
       markTutorialComplete(this._trainingUserID);
+      trackEvent('tutorial_completed',{game_mode:'tutorial',stage:this.stageIdx});
       this.showModal("You're ready!", [
         'Next stop: The Window. Meet Auntie Ro, join a crew, and start bringing bags home for your people.'
       ], 'Go to The Window  >>', () => {

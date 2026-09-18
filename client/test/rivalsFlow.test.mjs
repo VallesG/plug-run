@@ -10,6 +10,7 @@ let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, re
 const source=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const bindings={
+  trackScene:()=>{},
   ...rules, ...presets, ...capture,
   crewSigil:()=>null,completeRivalDistrict:()=>({applied:false}),
   rivalCityView:index=>({index}),drawCityMap:(s,o)=>{s.cityOptions=o;return {destroy(){s.cityDestroyed=true;}};},

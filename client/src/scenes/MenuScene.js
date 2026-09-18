@@ -2067,7 +2067,7 @@ export class MenuScene extends Phaser.Scene {
       // Music will be started in BaseGameScene (sounds must be created in the scene that uses them)
       cam.fadeOut(250, 0,0,0);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
-        trackNavigation('runner_mode');
+        trackNavigation(card.runKind==='rivals'?'block_rivals':'campaign');
         this.scene.transition({
           target: 'RUNNER',
           duration: 250,

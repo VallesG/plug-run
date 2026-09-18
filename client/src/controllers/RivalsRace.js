@@ -1,4 +1,5 @@
 import { crewSigil } from '../logic/crewSigils.js';
+import { trackScene } from '../utils/analytics.js';
 import { rivalCityView, completeRivalDistrict, getRivalTerritory } from '../utils/rivalCityProgress.js';
 import { drawCityMap } from './CityMap.js';
 import { drawRivalDistrictMap } from './RivalDistrictMap.js';
@@ -81,6 +82,7 @@ export default class RivalsRace {
   findMatch(){
     if(this.disposed||this.searching||this.race.status!=='ready')return;
     this.searching=true;this.race.entryStage='search';
+    trackScene(this.scene,'rivals_matchmaking_started',{course_slot:this.race.course.slot});
     this.entryModal?.destroy?.({resumeTouch:false});
     this.entryModal=this.scene.gameUI.showModal({
       // No claim is made about anyone being online, in a queue or playing now,
@@ -351,6 +353,7 @@ export default class RivalsRace {
         // Use the scheduled GO, not a late frame: backgrounding never pauses a race.
         this.race.startedAt=this.race.countdownEndsAt;
         this.race.status='racing';
+        trackScene(this.scene,'rivals_match_started',{course_slot:this.race.course.slot,power_1:this.race.powers?.[0],power_2:this.race.powers?.[1]});
         this.notice?.setText('');
         beginRaceCapture(this.race);
         this.resumeHouse();
@@ -396,6 +399,7 @@ export default class RivalsRace {
       this.finish('loss',now); return;
     }
     this.setRace(next);
+    trackScene(this.scene,'round_complete',{course_slot:this.race.course.slot,success:true,round_number:this.scene.pveRound});
     endAttemptCapture(this.scene,next,'extracted',now);
     this.scene.forensics?.extract(this.scene);
     this.scene.finalizeRun?.('rivals_extracted');
@@ -417,6 +421,7 @@ export default class RivalsRace {
     const outcome = reason==='resize' ? 'abandoned' : ((this.scene.attacker?.hp ?? 1) <= 0 ? 'caught' : 'timeout');
     endAttemptCapture(this.scene,this.race,outcome,now);
     this.race.retries++;
+    if(reason!=='resize') trackScene(this.scene,'house_failed',{course_slot:this.race.course.slot,reason:outcome});
     if(reason!=='resize') {
       this.race.houseRetries ??= {};
       this.race.houseRetries[this.scene.pveRound]=(this.race.houseRetries[this.scene.pveRound]||0)+1;
@@ -438,6 +443,7 @@ export default class RivalsRace {
     this.race.status='finished';
     this.race.result=result;
     this.race.finishedMs=result==='loss' ? this.race.rivalTimes[RIVAL_HOUSES-1] : rivalElapsed(this.race,now);
+    trackScene(this.scene,'rivals_match_completed',{course_slot:this.race.course.slot,result,elapsed_seconds:Math.round(this.race.finishedMs)/1000,retries:this.race.retries});
     endAttemptCapture(this.scene,this.race,'abandoned',now);
     this.freeze();
     this.pending?.remove?.();

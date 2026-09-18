@@ -84,7 +84,7 @@ console.log('the window: '+passed+' assertions passed');
 const {expressionArt,expressionIndex}=await import('../src/logic/contactExpressions.js');
 const sceneSource=readFileSync(new URL('../src/scenes/WindowScene.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/export /g,'');
 const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang','expressionArt','expressionIndex',
-  sceneSource+';return WindowScene;')({Scene:class{}},WINDOW_GANGS,WINDOW_INTRO,WINDOW_ART,windowGang,windowLayout,
+  'const trackEvent=()=>{};'+sceneSource+';return WindowScene;')({Scene:class{}},WINDOW_GANGS,WINDOW_INTRO,WINDOW_ART,windowGang,windowLayout,
   gangID=>({applied:true,state:createWindowState({gangID})}),expressionArt,expressionIndex);
 function reviewScene(width,height){
   const objects=[];

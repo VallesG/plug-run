@@ -32,7 +32,7 @@ const bindings={console, CITY_BLOCKS,cityForBlock,cityView,drawCityMap,advanceJo
  saveJourneyProgress:value=>{saved.push(value);return true;},saveSessionState:()=>true,
  getWindowState:()=>({gangID:'afterlight'}),PVE_BLOCK_MAPS:15,
  drawBlockMap,drawBlockComplete:completionRenderer,crewSigil,ReplaySystem:{hasReplay:()=>hasReplay,play:(_,options)=>{replayDone=options.onDone;}}};
-const Manager=new Function(...Object.keys(bindings),managerSource+'\nreturn ProgressionManager;')(...Object.values(bindings));
+const Manager=new Function(...Object.keys(bindings),'const trackScene=()=>{};'+managerSource+'\nreturn ProgressionManager;')(...Object.values(bindings));
 function scene(width=390,height=844,props={}){
  const objects=[],tweens=[],delays=[],configs=[],controls=[],restarts=[],events=[],listeners={};
  const object=(kind,x=0,y=0,value='',style={})=>{
