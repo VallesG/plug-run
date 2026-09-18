@@ -1,3 +1,34 @@
+// Season 1 campaign curve resets at each 15-house block.
+export function campaignPlugStats(house = 1) {
+  const h = Math.max(1, Math.min(15, house));
+  const lerp = (a,b,t) => a + (b-a)*t;
+  const a = h <= 3 ? [62,1.85,0.95,650,260,1.9] : h <= 8
+    ? [72,1.55,0.82,520,280,1.45] : [91,1.18,0.60,350,305,0.85];
+  const b = h <= 3 ? [68,1.65,0.87,570,270,1.65] : h <= 8
+    ? [88,1.25,0.64,380,300,0.95] : [103,0.94,0.45,230,330,0.55];
+  const t = h <= 3 ? (h-1)/2 : h <= 8 ? (h-4)/4 : (h-9)/6;
+  return Object.fromEntries(['speed','shootEvery','inaccuracy','reactDelay','maxRange','orientationDelay']
+    .map((key,i)=>[key,lerp(a[i],b[i],t)]));
+}
+
+export function campaignPlugWeapon(house, roll) {
+  // Forgiving opening, shotgun-heavy middle, mixed late-house pressure.
+  const shotgun = house <= 3 ? 0.10 : house <= 8 ? 0.45 + (house-4)*0.025 : 0.40;
+  if (roll < shotgun) return 'doublebarrel';
+  const pistol = house <= 3 ? 0.75 : house <= 8 ? 0.30 : 0.25;
+  return roll < shotgun+pistol ? 'pistol' : 'rifle';
+}
+
+function campaignExitContest(scene, defender) {
+  const runner = scene.attacker;
+  if (!scene.extract || !scene.hasStash || runner.hp !== 1 ||
+      (runner.iUntil || 0) > performance.now()) return false;
+  const range = Math.min(scene.aiPlug.maxRange, scene.cell*7);
+  return Math.hypot(scene.extract.x-runner.x,scene.extract.y-runner.y) <= range &&
+    Math.hypot(defender.x-runner.x,defender.y-runner.y) <= range &&
+    !!scene.hasLineOfSight?.(defender.x,defender.y,runner.x,runner.y);
+}
+
 /**
  * PlugAI - Defender AI (Opponent in Runner Mode)
  *
@@ -48,6 +79,10 @@ export function applyPlugProgression(scene) {
   if (!scene.aiPlug) return;
 
   const round = scene.pveRound || 1;
+  if (scene.runKind === 'journey' && scene.role === 'runner') {
+    Object.assign(scene.aiPlug, campaignPlugStats(round));
+    return;
+  }
 
   // SPEED: Faster progression for more challenging early game
   // Formula: 75 + (round - 1) * 2.5 (was 60 + 2.0)
@@ -91,6 +126,22 @@ export function resetPlugOrientation(scene) {
  * Update AI plug behavior (movement and shooting)
  */
 export function updatePlugBehavior(scene, dt) {
+  if (scene.runKind !== 'journey') return updatePlugBehaviorCore(scene, dt);
+  // Each campaign defender needs its own navigation, firing and orientation
+  // clocks. Scene swapping alone previously shared the first Plug's path.
+  const keys = ['_plugAIRunnerPrev','_plugAIRunnerVel','_aiOrientationTimer',
+    '_aiPathfindTimer','_aiPath','_aiPathIndex','_shootTicker'];
+  const d = scene.defender;
+  const state = d._campaignBrain ||= {};
+  const prior = Object.fromEntries(keys.map(key=>[key,scene[key]]));
+  for (const key of keys) scene[key] = state[key];
+  try { return updatePlugBehaviorCore(scene,dt); }
+  finally {
+    for (const key of keys) { state[key]=scene[key];scene[key]=prior[key]; }
+  }
+}
+
+function updatePlugBehaviorCore(scene, dt) {
   const rng = scene.runKind === 'rivals' ? scene.gameplayRNG : Math.random;
   const d = scene.defender;
 
@@ -148,7 +199,8 @@ export function updatePlugBehavior(scene, dt) {
 
     // ROLE-AWARE OBJECTIVE (dual AI): if the scene assigned this plug a
     // role, honor it instead of the solo interception heuristic.
-    const assignedRole = d._plugRole;
+    const canContest = scene.runKind !== 'journey' || campaignExitContest(scene,d);
+    const assignedRole = scene.runKind === 'journey' && !canContest ? 'pursuer' : d._plugRole;
     if (assignedRole === 'guard' && scene.hasStash && scene.extract) {
       // Hold the extraction — but sweep toward the runner periodically.
       // The sweep is deliberate anti-camp leniency: the car can't be
@@ -168,7 +220,7 @@ export function updatePlugBehavior(scene, dt) {
       // Always chase (with lead prediction already applied above) — never
       // peel off to the car; the guard has that covered.
       d._guardSweepAt = 0;
-    } else if (roundNow >= 5 && scene.hasStash && scene.extract && !targetingDecoy) {
+    } else if (roundNow >= 5 && canContest && scene.hasStash && scene.extract && !targetingDecoy) {
       // SOLO plug (no role assigned): original interception heuristic.
       const plugToExit   = Math.hypot(scene.extract.x - d.x, scene.extract.y - d.y);
       const runnerToExit = Math.hypot(scene.extract.x - scene.attacker.x, scene.extract.y - scene.attacker.y);
@@ -193,6 +245,13 @@ export function updatePlugBehavior(scene, dt) {
   // During orientation delay: AI drifts passively, doesn't actively pursue
   // After delay: AI locks onto target and pursues
   if (!isOrienting) {
+    const campaign = scene.runKind === 'journey';
+    const nav = campaign ? (d._campaignNav ||= { blocked:0,recover:0 }) : null;
+    if (nav?.recover > 0) {
+      nav.recover = Math.max(0,nav.recover-dt);
+      moveX=scene.attacker.x;moveY=scene.attacker.y;
+    }
+    const beforeX=d.x,beforeY=d.y;
     // Pathfinding: recalculate path every 0.5 seconds or if no path exists
     if (!scene._aiPathfindTimer) scene._aiPathfindTimer = 0;
     scene._aiPathfindTimer += dt;
@@ -205,6 +264,13 @@ export function updatePlugBehavior(scene, dt) {
 
     // Follow the path if one exists
     if (scene._aiPath && scene._aiPath.length > 0) {
+      // Consume already-reached start/waypoints in this frame instead of
+      // repeatedly losing movement frames when the path gets refreshed.
+      if (campaign) {
+        while (scene._aiPathIndex < scene._aiPath.length &&
+          Math.hypot(scene._aiPath[scene._aiPathIndex].x-d.x,
+            scene._aiPath[scene._aiPathIndex].y-d.y) < scene.cell*0.2) scene._aiPathIndex++;
+      }
       // Get current waypoint
       const waypoint = scene._aiPath[scene._aiPathIndex];
 
@@ -212,7 +278,7 @@ export function updatePlugBehavior(scene, dt) {
         const wpDist = Math.hypot(waypoint.x - d.x, waypoint.y - d.y);
 
         // Close enough to waypoint? Move to next one
-        if (wpDist < scene.cell * 0.5) {
+        if (wpDist < scene.cell * (campaign ? 0.2 : 0.5)) {
           scene._aiPathIndex++;
 
           // Reached end of path? Clear it to recalculate
@@ -229,12 +295,15 @@ export function updatePlugBehavior(scene, dt) {
             const dirX = wpVx / wpDir;
             const dirY = wpVy / wpDir;
 
-            const nx = d.x + dirX * speed * dt;
-            const ny = d.y + dirY * speed * dt;
+            const step = campaign ? Math.min(wpDist,speed*dt) : speed*dt;
+            const nx = d.x + dirX * step;
+            const ny = d.y + dirY * step;
             if (scene.canMoveTo(d, nx, d.y)) d.x = nx;
             if (scene.canMoveTo(d, d.x, ny)) d.y = ny;
           }
         }
+      } else if (campaign) {
+        scene._aiPath=null;
       }
     } else {
       // No path found - fall back to direct movement toward move target
@@ -250,6 +319,16 @@ export function updatePlugBehavior(scene, dt) {
       if (scene.canMoveTo(d, d.x, ny)) d.y = ny;
     }
 
+    if (nav) {
+      const wantsMove = Math.hypot(moveX-d.x,moveY-d.y) > scene.cell*0.5;
+      const progressed = Math.hypot(d.x-beforeX,d.y-beforeY) > Math.min(scene.cell*0.01,speed*dt*0.1);
+      nav.blocked = wantsMove && !progressed ? nav.blocked+dt : 0;
+      if (nav.blocked >= 1) {
+        // Replan toward the runner, never teleport or boost movement speed.
+        scene._aiPath=null;scene._aiPathfindTimer=0.5;
+        nav.recover=1.5;nav.blocked=0;
+      }
+    }
     // Update AI aim direction for sprite orientation (always aim at runner, not waypoint)
     if (dist > 0) {
       scene.aiAim = { x: vx / dist, y: vy / dist };

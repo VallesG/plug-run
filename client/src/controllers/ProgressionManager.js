@@ -960,7 +960,7 @@ export default class ProgressionManager {
    * Check if runner reached extraction point (using precise overlaps for fair detection)
    */
   checkExtractionProgress() {
-    if (this.scene.hasStash && carExtractionOverlap(this.scene.attacker, this.scene.extract)) {
+    if (this.scene.hasStash && carExtractionOverlap(this.scene.attacker, this.scene.extract, this.scene.runKind === 'journey')) {
       console.log('[EXTRACTION] ===== EXTRACTION TRIGGERED =====');
       console.log('[EXTRACTION] Round:', this.scene.pveRound);
       console.log('[EXTRACTION] Attacker:', this.scene.attacker === this.scene.attacker2 ? 'attacker2' : 'attacker');

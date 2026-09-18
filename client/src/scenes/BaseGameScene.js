@@ -49,7 +49,7 @@ import AIController from '../controllers/AIController.js';
 import CombatSystem from '../controllers/CombatSystem.js';
 import VisualEffects from '../controllers/VisualEffects.js';
 import GameUI from '../controllers/GameUI.js';
-import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation } from '../controllers/PlugAI.js';
+import { getPlugBaseStats, applyPlugProgression, resetPlugOrientation, campaignPlugWeapon } from '../controllers/PlugAI.js';
 import { getRunnerBaseStats, applyRunnerProgression, resetRunnerOrientation } from '../controllers/RunnerAI.js';
 import { isDesktop, areSidebarsActive, getExistingSidebars, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setCurrentMode } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity, logRunnerExtract, logPlugStop, logRunnerEliminated, logBunkPickup, logPersonalBest } from '../utils/activityFeed.js';
@@ -949,7 +949,9 @@ export class BaseGameScene extends Phaser.Scene {
     // PvE runner mode: AI plug gets random weapon (no laser)
     if (this.mode === 'pve' && this.role === 'runner') {
       const aiWeapons = ['pistol', 'doublebarrel', 'rifle'];
-      const randomWeapon = aiWeapons[Math.floor((this.runKind === 'rivals' ? this.gameplayRNG() : Math.random()) * aiWeapons.length)];
+      const roll = this.runKind === 'rivals' ? this.gameplayRNG() : Math.random();
+      const randomWeapon = this.runKind === 'journey'
+        ? campaignPlugWeapon(this.pveRound || 1, roll) : aiWeapons[Math.floor(roll * aiWeapons.length)];
       this.allowedGuns = [randomWeapon];
     } else {
       this.allowedGuns = [this.availableGuns[0]];
@@ -2602,13 +2604,13 @@ export class BaseGameScene extends Phaser.Scene {
         // Dual AI mode: Only the STASH CARRIER needs to extract
         // The other runner can wait at the car but doesn't need to be there
         const carrier = this.stashCarrier;
-        if (carrier && carrier.active && carrier.hp > 0 && carExtractionOverlap(carrier, this.extract)) {
+        if (carrier && carrier.active && carrier.hp > 0 && carExtractionOverlap(carrier, this.extract, this.runKind === 'journey')) {
           if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
           this.showMissionExitHint();
         }
       } else {
         // Single AI mode: Just one runner needs to extract
-        if (carExtractionOverlap(this.attacker, this.extract)) {
+        if (carExtractionOverlap(this.attacker, this.extract, this.runKind === 'journey')) {
           if (this.canLeaveMissionHouse()) return this.startExtractionSequence();
           this.showMissionExitHint();
         }

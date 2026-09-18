@@ -22,11 +22,15 @@ export function carDepartureTargets(scene) {
 }
 
 // Respect the actual extraction sensor, not a second fixed-size sprite hitbox.
-export function carExtractionOverlap(runner, pad) {
+export function carExtractionOverlap(runner, pad, tight = false) {
   if (!runner || !pad || ![runner.x,runner.y,pad.x,pad.y].every(Number.isFinite)) return false;
   const width = pad.displayWidth || pad.width || 24, height = pad.displayHeight || pad.height || 24;
   if (![width,height].every(n => Number.isFinite(n) && n > 0)) return false;
-  return Math.abs(runner.x-pad.x) <= width/2+12 && Math.abs(runner.y-pad.y) <= height/2+12;
+  // Campaign uses a tighter reach; existing Rivals replay/course geometry
+  // and tutorial forgiving arrival behavior retain the legacy bounds.
+  const halfX = tight ? width*0.36+Math.min(6,width*0.06) : width/2+12;
+  const halfY = tight ? height*0.36+Math.min(6,height*0.06) : height/2+12;
+  return Math.abs(runner.x-pad.x) <= halfX && Math.abs(runner.y-pad.y) <= halfY;
 }
 
 export function carSkidLines(seed, car, dir, cell) {
