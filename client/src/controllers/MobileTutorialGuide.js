@@ -14,9 +14,13 @@ export function createMobileTutorialGuide(scene, stage) {
   if(cam && (stage===1||stage===2)) cam.useBounds=false;
   const guide={stage,phase:stage===1?'intro':stage===2?'bagsIntro':'swipe',elapsed:0,turns:0,
     acceptAfter:performance.now()+300,done:false};
-  const resetTouch=()=>{
+  // keepMoving: drop the finger's gesture bookkeeping but leave the runner
+  // travelling. Stopping it dead between lesson beats reads as the game
+  // seizing up mid-stride, which is not what the beat is teaching.
+  const resetTouch=(keepMoving=false)=>{
     scene._activePointerId=null;scene.pointer=null;scene._swipeStart=null;
-    scene._lastPointerTapAt=0;scene._dragMoveActive=false;scene.playerDrift=null;
+    scene._lastPointerTapAt=0;scene._dragMoveActive=false;scene._runnerDragSnap=null;
+    if(!keepMoving)scene.playerDrift=null;
   };
   resetTouch();
   const restoreCamera=()=>{if(cam)cam.useBounds=original.bounds;cam?.setZoom(original.zoom);cam?.setScroll(original.x,original.y);};
@@ -122,18 +126,25 @@ export function createMobileTutorialGuide(scene, stage) {
     if(guide.phase==='coast'||guide.phase==='powerCoast'){
       floatCopy('Lift your finger. You keep moving.');
       scene.handleMovement(Math.min(delta,50)/1000);
-      if(guide.elapsed>=650){guide.phase=stage===3?'power':'swipe';guide.elapsed=0;resetTouch();}
+      // Hand off to the next beat still moving: the coast lesson just said
+      // "you keep moving", so freezing the runner here contradicts it.
+      if(guide.elapsed>=650){guide.phase=stage===3?'power':'swipe';guide.elapsed=0;resetTouch(true);}
       return true;
     }
     if(guide.phase==='swipe'){
-      scene.playerDrift=null;
-      floatCopy(guide.turns?'Swipe again to change direction.':'Swipe anywhere, in any direction.');
+      const moving=guide.turns>0;
+      // First prompt: the runner has not moved yet and there is nothing to
+      // preserve, so it waits. Later prompts arrive mid-run — keep the runner
+      // travelling and let the scene's own update drive movement and
+      // objectives, so the direction hint never stops the player mid-stride.
+      if(!moving)scene.playerDrift=null;
+      floatCopy(moving?'Swipe again to change direction.':'Swipe anywhere, in any direction.');
       const p=reduced?0.5:(guide.elapsed%1200)/1200;
       const x=W/2,y=H*0.85;
-      const d=guide.turns?{x:0,y:1}:{x:1,y:0};
+      const d=moving?{x:0,y:1}:{x:1,y:0};
       ink.lineStyle(3,0x9bcdfb,0.8);ink.lineBetween(x-d.x*28,y-d.y*28,x+d.x*28,y+d.y*28);
       ink.fillStyle(0x9bcdfb,0.9);ink.fillCircle(x+d.x*(-28+p*56),y+d.y*(-28+p*56),6);
-      return true;
+      return !moving;
     }
     if(stage===4){copy.setText('');return false;}
     if(stage===1){

@@ -1,11 +1,13 @@
 // Execute actual touch controller without Phaser or browser dependencies.
 import {readFileSync} from 'node:fs';
-const source=readFileSync(new URL('../src/controllers/PlayerController.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/g,'').replace('export default class','class');
+import {runnerDragVector} from '../src/logic/runnerSteering.js';
+import {resolveGridMovement} from '../src/logic/gridMovement.js';
+const source=readFileSync(new URL('../src/controllers/PlayerController.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const assertions=(()=>{
 let now = 1000, assertions = 0;
 const check = (ok, name) => { if (!ok) throw Error(name); assertions++; };
 const equalDir = (a,b) => Math.abs(a.x-b.x)<1e-9 && Math.abs(a.y-b.y)<1e-9;
-const Player = new Function('performance','corridorAssist', source + '\nreturn PlayerController;')({now:()=>now},()=>{});
+const Player = new Function('performance','corridorAssist','runnerDragVector','resolveGridMovement', source + '\nreturn PlayerController;')({now:()=>now},()=>{},runnerDragVector,resolveGridMovement);
 function make(role='runner') {
   let powers=0, shots=0;
   const scene={role,attacker:{},runnerPowersConsumed:[],intent:{recordMove(){},recordGun(){}},

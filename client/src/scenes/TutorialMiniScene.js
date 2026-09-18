@@ -10,6 +10,8 @@ import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import GameUI from '../controllers/GameUI.js';
 import { showRunnerLoadout } from '../controllers/RunnerLoadout.js';
 import { tutorialStage, nextTutorialStage, tutorialLesson, TUTORIAL_STAGE_COUNT } from '../logic/tutorial.js';
+import { runnerDragVector, releaseCardinal } from '../logic/runnerSteering.js';
+import { resolveGridMovement } from '../logic/gridMovement.js';
 import AudioManager from '../audio/AudioManager.js';
 import { trackTutorial, trackEvent } from '../utils/analytics.js';
 import { isDesktop, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateSocialFeed } from '../utils/desktopSidebars.js';
@@ -1051,6 +1053,10 @@ export class TutorialMiniScene extends Phaser.Scene {
         this._activePointerId = pid;
         this.pointer = p;
         this._swipeStart = { x: p.x, y: p.y, t: performance.now() };
+        // MAIN-GAME PARITY: PlayerController.beginSwipe clears both of these,
+        // so a fresh gesture never inherits the previous one's commit or bias.
+        this._dragMoveActive = false;
+        this._runnerDragSnap = null;
       };
       this._pointerMoveHandler = (p) => {
         if (this.pausedForModal || this._mobileGuide?.waitingSwipe) return;
@@ -1095,13 +1101,12 @@ export class TutorialMiniScene extends Phaser.Scene {
         }
         const MOVE_DEAD_PX = 10;
         if (L < MOVE_DEAD_PX) return;
-        const ang = Math.atan2(dy, dx);
-        const step = Math.PI / 4;
-        const nearest = Math.round(ang / step) * step;
-        const SNAP_RAD = 0.26;
-        const moveVec = (Math.abs(ang - nearest) < SNAP_RAD)
-          ? { x: Math.cos(nearest), y: Math.sin(nearest) }
-          : { x: dx / L, y: dy / L };
+        // MAIN-GAME PARITY: identical cardinal preference and angular
+        // hysteresis as PlayerController.runnerDragDirection — same shared
+        // module, so the tutorial cannot drift away from it again.
+        const snapped = runnerDragVector(dx, dy, this._runnerDragSnap);
+        this._runnerDragSnap = snapped.snap;
+        const moveVec = snapped.vector;
 
         // Commit: held past 180ms OR traveled past 32px without release.
         const held = performance.now() - (this._swipeStart?.t || 0);
@@ -1132,7 +1137,16 @@ export class TutorialMiniScene extends Phaser.Scene {
           // Define thresholds similar to PvP for taps and swipes
           const TAP_TIME = 220;                 // PlayerController.TAP_TIME_MS
           const TAP_DIST = 20;                  // PlayerController.TAP_MOVE_PX
-          if (dt <= TAP_TIME && moved <= TAP_DIST){
+          if (wasDragMove) {
+            // MAIN-GAME PARITY: PlayerController.endSwipe returns early on a
+            // committed drag — BEFORE tap/flick classification — keeping the
+            // direction the finger was steering. Reinterpreting it here
+            // overwrote diagonals on release, and because the floating
+            // re-anchor drags the origin along with the finger, a committed
+            // drag can end with a small `moved` and a short `dt` and be
+            // misread as a tap, spending a power the player never asked for.
+            this._runnerDragSnap = null;
+          } else if (dt <= TAP_TIME && moved <= TAP_DIST){
             // Stage 5: tap to shoot
             if (this.stageIdx === 5){
               this._mobileShootRequested = true;
@@ -1149,19 +1163,9 @@ export class TutorialMiniScene extends Phaser.Scene {
               }
             }
           } else if (moved >= 1) {
-            // MAIN-GAME PARITY: PlayerController.endSwipe cardinal-snaps
-            // EVERY runner release — no drag-move exemption. Diagonals are a
-            // live, finger-down thing; releases resolve to a cardinal.
-            let cardinalDir = { x: 0, y: 0 };
-            if (Math.abs(dx) > Math.abs(dy)) {
-              // Horizontal swipe
-              cardinalDir.x = dx > 0 ? 1 : -1;
-              cardinalDir.y = 0;
-            } else {
-              // Vertical swipe
-              cardinalDir.x = 0;
-              cardinalDir.y = dy > 0 ? 1 : -1;
-            }
+            // Quick swipe (never committed to a drag): resolves to a cardinal,
+            // same classification the real game's endSwipe uses.
+            const cardinalDir = releaseCardinal(dx, dy);
 
             if (this._mobileGuide?.waitingSwipe && !this._mobileGuide.swipe(cardinalDir,moved)) {
               this._activePointerId=null;this.pointer=null;this._swipeStart=null;this._lastPointerTapAt=0;
@@ -2701,9 +2705,13 @@ export class TutorialMiniScene extends Phaser.Scene {
     // assist unconditionally caused a clunky, step-like motion when pressing
     // multiple keys (e.g., down+right) in the tutorial.  Restricting the
     // assist to non-keyboard movement resolves this and matches PvP.
-    // In stage 4, disable corridor assist when near AI plug to prevent runner from following plug movement
-    const nearAIPlug = this.stageIdx === 4 && this.aiPlug && Math.hypot(this.runner.x - this.aiPlug.x, this.runner.y - this.aiPlug.y) < this.cell * 3;
-    if (!usingKeys && !nearAIPlug) {
+    // MAIN-GAME PARITY: lane centering depends on geometry and the assist
+    // setting, never on opponent proximity. This used to switch itself off
+    // within 3 cells of the stage-4 plug, which meant walking near a Plug
+    // visibly changed the runner's steering — the real game forbids exactly
+    // that (see PlayerController.handlePlayerMovement and the
+    // opponent-independence assertions in mobileInputLifecycle.test.mjs).
+    if (!usingKeys) {
       const dirAssist = (Math.abs(vx) > Math.abs(vy))
         ? { x: Math.sign(vx), y: 0 }
         : (Math.abs(vy) > 0 ? { x: 0, y: Math.sign(vy) } : { x: 0, y: 0 });
@@ -2747,48 +2755,12 @@ export class TutorialMiniScene extends Phaser.Scene {
 
     // We no longer apply a speed multiplier for dash because dash teleports instead.
 
-    const dxTot = vx * dt;
-    const dyTot = vy * dt;
-    const stepMax = this.cell * 0.28;
-    const moveAxis = (amt, axis) => {
-      let rem = amt;
-      const dir = Math.sign(rem) || 0;
-      const step = stepMax * dir;
-      let guard = 0;
-      while (Math.abs(rem) > 0.0001 && guard++ < 32){
-        const d = (Math.abs(rem) > stepMax) ? step : rem;
-        const nx = axis === 'x' ? this.runner.x + d : this.runner.x;
-        const ny = axis === 'y' ? this.runner.y + d : this.runner.y;
-        if (this.canMoveTo(this.runner, nx, ny)){
-          if (axis === 'x') this.runner.x = nx;
-          else this.runner.y = ny;
-          rem -= d;
-        } else {
-          break;
-        }
-      }
-    };
-
-    const preX = this.runner.x;
-    const preY = this.runner.y;
-    moveAxis(dxTot, 'x');
-    moveAxis(dyTot, 'y');
-
-    if (Math.hypot(this.runner.x - preX, this.runner.y - preY) < 0.5 && (Math.abs(vx) + Math.abs(vy) > 0)){
-      const c = this.toCell(this.runner.x, this.runner.y);
-      const cx = this.toWorldX(c.x);
-      const cy = this.toWorldY(c.y);
-      const ux = cx - this.runner.x;
-      const uy = cy - this.runner.y;
-      const ul = Math.hypot(ux, uy) || 1;
-      const nudge = Math.min(this.cell * 0.20, ul);
-      const nx = this.runner.x + (ux / ul) * nudge;
-      const ny = this.runner.y + (uy / ul) * nudge;
-      if (this.canMoveTo(this.runner, nx, ny)){
-        this.runner.x = nx;
-        this.runner.y = ny;
-      }
-    }
+    // MAIN-GAME PARITY: identical grid resolution as
+    // PlayerController.applyLegacyMovement — sub-stepping, cornering assist,
+    // and corner unstick, from the same shared module. The tutorial's old
+    // hand-copy had the sub-stepping and the unstick but no cornering assist,
+    // so corners caught here in a way they never do in a real round.
+    resolveGridMovement(this, this.runner, vx, vy, dt);
 
     const spdLen = Math.hypot(vx, vy);
     if (spdLen > 0.0001){

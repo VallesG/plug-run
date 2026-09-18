@@ -28,8 +28,18 @@ for(let i=0;i<100;i++)g.tick(100);
 eq(g.waitingSwipe,true);
 eq(g.swipe({x:1,y:0},10),false);eq(g.swipe({x:9,y:9},80),false);
 eq(g.swipe({x:0,y:-1},80),true);eq(g.phase,'coast');
+// The runner is travelling through the coast beat ("Lift your finger. You
+// keep moving.") and must still be travelling when the next prompt appears.
+s.playerDrift={x:0,y:-1};
 for(let i=0;i<7;i++)g.tick(100);
-eq(g.waitingSwipe,true);g.tick(16);eq(s.texts.at(-1),'Swipe again to change direction.');
+eq(g.waitingSwipe,true);
+// Handing off from coast to the second prompt must not stop the runner: the
+// beat just said "you keep moving", so freezing them to ask for another swipe
+// reads as the game seizing up mid-stride. Hint stays, stop goes.
+eq(s.playerDrift,{x:0,y:-1});
+g.tick(16);eq(s.texts.at(-1),'Swipe again to change direction.');
+eq(s.playerDrift,{x:0,y:-1});    // drift survives every tick of the prompt
+eq(g.tick(16),false);            // false = scene keeps updating (movement + objectives)
 eq(g.swipe({x:-1,y:0},80),true);eq(g.phase,'free');
 eq(g.tick(16),false);eq(s.circles.at(-1),[100,200]);
 g.destroy();g.destroy();eq(g.done,true);eq(s._lastPointerTapAt,0);eq(s.cameras.main.zoom,1);

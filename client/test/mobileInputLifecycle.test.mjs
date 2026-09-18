@@ -3,6 +3,8 @@
 import { readFileSync } from 'node:fs';
 import { CONTACTS, gangContacts, contactCue, contactPanelLayout, contactDialoguePages } from '../src/logic/contacts.js';
 import { expressionArt, expressionIndex, contactExpression } from '../src/logic/contactExpressions.js';
+import { runnerDragVector } from '../src/logic/runnerSteering.js';
+import { resolveGridMovement } from '../src/logic/gridMovement.js';
 
 const playerSource = readFileSync(new URL('../src/controllers/PlayerController.js', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\s*/gm, '').replace('export default class', 'class');
@@ -13,8 +15,8 @@ const methodsStart = sceneSource.indexOf('  makeMobileControls(){');
 const methodsEnd = sceneSource.indexOf('  /* ----------------- Movement Trails', methodsStart);
 if (methodsStart < 0 || methodsEnd < methodsStart) throw Error('mobile lifecycle source seam moved');
 let now = 1000;
-const Player = new Function('corridorAssist', 'performance', playerSource + '\nreturn PlayerController;')(
-  () => {}, { now: () => now });
+const Player = new Function('corridorAssist', 'performance', 'runnerDragVector', 'resolveGridMovement',
+  playerSource + '\nreturn PlayerController;')(() => {}, { now: () => now }, runnerDragVector, resolveGridMovement);
 const Host = new Function('class Host {\n' + sceneSource.slice(methodsStart, methodsEnd) + '\n}\nreturn Host;')();
 const showPanel = new Function('CONTACTS', 'contactPanelLayout', 'contactDialoguePages',
   'expressionArt', 'expressionIndex', 'contactExpression', panelSource + '\nreturn showContactPanel;')(
@@ -264,7 +266,7 @@ const assistStart=utilsSource.indexOf('export function corridorAssist(');
 const assistEnd=utilsSource.indexOf('// Manhattan distance',assistStart);
 if(assistStart<0||assistEnd<assistStart)throw Error('corridor assist seam moved');
 const realAssist=new Function(utilsSource.slice(assistStart,assistEnd).replace('export function','function')+';return corridorAssist;')();
-const MovementPlayer=new Function('corridorAssist',playerSource+';return PlayerController;')(realAssist);
+const MovementPlayer=new Function('corridorAssist','runnerDragVector','resolveGridMovement',playerSource+';return PlayerController;')(realAssist,runnerDragVector,resolveGridMovement);
 function movementTrace({near=false,moving=false,walls=0,strength=1,keys=false,vertical=false,idle=false,speed=60}={}) {
  const runner={x:45,y:45},opponent={x:245,y:45};
  const scene={role:'runner',attacker:runner,defender:opponent,cell:20,

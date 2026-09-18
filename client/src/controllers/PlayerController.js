@@ -1,4 +1,6 @@
 import { corridorAssist } from '../utils/gameUtils.js';
+import { runnerDragVector } from '../logic/runnerSteering.js';
+import { resolveGridMovement } from '../logic/gridMovement.js';
 
 /**
  * PlayerController - Handles all player movement and input
@@ -212,97 +214,12 @@ export default class PlayerController {
   }
 
   /**
-   * Apply legacy-style movement with sub-stepping to prevent tunneling through thin walls
+   * Apply legacy-style movement. The grid resolution (sub-stepping, cornering
+   * assist, corner unstick) lives in logic/gridMovement so the tutorial runs
+   * the identical code instead of a hand-copy.
    */
   applyLegacyMovement(sprite, vx, vy, dt) {
-    // Attempt to move in X and Y with sub-steps to prevent tunneling through thin walls
-    const dxTot = vx * dt;
-    const dyTot = vy * dt;
-    const stepMax = this.scene.cell * 0.28; // less than half a tile
-
-    const moveAxis = (amount, axis) => {
-      let remaining = amount;
-      const dir = Math.sign(remaining) || 0;
-      const step = stepMax * dir;
-      let guard = 0;
-
-      while (Math.abs(remaining) > 0.0001 && guard++ < 32) {
-        const d = (Math.abs(remaining) > stepMax) ? step : remaining;
-        const nx = axis === 'x' ? sprite.x + d : sprite.x;
-        const ny = axis === 'y' ? sprite.y + d : sprite.y;
-
-        if (this.scene.canMoveTo(sprite, nx, ny)) {
-          if (axis === 'x') sprite.x = nx;
-          else sprite.y = ny;
-          remaining -= d;
-        } else {
-          break; // blocked on this axis
-        }
-      }
-      return remaining; // leftover = how much of the intent was blocked
-    };
-
-    // Store position before movement for stuck detection
-    const preX = sprite.x, preY = sprite.y;
-
-    // Move on each axis
-    const leftX = moveAxis(dxTot, 'x');
-    const leftY = moveAxis(dyTot, 'y');
-
-    // CORNERING ASSIST (Pac-Man style): if the player is pushing into a
-    // blocked axis but the corridor they're aiming for DOES exist at their
-    // current row/column, they're just misaligned with the lane center —
-    // convert the blocked motion into perpendicular alignment so the turn
-    // "catches" without pixel-perfect input. This is the difference
-    // between corridors feeling tight and feeling like they fight you.
-    const steerToLane = (blockedLeftover, axis) => {
-      const dirSign = Math.sign(blockedLeftover);
-      if (!dirSign) return;
-      const c = this.scene.toCell(sprite.x, sprite.y);
-      if (axis === 'x') {
-        if (!this.scene.isWalkableCell?.(c.x + dirSign, c.y)) return; // no lane there — real wall
-        const laneY = this.scene.toWorldY(c.y);
-        const dy = laneY - sprite.y;
-        if (Math.abs(dy) < 0.5) return;
-        const stepAmt = Math.min(Math.abs(dy), Math.abs(blockedLeftover)) * Math.sign(dy);
-        const ny = sprite.y + stepAmt;
-        if (this.scene.canMoveTo(sprite, sprite.x, ny)) {
-          sprite.y = ny;
-          moveAxis(blockedLeftover * 0.5, 'x'); // retry the turn this frame
-        }
-      } else {
-        if (!this.scene.isWalkableCell?.(c.x, c.y + dirSign)) return;
-        const laneX = this.scene.toWorldX(c.x);
-        const dx = laneX - sprite.x;
-        if (Math.abs(dx) < 0.5) return;
-        const stepAmt = Math.min(Math.abs(dx), Math.abs(blockedLeftover)) * Math.sign(dx);
-        const nx = sprite.x + stepAmt;
-        if (this.scene.canMoveTo(sprite, nx, sprite.y)) {
-          sprite.x = nx;
-          moveAxis(blockedLeftover * 0.5, 'y'); // retry the turn this frame
-        }
-      }
-    };
-    if (Math.abs(leftX) > 0.0001) steerToLane(leftX, 'x');
-    if (Math.abs(leftY) > 0.0001) steerToLane(leftY, 'y');
-
-    // Legacy corner unstick logic:
-    // If we barely moved (corner caught), softly nudge toward tile center to unstick
-    if (Math.hypot(sprite.x - preX, sprite.y - preY) < 0.5 && (Math.abs(vx) + Math.abs(vy) > 0)) {
-      const c = this.scene.toCell(sprite.x, sprite.y);
-      const cx = this.scene.toWorldX(c.x);
-      const cy = this.scene.toWorldY(c.y);
-      const ux = cx - sprite.x, uy = cy - sprite.y;
-      const ul = Math.hypot(ux, uy) || 1;
-      const nudge = Math.min(this.scene.cell * 0.20, ul);
-      const nx = sprite.x + (ux/ul) * nudge;
-      const ny = sprite.y + (uy/ul) * nudge;
-
-      if (this.scene.canMoveTo(sprite, nx, ny)) {
-        sprite.x = nx;
-        sprite.y = ny;
-      }
-    }
+    resolveGridMovement(this.scene, sprite, vx, vy, dt);
   }
 
   /**
@@ -338,44 +255,12 @@ export default class PlayerController {
   }
 
   // Runner-only drag preference. Fresh gestures do not inherit old bias,
-  // and Plug aiming remains unchanged. Thresholds are an experimental feel
-  // setting, not a wall/collision correction.
+  // and Plug aiming remains unchanged. The maths lives in logic/runnerSteering
+  // so the tutorial drives movement through the identical code.
   runnerDragDirection(dx, dy) {
-    const length = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
-    const radians = degrees => degrees * Math.PI / 180;
-    const distance = other => Math.abs(Math.atan2(
-      Math.sin(angle - other), Math.cos(angle - other)));
-    const previous = this._runnerDragSnap;
-    if (previous && distance(previous.angle) <= radians(previous.cardinal ? 28 : 17)) {
-      return previous.vector;
-    }
-    // A hold just broke, or this is a fresh gesture. A FRESH gesture (no
-    // previous) uses the tight bands below (22 / ~15 degrees) so a first
-    // touch still has real free-angle room between them. A BROKEN hold uses
-    // the same width as the hold band it just left (28 / 17), so leaving one
-    // snapped direction always lands in the contiguous adjacent one instead
-    // of falling through the gap between the tight bands — that gap is what
-    // let a smooth, continuous drag (no new gesture at all) jump from a held
-    // cardinal straight to an arbitrary unsnapped angle the instant the hold
-    // gave out, e.g. 28 degrees held dead straight, then one more degree of
-    // ordinary thumb drift reporting a ~29-degree half-diagonal.
-    const cardinal = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
-    const cardinalBand = previous ? 28 : 22;
-    if (distance(cardinal) <= radians(cardinalBand)) {
-      const vector = { x: Math.round(Math.cos(cardinal)), y: Math.round(Math.sin(cardinal)) };
-      this._runnerDragSnap = { angle: cardinal, cardinal: true, vector };
-      return vector;
-    }
-    const nearest = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
-    const diagonalBand = previous ? radians(17) : 0.26;
-    if (distance(nearest) < diagonalBand) {
-      const vector = { x: Math.cos(nearest), y: Math.sin(nearest) };
-      this._runnerDragSnap = { angle: nearest, cardinal: false, vector };
-      return vector;
-    }
-    this._runnerDragSnap = null;
-    return { x: dx / length, y: dy / length };
+    const { vector, snap } = runnerDragVector(dx, dy, this._runnerDragSnap);
+    this._runnerDragSnap = snap;
+    return vector;
   }
 
   updateSwipe(pointer) {
