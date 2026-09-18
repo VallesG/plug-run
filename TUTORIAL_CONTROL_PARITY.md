@@ -59,9 +59,55 @@ coasting into the car during the prompt still completes the stage). The
 "swipe low" hint and copy are unchanged. The first prompt still waits — the
 runner has not moved yet and there is nothing to preserve.
 
+## Corner turns no longer go diagonal
+
+Reported after the parity pass: turning a corner with a less-than-perfect
+gesture sent the runner diagonally instead of round the corner.
+
+Cause: the drag vector runs from a floating anchor to the finger, and that
+anchor trails `MOVE_MAX_PX` (56px) behind along the **old** heading. After a
+square turn the anchor is left 56px off to the side, so anchor→finger stays
+diagonal until the new direction finally outweighs the stale 56px. Measured
+on the pre-fix controller, running up a corridor then turning right:
+
+| sideways travel | reported |
+|---|---|
+| 0–29px | still `up` (hysteresis holding) |
+| 30–80px | **up-right diagonal** — the reported bug |
+| 81px+ | finally `right` |
+
+So the corner cost 81px of sideways drag, 50px of it steering diagonally.
+
+Fix: watch the finger's recent travel. Once it has covered 14px on a heading
+45°–135° off what the runner is currently doing, treat it as a deliberate
+turn and re-anchor to where that turn began, so the new heading is measured
+from the corner rather than from 56px back up the old corridor. Now:
+
+| gesture | before | after |
+|---|---|---|
+| square corner (up→right) | up → diagonal (50px) → right at 81px | up → **right at 24px**, no diagonal |
+| sloppy ~70° corner | up → diagonal → right | up → **right**, no diagonal |
+| smooth curved corner | up → diagonal → right | up → diagonal → right (follows the curve, but resolves) |
+| deliberate held diagonal | diagonal | diagonal (untouched) |
+| straight drag | straight | straight (untouched) |
+
+The 45°–135° band matters: travel running *back* along the heading is the
+thumb easing off toward the anchor, not a turn. Re-anchoring there would turn
+"pull back to centre" into "steer the opposite way". The window also has to
+span at least two moved samples, so one outsized delta — a dropped frame, or
+a synthetic event — cannot be mistaken for a new heading.
+
+Both of those guards were added because the first cut of this broke real
+behavior the existing suite already protected ("dead-zone release retains
+direction", "held drag turns from diagonal to down"); the tests caught it.
+
 ## Checks
 
-- `client/test/tutorialControlParity.test.mjs` — new, 414 assertions,
+- `client/test/dragSteering.test.mjs` — corner-turn regressions (square and
+  sloppy turns register within 30px and never detour through a diagonal, and
+  easing back toward the anchor keeps its heading). Fail with turn detection
+  disabled. 321 assertions.
+- `client/test/tutorialControlParity.test.mjs` — new, 418 assertions,
   drives the actual tutorial source and the actual PlayerController and
   compares them directly. Fails against the pre-change tutorial.
 - `client/test/mobileTutorialGuide.test.mjs` — new lesson-1 assertions fail
@@ -74,5 +120,7 @@ Headless only. The feel changes — cornering assist now active in the
 tutorial, hysteresis on tutorial drags, and lesson 1 continuing to move
 through the second prompt — need a real device pass. Worth checking
 specifically: that lesson 1 reads as one continuous motion rather than a
-lurch, that the downward hint still registers while moving, and that
-coasting into the car mid-prompt completes the stage cleanly.
+lurch, that the downward hint still registers while moving, that coasting
+into the car mid-prompt completes the stage cleanly, and that corner turns
+now catch without the 14px turn window making deliberate diagonals feel
+twitchy in open rooms.

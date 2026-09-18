@@ -1,13 +1,13 @@
 // Execute actual touch controller without Phaser or browser dependencies.
 import {readFileSync} from 'node:fs';
-import {runnerDragVector} from '../src/logic/runnerSteering.js';
+import {runnerDragVector,runnerDragStep} from '../src/logic/runnerSteering.js';
 import {resolveGridMovement} from '../src/logic/gridMovement.js';
 const source=readFileSync(new URL('../src/controllers/PlayerController.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const assertions=(()=>{
 let now = 1000, assertions = 0;
 const check = (ok, name) => { if (!ok) throw Error(name); assertions++; };
 const equalDir = (a,b) => Math.abs(a.x-b.x)<1e-9 && Math.abs(a.y-b.y)<1e-9;
-const Player = new Function('performance','corridorAssist','runnerDragVector','resolveGridMovement', source + '\nreturn PlayerController;')({now:()=>now},()=>{},runnerDragVector,resolveGridMovement);
+const Player = new Function('performance','corridorAssist','runnerDragVector','runnerDragStep','resolveGridMovement', source + '\nreturn PlayerController;')({now:()=>now},()=>{},runnerDragVector,runnerDragStep,resolveGridMovement);
 function make(role='runner') {
   let powers=0, shots=0;
   const scene={role,attacker:{},runnerPowersConsumed:[],intent:{recordMove(){},recordGun(){}},
@@ -86,6 +86,40 @@ for (const role of ['runner','plug']) {
  check(equalDir(pc.playerDrift,dir),'sticky diagonal survives release');
 }
 
+// Actual bug: turning a corner sent the runner diagonal instead of turning.
+// The floating anchor trails MOVE_MAX_PX behind along the OLD heading, so
+// after a square turn the anchor sits 56px off to the side and the
+// anchor->finger vector stays diagonal until the new direction finally
+// outweighs it. Measured on the pre-fix controller: 81px of sideways travel
+// before it read as a clean cardinal, 50px of it steering diagonally.
+for (const [name,turn] of [['square',(i)=>[200+i,480]],
+  ['sloppy',(i)=>[200+i*Math.cos(-20*Math.PI/180),480+i*Math.sin(-20*Math.PI/180)]]]) {
+ const {pc}=make(),p={id:20,x:200,y:600,isDown:true};
+ pc.beginSwipe(p);now+=200; // past DRAG_COMMIT_MS, so the drag is committed
+ const move=(x,y)=>{now+=16;pc.updateSwipe({...p,x,y});};
+ for (let i=3;i<=120;i+=3) move(200,600-i); // run up the corridor
+ check(equalDir(pc.playerDrift,{x:0,y:-1}),'corner fixture is running up before the '+name+' turn');
+ let sideways=null; const diagonals=[];
+ for (let i=3;i<=150;i+=3){
+  move(...turn(i));
+  const v=pc.playerDrift;
+  if (Math.abs(Math.abs(v.x)-Math.SQRT1_2)<1e-9 && Math.abs(Math.abs(v.y)-Math.SQRT1_2)<1e-9) diagonals.push(i);
+  if (v.x===1 && v.y===0 && sideways===null) sideways=i;
+ }
+ check(sideways!==null && sideways<=30,'a '+name+' corner turn registers within 30px of sideways travel');
+ check(diagonals.length===0,'a '+name+' corner turn never detours through a diagonal');
+}
+// Easing the finger back toward the anchor is "let off", not "reverse": a
+// returning thumb must keep the direction rather than flip to the opposite.
+{
+ const {pc}=make(),p={id:21,x:200,y:600,isDown:true};
+ pc.beginSwipe(p);now+=200;
+ const move=(x,y)=>{now+=16;pc.updateSwipe({...p,x,y});};
+ for (let i=3;i<=120;i+=3) move(200+i,600);
+ check(equalDir(pc.playerDrift,{x:1,y:0}),'ease-off fixture is running right');
+ for (let i=3;i<=50;i+=3) move(320-i,600);
+ check(equalDir(pc.playerDrift,{x:1,y:0}),'easing back toward the anchor keeps the heading');
+}
 for (const axis of [0,90,180,-90]) {
  const {pc}=make();
  const vector = degrees => {const a=degrees*Math.PI/180;return pc.runnerDragDirection(56*Math.cos(a),56*Math.sin(a));};

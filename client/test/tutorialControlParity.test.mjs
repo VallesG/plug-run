@@ -9,7 +9,7 @@
 // and compare them directly, so they cannot drift apart again unnoticed.
 
 import { readFileSync } from 'node:fs';
-import { runnerDragVector, releaseCardinal } from '../src/logic/runnerSteering.js';
+import { runnerDragVector, runnerDragStep, releaseCardinal } from '../src/logic/runnerSteering.js';
 import { resolveGridMovement } from '../src/logic/gridMovement.js';
 
 let passed = 0;
@@ -21,19 +21,20 @@ const playerSource = readFileSync(new URL('../src/controllers/PlayerController.j
   .replace(/^import[\s\S]*?;\s*/gm, '').replace('export default class', 'class');
 
 let now = 1000;
-const Player = new Function('corridorAssist', 'performance', 'runnerDragVector', 'resolveGridMovement',
-  playerSource + ';return PlayerController;')(() => {}, { now: () => now }, runnerDragVector, resolveGridMovement);
+const Player = new Function('corridorAssist', 'performance', 'runnerDragVector', 'runnerDragStep', 'resolveGridMovement',
+  playerSource + ';return PlayerController;')(() => {}, { now: () => now }, runnerDragVector, runnerDragStep, resolveGridMovement);
 
 // ---------------------------------------------------------------------------
 // Both sides must call the shared modules — not a local copy of the maths.
 // ---------------------------------------------------------------------------
 check('tutorial imports the shared steering module',
-  /import\s*\{[^}]*runnerDragVector[^}]*\}\s*from\s*'\.\.\/logic\/runnerSteering\.js'/.test(sceneSource));
+  /import\s*\{[^}]*runnerDragStep[^}]*\}\s*from\s*'\.\.\/logic\/runnerSteering\.js'/.test(sceneSource));
 check('tutorial imports the shared movement module',
   /import\s*\{[^}]*resolveGridMovement[^}]*\}\s*from\s*'\.\.\/logic\/gridMovement\.js'/.test(sceneSource));
-check('tutorial drag steering calls the shared vector', sceneSource.includes('runnerDragVector(dx, dy, this._runnerDragSnap)'));
+check('tutorial drag steering calls the shared step', sceneSource.includes('runnerDragStep(this._swipeStart, p.x, p.y, this._runnerDragSnap)'));
 check('tutorial movement calls the shared resolver', sceneSource.includes('resolveGridMovement(this, this.runner, vx, vy, dt)'));
 check('tutorial no longer hand-rolls an 8-way snap', !sceneSource.includes('const SNAP_RAD = 0.26'));
+check('tutorial no longer hand-rolls the floating anchor', !sceneSource.includes('const MOVE_MAX_PX = 56'));
 check('tutorial no longer hand-rolls sub-stepped movement', !sceneSource.includes('const stepMax = this.cell * 0.28'));
 
 // The proximity exception is gone: movement must never read the Plug.
@@ -61,6 +62,24 @@ check('tutorial corridor assist is gated on input mode only',
     check('tutorial and game agree on drag direction at ' + deg + ' degrees',
       sameDir(tutorialDrag(dx, dy), pc.runnerDragDirection(dx, dy)));
   }
+}
+
+// Corner turns: the tutorial drives the same shared step, so a square turn
+// there must also turn rather than detour through a diagonal.
+{
+  const anchor = { x: 200, y: 600 };
+  let snap = null, dir = null;
+  const step = (px, py) => { const r = runnerDragStep(anchor, px, py, snap); if (r) { snap = r.snap; dir = r.vector; } return dir; };
+  for (let i = 0; i <= 120; i += 3) step(200, 600 - i);
+  check('tutorial corner fixture is running up', sameDir(dir, { x: 0, y: -1 }));
+  let sideways = null; const diagonals = [];
+  for (let i = 3; i <= 150; i += 3) {
+    const v = step(200 + i, 480);
+    if (Math.abs(Math.abs(v.x) - Math.SQRT1_2) < 1e-9 && Math.abs(Math.abs(v.y) - Math.SQRT1_2) < 1e-9) diagonals.push(i);
+    if (v.x === 1 && v.y === 0 && sideways === null) sideways = i;
+  }
+  check('tutorial corner turn registers within 30px too', sideways !== null && sideways <= 30);
+  check('tutorial corner turn never detours through a diagonal', diagonals.length === 0);
 }
 
 // A held cardinal drifting past the hold band must land on a snap in the

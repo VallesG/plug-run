@@ -46,7 +46,7 @@
 
 import { readFileSync } from 'node:fs';
 import { updatePlugBehavior } from '../src/controllers/PlugAI.js';
-import { runnerDragVector } from '../src/logic/runnerSteering.js';
+import { runnerDragVector, runnerDragStep } from '../src/logic/runnerSteering.js';
 import { resolveGridMovement } from '../src/logic/gridMovement.js';
 
 const playerSource = readFileSync(new URL('../src/controllers/PlayerController.js', import.meta.url), 'utf8')
@@ -64,8 +64,8 @@ const { corridorAssist: realAssist, applyCenterBias: realCenterBias } =
   new Function(realAssistSrc + ';return {corridorAssist, applyCenterBias};')();
 
 let now = 1000;
-const Player = new Function('corridorAssist', 'performance', 'runnerDragVector', 'resolveGridMovement',
-  playerSource + ';return PlayerController;')(realAssist, { now: () => now }, runnerDragVector, resolveGridMovement);
+const Player = new Function('corridorAssist', 'performance', 'runnerDragVector', 'runnerDragStep', 'resolveGridMovement',
+  playerSource + ';return PlayerController;')(realAssist, { now: () => now }, runnerDragVector, runnerDragStep, resolveGridMovement);
 
 let passed = 0;
 function check(name, ok) { if (!ok) throw Error(name); passed++; }

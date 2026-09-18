@@ -1,5 +1,5 @@
 import { corridorAssist } from '../utils/gameUtils.js';
-import { runnerDragVector } from '../logic/runnerSteering.js';
+import { runnerDragVector, runnerDragStep } from '../logic/runnerSteering.js';
 import { resolveGridMovement } from '../logic/gridMovement.js';
 
 /**
@@ -332,23 +332,13 @@ export default class PlayerController {
     // steering diagonally, and picking up the finger keeps you moving that
     // direction — same feel as plug, universally.
     if (!this._swipeStart) return;
-    let dx = pointer.x - this._swipeStart.x;
-    let dy = pointer.y - this._swipeStart.y;
-    let L = Math.hypot(dx, dy);
-    const MOVE_MAX_PX = 56;
-    if (L > MOVE_MAX_PX) {
-      // Floating re-anchor: past full deflection the origin follows the
-      // finger so mid-drag direction changes respond instantly.
-      const over = L - MOVE_MAX_PX;
-      this._swipeStart.x += (dx / L) * over;
-      this._swipeStart.y += (dy / L) * over;
-      dx = pointer.x - this._swipeStart.x;
-      dy = pointer.y - this._swipeStart.y;
-      L = MOVE_MAX_PX;
-    }
-    const MOVE_DEAD_PX = 10;
-    if (L >= MOVE_DEAD_PX) {
-      const moveVec = this.runnerDragDirection(dx, dy);
+    // Floating re-anchor plus corner-turn detection, then the cardinal /
+    // diagonal classification — all in logic/runnerSteering so the tutorial
+    // steers through the identical code.
+    const stepped = runnerDragStep(this._swipeStart, pointer.x, pointer.y, this._runnerDragSnap);
+    if (stepped) {
+      this._runnerDragSnap = stepped.snap;
+      const moveVec = stepped.vector;
 
       // Commit: hold past DRAG_COMMIT_MS OR travel past DRAG_COMMIT_PX
       // without release. Below that threshold it's still a quick-swipe;

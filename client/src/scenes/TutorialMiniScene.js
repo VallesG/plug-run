@@ -10,7 +10,7 @@ import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import GameUI from '../controllers/GameUI.js';
 import { showRunnerLoadout } from '../controllers/RunnerLoadout.js';
 import { tutorialStage, nextTutorialStage, tutorialLesson, TUTORIAL_STAGE_COUNT } from '../logic/tutorial.js';
-import { runnerDragVector, releaseCardinal } from '../logic/runnerSteering.js';
+import { runnerDragStep, releaseCardinal } from '../logic/runnerSteering.js';
 import { resolveGridMovement } from '../logic/gridMovement.js';
 import AudioManager from '../audio/AudioManager.js';
 import { trackTutorial, trackEvent } from '../utils/analytics.js';
@@ -1087,26 +1087,13 @@ export class TutorialMiniScene extends Phaser.Scene {
           this._swipeStart.x0 = this._swipeStart.x;
           this._swipeStart.y0 = this._swipeStart.y;
         }
-        let dx = p.x - this._swipeStart.x;
-        let dy = p.y - this._swipeStart.y;
-        let L = Math.hypot(dx, dy);
-        const MOVE_MAX_PX = 56;
-        if (L > MOVE_MAX_PX){
-          const over = L - MOVE_MAX_PX;
-          this._swipeStart.x += (dx / L) * over;
-          this._swipeStart.y += (dy / L) * over;
-          dx = p.x - this._swipeStart.x;
-          dy = p.y - this._swipeStart.y;
-          L = MOVE_MAX_PX;
-        }
-        const MOVE_DEAD_PX = 10;
-        if (L < MOVE_DEAD_PX) return;
-        // MAIN-GAME PARITY: identical cardinal preference and angular
-        // hysteresis as PlayerController.runnerDragDirection — same shared
-        // module, so the tutorial cannot drift away from it again.
-        const snapped = runnerDragVector(dx, dy, this._runnerDragSnap);
-        this._runnerDragSnap = snapped.snap;
-        const moveVec = snapped.vector;
+        // MAIN-GAME PARITY: floating re-anchor, corner-turn detection and
+        // the cardinal/diagonal classification all come from the shared
+        // logic/runnerSteering module, so the tutorial cannot drift from it.
+        const stepped = runnerDragStep(this._swipeStart, p.x, p.y, this._runnerDragSnap);
+        if (!stepped) return;
+        this._runnerDragSnap = stepped.snap;
+        const moveVec = stepped.vector;
 
         // Commit: held past 180ms OR traveled past 32px without release.
         const held = performance.now() - (this._swipeStart?.t || 0);
