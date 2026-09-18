@@ -1,5 +1,6 @@
 // Runner tutorial: four lessons, sharing the main game's presentation.
 import Phaser from 'phaser';
+import { createMobileTutorialGuide } from '../controllers/MobileTutorialGuide.js';
 import { markTutorialComplete } from '../utils/tutorialProgress.js';
 import { getUserID } from '../utils/userManager.js';
 import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../controllers/ArenaArt.js';
@@ -218,7 +219,7 @@ function generateArenaMap(cols, rows, seed, clusterScale = 1){
   const extractCandidates = floors.filter(c => safe(c) && (manhattan(c, plug) + 3 < manhattan(c, runner)));
   const pickFrom = (arr, avoid, minD) => {
     const filtered = arr.length ? arr.filter(c => avoid.every(pt => manhattan(c, pt) >= minD)) : [];
-    if (filtered.length) return filtered[(Math.random() * filtered.length) | 0];
+    if (filtered.length) return filtered[(rnd() * filtered.length) | 0];
     return pickFar(avoid, minD);
   };
   let stash = pickFrom(stashCandidates, [runner, plug], Math.floor((cols + rows) / 10));
@@ -680,6 +681,8 @@ export class TutorialMiniScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeCb);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this._mobileGuide?.destroy();
+      this._mobileGuide = null;
       clearTimeout(this._resizeTimer);
       this._tutorialModal?.destroy();
       try { this.audio?.stopEngineLoop(); } catch {}
@@ -780,6 +783,8 @@ export class TutorialMiniScene extends Phaser.Scene {
   }
 
   startStage(idx){
+    this._mobileGuide?.destroy();
+    this._mobileGuide = null;
     idx = tutorialStage(idx);
     this._transitioning = false;
     this._runnerLastTrailPos = null;
@@ -893,6 +898,13 @@ export class TutorialMiniScene extends Phaser.Scene {
     // stage 3 half-density, stages 4-5 full. Matches the main-game 1-3 curve.
     const stageOpenness = [1, 0.25, 0.35, 0.55, 0.9, 1][idx] ?? 1;
     const arena = generateArenaMap(this.cols, this.rows, seed, stageOpenness);
+    // Movement practice must never put a generated wall below the first turn.
+    // Keep the first lesson's entire interior clear; retain its boundary/egress.
+    if (idx === 1) {
+      for (let y = 1; y < this.rows - 1; y++) {
+        for (let x = 1; x < this.cols - 1; x++) arena.grid[y][x] = T.FLOOR;
+      }
+    }
     this.grid = arena.grid;
     this.egress = arena.egress;
     this.spawnRunnerCell = arena.spawns.runner;
@@ -1029,6 +1041,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this._swipeStart = null;
       this._lastPointerTapAt = 0;
       this._pointerDownHandler = (p) => {
+        if (this.pausedForModal || this._mobileGuide?.blocksGestures) return;
         // Ignore if already tracking a pointer
         if (this._activePointerId !== null) return;
         const pid = getPid(p);
@@ -1037,6 +1050,7 @@ export class TutorialMiniScene extends Phaser.Scene {
         this._swipeStart = { x: p.x, y: p.y, t: performance.now() };
       };
       this._pointerMoveHandler = (p) => {
+        if (this.pausedForModal || this._mobileGuide?.waitingSwipe) return;
         const pid = getPid(p);
         if (pid !== this._activePointerId || !p?.isDown) return;
         this.pointer = p;
@@ -1146,6 +1160,10 @@ export class TutorialMiniScene extends Phaser.Scene {
               cardinalDir.y = dy > 0 ? 1 : -1;
             }
 
+            if (this._mobileGuide?.waitingSwipe && !this._mobileGuide.swipe(cardinalDir,moved)) {
+              this._activePointerId=null;this.pointer=null;this._swipeStart=null;this._lastPointerTapAt=0;
+              return;
+            }
             this.playerAim = cardinalDir;
             this.playerGunAim = cardinalDir;
             // In stage 5 (plug), only update aim, not drift (plug doesn't auto-move)
@@ -1471,11 +1489,24 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   showStageModal(idx){
     const lesson = tutorialLesson(idx, this.sys.game.device.os.desktop);
+    if (!this.sys.game.device.os.desktop && idx <= 3) {
+      this.pausedForModal = false;
+      this.resumeFromModal();
+      if (idx === 3) this.showPowerSelectionModal();
+      else this.startMobileGuide(idx);
+      return;
+    }
     this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'CHOOSE POWERS' : lesson.stage===1 ? 'START TRAINING' : 'RUN THIS LESSON', () => {
       this.resumeFromModal();
       if (lesson.choosePowers) this.showPowerSelectionModal();
+      else if (!this.sys.game.device.os.desktop && idx === 4) this.startMobileGuide(4);
     }, { showReplay:lesson.stage>1 });
   }
+  startMobileGuide(stage){
+    this._mobileGuide?.destroy();
+    this._mobileGuide=createMobileTutorialGuide(this,stage);
+  }
+
   showCharacterPreview(role){
     // Create character preview to the right of "You are the RUNNER/PLUG" text (like a tab indent)
     const width = this.scale.width;
@@ -1560,6 +1591,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.pausedForModal = false;
       this.input.keyboard.enabled = true;
       this._ignoreNextPowerClick = true;
+      if (!this.sys.game.device.os.desktop && this.stageIdx === 3) this.startMobileGuide(3);
       onStart?.();
     };
     const primary = { label:btn, variant:'primary', onClick:begin };
@@ -1632,6 +1664,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this._tutorialModal = showRunnerLoadout(this.gameUI, () => {
       this.pausedForModal = false;
       this._ignoreNextPowerClick = true;
+      if (!this.sys.game.device.os.desktop && this.stageIdx === 3) this.startMobileGuide(3);
     }, {
       title:'TUTORIAL / LOADOUT',startLabel:'START LESSON',
       allowReplay:false,showAccount:false
@@ -1934,7 +1967,6 @@ export class TutorialMiniScene extends Phaser.Scene {
 
       markTutorialComplete(this._trainingUserID);
       this.showModal("You're ready!", [
-        'Grab the stash. Lose the Plug. Make it to the car.',
         'Next stop: The Window. Meet Auntie Ro, join a crew, and start bringing bags home for your people.'
       ], 'Go to The Window  >>', () => {
         this.scene.transition({ target:'WINDOW', duration:200, moveBelow:true, data:{firstVisit:true} });
@@ -2765,6 +2797,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     if (!this.runner) return;
     const dt = delta / 1000;
     if (this.pausedForModal) return;
+    if (this._mobileGuide?.tick(delta)) return;
 
     // Desktop stage 5 (plug): Update gun aim from mouse position every frame for instant response
     if (this.sys.game.device.os.desktop && this.stageIdx === 5 && this.input.activePointer) {
@@ -3027,6 +3060,11 @@ export class TutorialMiniScene extends Phaser.Scene {
       if (this.overlaps(this.runner, this.extractPad)) this.playCarDepartAndGoNext();
     } else if (this.stageIdx === 2){
       if (!this.hasPackage){
+        // The first touched bag teaches BUNK, regardless of the chosen route.
+        // After it dissolves, the remaining bag becomes the real stash.
+        if (this.bunkStash && this.stash && this.overlaps(this.runner, this.stash)) {
+          [this.stash, this.bunkStash] = [this.bunkStash, this.stash];
+        }
         if (this.stash && this.overlaps(this.runner, this.stash)){
           this.hasPackage = true;
           this.addCarry();
