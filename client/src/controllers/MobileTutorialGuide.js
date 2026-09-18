@@ -139,8 +139,8 @@ export function createMobileTutorialGuide(scene, stage) {
     }else if(stage===2){
       targets=scene.hasPackage?[scene.car]:scene.bunkStash?[scene.stash,scene.bunkStash]:[];
       floatCopy(scene.hasPackage?'That is the real stash. Bring it to the car.':
-        (!scene.bunkStash||scene.bunkStash.active===false)?'Bunk bags disappear. Touch the other bag.':
-        'Touch a bag. One is real; one is bunk.',targets);
+        (!scene.bunkStash||scene.bunkStash.active===false)?'Bunk bags disappear. Pick up the other bag.':
+        'Pick up a bag. One is real; one is bunk.',targets);
     }else if(stage===3){
       const used=(scene.runnerPowersConsumed||[]).filter(Boolean).length;
       if(used<2){
