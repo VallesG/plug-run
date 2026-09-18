@@ -17,20 +17,20 @@ const s=fixture(),g=createMobileTutorialGuide(s,1);
 eq(s.cameras.main.useBounds,false);
 eq(g.blocksGestures,true);eq(g.tick(100),true);eq(s.moves,undefined);
 eq(s.cameras.main.zoom,1.65);eq(s.rectangles.length,0);
-for(let i=0;i<12;i++)g.tick(100);
+for(let i=0;i<29;i++)g.tick(100);
 eq(g.phase,'reveal');
 for(let i=0;i<7;i++)g.tick(100);
 eq(g.waitingSwipe,true);eq(s.playerDrift,null);eq(s.cameras.main.zoom,1);
 eq(s.cameras.main.scrollX,0);eq(s.cameras.main.scrollY,0);
 eq(s.cameras.main.useBounds,true);
-g.tick(16);eq(s.texts.at(-1),'Swipe right to move.\nYou can swipe anywhere on the screen.');
+g.tick(16);eq(s.texts.at(-1),'Swipe anywhere, in any direction.');
 for(let i=0;i<100;i++)g.tick(100);
 eq(g.waitingSwipe,true);
 eq(g.swipe({x:1,y:0},10),false);eq(g.swipe({x:9,y:9},80),false);
-eq(g.swipe({x:0,y:-1},80),false);eq(g.swipe({x:1,y:0},80),true);eq(g.phase,'coast');
+eq(g.swipe({x:0,y:-1},80),true);eq(g.phase,'coast');
 for(let i=0;i<7;i++)g.tick(100);
-eq(g.waitingSwipe,true);g.tick(16);eq(s.texts.at(-1),'Now swipe down to turn.');
-eq(g.swipe({x:-1,y:0},80),false);eq(g.swipe({x:0,y:1},80),true);eq(g.phase,'free');
+eq(g.waitingSwipe,true);g.tick(16);eq(s.texts.at(-1),'Swipe again to change direction.');
+eq(g.swipe({x:-1,y:0},80),true);eq(g.phase,'free');
 eq(g.tick(16),false);eq(s.circles.at(-1),[100,200]);
 g.destroy();g.destroy();eq(g.done,true);eq(s._lastPointerTapAt,0);eq(s.cameras.main.zoom,1);
 const interrupted=fixture(),intro=createMobileTutorialGuide(interrupted,1);
@@ -67,4 +67,14 @@ function pickupFixture(first){
  eq(state.hasPackage,true);eq(state.sounds,['bpickup','pickup','spickup']);
 }
 pickupFixture('real');pickupFixture('bunk');
+// Exercise the real loadout callback, not the generic modal callback.
+const pickerBody=sceneText.split('  showPowerSelectionModal(){')[1].split('// Shelved plug-mode UI')[0].trim().replace(/}$/, '');
+let finish;
+const openPicker=new Function('showRunnerLoadout','GameUI',pickerBody);
+for(const desktop of [false,true]){
+ const state={gameUI:{},sys:{game:{device:{os:{desktop}}}},stageIdx:3,startMobileGuide(n){this.started=n;}};
+ openPicker.call(state,(_ui,onDone)=>{finish=onDone;return {};},class {});
+ eq(state.pausedForModal,true);finish();eq(state.pausedForModal,false);
+ eq(state.started,desktop?undefined:3);eq(state._ignoreNextPowerClick,true);
+}
 console.log('mobileTutorialGuide:',checks,'assertions passed');

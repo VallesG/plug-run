@@ -40,12 +40,29 @@ export function createMobileTutorialGuide(scene, stage) {
   };
   const arrow=target=>{
     if(!target||target.active===false||target.visible===false)return;
-    const t=screenPoint(target),endY=t.y-scene.cell*0.65;
-    const endX=Math.max(12,Math.min(W-12,t.x)),startY=Math.max(14,endY-38);
-    ink.lineStyle(4,0x9bcdfb,1);
-    ink.lineBetween(endX,startY,endX,endY);
-    ink.lineBetween(endX,endY,endX-7,endY-10);
-    ink.lineBetween(endX,endY,endX+7,endY-10);
+    const t=screenPoint(target),z=cam?.zoom||1;
+    const offsets=[{x:2.8,y:1},{x:-2.8,y:1},{x:0,y:2.8},{x:0,y:-2.8}];
+    const candidates=offsets.map(d=>({x:target.x+d.x*scene.cell,y:target.y+d.y*scene.cell}));
+    const floor=p=>{
+      const screen=screenPoint(p);
+      if(screen.x<22||screen.x>W-22||screen.y<24||screen.y>H-24)return false;
+      if(!scene.toCell||!scene.isWalkableCell)return true;
+      const c=scene.toCell(p.x,p.y);return scene.isWalkableCell(c.x,c.y);
+    };
+    const world=candidates.find(floor)||{x:Math.max(scene.cell*2,Math.min(W-scene.cell*2,target.x)),y:target.y+scene.cell*2};
+    const from=screenPoint(world);
+    from.x=Math.max(22,Math.min(W-22,from.x));from.y=Math.max(24,Math.min(H-24,from.y));
+    const dx=t.x-from.x,dy=t.y-from.y,len=Math.hypot(dx,dy)||1;
+    const ux=dx/len,uy=dy/len;
+    const end={x:t.x-ux*scene.cell*0.65*z,y:t.y-uy*scene.cell*0.65*z};
+    const bob=reduced?0:Math.sin(guide.elapsed/220)*3;
+    const sx=from.x-ux*bob,sy=from.y-uy*bob;
+    // Dark outline and broad blue arrow stay legible over the floor.
+    for(const [width,color] of [[9,0x07101b],[5,0x9bcdfb]]){
+      ink.lineStyle(width,color,1);ink.lineBetween(sx,sy,end.x,end.y);
+      ink.lineBetween(end.x,end.y,end.x-ux*14-uy*9,end.y-uy*14+ux*9);
+      ink.lineBetween(end.x,end.y,end.x-ux*14+uy*9,end.y-uy*14-ux*9);
+    }
   };
   Object.defineProperties(guide,{
     waitingSwipe:{get:()=>guide.phase==='swipe'},
@@ -53,8 +70,7 @@ export function createMobileTutorialGuide(scene, stage) {
   });
   guide.swipe=(direction,distance)=>{
     if(guide.phase!=='swipe')return true;
-    const expected=guide.turns?{x:0,y:1}:{x:1,y:0};
-    if(distance<32||direction.x!==expected.x||direction.y!==expected.y)return false;
+    if(distance<32||Math.abs(direction.x)+Math.abs(direction.y)!==1)return false;
     guide.turns++;guide.elapsed=0;guide.phase=guide.turns>=2?'free':'coast';
     return true;
   };
@@ -72,7 +88,7 @@ export function createMobileTutorialGuide(scene, stage) {
       syncHud();
       floatCopy('This is you.\nThe runner.',[scene.runner]);
       arrow(scene.runner);
-      if(!revealing&&guide.elapsed>=1300){guide.phase='reveal';guide.elapsed=0;}
+      if(!revealing&&guide.elapsed>=3000){guide.phase='reveal';guide.elapsed=0;}
       if(revealing&&p===1){restoreCamera();syncHud();guide.phase='swipe';guide.elapsed=0;resetTouch();}
       return true;
     }
@@ -93,7 +109,7 @@ export function createMobileTutorialGuide(scene, stage) {
     }
     if(guide.phase==='swipe'){
       scene.playerDrift=null;
-      floatCopy(guide.turns?'Now swipe down to turn.':'Swipe right to move.\nYou can swipe anywhere on the screen.');
+      floatCopy(guide.turns?'Swipe again to change direction.':'Swipe anywhere, in any direction.');
       const p=reduced?0.5:(guide.elapsed%1200)/1200;
       const x=W/2,y=H*0.85;
       const d=guide.turns?{x:0,y:1}:{x:1,y:0};

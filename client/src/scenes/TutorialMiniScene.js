@@ -1656,6 +1656,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this._tutorialModal = showRunnerLoadout(this.gameUI, () => {
       this.pausedForModal = false;
       this._ignoreNextPowerClick = true;
+      if (!this.sys.game.device.os.desktop && this.stageIdx === 3) this.startMobileGuide(3);
     }, {
       title:'TUTORIAL / LOADOUT',startLabel:'START LESSON',
       allowReplay:false,showAccount:false
