@@ -440,6 +440,7 @@ export default class PlayerController {
       if (this._dragMoveActive) {
         this.playerMoveDir = moveVec;
         this.playerDrift = moveVec;
+        this.playerIntendedDir = moveVec;
         this._runnerInputDir = moveVec; // powers read this
         this.playerGunAim = moveVec;    // runner's "aim" tracks facing
         this.scene.userTookOver = true;
@@ -460,7 +461,13 @@ export default class PlayerController {
     // DRAG-MOVE END: gesture released. Drift already points where the
     // finger was heading; clearing the flag drops the aim slowdown so
     // post-release movement runs at full speed (per spec).
-    this._dragMoveActive = false;
+    if (this._dragMoveActive) {
+      // Drag movement is already committed. Reinterpreting the release as
+      // a cardinal flick overwrites diagonals (and a re-anchored origin can
+      // even make a drag look like a tap). Keep the last steering vector.
+      this.resetTouchGestures();
+      return;
+    }
 
     // Determine if the gesture qualifies as a tap (short duration and limited movement)
     const sx = this._swipeStart?.x ?? pointer.x;
