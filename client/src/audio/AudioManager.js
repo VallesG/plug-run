@@ -2,13 +2,25 @@ import { missionPickupSound } from '../logic/missionItem.js';
 import { GAMEPLAY_BEATS, selectBeat, momentNotes } from '../logic/musicPlaylist.js';
 import Phaser from 'phaser';
 
+// How early success2 (horns) and success3 (applause) start relative to
+// success1 (the drum roll) finishing. A small configurable value, not a
+// guess at success1's exact length -- the real length is read at runtime
+// from the decoded sound's own .duration, since asset lengths change.
+const SUCCESS_OVERLAP_MS = 250;
+// If .duration isn't known yet (should not happen for a preloaded asset,
+// but a decode can still be mid-flight on a slow device), fall back to the
+// measured length of success1.mp3 rather than guessing a round number.
+const SUCCESS1_FALLBACK_S = 3.29;
+
 // Lightweight audio scaffold with graceful fallbacks (no external assets required)
 export class AudioManager {
   static _instance = null;
 
   static preloadMoments(scene) {
     scene.load.audio('contact_open', '/audio/contact_open.wav');
-    scene.load.audio('completion_cue', '/audio/completed.wav');
+    scene.load.audio('success1', '/audio/success1.mp3');
+    scene.load.audio('success2', '/audio/success2.mp3');
+    scene.load.audio('success3', '/audio/success3.wav');
     scene.load.audio('mission_pickup', '/audio/pickup.wav');
   }
 
@@ -251,14 +263,18 @@ export class AudioManager {
   }
 
   playMoment(kind) {
+    if (kind === 'block' || kind === 'city') return this.playCompletionSequence(kind);
     const ctx = this.sound?.context || this._ctx;
     if (this.isMuted() || this._volSfx <= 0 || !ctx?.createOscillator || ctx.state !== 'running') return false;
-    const stockKey = kind === 'contact' ? 'contact_open' : 'completion_cue';
-    if (this.scene?.cache?.audio?.exists?.(stockKey)) {
+    if (this.scene?.cache?.audio?.exists?.('contact_open')) {
       if (this.sound?.locked) return false;
-      this.play(stockKey, { volume: kind === 'contact' ? 0.24 : 0.55 });
+      this.play('contact_open', { volume: 0.24 });
       return true;
     }
+    return this._playSynthMoment(kind, ctx);
+  }
+
+  _playSynthMoment(kind, ctx) {
     try {
       for (const note of momentNotes(kind)) {
         const osc = ctx.createOscillator(), gain = ctx.createGain();
@@ -275,6 +291,69 @@ export class AudioManager {
       }
       return true;
     } catch { return false; }
+  }
+
+  // Completion celebration: success1 (drum roll) starts immediately; success2
+  // (horns) and success3 (applause) start together shortly before success1's
+  // own measured length ends, so the payoff lands on top of the roll instead
+  // of after a gap. Reused for block clears, city clears, and Rivals wins --
+  // all three already funnel through playBlockClear -> playMoment('block'/'city').
+  playCompletionSequence(kind) {
+    const ctx = this.sound?.context || this._ctx;
+    if (this.isMuted() || this._volSfx <= 0 || !ctx?.createOscillator || ctx.state !== 'running') return false;
+    const scene = this.scene;
+    const ready = !!(scene?.cache?.audio?.exists?.('success1')
+      && scene?.cache?.audio?.exists?.('success2')
+      && scene?.cache?.audio?.exists?.('success3'));
+    if (!ready) return this._playSynthMoment(kind, ctx);
+    if (this.sound?.locked) return false;
+
+    this._cancelCompletionSequenceTimer();
+    const mix = 0.55;
+    const vol = mix * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
+    let success1;
+    try {
+      success1 = this.sound.add('success1', { volume: vol });
+      success1.play();
+    } catch { return this._playSynthMoment(kind, ctx); }
+
+    // A token, not just the TimerEvent reference, guards against a stray
+    // fire: cancellation bumps it, so even a callback already in flight when
+    // remove() is called becomes a no-op (mirrors the _duck.token pattern
+    // above rather than trusting the timer's own removal timing).
+    const token = (this._completionToken = (this._completionToken || 0) + 1);
+    const fireFollowUps = () => {
+      if (this._completionToken !== token) return; // cancelled or superseded
+      this._completionTimer = null;
+      if (this.scene !== scene) return; // scene torn down/navigated away meanwhile
+      this.play('success2', { volume: mix });
+      this.play('success3', { volume: mix });
+    };
+    const durationS = success1.duration > 0 ? success1.duration : SUCCESS1_FALLBACK_S;
+    const fireAt = Math.max(0, durationS * 1000 - SUCCESS_OVERLAP_MS);
+    if (scene?.time?.delayedCall) {
+      this._completionTimer = scene.time.delayedCall(fireAt, fireFollowUps);
+    } else {
+      fireFollowUps();
+    }
+    return true;
+  }
+
+  // Scene teardown/navigation safety: a Rivals win, block clear, or city
+  // clear can queue success2/success3 to fire a few seconds out. If the
+  // scene restarts or switches before then (scene.restart() reuses the same
+  // instance and never fires 'shutdown', so the delayedCall would otherwise
+  // survive into the next round), cancel the pending timer explicitly.
+  cancelPendingCompletionAudio() {
+    this._cancelCompletionSequenceTimer();
+  }
+
+  _cancelCompletionSequenceTimer() {
+    this._completionToken = (this._completionToken || 0) + 1;
+    if (this._completionTimer) {
+      try { this._completionTimer.remove(); } catch {}
+      this._completionTimer = null;
+    }
   }
 
   playBlockClear({ cityComplete = false } = {}) {

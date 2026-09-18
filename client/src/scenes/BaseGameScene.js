@@ -114,6 +114,7 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('bg_main',  ['/audio/main_beat.ogg',  '/audio/main_beat.mp3']);
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
+      this.load.audio('bg_beat4', '/audio/gameplay_beat4.wav');
     } catch {}
   }
 
@@ -543,6 +544,12 @@ export class BaseGameScene extends Phaser.Scene {
     try {
       this.audio = AudioManager.get(this);
       this.audio.ensureUnlocked(this);
+      // scene.restart() reuses this same Scene instance without firing
+      // 'shutdown', so a completion-sequence timer from the previous round
+      // (delayed success2/success3 after the drum roll) would otherwise
+      // survive into this one. Cancel it explicitly, the same reason the
+      // orphaned-sprite cleanup right below exists.
+      this.audio.cancelPendingCompletionAudio?.();
       // Music already started in MenuScene when card was clicked
     } catch {}
 
@@ -1313,6 +1320,7 @@ export class BaseGameScene extends Phaser.Scene {
       this._touchSceneClosing=true;
       this.destroyTouchUI?.();
       this.unbindSpace();
+      this.audio?.cancelPendingCompletionAudio?.();
       // Note: Don't cleanup sidebars here - the next scene will clean them up
       // when it creates its own sidebars (cleanupSidebars() is called at start of initDesktopSidebars())
     });
@@ -3094,6 +3102,9 @@ export class BaseGameScene extends Phaser.Scene {
     } else if (musicKey === 'bg_learn') {
       baseVol = 0.30;
       maxVol = 0.40;
+    } else if (musicKey === 'bg_beat4') {
+      baseVol = 0.22;
+      maxVol = 0.48;
     }
 
     // VOLUME RAMP: Gradual increase from round 1 → round 30
