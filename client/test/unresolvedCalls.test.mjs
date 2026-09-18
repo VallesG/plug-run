@@ -56,12 +56,23 @@ const GLOBALS = new Set([
 
 /** Strip strings, template literals, regex-ish literals and comments. */
 function strip(source) {
-  return source
+  const withoutComments = source
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
-    .replace(/`(?:\\.|\$\{[^}]*\}|[^`\\])*`/g, '``')
-    .replace(/'(?:\\.|[^'\\])*'/g, "''")
-    .replace(/"(?:\\.|[^"\\])*"/g, '""');
+    .replace(/`(?:\\.|\$\{[^}]*\}|[^`\\])*`/g, '``');
+  // Single- and double-quoted strings must be stripped in ONE pass, not two
+  // independent global replaces. Two passes broke on a real file: a
+  // double-quoted JSON string containing an apostrophe ("nobody's used in
+  // years") has no special meaning to JS, but the single-quote pass ran
+  // first, saw that bare `'` as an opening quote, and consumed everything up
+  // to the next unescaped `'` — which could be tens of lines later, deleting
+  // real declarations (`const render =`, `function ironRowChapter`) from the
+  // text the scanner then treated as the whole file. A unified alternation
+  // matches whichever quote character actually opens a string at each
+  // position and closes on the SAME type, so a quote of the other kind
+  // inside it is just a character, not a new delimiter.
+  return withoutComments.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
+    m => m[0] === '"' ? '""' : "''");
 }
 
 /**
@@ -81,6 +92,26 @@ function boundNames(code) {
   for (const m of code.matchAll(/(?:^|[\s;{,])([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/gm)) names.add(m[1]);
   for (const m of code.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) names.add(m[1]);
   return names;
+}
+
+// Regression: a double-quoted JSON string containing an apostrophe must not
+// make the two-pass stripper eat past it and delete real declarations. This
+// reproduces the exact shape that broke on src/logic/ironRowSeason.js: a
+// content array with natural-language possessives, sitting near actual code.
+{
+  const sample = [
+    'export const CHAPTERS = Object.freeze([',
+    '  { "reason": "Brick found it behind a workbench nobody\'s used in years." }',
+    ']);',
+    "const render = (t, c) => String(t).replaceAll('{city}', c);",
+    'export function realFunction(chapter = 0) { return render(chapter); }'
+  ].join('\n');
+  const strippedSample = strip(sample);
+  if (!/const\s+render\s*=/.test(strippedSample) || !/function\s+realFunction/.test(strippedSample)) {
+    console.error('  regression failed: quote-stripping ate real declarations');
+    console.error('  stripped sample: ' + JSON.stringify(strippedSample));
+    process.exit(1);
+  }
 }
 
 let checked = 0, failures = [];

@@ -5,8 +5,8 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
   {
     "number": 1,
     "title": "Asphalt Welcome",
-    "jobName": "Industrial Burr Grinder",
-    "reason": "Rook refuses to drink shop drip coffee that tastes like scorched hydraulic oil.",
+    "jobName": "A ledger of every job the old crew never finished",
+    "reason": "Brick found it wedged behind a workbench nobody's used in years. Somebody quit on this shop mid-sentence.",
     "beats": {
       "1": {
         "pages": [
@@ -18,8 +18,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "rook",
             "text": "Don't stand around admiring the wallpaper. Move your boots."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -29,24 +28,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "brick",
-            "text": "Rook will need you at house 9. He’ll brief you before you step up to that entrance. For now, keep pulling bags."
+            "text": "Rook's got something at house 9. He'll tell you before that door."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "Here's the play. Inside this house, there’s a violet case holding a steel burr coffee grinder. Grab that case and the stash before you make for the car. Both come with you."
+            "text": "Here's the play. There's a ledger in the violet case — half the jobs in it never got closed out. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "A luxury bean mill? We're setting up a shop, Rook, not an espresso bar."
+            "text": "Somebody walked off this shop mid-job."
           },
           {
             "speaker": "rook",
-            "text": "You want decent coffee before twelve-hour tear-downs or not? Don't leave without that case, runner."
+            "text": "Or got walked off it. Grab the case and the bag, runner. Both come with you."
           }
         ]
       },
@@ -105,38 +103,38 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Fifteen out of fifteen. First block of {city} is marked on our campaign map. That’s fifteen stashes accounted for."
+        "text": "Fifteen out of fifteen. First block's marked."
       },
       {
         "speaker": "rook",
-        "text": "And the grinder survived the ride. I'm setting it right next to the drill press."
+        "text": "That ledger's got names in it I don't recognize. Somebody worked this shop before us and stopped answering for it."
       }
     ]
   },
   {
     "number": 2,
     "title": "Service Corridor",
-    "jobName": "Pneumatic Impact Wrench",
-    "reason": "Brick’s favorite half-inch impact wrench vanished two weeks ago; he suspects alley scrappers took it.",
+    "jobName": "A work jacket, too small for him now, IRON ROW stitched on the back in an older font",
+    "reason": "It belonged to whoever ran this garage before Brick did. He's never said who.",
     "beats": {
       "1": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "Tight avenues out here. Watch your corners when you break out the front door."
+            "text": "Tight avenues out here. Watch your corners on the way out."
           },
           {
             "speaker": "brick",
-            "text": "Just run your line and get the bag to the trunk. We have work to do."
+            "text": "Just get the bag to the trunk. We've got work."
           }
-        ],
-        "reactive": false
+        ]
       },
       "7": {
         "pages": [
@@ -146,20 +144,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "rook",
-            "text": "I’ll need you at house 9 for a quick pickup. I’ll explain what to grab right before that door. Keep moving."
+            "text": "House 9's Brick's business, not mine. He'll explain before that door."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
+            "speaker": "brick",
+            "text": "Door 9. There's a jacket in the violet case. Smaller size than mine. Old stitching. Grab the case and the stash."
+          },
+          {
             "speaker": "rook",
-            "text": "Target house. The violet case on the floor holds Brick’s heavy pneumatic impact wrench. You must carry both the case and the stash to the getaway car to clear the door."
+            "text": "You gonna say whose it was?"
           },
           {
             "speaker": "brick",
-            "text": "Look at that—sitting right where those alley scrappers stashed it. Bring my iron home."
+            "text": "Grab it and the bag, runner. Both come out, and neither one gets asked about again."
           }
         ]
       },
@@ -219,25 +220,30 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Thirty total stashes logged, and my favorite wrench is back in the rollaway."
+        "text": "Thirty stashes. Jacket's in the truck."
       },
       {
         "speaker": "rook",
-        "text": "Great. Now you can stop accusing me of borrowing it without asking."
+        "text": "First thing you've kept from a house that wasn't tools or food. I'm not gonna ask."
+      },
+      {
+        "speaker": "brick",
+        "text": "Good."
       }
     ]
   },
   {
     "number": 3,
     "title": "Scrap Mile",
-    "jobName": "Brass Ship Clock",
-    "reason": "Brick hates high-pitch digital timers that trigger his headaches; wants a mechanical clock with a brass chime.",
+    "jobName": "A repair order, unsigned, for a car reported stolen two years ago",
+    "reason": "Somebody in this neighborhood has been running plates that don't exist. Rook wants to know who taught them that trick.",
     "beats": {
       "4": {
         "pages": [
@@ -247,20 +253,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "brick",
-            "text": "Rook will need a favor at house 9. He’ll give you the rundown before that porch. Keep moving."
+            "text": "Rook's got a favor at house 9. He'll give you the rundown before that porch."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "Time for the pickup. There's an antique mechanical brass clock in the violet case on the floor. Remember: both the case and the stash must reach the car."
+            "text": "Time for the pickup. The violet case holds a repair order, no signature, for a car that's supposed to not exist anymore. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "Real gears and a bell chime. Grab it so we finally have a clock that doesn't whine like an angry alternator."
+            "text": "Somebody's running ghost plates through a real shop."
+          },
+          {
+            "speaker": "rook",
+            "text": "Not our shop. Not yet, anyway. Grab the case and the bag."
           }
         ]
       },
@@ -314,7 +323,8 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_ROK_DECOY_03",
           "IR_ROK_DECOY_04",
           "IR_ROK_DECOY_05"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
@@ -322,26 +332,25 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "brick",
             "text": "Three houses left. Close this block out."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "This block is in the bag. Forty-five total houses cleared for the Row."
+        "text": "This block's in the bag. Forty-five total houses cleared for the Row."
       },
       {
         "speaker": "rook",
-        "text": "And that brass clock is going on the wall right above your bench so you stop asking me when lunch starts."
+        "text": "Whoever taught that trick knew what they were doing. I want to know if they're still teaching it."
       }
     ]
   },
   {
     "number": 4,
     "title": "Neon Strip",
-    "jobName": "Portable Thermal Laminator",
-    "reason": "Rook is tired of Brick dripping mustard and coffee onto their shop wiring diagrams.",
+    "jobName": "A stack of unpaid invoices, addressed to businesses that don't exist on this street anymore",
+    "reason": "Brick's shop is legit on paper. Somebody's been laundering through paper that isn't.",
     "beats": {
       "1": {
         "pages": [
@@ -353,8 +362,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "brick",
             "text": "Don't stare at the signs; watch the porch steps. Get the stash and get out."
           }
-        ],
-        "reactive": false
+        ]
       },
       "7": {
         "pages": [
@@ -364,24 +372,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "rook",
-            "text": "I’ll need you at house 9 for a special pickup. Brick’s going to call it unnecessary, so I’ll explain right before that door. Stay on it."
+            "text": "House 9's got paperwork in it. I'll explain before that door."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "House 9. The violet case has a portable thermal laminator inside. Grab that case along with the stash before heading for the car. Don't leave either behind."
+            "text": "House 9. The violet case has invoices in it — for shops that don't exist. Somebody's running money through addresses on this street that aren't real anymore. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "An office laminator? We fix suspensions, Rook."
+            "text": "That's not scrap work. That's somebody's whole business."
           },
           {
             "speaker": "rook",
-            "text": "It's so your greasy lunch fingers stop ruining my brake line diagrams! Get both to the street, runner."
+            "text": "Which is exactly why it's not staying in this house. Grab the case, grab the bag."
           }
         ]
       },
@@ -389,7 +396,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses remain. Keep moving and finish this strip."
+            "text": "Three houses remain. Keep moving."
           }
         ],
         "reactive": true,
@@ -441,7 +448,8 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
@@ -451,29 +459,16 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
       },
       {
         "speaker": "rook",
-        "text": "First thing getting laminated: the shop rules. Rule one is keep Brick’s pastrami away from the schematics."
+        "text": "I know three of those business names. I'm gonna ask around, quiet."
       }
     ]
   },
   {
     "number": 5,
     "title": "Copper Terrace",
-    "jobName": "Industrial Master Toggle Switch",
-    "reason": "Brick wants a chunky manual switch for the shop bay door instead of twisting bare wires together.",
+    "jobName": "A set of master keys, cut for buildings that changed locks a week ago",
+    "reason": "Somebody wanted back into houses Iron Row already cleared. Rook doesn't like being followed.",
     "beats": {
-      "1": {
-        "pages": [
-          {
-            "speaker": "brick",
-            "text": "Wider porches on this avenue. Don't wander in the halls—find the stash and head straight back out the door."
-          },
-          {
-            "speaker": "rook",
-            "text": "Fast on your feet, runner."
-          }
-        ],
-        "reactive": false
-      },
       "4": {
         "pages": [
           {
@@ -482,20 +477,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "brick",
-            "text": "Rook will need a hand at house 9. He’ll tell you what’s in the case before you go in. Stick to the line."
+            "text": "Rook's got something at house 9 that's got him quiet all morning. He'll explain before that door."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "Here we go. The violet case on the floor holds a heavy industrial toggle switch. You need that case and the stash in the trunk before the car rolls."
+            "text": "Here we go. Master keys in the violet case — freshly cut, for locks that changed a week ago. Somebody wanted back into houses we already ran. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "Solid bronze contacts. Rated for forty amps. Now we can open the main bay door without sparking the fuse panel."
+            "text": "Followed, or just late?"
+          },
+          {
+            "speaker": "rook",
+            "text": "Don't know yet. Grab the case and the bag — we figure that out at the shop, not the curb."
           }
         ]
       },
@@ -555,6 +553,19 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
+        ],
+        "minChapter": 0
+      },
+      "1": {
+        "pages": [
+          {
+            "speaker": "brick",
+            "text": "Wider porches on this avenue. Don't wander in the halls — find the stash and head straight back out the door."
+          },
+          {
+            "speaker": "rook",
+            "text": "Fast on your feet, runner."
+          }
         ]
       }
     },
@@ -565,19 +576,15 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
       },
       {
         "speaker": "rook",
-        "text": "I'll wire that master toggle switch tomorrow. Assuming someone didn't misplace our insulated wire strippers."
-      },
-      {
-        "speaker": "brick",
-        "text": "Don't look at me. I haven't touched your toolbox all week."
+        "text": "Whoever cut those keys knows our schedule better than I'm comfortable with."
       }
     ]
   },
   {
     "number": 6,
     "title": "Boiler Line",
-    "jobName": "Cast-Iron Waffle Plates",
-    "reason": "Brick is tired of cold protein bars and demands hot food to pair with Rook's burr-ground coffee.",
+    "jobName": "A torn Crossline route map, left where Brick would find it on purpose",
+    "reason": "Somebody wanted Iron Row to know they'd been walked in on. Brick doesn't do subtle back.",
     "beats": {
       "4": {
         "pages": [
@@ -589,35 +596,21 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "brick",
             "text": "Hallway navigation is simple: grab the bag and move. Keep running."
           }
-        ],
-        "reactive": false
-      },
-      "7": {
-        "pages": [
-          {
-            "speaker": "brick",
-            "text": "Six houses cleared. Keep on the line."
-          },
-          {
-            "speaker": "rook",
-            "text": "I’ll need you at house 9 for a hardware run. I’ll explain what to grab before that entrance. Keep pulling stashes."
-          }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "House 9. Inside the violet case is a set of heavy cast-iron waffle plates. Both the case and the stash have to reach the car to clear the door."
+            "text": "House 9. There's a route map in the violet case — Crossline's, torn on purpose, left right where I'd trip over it. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "Heavy iron. Hot breakfast before dawn shifts. You got your fancy coffee grinder earlier; now we get real food."
+            "text": "That's not an accident. That's Switch's crew telling us they know our floor plan."
           },
           {
             "speaker": "rook",
-            "text": "Fair enough, but you're on cleanup duty. Don't leave without that case, runner."
+            "text": "Or telling us they want us to think that. Either way, grab the case and the bag. We're not leaving a message back — not yet."
           }
         ]
       },
@@ -677,25 +670,38 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
+        ],
+        "minChapter": 0
+      },
+      "7": {
+        "pages": [
+          {
+            "speaker": "brick",
+            "text": "Six houses cleared. Keep pulling bags."
+          },
+          {
+            "speaker": "rook",
+            "text": "I'll need you at house 9. Found something that's got me looking twice. I'll explain before that door."
+          }
         ]
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Ninety houses down in our campaign ledger. Another block claimed."
+        "text": "Ninety houses down in our campaign ledger."
       },
       {
         "speaker": "rook",
-        "text": "Waffle plates are safely in the van. Tomorrow morning, we feast like civilized mechanics."
+        "text": "If Crossline wants to leave notes on our floor, next time I'm leaving one on theirs. In person."
       }
     ]
   },
   {
     "number": 7,
     "title": "Rivet Flats",
-    "jobName": "Handheld Metal Label Embosser",
-    "reason": "Rook wants to stamp permanent metal tags on his tools because Brick constantly borrows and misplaces them.",
+    "jobName": "A payoff envelope, still sealed, addressed to nobody",
+    "reason": "Somebody's been paying somebody to look away from this block. Rook wants to know who's on the other end before he decides whether to open it.",
     "beats": {
       "1": {
         "pages": [
@@ -707,8 +713,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "rook",
             "text": "Let's keep this moving."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -718,24 +723,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "brick",
-            "text": "Rook will need you at house 9. He’ll explain what he dug up before that door. Keep pulling bags."
+            "text": "Rook's got something heavier than usual at house 9. He'll brief you before that door."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "Special job time. The violet case holds a mechanical label embosser that stamps metal tags. You need that case and the stash in the getaway car."
+            "text": "Special job time. Sealed envelope in the violet case, cash-heavy, no name on it. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "What are you going to label? The whole garage?"
+            "text": "Somebody's paying somebody."
           },
           {
             "speaker": "rook",
-            "text": "Every single half-inch socket so they stop mysteriously walking over to your bench! Grab the case, runner."
+            "text": "And I want to know which somebody, before I decide if we're the ones who get to keep it. Grab the case, runner."
           }
         ]
       },
@@ -795,25 +799,26 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "One hundred and five doors in the win column. Flats are locked down."
+        "text": "One hundred and five doors in the win column."
       },
       {
         "speaker": "rook",
-        "text": "Already stamped my first tag: 'ROOK'S WRENCH - DO NOT TOUCH, BRICK.'"
+        "text": "Envelope's still sealed. Some things you open together or not at all."
       }
     ]
   },
   {
     "number": 8,
     "title": "Canal Run",
-    "jobName": "Heavy-Duty Hydraulic Stool Cylinder",
-    "reason": "Brick threw his back out sitting on an overturned paint bucket; Rook found a replacement gas lift to fix their broken shop stool.",
+    "jobName": "A wedding ring, found months ago, that he never turned in",
+    "reason": "Rook's kept it in his toolbox since a job that went sideways. He still means to find whoever lost it.",
     "beats": {
       "7": {
         "pages": [
@@ -823,24 +828,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "rook",
-            "text": "I’ll need you at house 9. Brick’s back is giving him grief, so I found something useful. I’ll brief you before you enter."
+            "text": "House 9 is mine to explain. Give me the room."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "House 9. In the violet case is a heavy-duty pneumatic gas cylinder. Bring that case and the stash to the curb—both pickups are required to extract."
+            "text": "House 9. It's a ring, in the violet case. Not mine. Found it on a job months back — never turned it in, never sold it either. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "Wait, is that for the shop stool with the broken lift?"
+            "text": "Rook."
           },
           {
             "speaker": "rook",
-            "text": "Yes, so you can stop groaning like a rusty hinge every time you stand up from a paint bucket. Fetch it clean."
+            "text": "I know how it looks. I keep meaning to find who it belongs to. Grab it and the bag, runner. Both come out."
           }
         ]
       },
@@ -901,34 +905,38 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_ROK_DECOY_04",
           "IR_ROK_DECOY_05",
           "IR_ROK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
           {
-            "speaker": "brick",
+            "speaker": "rook",
             "text": "Three houses remain. Finish the canal row and let's get back to the shop."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
+        "speaker": "rook",
+        "text": "One hundred and twenty houses cleared. Ring's still in my toolbox."
+      },
+      {
         "speaker": "brick",
-        "text": "One hundred and twenty houses cleared. The canal block is stamped for Iron Row."
+        "text": "You've had months."
       },
       {
         "speaker": "rook",
-        "text": "And your back gets a cushioned hydraulic seat tomorrow. You're welcome."
+        "text": "I know. I'll find them. I always finish what I start — you know that better than anybody."
       }
     ]
   },
   {
     "number": 9,
     "title": "Granite Ridge",
-    "jobName": "High-CFM Blower Motor Core",
-    "reason": "Between waffle smoke and summer heat, the shop air is foul; Rook wants to rebuild their exhaust fan.",
+    "jobName": "A city inspection notice, stamped, for a building that was never inspected",
+    "reason": "Somebody's been forging paperwork to keep buildings on this block condemned. Rook wants to know who profits from that.",
     "beats": {
       "1": {
         "pages": [
@@ -940,8 +948,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "rook",
             "text": "We take the ridge, we see the whole water from up here. Let's work."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -951,24 +958,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "rook",
-            "text": "Look down the slope—you can trace our entire route across {city} from here."
+            "text": "Look down the slope — you can trace our entire route across {city} from here."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "Door 9. The violet case holds an industrial blower motor core. You must bring that case along with the stash out to the car."
+            "text": "Door 9. City inspection notice, in the violet case — stamped, official-looking, and completely fake. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "A blower motor? What happened to the shop fan?"
+            "text": "Fake how?"
           },
           {
             "speaker": "rook",
-            "text": "It choked on your waffle smoke and died two days ago. We need ventilation before we suffocate. Both items to the curb!"
+            "text": "Building's never been inspected a day in its life. Somebody wants it condemned on paper. Grab the case and the bag — I want to know who benefits."
           }
         ]
       },
@@ -1030,25 +1036,26 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "One hundred and thirty-five stashes logged. Another block belongs to our crew."
+        "text": "One hundred and thirty-five stashes logged."
       },
       {
         "speaker": "rook",
-        "text": "The air up here is great. Soon as I wire that motor into the shop wall, the bay will smell like oxygen again."
+        "text": "Somebody's making money off empty buildings nobody's allowed to fix. That's not scrap work. That's a business."
       }
     ]
   },
   {
     "number": 10,
     "title": "Sovereign Center",
-    "jobName": "Solid Brass Counter Bell",
-    "reason": "Rook’s ultimate response to Brick constantly losing tools and asking where they are.",
+    "jobName": "A courier's business card, left by a customer who never gave a name",
+    "reason": "He paid cash, said the Row's reputation reaches Copper Bay now, and left before Rook could ask what that meant.",
     "beats": {
       "1": {
         "pages": [
@@ -1060,8 +1067,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "rook",
             "text": "Let's run these porches like we built them."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -1071,24 +1077,23 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "brick",
-            "text": "Rook will need you at house 9. He won't tell me what it is, but he’ll brief you before you step up to that door. Keep pulling bags."
+            "text": "Rook had a customer today he didn't like the look of. He'll explain before house 9."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "rook",
-            "text": "This is it—door 9. Inside the violet case is a solid brass service counter bell. Grab the case, grab the stash, and sprint to the car. Both items mandatory."
+            "text": "This is it — door 9. Guy came in this morning, paid cash, didn't leave a name. Left this card in the violet case instead. Grab the case and the stash."
           },
           {
             "speaker": "brick",
-            "text": "A hotel service bell? Rook, what on earth do we need that for?"
+            "text": "What'd he want?"
           },
           {
             "speaker": "rook",
-            "text": "For every time you ask where your wrench, your coffee, or your pastrami went! I’m dinging it right in your ear. Bring the case!"
+            "text": "Didn't ask for a repair. Just wanted to know if the Row was 'ready for Copper Bay work.' Then he left. Grab the case and the bag, runner."
           }
         ]
       },
@@ -1150,7 +1155,8 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           "IR_BRK_DECOY_04",
           "IR_BRK_DECOY_05",
           "IR_BRK_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
@@ -1158,8 +1164,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
             "speaker": "rook",
             "text": "Three houses remain to lock down the city center. Stride it out all the way to the car."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
@@ -1169,11 +1174,19 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
       },
       {
         "speaker": "rook",
-        "text": "(Dings the brass bell) That’s the sound of clean books and a fully equipped garage."
+        "text": "That customer wasn't wrong about one thing — word's already crossed the water about us."
       },
       {
         "speaker": "brick",
-        "text": "Pack the getaway van, Rook. The shop's ready, but the next block won't run itself."
+        "text": "Copper Bay work. What's that supposed to mean."
+      },
+      {
+        "speaker": "rook",
+        "text": "Heavier stashes, from what I hear. And more than one set of hands waiting behind every door over there."
+      },
+      {
+        "speaker": "brick",
+        "text": "Then we go in ready, not curious. Pack the van, Rook. Whoever's asking about us on the other side of that water is about to get an answer."
       }
     ]
   }
@@ -1976,7 +1989,7 @@ export function ironRowChapter(chapter = 0) {
 export function ironRowJob(chapter = 0) {
   const story = ironRowChapter(chapter);
   if (!story) return null;
-  return { id: 'keys', label: story.jobName.toUpperCase(), short: ['GRINDER','IMPACT WRENCH','BRASS CLOCK','LAMINATOR','MASTER SWITCH','WAFFLE PLATES','LABEL EMBOSSER','STOOL CYLINDER','BLOWER MOTOR','COUNTER BELL'][story.number - 1], name: story.jobName };
+  return { id: 'keys', label: story.jobName.toUpperCase(), short: ['LEDGER','OLD JACKET','REPAIR ORDER','INVOICES','MASTER KEYS','ROUTE MAP','ENVELOPE','THE RING','INSPECTION','BUSINESS CARD'][story.number - 1], name: story.jobName };
 }
 /** One fixed consultation per authored slot; blank slots really stay silent. */
 export function ironRowCue({chapter = 0, house, blockIndex = 1, cityName, earnedPraise = [], usedPraise = [], telemetryComplete = false} = {}) {

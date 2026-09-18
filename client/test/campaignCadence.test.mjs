@@ -57,4 +57,35 @@ progress=JSON.parse(JSON.stringify(progress));m.showContactCheckIn(()=>advanced+
 for(const runKind of ['rivals','daily','tutorial'])new Manager({...scene,runKind}).showContactCheckIn(()=>advanced++);
 new Manager({...scene,role:'plug'}).showContactCheckIn(()=>advanced++);
 check('other modes untouched',shown===1&&advanced===7);
+
+// The actual bug this session found and fixed: a naive modulo selection
+// repeated cadence lines within a single account's real playthrough. Measured
+// on the old formula: 29 of 119 lines shown across 9 blocks of one gang were
+// exact duplicates. campaignCadencePages now groups blocks into shared
+// shuffle epochs (BLOCKS_PER_EPOCH in campaignCadence.js) so that within one
+// epoch, no two houses -- in the same block OR different blocks in that
+// epoch -- can draw the same line. Assert that guarantee directly, across
+// every gang and every authored chapter, rather than relying on it holding
+// as an emergent property of other checks.
+for(const gangID of ['crossline','iron-row','afterlight']){
+ const seenInEpoch=new Map(); // text -> [block,house], reset at each epoch boundary
+ let epochStart=1,lastEpoch=null;
+ for(let block=1;block<=10;block++){ // the full authored season; seasonChapter is null beyond it
+  const chapter=block-1,story=seasonChapter(gangID,chapter);
+  const houses=campaignContactHouses(gangID,{chapter,blockIndex:block});
+  const added=houses.filter(h=>!story.beats[h]);
+  const variation=block+story.number;
+  const epoch=Math.floor(Math.max(0,variation-2)/10); // mirrors campaignCadence.js's EPOCH_WIDTH
+  if(lastEpoch!==null&&epoch!==lastEpoch)seenInEpoch.clear();
+  lastEpoch=epoch;
+  for(const house of added){
+   const pages=campaignCadencePages(gangID,house,added,variation);
+   if(!pages)continue;
+   const text=pages[0].text;
+   check('no cadence repeat within an epoch '+gangID+block+house,!seenInEpoch.has(text),
+     seenInEpoch.has(text)?'also shown at '+seenInEpoch.get(text):'');
+   seenInEpoch.set(text,[block,house]);
+  }
+ }
+}
 console.log('campaign cadence: '+passed+' assertions passed');

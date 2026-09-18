@@ -4,9 +4,9 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
   {
     "number": 1,
     "title": "Signal Lock",
-    "jobName": "High-Gain Yagi Directional Antenna",
-    "reason": "Mags needs a directional antenna to monitor harbor dispatch; Switch thinks it looks like scrap aluminum.",
-    "short": "YAGI ANTENNA",
+    "jobName": "A working scanner off the old harbor band",
+    "reason": "Whoever's running that frequency knows things about this block Crossline doesn't. Mags wants to listen before somebody else starts talking first.",
+    "short": "SCANNER",
     "beats": {
       "1": {
         "pages": [
@@ -18,8 +18,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
             "speaker": "mags",
             "text": "I've got the radio tuned to the neighborhood band. Move fast and don't make me listen to dead air."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -29,33 +28,31 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "switch",
-            "text": "Mags will need you at house 9. She’ll brief you before you take that entrance. For now, keep pulling bags."
+            "text": "Mags will need you at house 9. She'll brief you before you take that entrance. For now, keep pulling bags."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. Inside is a violet case holding a high-gain Yagi antenna. Carry both the case and the stash to the getaway car to clear the door."
+            "text": "Door 9. There's a beat-up scanner in the violet case — still locked to the harbor channel nobody's supposed to use anymore. Grab the case and the stash, we're leaving together."
           },
           {
             "speaker": "switch",
-            "text": "That aluminum frame looks like a collapsed drying rack. We're setting up a communications grid, Mags."
+            "text": "That channel's been dead since before we started. If it's still locked there, someone kept it that way on purpose."
           },
           {
             "speaker": "mags",
-            "text": "It pulls sixteen decibels of clean gain, Switch. Grab the case and the bag, runner—both come out."
+            "text": "Which is exactly why I want it in my hands and not somebody else's. Move, runner."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
           {
             "speaker": "switch",
-            "text": "Six houses remain on this avenue. Maintain your lane and finish the run."
+            "text": "Six houses remain on this avenue. Keep your stride long and finish the set."
           }
         ],
         "reactive": true,
@@ -106,26 +103,27 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Fifteen doors cleared. The first fifteen stashes are recorded in Crossline's route log."
+        "text": "Fifteen doors cleared. The block is quiet behind us."
       },
       {
         "speaker": "mags",
-        "text": "And the antenna is already bolted to the roof. Now we can hear what the precinct had for breakfast."
+        "text": "The scanner works. It's tuned to a channel that's supposed to be dead. Somebody's still listening on the other end of it — I just don't know who yet."
       }
     ]
   },
   {
     "number": 2,
     "title": "The Wire Sweep",
-    "jobName": "Tuned Crystal Radio Receiver",
-    "reason": "Mags needs an unpowered receiver that monitors dispatch frequencies without broadcasting a detectable local oscillator signal.",
-    "short": "CRYSTAL RADIO",
+    "jobName": "A logbook, taped shut, from the last crew that ran this frequency",
+    "reason": "Mags wants to know who was on this channel before Crossline claimed it — and why they stopped writing in the middle of a page.",
+    "short": "LOGBOOK",
     "beats": {
       "1": {
         "pages": [
@@ -137,8 +135,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
             "speaker": "switch",
             "text": "Ignore the wiring and focus on the exit threshold. Move the bags to the car."
           }
-        ],
-        "reactive": false
+        ]
       },
       "7": {
         "pages": [
@@ -148,23 +145,25 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "I’ll need you at house 9 for a hardware pickup. I’ll explain the piece before you enter. Stay on the move."
+            "text": "I'll need you at house 9 for a hardware pickup. I'll explain the piece before you enter. Stay on the move."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "House 9. In the violet case is an analog crystal receiver. Bring that case and the stash out to the street—both pickups are mandatory."
+            "text": "House 9. The violet case holds a log — taped shut, every frequency and date somebody didn't want found. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "Zero RF leakage from a passive diode circuit. Smart pickup, Mags. Bring it home, runner."
+            "text": "Whoever wrote it stopped mid-page."
+          },
+          {
+            "speaker": "mags",
+            "text": "Yeah. I noticed that too."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -222,62 +221,61 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
-        "speaker": "switch",
-        "text": "Thirty total stashes logged for Crossline. Our route map is expanding across the southern grid."
+        "speaker": "mags",
+        "text": "Thirty stashes in, and I read every page of that log twice. Whoever had this block before us didn't leave on their own terms."
       },
       {
-        "speaker": "mags",
-        "text": "That passive crystal set is pulling clear dispatch audio. Nobody even knows we're listening."
+        "speaker": "switch",
+        "text": "Then we don't make their mistake. Keep moving."
       }
     ]
   },
   {
     "number": 3,
     "title": "High Impedance",
-    "jobName": "Shielded Coaxial Cable Spool",
-    "reason": "Switch demands fifty-ohm double-shielded cable so ping times don't spike across relays; Mags complains about carrying it.",
-    "short": "COAX SPOOL",
+    "jobName": "An old handheld CB, dead battery, initials scratched into the casing",
+    "reason": "It belonged to whoever taught Switch this street, before the frequency went dark on both of them. He's never said the name out loud.",
+    "short": "OLD RADIO",
     "beats": {
       "4": {
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses cleared. Keep bringing them out."
+            "text": "Three houses cleared. Keep them coming."
           },
           {
-            "speaker": "switch",
-            "text": "Mags will need a pickup at house 9. She’ll detail the item before that door. Keep moving."
+            "speaker": "mags",
+            "text": "House 9's got something in it. I already know what it is, but I'm not explaining it over the open channel."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Target house. The violet case holds a heavy spool of double-shielded coax. Both the case and the stash must reach the car."
+            "text": "Door 9. There's a CB radio in the violet case — old, dead battery, initials scratched into it. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "Zero signal drop, pure copper braiding. Grab it so we stop losing data packets across the avenue."
+            "text": "(quiet) Whose initials."
           },
           {
             "speaker": "mags",
-            "text": "It weighs twenty pounds, Switch! Runner, don't drop it on your toes on the way out."
+            "text": "Later. Both come out whole, runner."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Six houses remain. Stride it out and keep the rhythm steady."
+            "text": "Six houses remain. Radio's on my lap. Don't ask."
           }
         ],
         "reactive": true,
@@ -323,35 +321,35 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_MAG_DECOY_03",
           "CL_MAG_DECOY_04",
           "CL_MAG_DECOY_05"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses left. Close this commercial line."
+            "text": "Three houses remain. Finish it clean."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Forty-five houses logged for Crossline. Our packet latency dropped by forty milliseconds across this block."
+        "text": "(closing the case himself, this time) Fifteen more in the log. Radio's staying in the Dispatch, not the field bag."
       },
       {
         "speaker": "mags",
-        "text": "Great. Now Switch can be disappointed in our split times forty milliseconds faster."
+        "text": "First thing you've asked to keep quiet about all year. Already told the crew nothing. You're welcome."
       }
     ]
   },
   {
     "number": 4,
     "title": "Hot Transistors",
-    "jobName": "Extruded Aluminum Heat-Sink Array",
-    "reason": "The receiver bank in Switch’s Map Room is thermal-throttling; Mags claims Switch just runs too many CRT monitors.",
-    "short": "HEAT SINKS",
+    "jobName": "A stack of intercepted courier manifests, still warm",
+    "reason": "Somebody's running product through routes Crossline thought were dead. Mags wants names before Switch wants apologies.",
+    "short": "MANIFESTS",
     "beats": {
       "1": {
         "pages": [
@@ -363,8 +361,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
             "speaker": "switch",
             "text": "Because our repeaters are working double-time. Clear the porches and keep the route open."
           }
-        ],
-        "reactive": false
+        ]
       },
       "7": {
         "pages": [
@@ -374,27 +371,25 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "I’ll need you at house 9. The Map Room is cooking like an oven, so I found cooling hardware. I'll brief you before you go in."
+            "text": "I'll need you at house 9. The Map Room is cooking, and so is something else. I'll brief you before you go in."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. In the violet case is a finned aluminum heat-sink array. You need both the case and the stash in the trunk before the car pulls away."
+            "text": "Door 9. The violet case has manifests in it, still warm — somebody's using this route this week. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "Passive heat dissipation. That keeps our main receiver from melting down during peak hours."
+            "text": "Then it's not dead. It's ours, and somebody forgot to tell them."
           },
           {
             "speaker": "mags",
-            "text": "Or you could turn off three of your six tactical monitors, Switch. Grab the case, runner!"
+            "text": "Or they know exactly whose it is and don't care yet. Grab the case, runner — we read these at the Dispatch, not the curb."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -452,26 +447,27 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Sixty doors cleared in {city}. The southern network hub is stable and running cool."
+        "text": "Sixty doors cleared in {city}. The manifests confirm it — somebody's running our route without asking."
       },
       {
         "speaker": "mags",
-        "text": "Heat sinks are mounted. The Map Room dropped ten degrees—now it only smells like lukewarm solder."
+        "text": "First thing I do tomorrow is find out who signs those pickups."
       }
     ]
   },
   {
     "number": 5,
     "title": "Spectrum Map",
-    "jobName": "Portable Spectrum Analyzer Module",
-    "reason": "Switch needs to identify rogue frequency spikes distorting courier tracking across the central avenues.",
-    "short": "SPECTRUM UNIT",
+    "jobName": "A jammer, still running, pulled off a rooftop two blocks over",
+    "reason": "Somebody's been drowning Crossline's signal on purpose. Switch wants it off the air before he wants to know who built it.",
+    "short": "JAMMER",
     "beats": {
       "1": {
         "pages": [
@@ -483,8 +479,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
             "speaker": "mags",
             "text": "Watch the gravel paths. Keep your steps light."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -494,27 +489,25 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "switch",
-            "text": "Mags will need a hand at house 9. She’ll detail the diagnostic unit before that entrance. Stay on task."
+            "text": "Mags will need a hand at house 9. She'll explain what she found before that entrance. Stay on task."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "House 9. Inside the violet case is a handheld spectrum analyzer. You must bring that case along with the stash to extract."
+            "text": "Door 9. There's a jammer in the violet case, still live, chewing our clean frequency to static. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "That unit sweeps from ten megahertz to three gigahertz. We can finally pin down where the background interference is coming from."
+            "text": "Cut its power before you touch anything else."
           },
           {
             "speaker": "mags",
-            "text": "Spoiler alert: it’s coming from Afterlight blasting subwoofers three blocks over. Grab the case!"
+            "text": "Already unplugged it, Switch. Grab the case and the bag — I want this thing dead in our hands, not theirs."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -572,26 +565,27 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Halfway through {city}. Seventy-five stashes logged on Crossline's board."
+        "text": "Seventy-five stashes. The static's gone."
       },
       {
         "speaker": "mags",
-        "text": "Spectrum sweep is complete. We've mapped every clean frequency from here to the harbor."
+        "text": "Whoever built that jammer knew our frequency on purpose. That's not luck. That's somebody who's been listening back."
       }
     ]
   },
   {
     "number": 6,
     "title": "Brownout Buffer",
-    "jobName": "Ultracapacitor Backup Pack",
-    "reason": "Prevents rooftop signal repeaters from rebooting during neighborhood power drops; Switch points out it barely powers a desk lamp.",
-    "short": "BACKUP PACK",
+    "jobName": "A backup line, spliced straight into the block's old utility trunk",
+    "reason": "If the grid drops for real, Crossline's the only ones who don't go dark. Switch calls it insurance. Mags calls it a bet.",
+    "short": "SPLICE LINE",
     "beats": {
       "4": {
         "pages": [
@@ -603,8 +597,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
             "speaker": "switch",
             "text": "Our runs don't depend on streetlights. Find the door, take the bag, and sprint out."
           }
-        ],
-        "reactive": false
+        ]
       },
       "7": {
         "pages": [
@@ -614,27 +607,25 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "I’ll need you at house 9 for a power cell pickup. I’ll explain before that door. Keep pulling bags."
+            "text": "I'll need you at house 9 for a power pickup. I'll explain before that door. Keep pulling bags."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. In the violet case is an ultracapacitor backup bank. Both the case and the stash must reach the car."
+            "text": "Door 9. The violet case holds a splice line — somebody already ran it into the utility trunk here. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "Instant discharge, zero cycle degradation. If the city grid hiccups, our repeaters won't lose sync."
+            "text": "Somebody, or us? Be specific."
           },
           {
             "speaker": "mags",
-            "text": "It holds about enough juice to run your coffee maker for four seconds, Switch. Bring it to the car, runner!"
+            "text": "Fine. Future-us. Past-us was smarter than I give us credit for. Grab the case and the bag."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -692,39 +683,39 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Ninety houses down in our campaign ledger. Brownout corridor is locked into our network."
+        "text": "Ninety houses down in our campaign ledger. If the grid drops tonight, we're the only ones still talking."
       },
       {
         "speaker": "mags",
-        "text": "Capacitors are wired. Even if {city} loses power completely, Crossline stays talking."
+        "text": "That's the whole plan. Let everyone else go quiet for a change."
       }
     ]
   },
   {
     "number": 7,
     "title": "Noise Baffle",
-    "jobName": "Microwave Cavity Notch Filter",
-    "reason": "Mags wants a sharp filter notch to mute noise from Iron Row's garage welders and Afterlight's transmitters; Switch says they don't sabotage, they isolate.",
+    "jobName": "A notch filter, tuned exactly to Iron Row's garage frequency",
+    "reason": "Somebody in Iron Row has been running their radio over Crossline's clean channel. Switch doesn't call it a coincidence twice.",
     "short": "NOTCH FILTER",
     "beats": {
       "1": {
         "pages": [
           {
             "speaker": "switch",
-            "text": "Gravel and track beds along this block. Watch your balance on the porch stairs and head straight for the curb."
+            "text": "Watch your footing on the rail beds, this block's uneven."
           },
           {
             "speaker": "mags",
-            "text": "Lots of stray radio chatter echoing off the rail cars. Stay sharp."
+            "text": "There's a lot of chatter bleeding onto our line from the east. Somebody's doing it on purpose now."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -734,33 +725,31 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "switch",
-            "text": "Mags will need you at house 9. She has a countermeasure unit scoped out. She’ll brief you before you enter."
+            "text": "Mags found the source of that bleed. House 9. She'll brief you there."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "House 9. In the violet case is a silver cavity notch filter. Both pickups—case and stash—are required to leave."
+            "text": "Door 9. This notch filter's in the violet case, already tuned — to Rook's garage frequency, exact channel. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "A fifty-decibel attenuation notch. We drop it right over the local interference frequency."
+            "text": "Twice in one week is not an accident, Mags."
           },
           {
             "speaker": "mags",
-            "text": "Which means Rook’s noisy garage radio gets completely scrubbed out of our comms. Get both items to the street!"
+            "text": "No. It's not. Grab the case and the bag — we're not leaving this in their hands to try a third time."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
           {
             "speaker": "switch",
-            "text": "Six houses remain. Don't slow down at the door."
+            "text": "Six houses remain. Don't slow down — I want this handled before the day's out."
           }
         ],
         "reactive": true,
@@ -812,26 +801,27 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "One hundred and five doors cleared. Rail corridor is secure and noise levels are zero."
+        "text": "One hundred and five doors cleared. The line's clean again."
       },
       {
         "speaker": "mags",
-        "text": "Filter's installed. Pure, clean silence on the channel. It’s almost spooky."
+        "text": "For now. If Iron Row wants to keep testing our patience, I'll stop being polite about how I answer it."
       }
     ]
   },
   {
     "number": 8,
     "title": "Long Haul",
-    "jobName": "Directional Laser Transceiver Head",
-    "reason": "An optical line-of-sight laser transmitter to bridge communication across the water without using congested radio bands.",
-    "short": "LASER HEAD",
+    "jobName": "A sealed waterproof drop case, pulled from under the old dock",
+    "reason": "Someone's been using the canal route to move things Crossline doesn't control yet. Mags wants to know what, before Switch decides whether to stop it.",
+    "short": "DROP CASE",
     "beats": {
       "7": {
         "pages": [
@@ -841,27 +831,25 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "I’ll need you at house 9. We need long-range glass to bridge the canal gap. I’ll explain before you step up."
+            "text": "I'll need you at house 9. We found something already sealed shut down at the water. I'll explain before you step up."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "House 9. In the violet case is an infrared laser transceiver. You need that case and the stash in the trunk before the car rolls."
+            "text": "Door 9. Sealed drop case, hidden under the floorboards like it's been used before. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "Optical transmission across the canal basin. Unjammable, zero latency, point-to-point."
+            "text": "Don't open it in the field."
           },
           {
             "speaker": "mags",
-            "text": "Just don't point it at my eyes while I'm aligning the mirror! Both to the car, runner."
+            "text": "Wasn't planning to. Grab the case and the bag, runner — we look at this at the Dispatch, together."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -920,7 +908,8 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_MAG_DECOY_04",
           "CL_MAG_DECOY_05",
           "CL_MAG_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
@@ -928,27 +917,26 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
             "speaker": "switch",
             "text": "Three houses remain. Finish the canal line and bring the haul back."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "One hundred and twenty houses logged. Canal sector is bridged and our network latency is flat."
+        "text": "One hundred and twenty houses logged. The case is sealed."
       },
       {
         "speaker": "mags",
-        "text": "Laser is locked onto the Map Room mast. Clean green beam right across the water."
+        "text": "Whatever's in there, it's not ours yet. Give me a night with it."
       }
     ]
   },
   {
     "number": 9,
     "title": "The Encryption Key",
-    "jobName": "Hardware Security Cryptographic Module",
-    "reason": "Switch needs a dedicated hardware cipher chip to lock Crossline’s master network with military-grade rolling encryption.",
-    "short": "CIPHER MODULE",
+    "jobName": "A radio contest ribbon, faded, folded inside a torn envelope",
+    "reason": "It was Mags's, once — before the streets, before Switch, before any of this. She never talks about the years it's from.",
+    "short": "CONTEST RIBBON",
     "beats": {
       "1": {
         "pages": [
@@ -958,10 +946,9 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "From up here, our repeaters look like a constellation across the roofs."
+            "text": "This neighborhood used to have a ham club two blocks over. Long gone now."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -971,27 +958,25 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "Every signal across {city} is routing through our grid now."
+            "text": "House 9's mine. I mean that. I'll explain before we get there."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. In the violet case is a tamper-proof cryptographic module. Carry both the case and the stash to the getaway car."
+            "text": "Door 9. It's — nothing, it's fine. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "Hardware-level AES-256 encryption. Once that module is seated in our primary server, nobody intercepts our courier lines."
+            "text": "Mags."
           },
           {
             "speaker": "mags",
-            "text": "Not even the city dispatchers with their expensive monitors. Bring it home clean, runner!"
+            "text": "It's a ribbon. First-place. I was twelve. We're not doing this here, runner — just get us both out."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -1049,26 +1034,35 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
+        "speaker": "mags",
+        "text": "One hundred and thirty-five stashes. And yeah. I kept it this whole time."
+      },
+      {
         "speaker": "switch",
-        "text": "One hundred and thirty-five stashes logged for Crossline. The cipher module is ready for our grid."
+        "text": "Twelve years old and already better at this than half the crew I run now. Doesn't surprise me."
       },
       {
         "speaker": "mags",
-        "text": "The line is completely dark to outsiders. Only Crossline talks on these streets now."
+        "text": "...Thanks, Switch."
+      },
+      {
+        "speaker": "switch",
+        "text": "Don't get used to it."
       }
     ]
   },
   {
     "number": 10,
     "title": "Master Carrier",
-    "jobName": "Antique Dual-Gong Telephone Ringer",
-    "reason": "Mags wants a loud physical brass bell that violently rings in the Map Room every time Switch gives an overly analytical route brief.",
-    "short": "BRASS RINGER",
+    "jobName": "A relay log, freshly intercepted, addressed across the water",
+    "reason": "The very last frequency Crossline swept was already talking to Copper Bay. Someone over there already knows this block is spoken for.",
+    "short": "RELAY LOG",
     "beats": {
       "1": {
         "pages": [
@@ -1078,10 +1072,9 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "Every repeater is synced and waiting. Let’s finish the map."
+            "text": "Every repeater is synced and waiting. Let's finish the map."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -1091,33 +1084,31 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "switch",
-            "text": "Mags will need you at house 9. She won't explain it over the open channel, but she’ll brief you before you go in."
+            "text": "Mags picked up something at house 9 that isn't ours. She'll brief you there."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. In the violet case is a heavy brass telephone ringer. Grab that case and the stash—both pickups are mandatory."
+            "text": "Door 9. It's a relay log in the violet case — and it's not talking to anybody in {city}. It's addressed across the water, to Copper Bay. Grab the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "An analog telephone ringer? Mags, we run a digital fiber and microwave grid."
+            "text": "Copper Bay doesn't know we exist."
           },
           {
             "speaker": "mags",
-            "text": "Yeah, and I'm wiring it directly to your desk so it clangs in your ear every time you spend ten minutes analyzing five seconds of running! Bring the case!"
+            "text": "Copper Bay's had ears on us for longer than we've had ears on them, Switch. Grab the case and the bag — we need to read every line of this before we go anywhere near that water."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
           {
             "speaker": "switch",
-            "text": "Six houses remain in {city}. Leave nothing on the table."
+            "text": "Six houses remain in {city}. Finish clean — we've got harder listening to do after this."
           }
         ],
         "reactive": true,
@@ -1169,30 +1160,38 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           "CL_SWT_DECOY_04",
           "CL_SWT_DECOY_05",
           "CL_SWT_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
           {
             "speaker": "mags",
-            "text": "Three houses remain on the city grid. Run your line straight to the curb."
+            "text": "Three houses left. Run your line straight to the curb. Copper Bay can wait one more block."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "One hundred and fifty stashes logged for Crossline. Our opening campaign ledger is complete, and the master network is ready."
+        "text": "One hundred and fifty stashes logged. Our network here is closed — clean, quiet, ours."
       },
       {
         "speaker": "mags",
-        "text": "(Clangs the brass ringer) That’s the sound of a closed circuit and zero dropped packets."
+        "text": "And Copper Bay already knows it. Word from over there is their stashes run heavier than ours ever did — and every house holds more than one Plug waiting behind the door."
       },
       {
         "speaker": "switch",
-        "text": "Pack the mobile terminal. We've got another route waiting wherever the next block takes us."
+        "text": "Heavier stash, harder rooms. That's not a rumor, Mags, that's a warning."
+      },
+      {
+        "speaker": "mags",
+        "text": "Somebody's running that whole side of the water. Nobody says a name. Not yet."
+      },
+      {
+        "speaker": "switch",
+        "text": "Then we find out before we cross it. Pack the terminal — next block's not like the last ten."
       }
     ]
   }

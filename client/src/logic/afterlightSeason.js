@@ -4,9 +4,9 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
   {
     "number": 1,
     "title": "Opening Act",
-    "jobName": "Analog Split-Second Mechanical Stopwatch",
-    "reason": "Sol refuses to use digital phone timers to track runner splits, claiming analog dials have real soul.",
-    "short": "STOPWATCH",
+    "jobName": "A guestlist, half-burned, for a showcase that already happened somewhere else",
+    "reason": "Sol found it in the ash. Somebody already tried this exact idea before Afterlight did — and it didn't end well.",
+    "short": "GUESTLIST",
     "beats": {
       "1": {
         "pages": [
@@ -18,8 +18,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "sol",
             "text": "Don't just run—sprint! The getaway car is waiting and I'm timing your curb split from here."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -29,27 +28,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "vee",
-            "text": "Sol will need you at house 9. He’ll brief you before you step up to that door. For now, keep pulling bags."
+            "text": "Sol will need you at house 9. He'll brief you before you step up to that door. For now, keep pulling bags."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "Door 9. In the violet case is a dual-dial mechanical stopwatch. Grab that case and the stash before you make for the car. Both pickups are required."
+            "text": "Door 9. In the violet case is a guestlist — half-burned, handwritten, for a party I've never heard of. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "An antique stopwatch? We're taking over a city, Sol, not coaching track and field."
+            "text": "Someone already tried our idea?"
           },
           {
             "speaker": "sol",
-            "text": "That spring-wound timer tracks split seconds to the tenth, Vee! Scoop both items and sprint to the curb!"
+            "text": "And stopped mid-list. Grab both items and sprint to the curb — we're finishing what they didn't."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -106,26 +103,27 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "vee",
-        "text": "Fifteen doors cleared. The first fifteen stashes are logged for Afterlight. Our opening act is in the books."
+        "text": "Fifteen doors cleared. Our opening act is in the books."
       },
       {
         "speaker": "sol",
-        "text": "And the stopwatch came home! One piece of the showcase down—plenty more noise to make."
+        "text": "And that guestlist's got names on it I want to ask around about. Quietly, for once."
       }
     ]
   },
   {
     "number": 2,
     "title": "Neon Ink",
-    "jobName": "High-Pressure Aerosol Spray Nozzle Kit",
-    "reason": "Vee needs precision wide-fan spray nozzles to tag building-sized murals before sunrise.",
-    "short": "SPRAY NOZZLES",
+    "jobName": "A rival mural, painted over in one night, still wet under the new coat",
+    "reason": "Somebody erased somebody else's work fast and sloppy. Vee wants to know whose signature got buried.",
+    "short": "BURIED MURAL",
     "beats": {
       "1": {
         "pages": [
@@ -137,8 +135,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "vee",
             "text": "Speed is fine, but don't scramble. Make every corner look deliberate."
           }
-        ],
-        "reactive": false
+        ]
       },
       "7": {
         "pages": [
@@ -148,27 +145,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "sol",
-            "text": "I’ll need you at house 9 for a quick pickup. I’ll explain what to grab before that entrance. Keep moving."
+            "text": "I'll need you at house 9. Found something under fresh paint. I'll explain before that entrance."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "Target door. The violet case holds an anodized spray nozzle kit. You must bring that case along with the stash to extract."
+            "text": "Target door. The violet case holds somebody else's mural, photographed — buried under fresh paint, still wet. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "Fat caps and calligraphy tips. That lets me lay down six-foot violet tags in four seconds flat."
+            "text": "Buried in one night? That's a rush job, not a redo."
           },
           {
             "speaker": "sol",
-            "text": "Just don't spray my leather jacket this time! Both items to the curb, runner."
+            "text": "Somebody wanted it gone fast. Grab both items — Vee's gonna want to see this before it fully dries."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -226,26 +221,27 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "vee",
-        "text": "Thirty total stashes logged, and the entire alley is tagged in radiant violet."
+        "text": "Thirty stashes logged, and I know that signature style. Somebody's work got erased on purpose."
       },
       {
         "speaker": "sol",
-        "text": "Nobody can mistake whose block this is now. Let's roll to the next avenue."
+        "text": "Not ours to fix tonight. But Vee's not gonna forget it."
       }
     ]
   },
   {
     "number": 3,
     "title": "Amber Beacon",
-    "jobName": "High-Output Amber Strobe Beacon",
-    "reason": "Sol wants an industrial-grade amber strobe to mark the finish line of their late-night street sprint.",
-    "short": "AMBER STROBE",
+    "jobName": "A flyer for a showcase that never happened, dated last year",
+    "reason": "Someone promised this block a night like the one Afterlight's building — and never showed up. Sol hates being compared to a no-show.",
+    "short": "OLD FLYER",
     "beats": {
       "4": {
         "pages": [
@@ -255,27 +251,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "vee",
-            "text": "Sol will need a favor at house 9. He’ll lay out the pickup before you take that entrance. Keep moving."
+            "text": "Sol's got a favor at house 9. He'll lay out the pickup before you take that entrance."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "Door 9. In the violet case is a heavy amber emergency strobe. Both the case and the stash must reach the car."
+            "text": "Door 9. Flyer in the violet case, for a showcase — dated over a year ago. Never happened, near as I can tell. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "An amber strobe? It's completely going to clash with our violet aesthetic, Sol."
+            "text": "Someone promised this block a night and never showed up."
           },
           {
             "speaker": "sol",
-            "text": "It flashes at four hundred lumens! When runners hit the curb, they'll know exactly where the finish line is. Bring both!"
+            "text": "Which means we're the first ones who actually will. Grab both items, runner — I want that flyer next to ours for comparison."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -327,7 +321,8 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_SOL_DECOY_03",
           "AL_SOL_DECOY_04",
           "AL_SOL_DECOY_05"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
@@ -335,8 +330,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "vee",
             "text": "Three houses left. Close this commercial strip with style."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
@@ -346,59 +340,44 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
       },
       {
         "speaker": "sol",
-        "text": "Strobe beacon is secured. That light is going to blind the whole street when we fire it up."
+        "text": "Whoever flaked on that old showcase, I hope they're watching this one."
       }
     ]
   },
   {
     "number": 4,
     "title": "Bass Drop",
-    "jobName": "Parametric Sound Equalizer Rack",
-    "reason": "Sol wants to balance the low-end subwoofers in the getaway van so the bass rattling doesn't blow out the speakers.",
-    "short": "EQUALIZER",
+    "jobName": "A rolled-up portfolio, edges soft from being carried too long",
+    "reason": "It's Vee's. From an art program that rejected her application twice. She still has the letter folded inside it.",
+    "short": "PORTFOLIO",
     "beats": {
       "1": {
         "pages": [
           {
-            "speaker": "sol",
-            "text": "Too many street advertisements humming out here. We need real music on this block."
-          },
-          {
             "speaker": "vee",
-            "text": "Music comes after the run. Clear the porches and keep the getaway clean."
-          }
-        ],
-        "reactive": false
-      },
-      "7": {
-        "pages": [
-          {
-            "speaker": "sol",
-            "text": "Six houses cleared. Keep bringing them out."
+            "text": "Wide sidewalks on this block. Keep it clean, keep it quick."
           },
           {
             "speaker": "sol",
-            "text": "I’ll need you at house 9. Found something loud for the sound rig. I’ll brief you before you go in."
+            "text": "Copy. I'll hang back on the jokes tonight."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
+            "speaker": "vee",
+            "text": "Door 9. It's — my old portfolio, in the violet case. Sketches from before any of this. Grab the case and the stash."
+          },
+          {
             "speaker": "sol",
-            "text": "Door 9. In the violet case is a pro-grade parametric audio equalizer. Carry both the case and the stash to the getaway car."
+            "text": "The one from the program?"
           },
           {
             "speaker": "vee",
-            "text": "An audio processor? You really can't go five minutes without rattling windows, can you?"
-          },
-          {
-            "speaker": "sol",
-            "text": "You can't have a street showcase without chest-thumping bass, Vee! Bring both items to the trunk, runner!"
+            "text": "The one that said no twice. Grab it and the bag, runner. Both come out — I've carried worse without dropping it, I can carry this."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -456,26 +435,47 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
+        ],
+        "minChapter": 0
+      },
+      "7": {
+        "pages": [
+          {
+            "speaker": "vee",
+            "text": "Three houses cleared. Keep bringing them out."
+          },
+          {
+            "speaker": "vee",
+            "text": "House 9's mine this time, Sol. I'll explain before that door."
+          }
         ]
       }
     },
     "finish": [
       {
         "speaker": "vee",
-        "text": "Sixty doors cleared in {city}. Retail district is officially claimed under Afterlight."
+        "text": "Sixty doors cleared. Portfolio's home."
       },
       {
         "speaker": "sol",
-        "text": "Equalizer is wired in. The van’s audio hits so hard it shook the mirror right off the windshield."
+        "text": "For what it's worth — every wall you've tagged since is better than anything in a program that said no to you twice."
+      },
+      {
+        "speaker": "vee",
+        "text": "...Don't make this weird, Sol."
+      },
+      {
+        "speaker": "sol",
+        "text": "Too late. Already weird. Moving on."
       }
     ]
   },
   {
     "number": 5,
     "title": "Signature Pattern",
-    "jobName": "Laser-Cut Mylar Stencil Portfolio",
-    "reason": "Vee's multi-layered crew logo stencils were left behind in an abandoned safe house.",
-    "short": "STENCIL BINDER",
+    "jobName": "A photograph of a mural that's since been torn down, a face scratched out of it",
+    "reason": "Somebody didn't want to be remembered standing in front of that wall. Vee wants to know why.",
+    "short": "OLD PHOTO",
     "beats": {
       "1": {
         "pages": [
@@ -487,8 +487,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "sol",
             "text": "Quick steps across the grass, grab the bag, and sprint for the street."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -498,27 +497,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "vee",
-            "text": "Sol will need a hand at house 9. He’ll explain what we're pulling before you take that entrance. Stay on task."
+            "text": "Sol will need a hand at house 9. He'll explain what we're pulling before you take that entrance."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "House 9. Inside the violet case is Vee’s laser-cut Mylar stencil binder. Both the case and the stash must reach the car."
+            "text": "House 9. The violet case holds a photograph of a mural that's gone now. Somebody scratched a face out of the picture. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "My multi-layer logo masters. With those, we can drop forty clean crew insignias in under an hour."
+            "text": "On purpose?"
           },
           {
             "speaker": "sol",
-            "text": "Don't bend the plastic sheets, runner! Grab the case, grab the bag, and sprint!"
+            "text": "Deep enough to tear the paper. Grab the case, grab the bag, and sprint — I want Vee's eyes on this before we lose the light."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -576,7 +573,8 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
@@ -586,16 +584,16 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
       },
       {
         "speaker": "sol",
-        "text": "And Vee’s stencils are back where they belong. The whole city is about to get painted."
+        "text": "Whoever's in that photo didn't want to be found. Somebody found them anyway."
       }
     ]
   },
   {
     "number": 6,
     "title": "High Glow",
-    "jobName": "High-Voltage Solid-State Neon Transformer",
-    "reason": "Vee needs a dedicated 12kV solid-state transformer to power the glowing violet logo display at the event stage.",
-    "short": "NEON UNIT",
+    "jobName": "A recording, cued up, of somebody badmouthing Afterlight's showcase to a paying crowd",
+    "reason": "Somebody from Iron Row's been telling people the showcase is a cover for something smaller. Sol wants it played back loud enough for them to hear their own voice.",
+    "short": "RECORDING",
     "beats": {
       "4": {
         "pages": [
@@ -607,38 +605,23 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "vee",
             "text": "Darkness just means our neon stands out brighter. Clear the porches and keep running."
           }
-        ],
-        "reactive": false
-      },
-      "7": {
-        "pages": [
-          {
-            "speaker": "vee",
-            "text": "Six houses cleared. Keep bringing them out."
-          },
-          {
-            "speaker": "sol",
-            "text": "I’ll need you at house 9 for a power unit. I’ll explain before that entrance. Keep pulling stashes."
-          }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "Door 9. In the violet case is a solid-state neon transformer. You must bring that case along with the stash to extract."
+            "text": "Door 9. The violet case holds a recording — a Row guy, telling a whole bar our showcase is smaller than it looks. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "Twelve thousand volts of pure cold illumination. That will light our stage from four blocks away."
+            "text": "Small? Iron Row can barely fill a garage bay."
           },
           {
             "speaker": "sol",
-            "text": "Just don't touch the secondary terminals unless you want your hair permanently spiked! Both to the car, runner."
+            "text": "Grab the case and the bag, runner. I want this cued up loud enough that whoever said it hears it come back around."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -696,6 +679,19 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
+        ],
+        "minChapter": 0
+      },
+      "7": {
+        "pages": [
+          {
+            "speaker": "sol",
+            "text": "Six houses cleared. Keep bringing them out."
+          },
+          {
+            "speaker": "vee",
+            "text": "Sol will need you at house 9. He found something that's got him uneasy. He'll brief you there."
+          }
         ]
       }
     },
@@ -706,16 +702,16 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
       },
       {
         "speaker": "sol",
-        "text": "Transformer is mounted. When we flip that switch, {city} will see our glow from space."
+        "text": "Let Iron Row talk about us in a garage. We'll be the ones lighting up the block they can't stop looking at."
       }
     ]
   },
   {
     "number": 7,
     "title": "The Split Timer",
-    "jobName": "Optical Beam Gate Telemetry Sensor",
-    "reason": "Sol wants professional infrared timing gates to clock foot-sprint records across their finish line.",
-    "short": "TIMING GATE",
+    "jobName": "A stopwatch, professional grade, still running from whoever dropped it last",
+    "reason": "Somebody was timing something on this block before Sol ever showed up. He wants to know what.",
+    "short": "STOPWATCH",
     "beats": {
       "1": {
         "pages": [
@@ -727,8 +723,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "sol",
             "text": "Long open straightaways out here! Let's see some serious foot speed."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -738,27 +733,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "vee",
-            "text": "Sol will need you at house 9. He found a precision telemetry unit. He’ll brief you before you enter."
+            "text": "Sol found a timing rig. He'll brief you at house 9."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "House 9. In the violet case is an optical beam-break timing gate. Both pickups—case and stash—are mandatory."
+            "text": "House 9. Stopwatch in the violet case, still running. Somebody was clocking something here before we ever showed up. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "Laser timing gates? Sol, you're turning our street showcase into a drag strip."
+            "text": "Clocking what, exactly?"
           },
           {
             "speaker": "sol",
-            "text": "Because speed matters, Vee! When runners sprint to the car, I want the exact numbers on display. Grab both items!"
+            "text": "Don't know yet. But it's been running for hours — whatever they were timing, they never came back to stop it. Grab both items!"
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -816,26 +809,27 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
         "speaker": "vee",
-        "text": "One hundred and five stashes logged for Afterlight. The timing gates are home and ready for the showcase."
+        "text": "One hundred and five stashes logged for Afterlight."
       },
       {
         "speaker": "sol",
-        "text": "Timing gates are calibrated! Next runner who hits the curb gets their split time beamed to the big screen."
+        "text": "Still running when we got it in the van. I finally stopped it myself. Felt weird doing that."
       }
     ]
   },
   {
     "number": 8,
     "title": "The Sound Horn",
-    "jobName": "Cast-Aluminum Public Address Horn",
-    "reason": "Sol wants a weatherproof cast-metal megaphone horn to blast track callouts across the harbor.",
-    "short": "PA HORN",
+    "jobName": "A megaphone, already rigged, playing someone else's message on a loop",
+    "reason": "It was a warning, not an invitation, when they found it running. Sol wants to know who it was meant for.",
+    "short": "MEGAPHONE LOOP",
     "beats": {
       "7": {
         "pages": [
@@ -845,27 +839,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "sol",
-            "text": "I’ll need you at house 9. I found something loud to wake up the whole canal. I'll brief you before you enter."
+            "text": "I'll need you at house 9. Found something loud, already running. I'll brief you before you enter."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "House 9. In the violet case is a cast-aluminum megaphone horn. Carry both the case and the stash out to the car."
+            "text": "House 9. The violet case holds a megaphone, already rigged, playing a message on a loop when I got there. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "A megaphone horn? As if your normal speaking voice wasn't already audible across three precincts."
+            "text": "What's it say?"
           },
           {
             "speaker": "sol",
-            "text": "This baby throws sound across half a mile of open water! Grab the case, grab the bag, and haul it to the street!"
+            "text": "Something about staying off a corner that isn't marked as anybody's. Grab the case, grab the bag, and haul it out — I want to hear the rest of this in the van."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -924,7 +916,8 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_SOL_DECOY_04",
           "AL_SOL_DECOY_05",
           "AL_SOL_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
@@ -932,27 +925,26 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "vee",
             "text": "Three houses remain. Finish the canal line and bring the haul back."
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
         "speaker": "vee",
-        "text": "One hundred and twenty houses logged. Canal sector is secured under Afterlight's colors."
+        "text": "One hundred and twenty houses logged."
       },
       {
         "speaker": "sol",
-        "text": "(Speaks through the megaphone) TESTING ONE TWO! The entire harbor can hear us now!"
+        "text": "Message looped forty more times before I finally cut the power. Whoever recorded it really wanted it heard."
       }
     ]
   },
   {
     "number": 9,
     "title": "The Chrome Grip",
-    "jobName": "Custom Anodized Billet Shift Knob",
-    "reason": "Sol wants the weighted violet shift knob from an old street racer to complete the getaway car's cockpit.",
-    "short": "SHIFT KNOB",
+    "jobName": "A regional track medal, scratched, in a box that hasn't been opened in years",
+    "reason": "Sol's. From before whatever happened stopped him running for real. He's never told Vee the rest of it.",
+    "short": "TRACK MEDAL",
     "beats": {
       "1": {
         "pages": [
@@ -962,10 +954,9 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "sol",
-            "text": "From up here, our violet tags look like a neon constellation across the lower avenues."
+            "text": "(quieter than usual) Yeah. Copy that."
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -975,27 +966,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "sol",
-            "text": "Look at that vista! {city} is practically primed for our finale."
+            "text": "House 9's mine. I'll explain before that door. Don't make it a thing, Vee."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "Door 9. In the violet case is a weighted violet anodized shift knob. Both the case and the stash must reach the car."
+            "text": "Door 9. It's a medal, in the violet case. Regional. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "A shift knob? You made our runner search a burglary house for cockpit jewelry?"
+            "text": "From when, Sol?"
           },
           {
             "speaker": "sol",
-            "text": "It's four hundred grams of billet aluminum and it matches our crew violet, Vee! Both items to the curb!"
+            "text": "Before whatever. Both come out, runner. That's the whole story you're getting tonight."
           }
-        ],
-        "reactive": false
+        ]
       },
       "13": {
         "pages": [
@@ -1053,26 +1042,39 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       }
     },
     "finish": [
       {
+        "speaker": "sol",
+        "text": "One hundred and thirty-five stashes cleared."
+      },
+      {
         "speaker": "vee",
-        "text": "One hundred and thirty-five stashes cleared. Granite Ridge is secure and our palette dominates the skyline."
+        "text": "You've never once mentioned you actually ran track."
       },
       {
         "speaker": "sol",
-        "text": "Shift knob is screwed onto the stick! The getaway car feels like a proper rocket now."
+        "text": "Because I don't. Not anymore. I just time other people doing it instead."
+      },
+      {
+        "speaker": "vee",
+        "text": "...Okay. I'm not gonna push."
+      },
+      {
+        "speaker": "sol",
+        "text": "Appreciate that. Ask me again in a year."
       }
     ]
   },
   {
     "number": 10,
     "title": "Midnight Klaxon",
-    "jobName": "Antique Dual-Rotor Motorized Air-Raid Siren",
-    "reason": "Sol wants an overwhelming mechanical siren to trigger the grand opening of their midnight street takeover.",
-    "short": "AIR-RAID SIREN",
+    "jobName": "A hand-delivered invitation to a showcase across the water that Afterlight didn't organize",
+    "reason": "Somebody in Copper Bay already knows Afterlight's name — and wants them to know the water doesn't stop them.",
+    "short": "INVITATION",
     "beats": {
       "1": {
         "pages": [
@@ -1082,10 +1084,9 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "sol",
-            "text": "Every light, every speaker, every strobe is wired and waiting. Let’s close this out!"
+            "text": "Every light, every speaker, every strobe is wired and waiting. Let's close this out!"
           }
-        ],
-        "reactive": false
+        ]
       },
       "4": {
         "pages": [
@@ -1095,27 +1096,25 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "vee",
-            "text": "Sol will need you at house 9. He won't tell me what it is, but he’ll brief you before you go in."
+            "text": "Sol got handed something weird tonight. He'll explain before house 9."
           }
-        ],
-        "reactive": false
+        ]
       },
       "9": {
         "pages": [
           {
             "speaker": "sol",
-            "text": "Door 9. In the violet case is a motorized dual-rotor air-raid siren. Grab that case and the stash—both pickups are mandatory."
+            "text": "Door 9. In the violet case is an invite, hand-written, to a showcase in Copper Bay. We didn't send it, and we're not the ones running it. Grab the case and the stash."
           },
           {
             "speaker": "vee",
-            "text": "An air-raid siren? Sol, that will wake up the entire eastern seaboard!"
+            "text": "Then who is?"
           },
           {
             "speaker": "sol",
-            "text": "Exactly! When we claim {city}, I want the whole harbor shaking! Bring the case to the car!"
+            "text": "Didn't say. Just said our name, like they already know it. Grab the case and the bag."
           }
-        ],
-        "reactive": false
+        ]
       },
       "10": {
         "pages": [
@@ -1173,7 +1172,8 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           "AL_VEE_DECOY_04",
           "AL_VEE_DECOY_05",
           "AL_VEE_DECOY_06"
-        ]
+        ],
+        "minChapter": 0
       },
       "13": {
         "pages": [
@@ -1181,22 +1181,29 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
             "speaker": "sol",
             "text": "Three houses remain on the city grid. Run your line straight to the curb!"
           }
-        ],
-        "reactive": false
+        ]
       }
     },
     "finish": [
       {
         "speaker": "vee",
-        "text": "One hundred and fifty stashes logged for Afterlight. The opening campaign is complete. Every piece of the midnight showcase is home."
+        "text": "One hundred and fifty stashes logged for Afterlight. The opening campaign is complete."
       },
       {
         "speaker": "sol",
-        "text": "(Wails the siren) AWOOO-GA! That is the sound of absolute victory!"
+        "text": "And Copper Bay already knows our name before we've set foot over there."
       },
       {
         "speaker": "vee",
-        "text": "Pack the sound truck, Sol. Our next set starts wherever the next block takes us."
+        "text": "The invite says the stashes run bigger on that side. Bigger stash, more security behind every door — more than one Plug, easy."
+      },
+      {
+        "speaker": "sol",
+        "text": "Somebody's throwing that whole showcase. Nobody signed the invitation."
+      },
+      {
+        "speaker": "vee",
+        "text": "Then we find out who before we walk into their room. Pack the sound truck, Sol. Copper Bay's about to meet us on our terms, not theirs."
       }
     ]
   }
