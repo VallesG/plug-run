@@ -385,9 +385,8 @@ export class MenuScene extends Phaser.Scene {
     const cont = this.add.container(0,0).setSize(a.menuW,a.rowH+a.rowGap).setDepth(3);
     cont.modeKey = 'runner';
     cont.runKind = 'journey';
-    const destination = this.firstPlayDestination();
-    const label = destination === 'TUTORIAL_MINI' ? 'Start Tutorial' : destination === 'WINDOW' ? 'Join a Crew' : 'Run the Block';
-    const start = this.makeTitleOption(label, () => this.launchCard(cont));
+    // Keep the front door consistent; launchCard still applies onboarding policy.
+    const start = this.makeTitleOption('PLAY', () => this.launchCard(cont));
     cont.add(start);
     cont._startBg = start._bg;
     cont._startText = start._text;
@@ -1504,7 +1503,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   makeTutorialButton(){
-    return this.makeTitleOption('Tutorial', () => {
+    const button = this.makeTitleOption('Tutorial', () => {
       // Fade out street sounds
       this.fadeOutStreetSounds();
 
@@ -1523,6 +1522,19 @@ export class MenuScene extends Phaser.Scene {
         this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
       });
     });
+    this._tutorialHintNeeded = !hasCompletedTutorial() && campaignStashes() < 1;
+    this._tutorialHintArrow = null;
+    if (this._tutorialHintNeeded) {
+      const a = landingLayout(this.scale.width, this.scale.height);
+      const arrow = this.add.graphics().fillStyle(0x9bcdfb, 1);
+      arrow.fillTriangle(-7, -7, 3, 0, -7, 7);
+      arrow.fillRect(-13, -2, 8, 4);
+      arrow.setPosition(-a.menuW / 2 + 23, 0);
+      button.add(arrow); // Decorative only: no interactive hit area.
+      this._tutorialHintArrow = arrow;
+      this._tutorialHintReducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    }
+    return button;
   }
 
   makeChip(text, color){
@@ -2769,7 +2781,15 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(){
-    // Slow lane-dash scroll for ambient motion
+    const arrow = this._tutorialHintArrow;
+    if (!arrow?.active || !this._tutorialHintNeeded) return;
+    // Menu overlays already use depths 50+. Keep the hint quiet behind them.
+    const overlay = this.children.list.some(child => child.active && child.visible && child.depth >= 50);
+    arrow.setVisible(!overlay);
+    if (!overlay) {
+      const pulse = this._tutorialHintReducedMotion ? 1 : 0.65 + 0.35 * Math.sin(this.time.now * Math.PI / 900);
+      arrow.setAlpha(pulse);
+    }
   }
 
   reposition(){
