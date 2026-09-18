@@ -3052,6 +3052,11 @@ export class TutorialMiniScene extends Phaser.Scene {
       if (this.overlaps(this.runner, this.extractPad)) this.playCarDepartAndGoNext();
     } else if (this.stageIdx === 2){
       if (!this.hasPackage){
+        // The first touched bag teaches BUNK, regardless of the chosen route.
+        // After it dissolves, the remaining bag becomes the real stash.
+        if (this.bunkStash && this.stash && this.overlaps(this.runner, this.stash)) {
+          [this.stash, this.bunkStash] = [this.bunkStash, this.stash];
+        }
         if (this.stash && this.overlaps(this.runner, this.stash)){
           this.hasPackage = true;
           this.addCarry();
