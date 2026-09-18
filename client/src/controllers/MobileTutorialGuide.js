@@ -43,7 +43,9 @@ export function createMobileTutorialGuide(scene, stage) {
   const arrow=target=>{
     if(!target||target.active===false||target.visible===false)return;
     const t=screenPoint(target),z=cam?.zoom||1;
-    const offsets=[{x:2.8,y:1},{x:-2.8,y:1},{x:0,y:2.8},{x:0,y:-2.8}];
+    const offsets=target===scene.car
+      ?[{x:5,y:0},{x:-5,y:0},{x:0,y:5},{x:0,y:-5}]
+      :[{x:2.8,y:1},{x:-2.8,y:1},{x:0,y:2.8},{x:0,y:-2.8}];
     const candidates=offsets.map(d=>({x:target.x+d.x*scene.cell,y:target.y+d.y*scene.cell}));
     const floor=p=>{
       const screen=screenPoint(p);
@@ -82,7 +84,7 @@ export function createMobileTutorialGuide(scene, stage) {
   };
   guide.tick=(delta)=>{
     if(guide.done)return false;
-    if(scene._transitioning){ink.clear();ring.clear();copy.setText('');restoreCamera();return false;}
+    if(scene._transitioning||scene._carDeparting){ink.clear();ring.clear();copy.setText('');gestureLabel.setText('');restoreCamera();return false;}
     guide.elapsed+=Math.min(100,Math.max(0,delta));
     ink.clear();ring.clear();gestureLabel.setText('');
     if(guide.phase==='intro'||guide.phase==='reveal'){
@@ -137,7 +139,7 @@ export function createMobileTutorialGuide(scene, stage) {
     if(stage===1){
       targets=[scene.car];floatCopy('Reach the lit getaway car.\nSwipe anywhere to turn.',targets);
     }else if(stage===2){
-      targets=scene.hasPackage?[scene.car]:scene.bunkStash?[scene.stash,scene.bunkStash]:[];
+      targets=scene.hasPackage?[scene.car]:scene.bunkStash?[scene.stash,scene.bunkStash]:[scene.stash];
       floatCopy(scene.hasPackage?'That is the real stash. Bring it to the car.':
         (!scene.bunkStash||scene.bunkStash.active===false)?'Bunk bags disappear. Pick up the other bag.':
         'Pick up a bag. One is real; one is bunk.',targets);

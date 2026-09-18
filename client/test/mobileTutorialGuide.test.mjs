@@ -45,8 +45,9 @@ eq(b.waitingSwipe,true);eq(bags.cameras.main.zoom,1);eq(bags.cameras.main.useBou
 eq(b.swipe({x:1,y:0},80),true);eq(b.phase,'stash');
 b.tick(16);eq(bags.circles.slice(-2),[[40,50],[60,70]]);
 bags.bunkStash=null;const ringsBefore=bags.circles.length;b.tick(16);
-eq(bags.texts.at(-1),'Bunk bags disappear. Pick up the other bag.');eq(bags.circles.length,ringsBefore);
-bags.hasPackage=true;b.tick(16);eq(bags.circles.at(-1),[100,200]);b.destroy();
+eq(bags.texts.at(-1),'Bunk bags disappear. Pick up the other bag.');eq(bags.circles.length,ringsBefore+1);eq(bags.circles.at(-1),[40,50]);
+bags.hasPackage=true;b.tick(16);eq(bags.circles.at(-1),[100,200]);
+bags._carDeparting=true;const beforeDeparture=bags.circles.length;eq(b.tick(16),false);eq(bags.circles.length,beforeDeparture);eq(bags.texts.at(-1),'');b.destroy();
 const powers=fixture(),p=createMobileTutorialGuide(powers,3);
 eq(p.waitingSwipe,true);p.tick(16);eq(powers.runnerPowersConsumed,[false,false]);
 eq(p.swipe({x:0,y:1},80),true);eq(p.phase,'powerCoast');
