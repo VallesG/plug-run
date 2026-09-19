@@ -1,3 +1,162 @@
+## Completion drum roll swap — Codex (2026-09-19)
+
+success1.mp3 (3.29s, 51KB) is replaced by success1.wav (4.21s, 725KB, stereo
+44.1k). The completion sequence places horns/applause from the roll's own
+.duration, which is wrong for this asset: measured on the waveform it
+crescendos at 1.70s, hits near 1.78s, falls to 2% of peak by 2.30s and is
+inaudible past roughly 2.5s. The remaining 1.7s is silence, so an uncapped
+cue fired at 3.96s, out in dead air.
+
+SUCCESS_CUE_LATEST_S (3.04s) now caps it: the payoff lands at the end of the
+roll or at 3.04s, whichever is first. 3.04s is where it landed on the previous
+roll, so pacing is unchanged. The cap only clamps — a roll shorter than it
+still drives its own cue, asserted in musicPlaylist so this cannot silently
+degrade into a fixed delay. SUCCESS_OVERLAP_MS (250) and SUCCESS1_FALLBACK_S
+(now 4.21) are unchanged in meaning.
+
+Not yet heard on a device. The cue may still want moving to ~2.0s so the horns
+land on the hit rather than half a second after the roll goes quiet; that is
+one constant. Trimming the silent tail instead would restore duration-derived
+timing and cut the file to roughly 400KB (mono would halve it again).
+
+## Leaderboard gated behind a coming-soon note — Codex (2026-09-19)
+
+Boards are not live, so both routes into them are closed. The footer trophy is
+drawn dimmed (muted icon, softer stroke, no hover glow, default cursor) but
+deliberately keeps its hit area: tapping it pins a "Leaderboards coming soon!"
+note beside it for two seconds via MenuScene.showComingSoonNote, which anchors
+left of the control and flips right only if the left edge would leave the
+screen. The carousel card takes the same gate through the existing toast that
+Street Wars already uses, so the two entry points cannot disagree.
+
+LeaderboardScene is untouched and still registered; nothing routes to it, which
+makes re-enabling a one-line change. The leaderboard v2 backend from
+2026-09-18 (packed stash board with REP tiebreak, Rivals wins board,
+admin-gated wipe) is intact and unused. leaderboard.test.mjs asserts both gates
+and that no route into the scene survives; it fails against the previous menu.
+Checked on a real 390x844 build, not just in tests.
+
+## First-run copy readability — Codex (2026-09-19)
+
+Both first-run pickers put explanatory copy in 9-12px grey. Power card
+descriptions are now two short lines at 13px (10px on a genuinely narrow card)
+in higher-contrast ink, and they wrap to the CARD rather than the whole panel —
+that wrap width was a pre-existing bug that allowed copy to run past its own
+card. Slot labels, the help line and button labels each moved up a size.
+Measured every line against its wrap column from 320px to 1440px: widest is
+81px against an 89px column, so nothing wraps to a third line.
+
+Crew cards previously carried a long vibe pitch plus a motto. Both are gone.
+WINDOW_GANGS drops `motto` and `pitch` and gains `story`, a one-sentence
+Season 1 hook ("A dead channel, and the crew that vanished on it."), rendered
+at 12.5px as the card's only body line — 11px when the column is under 175px.
+The hub's YOUR GANG panel now uses `story` too, since `motto` no longer exists.
+Hooks are cut to land in two lines at the narrowest card and one line from
+414px up, so the old drop-to-a-shorter-string fallback is gone.
+
+runnerLoadout (90) and window (201) assert floors so this cannot regress: a
+10px minimum with a 14-character-per-line cap on power descriptions, 11px plus
+a one-short-sentence cap on crew copy. The loadout test harness had been
+discarding the text style argument, making font size unassertable; it records
+it now, and the floor was confirmed to fail against the old sizes.
+
+## Tutorial line timing — Codex (2026-09-19)
+
+Lesson 1 flashed "Lift your finger. You keep moving." for 650ms between the
+first and second swipe. Removed, along with its stage-3 twin before the power
+lesson; both beats hand straight to the next prompt, still travelling.
+
+That leaves the two opening reveals as the only tutorial copy a clock can
+dismiss, since the camera is moving and there is nothing to act on. Their holds
+now derive from the copy (readMs: words * 300 + 1200, floored at 2200ms, capped
+at 6000ms) rather than hardcoded numbers. The bags line — ten words, previously
+pulled after 1800ms — now holds 4200ms. Everything else was already gated on
+the player: swipe prompts wait for a swipe, the power prompt for a double tap,
+objective lines until the objective is met.
+
+mobileTutorialGuide (100) asserts the principle rather than the numbers: the
+bags line is still up at the old 1800ms cutoff, the second swipe prompt
+survives six seconds of ticks, the power prompt eight, and neither coast string
+appears in stage 1 or 3.
+
+## Steering and movement now shared with the tutorial — Codex (2026-09-19)
+
+Read this before touching steering. TutorialMiniScene never used
+PlayerController; it carried a hand-copy that had drifted, in places still
+claiming MAIN-GAME PARITY for behavior the real game had changed. The maths now
+lives in two zero-import modules both callers use:
+client/src/logic/runnerSteering.js (runnerDragVector, runnerDragStep,
+releaseCardinal, MOVE_MAX_PX, MOVE_DEAD_PX) and
+client/src/logic/gridMovement.js (resolveGridMovement — sub-stepping, cornering
+assist, corner unstick). Edit either and both the game and the tutorial change.
+
+Five divergences closed: the tutorial had no cardinal preference or angular
+hysteresis, cardinal-snapped every release (destroying committed diagonals,
+already fixed in the game), had no steerToLane at all so corners caught, did
+not clear a previous gesture's drag commit, and — directly extending the
+2026-09-17 mobile steering drift entry — switched corridor assist off within 3
+cells of the stage-4 Plug. That `nearAIPlug` cutoff was the same class of bug
+removed from PlayerController then, surviving in the copy. Gone; lane centering
+is geometry and the assist setting only.
+
+Hoisting the committed-drag branch above tap classification matters: the
+floating re-anchor drags the gesture origin with the finger, so a long
+committed drag can release with a tiny `moved` and short `dt` and be misread as
+a tap, spending a power. endSwipe checks the commit first and the tutorial now
+does too. tutorialControlParity (418) drives the actual tutorial source against
+the actual PlayerController and fails against the pre-change tutorial.
+
+## Drag steering: hysteresis cliff and corner turns — Codex (2026-09-19)
+
+Two real defects in the cardinal-preference experiment, both reproduced before
+being changed.
+
+A held cardinal survived drift to 28 degrees but escaping that hold fell
+through to the tighter fresh bands (22 / ~15 degrees), so a smooth 1-degree
+-per-step drag with no new gesture jumped from (1,0) at 28 degrees to an
+arbitrary (0.875, 0.485) at 29. A broken hold now classifies with the same
+width as the hold it left, so leaving one snap lands in the contiguous next
+one; a genuinely fresh gesture keeps its original bands and free-angle gap.
+
+Corner turns went diagonal because the floating anchor trails MOVE_MAX_PX
+behind along the OLD heading: after a square turn it sits 56px to the side and
+anchor->finger stays diagonal. Measured pre-fix, running up a corridor then
+turning right: still "up" for 29px, an up-right diagonal from 30 to 80px, and
+"right" only after 81px of sideways travel. runnerDragStep now watches recent
+travel and re-anchors to where a turn began once 14px is covered on a heading
+45-135 degrees off the current one. Square corners read "right" after 24px with
+no diagonal; sloppy ~70 degree corners turn cleanly; sustained diagonals and
+straight drags never trip it. Two guards earn their keep and both exist because
+the first cut broke behavior the suite already protected: the 45-135 band
+(travel back along the heading is a thumb easing off toward the anchor, and
+re-anchoring there turns "pull back to centre" into "steer the opposite way"),
+and a two-moved-sample minimum (one outsized delta from a dropped frame is not
+a new heading). dragSteering is 321 assertions.
+
+Separately, the reported "nearby Plug nudges the runner" was investigated and
+ruled out for the real game: runnerPlugProximity (400) drives the actual
+controller, corridorAssist and PlugAI against a real wall grid with a Plug at 8
+angles and 3 distances, near/far/absent, through corners, held-drag and release
+continuation, and dual-Plug House 15 using BaseGameScene's defender-swap. Every
+trace is byte-identical regardless of the Plug. The tutorial's `nearAIPlug`
+above was the only real instance and is gone.
+
+## State of master — Codex (2026-09-19)
+
+master is at 6622134 and equals claude/input-intent-layer; every fast-forward,
+no force-push. npm run verify (full suite plus production build) passed before
+each push. Shipped since 2026-09-17: the three-stage completion celebration and
+the 4th gameplay beat, the Season 1 narrative rewrite, leaderboard v2 backend
+(unused, gated), all steering and tutorial work above.
+
+Two things are live but have never had a device pass, both from e1c507a: the
+campaign Plug difficulty curve (houses 9-15 at speed 91-103, fire intervals to
+0.94s, houses 4-8 45-55% doublebarrel) and the tightened campaign extraction
+box (carExtractionOverlap went from half-sensor+12px to 36%+6px). If players
+report bouncing off the getaway car, that second one is the cause and widening
+it is a one-line change in logic/getawayCar.js. They are independent of the
+steering commits, so `git revert e1c507a` is clean if the curve is wrong.
+
 ## Music shuffle and moment cues — Codex (2026-09-17)
 
 Friends' existing main_beat, plug_beat2 and learn_beat assets are unchanged.
