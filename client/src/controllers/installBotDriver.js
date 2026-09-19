@@ -311,6 +311,27 @@ function installRoundLock(cfg) {
 }
 
 /**
+ * Harness-only handle on the running game.
+ *
+ * __plugRunLiveScene only appears once a BaseGameScene is ticking, so a
+ * capture rig has no way to observe the menu, The Window, or any transition
+ * between them. MenuScene.create always runs and carries this.sys.game, so
+ * one wrap there hands the harness the SceneManager for the whole session.
+ *
+ * Observation only: nothing here drives the game. Capture tooling still has
+ * to click, exactly like a player. Bot-gated, so production never reaches it.
+ */
+function installSceneHandle() {
+  const origCreate = MenuScene.prototype.create;
+  MenuScene.prototype.create = function () {
+    window.__plugRunGame = this.sys.game;
+    window.__plugRunScenes = () =>
+      this.sys.game.scene.scenes.filter((s) => s.scene.isActive()).map((s) => s.scene.key);
+    return origCreate.call(this);
+  };
+}
+
+/**
  * Wrap BaseGameScene.prototype.update so the bot ticks after the scene's own
  * update. Guarded so hot-reload can't stack wrappers on top of each other.
  *
@@ -333,6 +354,7 @@ export function installBotDriver() {
   activeConfig = { ...DEFAULTS, ...cfg };
   installModalAutoDismiss(cfg);
   installRoundLock(cfg);
+  installSceneHandle();
   if (rec) installRivalsRecorder(rec, cfg);
   const origUpdate = BaseGameScene.prototype.update;
 
