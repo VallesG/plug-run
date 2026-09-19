@@ -115,8 +115,12 @@ export class MenuScene extends Phaser.Scene {
     // Settings lives in the main vertical title menu
     this.settingsBtn = this.makeTitleOption('Settings', () => this.openSettings());
 
-    // Leaderboard button for mobile (trophy icon - only visible on mobile)
-    this.leaderboardBtn = this.makeIconButton('trophy', () => this.scene.start('LEADERBOARD'));
+    // Leaderboard button (trophy icon). Boards are not live yet, so the
+    // control is dimmed and answers a tap with a note rather than opening a
+    // screen full of nothing.
+    this.leaderboardBtn = this.makeIconButton('trophy',
+      () => this.showComingSoonNote(this.leaderboardBtn, 'Leaderboards coming soon!'),
+      { dimmed: true });
 
     // Help button — explains the premise/leaderboard/replays for newcomers
     this.helpBtn = this.makeIconButton('?', () => this.openHelp());
@@ -1467,40 +1471,76 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  makeIconButton(label, onClick){
+  makeIconButton(label, onClick, { dimmed = false } = {}){
     const H = this.scale.height;
     // Clamp: uncapped height-scaling made these balloon on desktop
     const r = Math.min(21, Math.max(18, Math.floor(H * 0.024)));
-    const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, 0.92)
-      .setStrokeStyle(2, PALETTE.stroke)
-      .setInteractive({ cursor: 'pointer' });
+    const bg = this.rexUI.add.roundRectangle(0, 0, r*2, r*2, r, PALETTE.panel, dimmed ? 0.55 : 0.92)
+      .setStrokeStyle(2, dimmed ? 0x232838 : PALETTE.stroke)
+      .setInteractive({ cursor: dimmed ? 'default' : 'pointer' });
     let t;
     if (label === 'settings') {
       t = drawPowerIcon(this, 0, 0, 'settings', 21, 0xb7c7cc, 6);
     } else if (label === 'trophy') {
       t = this.add.graphics();
-      t.lineStyle(2, 0xf1ca82, 1);
+      t.lineStyle(2, dimmed ? 0x5b6472 : 0xf1ca82, 1);
       t.strokeRect(-5, -8, 10, 10);
       t.lineBetween(-8, -7, -8, -1); t.lineBetween(-8, -1, -5, 1);
       t.lineBetween(8, -7, 8, -1); t.lineBetween(8, -1, 5, 1);
       t.lineBetween(0, 2, 0, 7); t.lineBetween(-6, 8, 6, 8);
     } else {
-      t = this.add.text(0, 0, label, { fontSize: '18px', color: '#b7c7cc' }).setOrigin(0.5);
+      t = this.add.text(0, 0, label, { fontSize: '18px', color: dimmed ? '#5b6472' : '#b7c7cc' }).setOrigin(0.5);
     }
     const btn = this.add.container(0, 0, [bg, t]).setSize(r*2, r*2).setDepth(6);
+    btn._radius = r;
 
-    // Background handles interaction
+    // Background handles interaction. A dimmed button still takes the tap —
+    // that is how it gets to explain itself instead of doing nothing.
     bg.on('pointerup', onClick);
 
-    // Hover effect
-    bg.on('pointerover', () => {
-      bg.setStrokeStyle(2, PALETTE.glow);
-    });
-    bg.on('pointerout', () => {
-      bg.setStrokeStyle(2, PALETTE.stroke);
-    });
+    // Hover effect. A dimmed control never lights up; it is not going anywhere.
+    if (!dimmed) {
+      bg.on('pointerover', () => {
+        bg.setStrokeStyle(2, PALETTE.glow);
+      });
+      bg.on('pointerout', () => {
+        bg.setStrokeStyle(2, PALETTE.stroke);
+      });
+    }
 
     return btn;
+  }
+
+  /** A small note pinned beside a disabled control, saying why it is disabled. */
+  showComingSoonNote(anchor, message){
+    try { this._comingSoonNote?.destroy(); } catch {}
+    this._comingSoonNote = null;
+    if (!anchor) { this.toast(message); return null; }
+    const W = this.scale.width, H = this.scale.height;
+    const size = Math.max(12, Math.min(15, Math.floor(H * 0.02)));
+    const label = this.add.text(0, 0, message, { fontFamily: 'Arial, sans-serif',
+      fontSize: size + 'px', color: PALETTE.title }).setOrigin(0.5);
+    const padX = 12, padY = 7;
+    const w = label.width + padX * 2, h = label.height + padY * 2;
+    const bg = this.rexUI.add.roundRectangle(0, 0, w, h, 8, PALETTE.panel, 0.96)
+      .setStrokeStyle(2, PALETTE.stroke);
+    const note = this.add.container(0, 0, [bg, label]).setDepth(60).setAlpha(0);
+    // Sit to the left of the anchor, since this control is the rightmost in
+    // the footer; flip to the right only if the left would run off screen.
+    const gap = (anchor._radius || 20) + 10;
+    let x = anchor.x - gap - w / 2;
+    if (x - w / 2 < 8) x = anchor.x + gap + w / 2;
+    note.setPosition(clamp(x, w / 2 + 8, W - w / 2 - 8), clamp(anchor.y, h / 2 + 8, H - h / 2 - 8));
+    this._comingSoonNote = note;
+    this.tweens.add({ targets: note, alpha: 1, duration: 140 });
+    this.time.delayedCall(1900, () => {
+      if (this._comingSoonNote !== note) return;
+      this.tweens.add({ targets: note, alpha: 0, duration: 200, onComplete: () => {
+        try { note.destroy(); } catch {}
+        if (this._comingSoonNote === note) this._comingSoonNote = null;
+      } });
+    });
+    return note;
   }
 
   makeTutorialButton(){
@@ -2091,13 +2131,9 @@ export class MenuScene extends Phaser.Scene {
         });
       });
     } else if (k === 'leaderboard'){
-      // Launch leaderboard - keep street ambience playing (no music in leaderboard)
-      // Street sounds continue playing for atmosphere
-      cam.fadeOut(250, 0,0,0);
-      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, ()=>{
-        trackNavigation('leaderboard');
-        this.scene.transition({ target: 'LEADERBOARD', duration: 250, moveBelow: true });
-      });
+      // Same gate as the footer trophy: the boards are not live, so the card
+      // says so instead of opening the scene.
+      this.toast('Leaderboards coming soon!');
     } else if (k === 'pvp') {
       // Coming soon - keep street sounds playing
       console.info('[Menu] Coming soon:', k);
