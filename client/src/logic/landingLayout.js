@@ -5,17 +5,20 @@ export function landingLayout(width, height) {
   const railW = Math.min(600, Math.floor(w * 0.96));
   const dockPad = Math.max(8, Math.floor(Math.min(w, h) * 0.02));
   const profileW = Math.min(220, Math.max(76, railW - dockPad * 2 - 176));
-  const logoW = Math.min(600, w - 36, h * 0.75);
-  const logoH = logoW * 0.32;
-  const logoY = h * 0.20;
-  const tickerY = logoY + logoH / 2 + 24;
-  // Five title rows now include The Window. The compact minimum keeps all
-  // 44px targets above the footer even at the 280x480 contract.
-  const menuY = Math.max(tickerY + 46, h * 0.40);
-  const rowGap = Math.min(54, Math.max(44, h * 0.064));
+  // The approved PNG includes generous transparent margins. Geometry below
+  // describes its visible wordmark, not its full source rectangle.
+  const logoW = Math.min(600, w - 36, h * 0.62);
+  const logoH = logoW * 0.40;
+  const logoY = Math.max(logoH / 2 + 8, h * (h < 600 && w > h ? 0.15 : 0.215));
+  const tickerY = logoY + logoH / 2 + 22;
+  const rowH = Math.min(60, Math.max(44, Math.floor(h * 0.072)));
+  const menuY = Math.max(tickerY + rowH / 2 + 24, h * 0.42);
+  // Reserve the footer even on the minimum 280x480 viewport.
+  const availableGap = Math.max(rowH, (h - 56 - menuY - rowH / 2) / 4);
+  const rowGap = Math.min(availableGap, Math.max(rowH + 6, Math.min(70, h * 0.08)));
   return {
     logoW, logoH, logoY, tickerY, menuY, rowGap,
-    menuW: Math.min(260, w - 112), rowH: 44,
+    menuW: Math.min(440, w - 64, Math.max(260, w * 0.58)), rowH,
     railW, dockPad, profileW, dockY: h - 28,
     // Retain geometry for the shelved non-runner card path.
     cardW: Math.min(480, w - 32), cardH: 250, cardY: menuY

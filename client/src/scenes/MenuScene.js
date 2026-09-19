@@ -40,9 +40,10 @@ export class MenuScene extends Phaser.Scene {
   constructor(){ super('MENU'); }
 
   preload(){
-    // The SVG is rasterized large, then this texture gets linear filtering so
-    // the smooth athletic wordmark does not inherit the game's pixel-art scale.
+    // Keep the original vector as a load-failure fallback for the approved PNG.
     this.load.svg('plug_run_wordmark', '/brand/plug-run-wordmark.svg', { width: 1200, height: 384 });
+    this.load.image('menu_city_bg', '/art/menu/menu-city-bg.png');
+    this.load.image('menu_logo', '/art/menu/menu-logo.png');
 
     // Load character sprites for card visuals
     this.load.image('td_runner', '/sprites/td/runner.png');
@@ -78,13 +79,15 @@ export class MenuScene extends Phaser.Scene {
   create(){
     // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
-    // Night street background: asphalt road, curbs, scrolling lane dashes
+    // Approved night-city art sits behind real, interactive menu controls.
     this.drawStreetBackground();
 
     const brand = landingLayout(W, H);
-    this.textures.get('plug_run_wordmark')?.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.logo = this.add.image(W/2, brand.logoY, 'plug_run_wordmark')
-      .setDisplaySize(brand.logoW, brand.logoH).setDepth(5);
+    const logoKey = this.textures.exists('menu_logo') ? 'menu_logo' : 'plug_run_wordmark';
+    this.textures.get(logoKey)?.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.logo = this.add.image(W / 2, brand.logoY, logoKey).setDepth(5);
+    if (logoKey === 'menu_logo') this.treatMenuLogoBackground();
+    this.positionMenuLogo(brand);
 
     // Plug mode is SHELVED, not removed: everything behind it still works, it
     // just isn't offered until runner mode is good and people ask for it.
@@ -251,34 +254,75 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
-  // Night street background: full-canvas asphalt with curbs, center
-  // dashes, and speckle noise. Rebuilt on resize.
+  // Frame the live menu with the approved city illustration. Cover scaling
+  // preserves its aspect ratio; the vignette keeps controls legible at any size.
   drawStreetBackground(){
     const W = this.scale.width, H = this.scale.height;
     if (this._streetBg) this._streetBg.destroy(true);
     const c = this.add.container(0, 0).setDepth(0);
-    c.add(this.add.rectangle(W/2, H/2, W, H, 0x070c0f, 1));
-    for (const p of titleBackdrop(W, H)) {
-      const texture = p.role === 'plug' ? 'td_plug' : 'td_runner';
-      if (!this.textures.exists(texture)) continue;
-      const sprite = this.add.image(p.x, p.y, texture);
-      sprite.setScale(p.size / Math.max(sprite.width, sprite.height))
-        .setTint(p.role === 'plug' ? 0x704148 : 0x377080)
-        .setAlpha(p.alpha).setAngle(p.angle);
-      c.add(sprite);
+    c.add(this.add.rectangle(W / 2, H / 2, W, H, 0x07111b, 1));
+    if (this.textures.exists('menu_city_bg')) {
+      const image = this.add.image(W / 2, H / 2, 'menu_city_bg');
+      const source = image.texture.getSourceImage();
+      const scale = Math.max(W / source.width, H / source.height);
+      image.setDisplaySize(source.width * scale, source.height * scale);
+      c.add(image);
+      const centerShade = this.add.rectangle(W / 2, H * 0.53, Math.min(W * 0.78, 680), H * 0.69, 0x06111a, 0.13);
+      c.add(centerShade);
+    } else {
+      // Safe fallback if the new asset fails to load.
+      for (const p of titleBackdrop(W, H)) {
+        const texture = p.role === 'plug' ? 'td_plug' : 'td_runner';
+        if (!this.textures.exists(texture)) continue;
+        const sprite = this.add.image(p.x, p.y, texture);
+        sprite.setScale(p.size / Math.max(sprite.width, sprite.height))
+          .setTint(p.role === 'plug' ? 0x704148 : 0x377080)
+          .setAlpha(p.alpha).setAngle(p.angle);
+        c.add(sprite);
+      }
     }
-    // Quiet stepped vignette; no moving particles behind menu hit targets.
     const shade = this.add.graphics();
-    for (let i=0;i<6;i++) {
-      const edge = (6-i) * Math.min(W,H) * 0.018;
+    for (let i = 0; i < 6; i++) {
+      const edge = (6 - i) * Math.min(W, H) * 0.018;
       shade.fillStyle(0x000000, 0.055);
-      shade.fillRect(0,0,edge,H);
-      shade.fillRect(W-edge,0,edge,H);
-      shade.fillRect(0,0,W,edge);
-      shade.fillRect(0,H-edge,W,edge);
+      shade.fillRect(0, 0, edge, H);
+      shade.fillRect(W - edge, 0, edge, H);
+      shade.fillRect(0, 0, W, edge);
+      shade.fillRect(0, H - edge, W, edge);
     }
     c.add(shade);
     this._streetBg = c;
+  }
+
+  // The supplied logo has broad canvas padding. Scale the visible artwork
+  // (roughly 84% wide and 50% tall) to the layout's intended wordmark box.
+  positionMenuLogo(brand){
+    if (!this.logo) return;
+    const W = this.scale.width;
+    if (this.logo.texture.key !== 'menu_logo') {
+      this.logo.setPosition(W / 2, brand.logoY).setDisplaySize(brand.logoW, brand.logoH);
+      return;
+    }
+    const source = this.logo.texture.getSourceImage();
+    const boxW = brand.logoW / 0.84;
+    const boxH = boxW * source.height / source.width;
+    this.logo.setPosition(W / 2, brand.logoY - boxH * 0.05).setDisplaySize(boxW, boxH);
+  }
+
+  // An opaque black export can still sit on the illustrated background:
+  // SCREEN makes only black transparent without discarding the logo colors.
+  treatMenuLogoBackground(){
+    try {
+      const source = this.logo.texture.getSourceImage();
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(source, 0, 0, 1, 1, 0, 0, 1, 1);
+      const [r, g, b, alpha] = ctx.getImageData(0, 0, 1, 1).data;
+      if (alpha > 245 && r < 12 && g < 12 && b < 12) {
+        this.logo.setBlendMode(Phaser.BlendModes.SCREEN);
+      }
+    } catch {}
   }
 
   // LED-style countdown ticker chip under the title sign
@@ -345,30 +389,40 @@ export class MenuScene extends Phaser.Scene {
   makeTitleOption(label, onClick, locked = null){
     const a = landingLayout(this.scale.width, this.scale.height);
     const c = this.add.container(0, 0).setSize(a.menuW, a.rowH).setDepth(6);
-    const bg = this.add.rectangle(0, 0, a.menuW, a.rowH, 0x182329, 0.2)
+    const shadow = this.rexUI.add.roundRectangle(0, 3, a.menuW, a.rowH, 8, 0x000000, 0.32);
+    const bg = this.rexUI.add.roundRectangle(0, 0, a.menuW, a.rowH, 8,
+      locked ? 0x101922 : 0x102133, locked ? 0.70 : 0.91)
+      .setStrokeStyle(1.5, locked ? 0x536270 : 0x77b9ed, locked ? 0.42 : 0.75)
       .setInteractive({ cursor: locked ? 'default' : 'pointer' });
-    const line = this.add.rectangle(0, a.rowH/2, a.menuW-24, 1, 0x506064, 0.15);
-    const tx = this.add.text(0, 0, label, {
-      fontFamily: 'Arial, sans-serif', fontSize: '21px', color: locked ? '#6b7478' : '#a6b0b6'
+    const tx = this.add.text(0, locked ? -7 : 0, label, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: (a.rowH >= 56 ? 22 : 20) + 'px',
+      fontStyle: 'bold',
+      color: locked ? '#8e9aa5' : '#e4eef9'
     }).setOrigin(0.5);
-    c.add([bg,line,tx]);
-    // A locked row stays visible and says how far along you are. One line, no
-    // popup, no explanation of a system the player has not met yet.
+    c.add([shadow, bg, tx]);
     if (locked) {
       c._locked = true;
-      const note = this.add.text(0, a.rowH * 0.3, locked, {
-        fontFamily: 'monospace', fontSize: '10px', color: '#6b7478', letterSpacing: 1
+      const note = this.add.text(0, a.rowH * 0.25, locked, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#9baaba', letterSpacing: 1
       }).setOrigin(0.5);
       c.add(note);
       c._note = note;
+    } else {
+      const chevron = this.add.text(a.menuW / 2 - 20, 0, '›', {
+        fontFamily: 'Arial, sans-serif', fontSize: '30px', color: '#a7d8ff'
+      }).setOrigin(0.5);
+      c.add(chevron);
+      c._chevron = chevron;
     }
     c._bg = bg;
     c._text = tx;
     c._setSelected = selected => {
       if (c._locked) return;
-      bg.setFillStyle(0x182329, selected ? 0.6 : 0.2);
-      tx.setColor(selected ? '#f1ca82' : '#a6b0b6');
-      line.setFillStyle(selected ? 0xf1ca82 : 0x506064, selected ? 0.45 : 0.15);
+      bg.setFillStyle(selected ? 0x342e23 : 0x102133, selected ? 0.95 : 0.91);
+      bg.setStrokeStyle(selected ? 2.5 : 1.5, selected ? 0xffd579 : 0x77b9ed, selected ? 1 : 0.75);
+      tx.setColor(selected ? '#ffe0a0' : '#e4eef9');
+      c._chevron?.setColor(selected ? '#ffe0a0' : '#a7d8ff');
     };
     if (!locked) {
       this._titleOptions.push(c);
@@ -2835,8 +2889,7 @@ export class MenuScene extends Phaser.Scene {
     // Rebuild street background at new dimensions
     this.drawStreetBackground();
     const brand = landingLayout(W, H);
-    this.logo?.setPosition(W/2, brand.logoY);
-    this.logo?.setDisplaySize(brand.logoW, brand.logoH);
+    this.positionMenuLogo(brand);
     this.tickerChip?.setPosition(W/2, brand.tickerY);
 
     // Bottom dock bar (sidewalk strip)
