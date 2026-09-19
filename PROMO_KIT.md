@@ -1,14 +1,14 @@
 # Plug Run promo kit
 
-Status: branded covers and copy for the 2D browser game are ready for review. Gameplay screenshots and trailers must be captured from actual current gameplay; this package does not substitute illustrations or old-map replays for real play.
+Status: launch copy and the trailer brief are ready. The draft SVG covers were removed; approved PNG promo art will replace them. Gameplay screenshots and trailers must be captured from actual current gameplay, not reconstructed or taken from old-map replays.
 
-## Finished assets
+## Promo assets
 
-- `promo/plug-run-cover-1200x630.svg` — landscape social/link cover.
-- `promo/plug-run-poster-1080x1920.svg` — vertical poster/story cover.
+- `promo/plug-run-cover-1200x630.png` — approved landscape social/link cover (to add).
+- `promo/plug-run-poster-1080x1920.png` — approved vertical poster/story cover (to add).
 - `PROMO_COPY.md` — short and long launch copy.
 
-These vectors reuse the game's current wordmark, crew sigils, and palette. They are editorial graphics, not screenshots. Export PNGs at native dimensions for platforms that do not accept SVG.
+The covers are promotional illustrations, not gameplay screenshots. Keep them separate from the real captures below.
 
 ## Real gameplay deliverables to capture
 
