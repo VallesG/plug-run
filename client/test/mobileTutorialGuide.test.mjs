@@ -27,19 +27,19 @@ g.tick(16);eq(s.texts.at(-1),'Swipe anywhere, in any direction.');
 for(let i=0;i<100;i++)g.tick(100);
 eq(g.waitingSwipe,true);
 eq(g.swipe({x:1,y:0},10),false);eq(g.swipe({x:9,y:9},80),false);
-eq(g.swipe({x:0,y:-1},80),true);eq(g.phase,'coast');
-// The runner is travelling through the coast beat ("Lift your finger. You
-// keep moving.") and must still be travelling when the next prompt appears.
+// The first swipe hands straight to the second prompt. There is no timed
+// beat in between: the old one flashed "Lift your finger. You keep moving."
+// for 650ms, which nobody could finish reading.
 s.playerDrift={x:0,y:-1};
-for(let i=0;i<7;i++)g.tick(100);
-eq(g.waitingSwipe,true);
-// Handing off from coast to the second prompt must not stop the runner: the
-// beat just said "you keep moving", so freezing them to ask for another swipe
-// reads as the game seizing up mid-stride. Hint stays, stop goes.
-eq(s.playerDrift,{x:0,y:-1});
+eq(g.swipe({x:0,y:-1},80),true);eq(g.phase,'swipe');
+eq(s.playerDrift,{x:0,y:-1});    // handoff keeps the runner travelling
+eq(s.texts.includes('Lift your finger. You keep moving.'),false);
 g.tick(16);eq(s.texts.at(-1),'Swipe again to change direction.');
 eq(s.playerDrift,{x:0,y:-1});    // drift survives every tick of the prompt
 eq(g.tick(16),false);            // false = scene keeps updating (movement + objectives)
+// The prompt waits on the player, not a clock: it is still up many seconds on.
+for(let i=0;i<60;i++)g.tick(100);
+eq(g.phase,'swipe');g.tick(16);eq(s.texts.at(-1),'Swipe again to change direction.');
 eq(g.swipe({x:-1,y:0},80),true);eq(g.phase,'free');
 eq(g.tick(16),false);eq(s.circles.at(-1),[100,200]);
 g.destroy();g.destroy();eq(g.done,true);eq(s._lastPointerTapAt,0);eq(s.cameras.main.zoom,1);
@@ -48,7 +48,13 @@ intro.tick(100);intro.destroy();eq(interrupted.cameras.main.zoom,1);eq(interrupt
 eq(interrupted.cameras.main.useBounds,true);
 const bags=fixture(),b=createMobileTutorialGuide(bags,2);
 eq(b.tick(16),true);eq(b.phase,'bagsIntro');
+// "These are the bags. One is real; one is bunk." is ten words. It used to be
+// pulled after 1800ms; nobody reads ten words that fast, so the reveal now
+// waits on the copy's own reading time and is still up well past that point.
 for(let i=0;i<18;i++)b.tick(100);
+eq(b.phase,'bagsIntro');
+eq(bags.texts.at(-1),'These are the bags. One is real; one is bunk.');
+for(let i=0;i<26;i++)b.tick(100);
 eq(b.phase,'bagsReveal');eq(bags.cameras.main.zoom>1,true);
 for(let i=0;i<7;i++)b.tick(100);
 eq(b.waitingSwipe,true);eq(bags.cameras.main.zoom,1);eq(bags.cameras.main.useBounds,true);
@@ -60,11 +66,15 @@ bags.hasPackage=true;b.tick(16);eq(bags.circles.at(-1),[100,200]);
 bags._carDeparting=true;const beforeDeparture=bags.circles.length;eq(b.tick(16),false);eq(bags.circles.length,beforeDeparture);eq(bags.texts.at(-1),'');b.destroy();
 const powers=fixture(),p=createMobileTutorialGuide(powers,3);
 eq(p.waitingSwipe,true);p.tick(16);eq(powers.runnerPowersConsumed,[false,false]);
-eq(p.swipe({x:0,y:1},80),true);eq(p.phase,'powerCoast');
-for(let i=0;i<7;i++)p.tick(100);
-eq(p.phase,'power');p.tick(16);eq(powers.playerDrift,null);
+eq(p.swipe({x:0,y:1},80),true);eq(p.phase,'power');
+p.tick(16);eq(powers.playerDrift,null);
+eq(powers.texts.includes('Lift your finger. You keep moving.'),false);
 eq(powers.texts.some(t=>t.includes('Double-tap anywhere to use dash')),true);eq(powers.texts.at(-1),'TAP · TAP');
-p.tick(16);eq(powers.runnerPowersConsumed,[false,false]);
+// Same rule as the swipe prompt: it asks for an action, so it leaves when the
+// player acts and not before, however long they take to get there.
+for(let i=0;i<80;i++)p.tick(100);
+eq(p.phase,'power');eq(powers.runnerPowersConsumed,[false,false]);
+p.tick(16);eq(powers.texts.some(t=>t.includes('Double-tap anywhere to use dash')),true);
 powers.runnerPowersConsumed[0]=true;p.tick(16);eq(powers.texts.some(t=>t.includes('Double-tap anywhere to use decoy')),true);
 powers.runnerPowersConsumed[1]=true;powers.playerDrift={x:1,y:0};p.tick(16);
 eq(powers.playerDrift,{x:1,y:0});eq(powers.texts.at(-1),'Both powers used. Find the real stash, then escape.');

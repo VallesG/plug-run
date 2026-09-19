@@ -10,6 +10,11 @@ export function createMobileTutorialGuide(scene, stage) {
   const gestureLabel=scene.add.text(W/2,H/2,'',{fontFamily:'Arial, sans-serif',fontSize:'13px',fontStyle:'bold',color:'#9bcdfb',stroke:'#080e16',strokeThickness:4}).setOrigin(0.5);
   hud.add([ink,copy,gestureLabel]);
   const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+  // Only the opening reveals are on a clock — the player cannot act during a
+  // camera move, so there is no action to tie them to. Hold them long enough
+  // to actually finish the sentence: roughly 3.3 words a second plus a beat
+  // to start and finish reading, floored so even a short line does not blink.
+  const readMs=text=>Math.max(2200,Math.min(6000,String(text).trim().split(/\s+/).length*300+1200));
   const original={zoom:cam?.zoom||1,x:cam?.scrollX||0,y:cam?.scrollY||0,bounds:cam?.useBounds};
   if(cam && (stage===1||stage===2)) cam.useBounds=false;
   const guide={stage,phase:stage===1?'intro':stage===2?'bagsIntro':'swipe',elapsed:0,turns:0,
@@ -83,7 +88,10 @@ export function createMobileTutorialGuide(scene, stage) {
     if(guide.phase!=='swipe')return true;
     if(distance<32||Math.abs(direction.x)+Math.abs(direction.y)!==1)return false;
     guide.turns++;guide.elapsed=0;
-    guide.phase=stage===1?(guide.turns>=2?'free':'coast'):stage===2?'stash':stage===3?'powerCoast':'free';
+    // Each beat hands straight to the next prompt, which waits on the player.
+    // resetTouch keeps the runner travelling so the handoff is not a lurch.
+    resetTouch(true);
+    guide.phase=stage===1?(guide.turns>=2?'free':'swipe'):stage===2?'stash':stage===3?'power':'free';
     return true;
   };
   guide.tick=(delta)=>{
@@ -98,9 +106,10 @@ export function createMobileTutorialGuide(scene, stage) {
       cam?.setZoom(z);
       cam?.setScroll((W/(2*1.65)-W/2)*(reduced?0:1-p),(-H/4)*(reduced?0:1-p));
       syncHud();
-      floatCopy('This is you.\nThe runner.',[scene.runner]);
+      const line='This is you.\nThe runner.';
+      floatCopy(line,[scene.runner]);
       arrow(scene.runner);
-      if(!revealing&&guide.elapsed>=3000){guide.phase='reveal';guide.elapsed=0;}
+      if(!revealing&&guide.elapsed>=readMs(line)){guide.phase='reveal';guide.elapsed=0;}
       if(revealing&&p===1){restoreCamera();syncHud();guide.phase='swipe';guide.elapsed=0;resetTouch();}
       return true;
     }
@@ -117,18 +126,11 @@ export function createMobileTutorialGuide(scene, stage) {
       const p=revealing?Math.min(1,guide.elapsed/(reduced?1:700)):0;
       cam?.setZoom(1+(zoom-1)*(1-p));
       cam?.setScroll((focus.x-W/2)*(1-p),(focus.y-H/2)*(1-p));syncHud();
-      floatCopy('These are the bags. One is real; one is bunk.',bags);
+      const line='These are the bags. One is real; one is bunk.';
+      floatCopy(line,bags);
       for(const bag of bags)arrow(bag);
-      if(!revealing&&guide.elapsed>=1800){guide.phase='bagsReveal';guide.elapsed=0;}
+      if(!revealing&&guide.elapsed>=readMs(line)){guide.phase='bagsReveal';guide.elapsed=0;}
       if(revealing&&p===1){restoreCamera();syncHud();guide.phase='swipe';guide.elapsed=0;resetTouch();}
-      return true;
-    }
-    if(guide.phase==='coast'||guide.phase==='powerCoast'){
-      floatCopy('Lift your finger. You keep moving.');
-      scene.handleMovement(Math.min(delta,50)/1000);
-      // Hand off to the next beat still moving: the coast lesson just said
-      // "you keep moving", so freezing the runner here contradicts it.
-      if(guide.elapsed>=650){guide.phase=stage===3?'power':'swipe';guide.elapsed=0;resetTouch(true);}
       return true;
     }
     if(guide.phase==='swipe'){
