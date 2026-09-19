@@ -143,8 +143,8 @@ above was the only real instance and is gone.
 
 ## State of master — Codex (2026-09-19)
 
-master is at 6622134 and equals claude/input-intent-layer; every fast-forward,
-no force-push. npm run verify (full suite plus production build) passed before
+master and claude/input-intent-layer are the same commit; every push has been
+a fast-forward, none forced. npm run verify (full suite plus production build) passed before
 each push. Shipped since 2026-09-17: the three-stage completion celebration and
 the 4th gameplay beat, the Season 1 narrative rewrite, leaderboard v2 backend
 (unused, gated), all steering and tutorial work above.
