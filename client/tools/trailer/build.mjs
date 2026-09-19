@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { findMoments, clipAround, FPS } from './analyze.mjs';
+import { findMoments, clipAround, flipRate, FPS } from './analyze.mjs';
 import { cut, concat, toLandscape, mux, probe } from './assemble.mjs';
 import { mixSfx } from './mixsfx.mjs';
 const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
@@ -88,6 +88,16 @@ function renderCut(kind){
   return {body,timeline,events,bodyMs:tMs};
 }
 
+const takeFlip=flipRate(rows,0,rows.length);
+for(const kind of ['vertical','landscape'])
+  for(const bt of plan[kind]){
+    if(!String(bt.src||'').endsWith('take-play.mp4')) continue;
+    bt.flipRate=flipRate(rows,bt.start,bt.end);
+    if(bt.flipRate>takeFlip*3)
+      console.log(`WARNING ${kind}/${bt.name}: ${bt.flipRate} reversals/s vs take baseline ${takeFlip} - reads as twitching, not play`);
+  }
+console.log('take baseline reversals/s',takeFlip);
+
 const V=renderCut('vertical');
 const L=renderCut('landscape');
 const endV=S+'/cards/end-vertical.mp4', endL=S+'/cards/end-landscape.mp4';
@@ -112,7 +122,7 @@ mux(lFull,lWav,lOut,{fadeOutFrom:Math.max(0,lSec-1.2)});
 const report={commit:takes.commit,
   vertical:{seconds:+vSec.toFixed(2),bytes:statSync(vOut).size,probe:probe(vOut),mix:vMix,timeline:V.timeline},
   landscape:{seconds:+lSec.toFixed(2),bytes:statSync(lOut).size,probe:probe(lOut),mix:lMix,timeline:L.timeline},
-  omitted,
+  omitted, takeFlipRate:takeFlip,
   moments:Object.fromEntries(Object.entries(M).map(([k,v])=>[k,v.length])),
   tightestBullets:byTight.slice(0,5)};
 writeFileSync(S+'/build-report.json',JSON.stringify(report,null,1));

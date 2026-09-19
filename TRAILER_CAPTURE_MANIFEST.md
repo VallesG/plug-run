@@ -59,10 +59,10 @@ as a real-time recording.**
 Both are uncut, single continuous captures. Paths are reported in the summary
 rather than committed, per the size instruction.
 
-## Vertical cut - 24.3s, 3.2MB
+## Vertical cut - 21.3s, 2.8MB
 
 `promo/trailers/plug-run-vertical.mp4`
-`codec_name=h264 width=1080 height=1920 r_frame_rate=30/1 nb_frames=729 codec_name=aac r_frame_rate=0/0 nb_frames=1141 duration=24.300000 size=3165050`
+`codec_name=h264 width=1080 height=1920 r_frame_rate=30/1 nb_frames=639 codec_name=aac r_frame_rate=0/0 nb_frames=1000 duration=21.300000 size=2826511`
 
 | # | shot | source | source timecode | len | note |
 |---|---|---|---|---|---|
@@ -70,10 +70,9 @@ rather than committed, per the size instruction.
 | 2 | crew-choice | take-window.mp4 | 00:07.16–00:09.10 | 1.8s | The Window: crew card |
 | 3 | switch-brief | take-window.mp4 | 00:15.19–00:17.13 | 1.8s | Switch states the objective |
 | 4 | stash | take-play.mp4 | 00:25.04–00:28.10 | 3.2s | real stash pickup |
-| 5 | plug-pressure | take-play.mp4 | 01:07.18–01:10.18 | 3s | Plug closing |
-| 6 | power | take-play.mp4 | 01:39.28–01:43.16 | 3.6s | power activation |
-| 7 | escape | take-play.mp4 | 02:03.25–02:08.13 | 4.6s | carry into the car |
-| 8 | end card | promo/plug-run-poster-1080x1920.png | - | 3.00s | approved art, ends on PLUGRUN.IO |
+| 5 | power | take-play.mp4 | 01:39.28–01:43.16 | 3.6s | power activation |
+| 6 | escape | take-play.mp4 | 02:03.25–02:08.13 | 4.6s | carry into the car |
+| 7 | end card | promo/plug-run-poster-1080x1920.png | - | 3.00s | approved art, ends on PLUGRUN.IO |
 
 ## Landscape cut - 50.97s, 5.2MB
 
@@ -119,6 +118,21 @@ a near miss, and is excluded. Tightest passes captured:
 
 Moments found in the take: closeCalls 6, pickups 12, powers 21, extractions 12, clears 18, plugPressure 16.
 
+## Twitch screening
+
+The bot dodges by reversing direction, and when a Plug closes in it can
+reverse fast enough to read as twitching rather than as someone playing.
+The footage is real, but it does not look human, so candidate clips are
+screened on heading reversals per second (`flipRate` in `analyze.mjs`).
+
+The whole take sits at **1.92 reversals/s**. One clip in the first
+vertical cut hit **10.33/s** -- five times baseline -- and was visible
+immediately on screen; it has been cut. Any beat above three times baseline
+is now reported at build time so it gets a second look before shipping.
+
+Still above that line in the landscape cut, left in for now and worth your
+eyes: `power` at 5.83/s and `close-call-3` at 6.06/s.
+
 ## Audio - SFX only, and why
 
 **The music is not in these trailers.** No licence, credit or attribution file
@@ -132,7 +146,7 @@ The SFX bed is not a recording of the browser. Headless Chromium gives no
 audio track, so every cue the game fired was logged at capture time from
 `AudioManager.play()` - the game's own call, with the game's own computed
 volume - and the bed was rebuilt from the game's own asset files at those
-exact offsets. Cues used: {"phase":1,"gun_fire":5,"ouch":2,"dash":2,"pickup":3,"spickup":3,"engine_start":6,"decoy":2}.
+exact offsets. Cues used: {"phase":1,"gun_fire":4,"ouch":1,"dash":2,"pickup":3,"spickup":3,"engine_start":6,"decoy":2}.
 
 **Open question for you, and it affects the game, not just the trailer:** the
 current drum roll was uploaded as `28758__teleport8__sdroll.wav`. That is

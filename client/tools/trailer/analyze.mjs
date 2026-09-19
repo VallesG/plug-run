@@ -56,3 +56,30 @@ export function clipAround(rows, frame, beforeS, afterS) {
   const end = Math.min(rows.length - 1, frame + Math.round(afterS * FPS));
   return { start, end, seconds: +((end - start) / FPS).toFixed(2) };
 }
+
+/**
+ * Heading reversals per second over a frame range.
+ *
+ * The bot dodges by reversing direction, and when a Plug closes in it can
+ * reverse fast enough to read as twitching rather than play -- footage that
+ * is real but does not look like a person. Screen candidate clips with this
+ * and drop the outliers: the whole take here sat near 1.9/s while one clip
+ * hit 10.3/s, which was visible immediately on screen.
+ */
+export function flipRate(rows, start, end) {
+  const segs = [];
+  for (let i = start + 1; i < Math.min(end, rows.length); i++) {
+    const p = rows[i - 1], q = rows[i];
+    if (!p || !q || !p.live || !q.live) continue;
+    const dx = q.x - p.x, dy = q.y - p.y;
+    if (dx || dy) segs.push([dx, dy]);
+  }
+  let flips = 0;
+  for (let i = 1; i < segs.length; i++) {
+    const [ax, ay] = segs[i - 1], [bx, by] = segs[i];
+    const na = Math.hypot(ax, ay), nb = Math.hypot(bx, by);
+    if (!na || !nb) continue;
+    if ((ax * bx + ay * by) / (na * nb) < 0) flips++;
+  }
+  return +(flips / Math.max(1e-9, (end - start) / FPS)).toFixed(2);
+}

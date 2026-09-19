@@ -105,6 +105,21 @@ ${r.tightestBullets.map(b=>`- frame ${b.frame} (${tc(b.frame)}): **${b.dist} cel
 
 Moments found in the take: ${Object.entries(r.moments).map(([k,v])=>`${k} ${v}`).join(', ')}.
 
+## Twitch screening
+
+The bot dodges by reversing direction, and when a Plug closes in it can
+reverse fast enough to read as twitching rather than as someone playing.
+The footage is real, but it does not look human, so candidate clips are
+screened on heading reversals per second (\`flipRate\` in \`analyze.mjs\`).
+
+The whole take sits at **${r.takeFlipRate} reversals/s**. One clip in the first
+vertical cut hit **10.33/s** -- five times baseline -- and was visible
+immediately on screen; it has been cut. Any beat above three times baseline
+is now reported at build time so it gets a second look before shipping.
+
+Still above that line in the landscape cut, left in for now and worth your
+eyes: \`power\` at 5.83/s and \`close-call-3\` at 6.06/s.
+
 ## Audio - SFX only, and why
 
 **The music is not in these trailers.** No licence, credit or attribution file
