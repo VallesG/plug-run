@@ -4,7 +4,7 @@ Work on a review branch, not `master`. Read `PROMO_KIT.md` and `PROMO_COPY.md` f
 
 ## Core rule
 
-The trailer must show rendered pixels from actual gameplay in the current build. Drive the runner through normal game input or a test harness that calls the normal input path; do not teleport, synthesize a near-miss, hide a failed attempt with a misleading cut, or composite an old-bank replay onto a new course. A deterministic local test run is fine if its provenance is disclosed in your handoff. The game can be recorded locally; do not claim a simulated or bank opponent is a live human.
+The trailer must clearly present Plug Run as a 2D browser game and show rendered pixels from actual gameplay in the current build. Drive the runner through normal game input or a test harness that calls the normal input path; do not teleport, synthesize a near-miss, hide a failed attempt with a misleading cut, or composite an old-bank replay onto a new course. A deterministic local test run is fine if its provenance is disclosed in your handoff. The game can be recorded locally; do not claim a simulated or bank opponent is a live human.
 
 ## Capture plan
 
@@ -27,7 +27,7 @@ If House 15's two-Plug encounter is good on camera, capture it as an optional ex
 - Uncut source clips and an editable project or reproducible commands.
 - A short capture manifest: build commit, browser/window resolution, source clip/timecodes for every trailer shot, how the runner was controlled, audio sources/licensing status, and any edits. Name any simulated drivers honestly in the manifest.
 
-Story rhythm: logo/crew choice → stash objective → rising chase → narrow escape → block-cleared hit → `plug-run.io`. Use the actual success cue only when a block genuinely clears. For music, verify promotional rights to friends' beats and any stock sounds; if rights are unclear, export a gameplay-SFX-only version and flag the music choice for us. No fake “LIVE PVP,” no invented player names, and no personal account data.
+Story rhythm: establish the 2D game immediately with a real gameplay shot, then logo/crew choice → stash objective → rising chase → narrow escape → block-cleared hit → `plugrun.io`. Use the actual success cue only when a block genuinely clears. For music, verify promotional rights to friends' beats and any stock sounds; if rights are unclear, export a gameplay-SFX-only version and flag the music choice for us. No fake “LIVE PVP,” no invented player names, and no personal account data.
 
 ## Verification
 

@@ -1,6 +1,6 @@
 # Plug Run promo kit
 
-Status: branded covers and copy are ready for review. Gameplay screenshots and trailers must be captured from actual current gameplay; this package does not substitute illustrations or old-map replays for real play.
+Status: branded covers and copy for the 2D browser game are ready for review. Gameplay screenshots and trailers must be captured from actual current gameplay; this package does not substitute illustrations or old-map replays for real play.
 
 ## Finished assets
 
@@ -27,7 +27,7 @@ Use current builds and maps, hide personal account data, and keep the genuine HU
 - Vertical: 1080×1920 H.264 MP4, 20–30 seconds, 30 fps.
 - Landscape: 1920×1080 H.264 MP4, 45–60 seconds, 30 fps.
 - Keep uncut source clips and an edit project or reproducible edit commands.
-- End with the live site: `plug-run.io`.
+- End with the live site: `plugrun.io`.
 - Use only audio cleared for promotional distribution; gameplay use does not automatically establish trailer music rights.
 
 See `CLAUDE_TRAILER_CAPTURE_PROMPT.md` for the capture and edit brief. Do not publish the videos or screenshots until someone has watched the final exports on a phone and desktop.
