@@ -59,10 +59,10 @@ as a real-time recording.**
 Both are uncut, single continuous captures. Paths are reported in the summary
 rather than committed, per the size instruction.
 
-## Vertical cut - 29.5s, 4.4MB
+## Vertical cut - 29s, 4.4MB
 
 `promo/trailers/plug-run-vertical.mp4`
-`codec_name=h264 width=1080 height=1920 r_frame_rate=30/1 nb_frames=885 codec_name=aac r_frame_rate=0/0 nb_frames=1272 duration=29.500000 size=4445208`
+`codec_name=h264 width=1080 height=1920 r_frame_rate=30/1 nb_frames=870 codec_name=aac r_frame_rate=0/0 nb_frames=1250 duration=29.000000 size=4371241`
 
 | # | shot | source | source timecode | len | note |
 |---|---|---|---|---|---|
@@ -70,18 +70,18 @@ rather than committed, per the size instruction.
 | 2 | auntie-ro | take-window.mp4 | 00:02.00–00:03.24 | 1.8s | The Window: Auntie Ro |
 | 3 | crew-choice | take-window.mp4 | 00:07.16–00:09.10 | 1.8s | The Window: crew card |
 | 4 | stash | take-play.mp4 | 00:25.04–00:28.10 | 3.2s | real stash pickup |
-| 5 | switch-brief | take-window.mp4 | 00:15.19–00:17.13 | 1.8s | Switch states the objective |
+| 5 | switch-brief | take-window.mp4 | 00:16.01–00:17.09 | 1.27s | Switch states the objective |
 | 6 | close-call-2 | take-play.mp4 | 02:17.28–02:20.16 | 2.6s | second near miss |
-| 7 | mags | take-window.mp4 | 00:17.19–00:19.13 | 1.8s | Mags on the radio |
+| 7 | mags | take-window.mp4 | 00:17.25–00:19.19 | 1.8s | Mags on the radio |
 | 8 | power | take-play.mp4 | 01:39.28–01:43.16 | 3.6s | power activation |
 | 9 | escape | take-play.mp4 | 02:04.01–02:08.07 | 4.2s | carry into the car |
 | 10 | clear | take-play.mp4 | 02:24.19–02:27.01 | 2.4s | house clear |
 | 11 | end card | promo/plug-run-poster-1080x1920.png | - | 3.00s | approved art, ends on PLUGRUN.IO |
 
-## Landscape cut - 50.97s, 5.2MB
+## Landscape cut - 49.67s, 5.1MB
 
 `promo/trailers/plug-run-landscape.mp4`
-`codec_name=h264 width=1920 height=1080 r_frame_rate=30/1 nb_frames=1529 codec_name=aac r_frame_rate=0/0 nb_frames=2390 duration=50.967000 size=5230087`
+`codec_name=h264 width=1920 height=1080 r_frame_rate=30/1 nb_frames=1490 codec_name=aac r_frame_rate=0/0 nb_frames=2329 duration=49.667000 size=5063669`
 
 The game is portrait-only (a 16x35 grid). In a native landscape window it
 renders the arena in the middle with ~65% of the frame as empty margin, which
@@ -93,9 +93,9 @@ pixels are untouched and unstretched.
 |---|---|---|---|---|---|
 | 1 | cold-open-close-call | take-play.mp4 | 02:28.17–02:32.17 | 4s | bullet 0.4 cells, no hit |
 | 2 | auntie-ro | take-window.mp4 | 00:01.15–00:04.00 | 2.5s | The Window: Auntie Ro |
-| 3 | crew-choice | take-window.mp4 | 00:07.10–00:09.13 | 2.1s | The Window: crew card |
-| 4 | switch-brief | take-window.mp4 | 00:15.13–00:17.16 | 2.1s | Switch states the objective |
-| 5 | block-screen | take-window.mp4 | 00:19.24–00:21.18 | 1.8s | Mercer Row, 0/15 cleared |
+| 3 | crew-choice | take-window.mp4 | 00:07.19–00:09.16 | 1.9s | The Window: crew card |
+| 4 | switch-brief | take-window.mp4 | 00:16.01–00:17.10 | 1.3s | Switch states the objective |
+| 5 | block-screen | take-window.mp4 | 00:20.06–00:21.21 | 1.5s | Mercer Row, 0/15 cleared |
 | 6 | stash | take-play.mp4 | 00:17.24–00:22.06 | 4.4s | real stash pickup |
 | 7 | plug-pressure | take-play.mp4 | 00:47.28–00:51.13 | 3.5s | Plug closing |
 | 8 | power | take-play.mp4 | 01:04.09–01:09.03 | 4.8s | power activation |
@@ -148,7 +148,7 @@ and there is still no licence or credit file in the repo for it.
 It masters hot: -10.4 LUFS integrated, peaking +1.3 dBFS, i.e. already clipped
 at source. It is therefore laid in at -9 dB, started at 2.0s to skip its
 one-second fade-in so the cut opens on the established beat, faded out under
-the end card, and the sum is limited at 0.94. Final mix: -18.5 LUFS integrated, -1.6 dBFS peak.
+the end card, and the sum is limited at 0.94. Final mix: -18.6 LUFS integrated, -2.3 dBFS peak.
 
 **Landscape cut: gameplay SFX only.** No music was requested for it. If you
 want the same bed on it, it is one flag -- `MUSIC=<file> node build.mjs`.

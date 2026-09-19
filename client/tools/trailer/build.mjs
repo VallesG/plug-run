@@ -24,6 +24,19 @@ if(!byTight.length) throw new Error('no genuine close call captured - refusing t
 // Beat list. Every entry points at a frame the bot actually produced; nothing
 // is staged. `src` is the uncut take the frames come from.
 const PLAY=S+'/take-play.mp4', WIN=S+'/take-window.mp4';
+// One entry per SCREEN in the window take, measured off it. The UI hard-cuts
+// between screens, so a clip spanning two of them reads as a bad edit, and the
+// city map holds a "FINDING YOUR BLOCK" state with a black placeholder panel
+// (roughly frames 420-479) that looks outright broken. That shipped once.
+// Deliberately omitted, so no clip can land in it: the map loading window.
+const CLEAN_WIN=[
+  [40,149],   // Auntie Ro
+  [150,224],  // crew list - all three crews
+  [225,419],  // "YOU RUN WITH CROSSLINE" card
+  [480,522],  // Switch
+  [528,604],  // Mags
+  [605,660],  // Mercer Row block screen
+];
 function beat(name,src,frame,before,after,note){
   // A beat with no real frame behind it is dropped, never substituted. Using
   // a close-call frame as the "escape" shot would be exactly the kind of
@@ -48,9 +61,9 @@ const plan={
     beat('auntie-ro',WIN,96,1.2,0.6,'The Window: Auntie Ro'),
     beat('crew-choice',WIN,262,1.2,0.6,'The Window: crew card'),
     beat('stash',PLAY,near(M.pickups,0.18),1.6,1.6,'real stash pickup'),
-    beat('switch-brief',WIN,505,1.2,0.6,'Switch states the objective'),
+    beat('switch-brief',WIN,500,0.63,0.63,'Switch states the objective'),
     beat('close-call-2',PLAY,(byTight[1]||{}).frame??null,1.4,1.2,'second near miss'),
-    beat('mags',WIN,565,1.2,0.6,'Mags on the radio'),
+    beat('mags',WIN,562,0.9,0.9,'Mags on the radio'),
     beat('power',PLAY,near(M.powers,0.60),1.6,2.0,'power activation'),
     beat('escape',PLAY,near(M.extractions,0.80),3.0,1.2,'carry into the car'),
     beat('clear',PLAY,near(M.clears,0.92),1.0,1.4,'house clear'),
@@ -58,9 +71,9 @@ const plan={
   landscape:[
     beat('cold-open-close-call',PLAY,byTight[0].frame,2.0,2.0,`bullet ${byTight[0].dist} cells, no hit`),
     beat('auntie-ro',WIN,96,1.7,0.8,'The Window: Auntie Ro'),
-    beat('crew-choice',WIN,262,1.4,0.7,'The Window: crew card'),
-    beat('switch-brief',WIN,505,1.4,0.7,'Switch states the objective'),
-    beat('block-screen',WIN,624,1.0,0.8,'Mercer Row, 0/15 cleared'),
+    beat('crew-choice',WIN,262,1.1,0.8,'The Window: crew card'),
+    beat('switch-brief',WIN,500,0.63,0.67,'Switch states the objective'),
+    beat('block-screen',WIN,627,0.7,0.8,'Mercer Row, 0/15 cleared'),
     beat('stash',PLAY,near(M.pickups,0.12),2.2,2.2,'real stash pickup'),
     beat('plug-pressure',PLAY,near(M.plugPressure,0.30),1.8,1.7,'Plug closing'),
     beat('power',PLAY,near(M.powers,0.40),2.2,2.6,'power activation'),
@@ -72,6 +85,14 @@ const plan={
     beat('clear',PLAY,near(M.clears,0.92),1.0,2.6,'house clear'),
   ]
 };
+// A window-take clip that strays outside a clean range opens on a cross-fade
+// or on the map's black loading panel. That shipped once; it fails loudly now.
+for(const kind of ['vertical','landscape'])
+  for(const bt of plan[kind]){
+    if(bt.missing||bt.src!==WIN) continue;
+    if(!CLEAN_WIN.some(([a,b])=>bt.start>=a&&bt.end<=b))
+      throw new Error(`${kind}/${bt.name}: frames ${bt.start}-${bt.end} cross a transition or the map loading state`);
+  }
 const omitted={vertical:plan.vertical.filter(b=>b.missing).map(b=>b.name),
                landscape:plan.landscape.filter(b=>b.missing).map(b=>b.name)};
 plan.vertical=plan.vertical.filter(b=>!b.missing);
