@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
-const S=OUT.replace(/\/$/,'');
-const REPO='/home/user/plug-run';
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
+const S=OUT;
+
 const r=JSON.parse(readFileSync(S+'/build-report.json','utf8'));
 const tk=JSON.parse(readFileSync(S+'/takes.json','utf8'));
 const tc=f=>{const t=f/30;const m=Math.floor(t/60),s=Math.floor(t%60),fr=Math.round(f%30);
@@ -120,28 +121,40 @@ is now reported at build time so it gets a second look before shipping.
 Still above that line in the landscape cut, left in for now and worth your
 eyes: \`power\` at 5.83/s and \`close-call-3\` at 6.06/s.
 
-## Audio - SFX only, and why
+## Audio
 
-**The music is not in these trailers.** No licence, credit or attribution file
-exists anywhere in the repo for any audio asset, and none of the files carry
-metadata tags. \`MUSIC_PRODUCTION_BRIEF.md\` asks producers to confirm samples
-are cleared *for game use*, which is not the same as promotional use -
-\`PROMO_KIT.md\` says so itself. Per the brief's rule (uncertain rights -> ship
-SFX only), these exports carry gameplay SFX and no music.
+**Vertical cut: music + gameplay SFX.** The bed is \`plug_beat2.mp3\` (the
+"glideraide" beat). Rights basis: the repo owner states it was written by his
+cousin in GarageBand and that they have permission to use it. That is his
+statement, recorded here as the basis -- I did not independently verify it,
+and there is still no licence or credit file in the repo for it.
 
-The SFX bed is not a recording of the browser. Headless Chromium gives no
+It masters hot: -10.4 LUFS integrated, peaking +1.3 dBFS, i.e. already clipped
+at source. It is therefore laid in at -9 dB, started at 2.0s to skip its
+one-second fade-in so the cut opens on the established beat, faded out under
+the end card, and the sum is limited at 0.94. Final mix: ${r.vertical.loudness}.
+
+**Landscape cut: gameplay SFX only.** No music was requested for it. If you
+want the same bed on it, it is one flag -- \`MUSIC=<file> node build.mjs\`.
+
+**The SFX bed is not a recording of the browser.** Headless Chromium exposes no
 audio track, so every cue the game fired was logged at capture time from
-\`AudioManager.play()\` - the game's own call, with the game's own computed
-volume - and the bed was rebuilt from the game's own asset files at those
-exact offsets. Cues used: ${JSON.stringify(r.vertical.mix.used)}.
+\`AudioManager.play()\` -- the game's own call, with the game's own computed
+volume -- and rebuilt from the game's own asset files at those exact offsets.
+Cues used: ${JSON.stringify(r.vertical.mix.used)}.
 
-**Open question for you, and it affects the game, not just the trailer:** the
-current drum roll was uploaded as \`28758__teleport8__sdroll.wav\`. That is
-Freesound.org's \`<id>__<user>__<name>\` naming convention, which suggests a
-third-party sample. Freesound licences range from CC0 to CC-BY-NC, and CC-BY-NC
-would not permit promotional use. I could not check it from here. The other
-"uploaded stock sound" assets (\`contact_open.wav\`, \`pickup.wav\`) have the same
-undocumented provenance. Worth confirming before any of this goes out.
+One cue is missing: \`impact\` (the bullet-hit thud). The game synthesises it as a
+Web Audio earcon rather than playing an asset file, so there is no file to
+rebuild it from. Every other cue the game fired is present.
+
+**Still open, and it affects the game, not just the trailer.** The other audio
+assets have no licence, credit or attribution anywhere in the repo and carry no
+metadata. The drum roll in particular was uploaded as
+\`28758__teleport8__sdroll.wav\` -- Freesound.org's \`<id>__<user>__<name>\`
+convention, which suggests a third-party sample. Freesound licences run from
+CC0 to CC-BY-NC, and CC-BY-NC would not permit promotional use. I could not
+check it from here. \`contact_open.wav\` and \`pickup.wav\` have the same
+undocumented provenance. Worth confirming before this goes out.
 
 ## Verification notes worth knowing
 

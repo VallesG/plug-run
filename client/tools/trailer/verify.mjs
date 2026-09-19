@@ -1,7 +1,8 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
-const S=OUT.replace(/\/$/,'');
-const FF=S+'/bin/ffmpeg', FP=S+'/bin/ffprobe';
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
+const S=OUT;
+const FF=(process.env.FFMPEG||'ffmpeg'), FP=(process.env.FFPROBE||'ffprobe');
 // ffmpeg reports filter results (blackdetect, freezedetect, ebur128) on
 // STDERR even on success, so both streams have to be read or every check
 // silently comes back clean.

@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
 const FF=(process.env.FFMPEG||'ffmpeg');
 export const FPS=30;
 const run=a=>execFileSync(FF,['-y','-loglevel','error',...a],{maxBuffer:1<<28});
@@ -55,4 +56,25 @@ export function probe(f){
   return execFileSync(P,['-v','error','-show_entries',
     'stream=codec_name,width,height,r_frame_rate,nb_frames:format=duration,size',
     '-of','default=nw=1',f]).toString().trim();
+}
+
+/**
+ * Lay a music bed under the rebuilt SFX.
+ *
+ * The bed is pulled well below the SFX so pickups, shots and the engine still
+ * read; a limiter catches the sum. plug_beat2 masters hot (-10.4 LUFS, peaking
+ * +1.3 dBFS, i.e. already clipped at source), so it cannot simply be dropped
+ * in at unity -- musicDb does the pulling down, and startS skips its 1s
+ * fade-in so the cut opens on the established beat.
+ */
+export function mixMusicBed(sfxWav, musicFile, out, { seconds, musicDb = -9, startS = 2.0, fadeOutS = 1.8 }) {
+  const outStart = Math.max(0, seconds - fadeOutS);
+  run(['-i', sfxWav, '-i', musicFile, '-filter_complex',
+    `[1:a]atrim=start=${startS.toFixed(2)},asetpts=PTS-STARTPTS,` +
+    `volume=${musicDb}dB,afade=t=in:st=0:d=0.5,` +
+    `afade=t=out:st=${outStart.toFixed(2)}:d=${fadeOutS}[m];` +
+    `[0:a][m]amix=inputs=2:normalize=0:duration=first[s];` +
+    `[s]alimiter=limit=0.94:level=disabled[a]`,
+    '-map', '[a]', '-t', String(seconds), '-c:a', 'pcm_s16le', out]);
+  return out;
 }

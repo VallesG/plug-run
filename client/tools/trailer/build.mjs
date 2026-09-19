@@ -1,11 +1,13 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { findMoments, clipAround, flipRate, FPS } from './analyze.mjs';
-import { cut, concat, toLandscape, mux, probe } from './assemble.mjs';
+import { cut, concat, toLandscape, mux, probe, mixMusicBed } from './assemble.mjs';
 import { mixSfx } from './mixsfx.mjs';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
-const S=OUT.replace(/\/$/,'');
-const REPO='/home/user/plug-run';
+import { verifyExport } from './verify.mjs';
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
+const S=OUT;
+
 mkdirSync(S+'/clips',{recursive:true}); mkdirSync(S+'/out',{recursive:true});
 
 const takes=JSON.parse(readFileSync(S+'/takes.json','utf8'));
@@ -40,23 +42,34 @@ const near=(arr,frac)=>{if(!arr.length)return null;
   return [...arr].sort((a,b)=>Math.abs(a.frame-target)-Math.abs(b.frame-target))[0].frame;};
 const plan={
   vertical:[
+    // Dialogue and gameplay alternate: four talking beats in a row up front
+    // read as a visual novel, and the brief wants the 2D game carrying it.
     beat('cold-open-close-call',PLAY,byTight[0].frame,1.7,1.6,`bullet ${byTight[0].dist} cells, no hit`),
-    beat('crew-choice',WIN,262,2.4,1.1,'The Window: crew card'),
-    beat('stash',PLAY,at(M.pickups),1.6,1.6,'real stash pickup'),
-    beat('power',PLAY,at(M.powers),1.6,2.0,'power activation'),
-    beat('escape',PLAY,at(M.extractions),3.2,1.2,'carry into the car'),
+    beat('auntie-ro',WIN,96,1.2,0.6,'The Window: Auntie Ro'),
+    beat('crew-choice',WIN,262,1.2,0.6,'The Window: crew card'),
+    beat('stash',PLAY,near(M.pickups,0.18),1.6,1.6,'real stash pickup'),
+    beat('switch-brief',WIN,505,1.2,0.6,'Switch states the objective'),
+    beat('close-call-2',PLAY,(byTight[1]||{}).frame??null,1.4,1.2,'second near miss'),
+    beat('mags',WIN,565,1.2,0.6,'Mags on the radio'),
+    beat('power',PLAY,near(M.powers,0.60),1.6,2.0,'power activation'),
+    beat('escape',PLAY,near(M.extractions,0.80),3.0,1.2,'carry into the car'),
+    beat('clear',PLAY,near(M.clears,0.92),1.0,1.4,'house clear'),
   ],
   landscape:[
     beat('cold-open-close-call',PLAY,byTight[0].frame,2.0,2.0,`bullet ${byTight[0].dist} cells, no hit`),
-    beat('auntie-ro',WIN,96,2.6,1.2,'The Window: Auntie Ro'),
-    beat('crew-choice',WIN,262,2.6,1.4,'The Window: crew card'),
+    beat('auntie-ro',WIN,96,1.7,0.8,'The Window: Auntie Ro'),
+    beat('crew-choice',WIN,262,1.4,0.7,'The Window: crew card'),
+    beat('switch-brief',WIN,505,1.4,0.7,'Switch states the objective'),
+    beat('block-screen',WIN,624,1.0,0.8,'Mercer Row, 0/15 cleared'),
     beat('stash',PLAY,near(M.pickups,0.12),2.2,2.2,'real stash pickup'),
-    beat('plug-pressure',PLAY,at(M.plugPressure),2.4,2.6,'Plug closing'),
+    beat('plug-pressure',PLAY,near(M.plugPressure,0.30),1.8,1.7,'Plug closing'),
     beat('power',PLAY,near(M.powers,0.40),2.2,2.6,'power activation'),
-    beat('close-call-2',PLAY,(byTight[1]||{}).frame??null,2.0,2.0,'second near miss'),
+    beat('close-call-2',PLAY,(byTight[1]||{}).frame??null,1.7,1.6,'second near miss'),
     beat('power-2',PLAY,near(M.powers,0.66),2.0,2.4,'second power'),
-    beat('escape',PLAY,at(M.extractions),3.6,1.6,'carry into the car'),
-    beat('clear',PLAY,at(M.clears),1.0,3.2,'house clear'),
+    beat('close-call-3',PLAY,(byTight[2]||{}).frame??null,1.7,1.6,'third near miss'),
+    beat('stash-2',PLAY,near(M.pickups,0.72),1.3,1.3,'second stash run'),
+    beat('escape',PLAY,near(M.extractions,0.86),3.8,1.8,'carry into the car'),
+    beat('clear',PLAY,near(M.clears,0.92),1.0,2.6,'house clear'),
   ]
 };
 const omitted={vertical:plan.vertical.filter(b=>b.missing).map(b=>b.name),
@@ -116,13 +129,18 @@ const lMix=mixSfx(L.events,lSec*1000,lWav);
 mkdirSync(REPO+'/promo/trailers',{recursive:true});
 const vOut=REPO+'/promo/trailers/plug-run-vertical.mp4';
 const lOut=REPO+'/promo/trailers/plug-run-landscape.mp4';
-mux(vFull,vWav,vOut,{fadeOutFrom:Math.max(0,vSec-1.2)});
+const MUSIC=process.env.MUSIC||REPO+'/client/public/audio/plug_beat2.mp3';
+const vBed=MUSIC?mixMusicBed(vWav,MUSIC,S+'/out/vertical-mixed.wav',{seconds:vSec}):vWav;
+mux(vFull,vBed,vOut,{fadeOutFrom:Math.max(0,vSec-1.2)});
 mux(lFull,lWav,lOut,{fadeOutFrom:Math.max(0,lSec-1.2)});
 
+const vv=verifyExport(vOut), lv=verifyExport(lOut);
 const report={commit:takes.commit,
-  vertical:{seconds:+vSec.toFixed(2),bytes:statSync(vOut).size,probe:probe(vOut),mix:vMix,timeline:V.timeline},
-  landscape:{seconds:+lSec.toFixed(2),bytes:statSync(lOut).size,probe:probe(lOut),mix:lMix,timeline:L.timeline},
-  omitted, takeFlipRate:takeFlip,
+  vertical:{seconds:+vSec.toFixed(2),bytes:statSync(vOut).size,probe:probe(vOut),mix:vMix,timeline:V.timeline,
+    loudness:`${vv.integratedLUFS} LUFS integrated, ${vv.truePeakDB} dBFS peak`},
+  landscape:{seconds:+lSec.toFixed(2),bytes:statSync(lOut).size,probe:probe(lOut),mix:lMix,timeline:L.timeline,
+    loudness:`${lv.integratedLUFS} LUFS integrated, ${lv.truePeakDB} dBFS peak`},
+  omitted, takeFlipRate:takeFlip, music:MUSIC||null,
   moments:Object.fromEntries(Object.entries(M).map(([k,v])=>[k,v.length])),
   tightestBullets:byTight.slice(0,5)};
 writeFileSync(S+'/build-report.json',JSON.stringify(report,null,1));

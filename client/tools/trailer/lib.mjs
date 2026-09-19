@@ -1,6 +1,7 @@
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
 export const EXE=process.env.CHROMIUM||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-export const S=OUT.replace(/\/$/,'');
+export const S=OUT;
 // Enumerate interactive objects, labelled by the nearest Text in the same scene.
 export const PROBE=`(()=>{const g=window.__plugRunGame;if(!g)return{err:'no game'};
  const scenes=g.scene.scenes.filter(s=>s.scene.isActive());

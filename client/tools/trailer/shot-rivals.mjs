@@ -4,6 +4,8 @@ import { boot, PROBE, S } from './lib.mjs';
 // locked on a fresh profile. rivalsPlay=1 is the harness's PLAYER-FACING path:
 // real opponent lookup from the shipped bank, real Rivals UI. The opponent is
 // a recorded bank rival, never a human -- said plainly in the manifest.
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
 const {b,p}=await boot(chromium,{w:540,h:960,dsf:2,skipTutorial:true,
   url:'http://127.0.0.1:4178/?bot=1&rivalsPlay=1&courseSlot=1&runs=1'});
 await p.waitForTimeout(9000);

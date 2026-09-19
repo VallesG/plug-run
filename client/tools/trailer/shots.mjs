@@ -1,9 +1,10 @@
 import { readFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { findMoments } from './analyze.mjs';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
-const S=OUT.replace(/\/$/,'');
-const REPO='/home/user/plug-run', FF=S+'/bin/ffmpeg', FPS=30;
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
+const S=OUT;
+const FF=(process.env.FFMPEG||'ffmpeg'), FPS=30;
 mkdirSync(REPO+'/promo/screenshots',{recursive:true});
 const grab=(src,frame,out)=>{execFileSync(FF,['-y','-loglevel','error','-ss',(frame/FPS).toFixed(4),
   '-i',src,'-frames:v','1',out]);return {out:out.split('/').pop(),src:src.split('/').pop(),frame};};
@@ -27,7 +28,7 @@ const shots=[
   grab(WIN,262,REPO+'/promo/screenshots/01-choose-your-crew.png'),
   grab(PLAY,wide?wide.i:(M.pickups[0]||{frame:600}).frame,REPO+'/promo/screenshots/02-stash-and-plug.png'),
   grab(PLAY,tight[0].frame,REPO+'/promo/screenshots/03-narrow-exit.png'),
-  grab(WIN,96,REPO+'/promo/screenshots/04-character-moment.png'),
+  grab(WIN,505,REPO+'/promo/screenshots/04-character-moment.png'),
 ];
 console.log(JSON.stringify({shots,
   nearMissCells:tight[0].dist, nearMissFrame:tight[0].frame,

@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { INSTALL_CLOCK } from './fixedstep.mjs';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
 const FFMPEG = (process.env.FFMPEG||'ffmpeg');
 export const FPS = 30, STEP_MS = 1000 / FPS;
 

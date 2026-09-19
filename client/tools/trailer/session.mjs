@@ -6,6 +6,8 @@ import { INSTALL_SAMPLER } from './sampler.mjs';
 import { INSTALL_AUDIO_LOG } from './fixedstep.mjs';
 import { captureTake } from './capture.mjs';
 
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
 const GAMEPLAY_SECONDS = Number(process.env.GS || 160);
 const {b,p}=await boot(chromium,{w:540,h:960,dsf:2});
 const commit=process.env.COMMIT||'unknown';

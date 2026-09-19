@@ -4,10 +4,11 @@
 // cue is not in the log, it is not in the bed.
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, existsSync } from 'node:fs';
-const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname;
+const OUT = process.env.TRAILER_OUT || new URL('./.out/', import.meta.url).pathname.replace(/\/$/,'');
+const REPO = process.env.REPO || new URL('../../../', import.meta.url).pathname.replace(/\/$/,'');
 const FFMPEG = (process.env.FFMPEG||'ffmpeg');
 const SR = 48000, CH = 2;
-const AUDIO_DIR = '/home/user/plug-run/client/public/audio';
+const AUDIO_DIR = ''+REPO+'/client/public/audio';
 
 const decodeCache = new Map();
 function decode(key) {

@@ -59,20 +59,24 @@ as a real-time recording.**
 Both are uncut, single continuous captures. Paths are reported in the summary
 rather than committed, per the size instruction.
 
-## Vertical cut - 21.3s, 2.8MB
+## Vertical cut - 29.5s, 4.4MB
 
 `promo/trailers/plug-run-vertical.mp4`
-`codec_name=h264 width=1080 height=1920 r_frame_rate=30/1 nb_frames=639 codec_name=aac r_frame_rate=0/0 nb_frames=1000 duration=21.300000 size=2826511`
+`codec_name=h264 width=1080 height=1920 r_frame_rate=30/1 nb_frames=885 codec_name=aac r_frame_rate=0/0 nb_frames=1272 duration=29.500000 size=4445208`
 
 | # | shot | source | source timecode | len | note |
 |---|---|---|---|---|---|
 | 1 | cold-open-close-call | take-play.mp4 | 02:28.26–02:32.05 | 3.3s | bullet 0.4 cells, no hit |
-| 2 | crew-choice | take-window.mp4 | 00:07.16–00:09.10 | 1.8s | The Window: crew card |
-| 3 | switch-brief | take-window.mp4 | 00:15.19–00:17.13 | 1.8s | Switch states the objective |
+| 2 | auntie-ro | take-window.mp4 | 00:02.00–00:03.24 | 1.8s | The Window: Auntie Ro |
+| 3 | crew-choice | take-window.mp4 | 00:07.16–00:09.10 | 1.8s | The Window: crew card |
 | 4 | stash | take-play.mp4 | 00:25.04–00:28.10 | 3.2s | real stash pickup |
-| 5 | power | take-play.mp4 | 01:39.28–01:43.16 | 3.6s | power activation |
-| 6 | escape | take-play.mp4 | 02:03.25–02:08.13 | 4.6s | carry into the car |
-| 7 | end card | promo/plug-run-poster-1080x1920.png | - | 3.00s | approved art, ends on PLUGRUN.IO |
+| 5 | switch-brief | take-window.mp4 | 00:15.19–00:17.13 | 1.8s | Switch states the objective |
+| 6 | close-call-2 | take-play.mp4 | 02:17.28–02:20.16 | 2.6s | second near miss |
+| 7 | mags | take-window.mp4 | 00:17.19–00:19.13 | 1.8s | Mags on the radio |
+| 8 | power | take-play.mp4 | 01:39.28–01:43.16 | 3.6s | power activation |
+| 9 | escape | take-play.mp4 | 02:04.01–02:08.07 | 4.2s | carry into the car |
+| 10 | clear | take-play.mp4 | 02:24.19–02:27.01 | 2.4s | house clear |
+| 11 | end card | promo/plug-run-poster-1080x1920.png | - | 3.00s | approved art, ends on PLUGRUN.IO |
 
 ## Landscape cut - 50.97s, 5.2MB
 
@@ -133,28 +137,40 @@ is now reported at build time so it gets a second look before shipping.
 Still above that line in the landscape cut, left in for now and worth your
 eyes: `power` at 5.83/s and `close-call-3` at 6.06/s.
 
-## Audio - SFX only, and why
+## Audio
 
-**The music is not in these trailers.** No licence, credit or attribution file
-exists anywhere in the repo for any audio asset, and none of the files carry
-metadata tags. `MUSIC_PRODUCTION_BRIEF.md` asks producers to confirm samples
-are cleared *for game use*, which is not the same as promotional use -
-`PROMO_KIT.md` says so itself. Per the brief's rule (uncertain rights -> ship
-SFX only), these exports carry gameplay SFX and no music.
+**Vertical cut: music + gameplay SFX.** The bed is `plug_beat2.mp3` (the
+"glideraide" beat). Rights basis: the repo owner states it was written by his
+cousin in GarageBand and that they have permission to use it. That is his
+statement, recorded here as the basis -- I did not independently verify it,
+and there is still no licence or credit file in the repo for it.
 
-The SFX bed is not a recording of the browser. Headless Chromium gives no
+It masters hot: -10.4 LUFS integrated, peaking +1.3 dBFS, i.e. already clipped
+at source. It is therefore laid in at -9 dB, started at 2.0s to skip its
+one-second fade-in so the cut opens on the established beat, faded out under
+the end card, and the sum is limited at 0.94. Final mix: -18.5 LUFS integrated, -1.6 dBFS peak.
+
+**Landscape cut: gameplay SFX only.** No music was requested for it. If you
+want the same bed on it, it is one flag -- `MUSIC=<file> node build.mjs`.
+
+**The SFX bed is not a recording of the browser.** Headless Chromium exposes no
 audio track, so every cue the game fired was logged at capture time from
-`AudioManager.play()` - the game's own call, with the game's own computed
-volume - and the bed was rebuilt from the game's own asset files at those
-exact offsets. Cues used: {"phase":1,"gun_fire":4,"ouch":1,"dash":2,"pickup":3,"spickup":3,"engine_start":6,"decoy":2}.
+`AudioManager.play()` -- the game's own call, with the game's own computed
+volume -- and rebuilt from the game's own asset files at those exact offsets.
+Cues used: {"phase":2,"gun_fire":6,"ouch":3,"dash":2,"pickup":2,"spickup":2,"engine_start":4,"decoy":2}.
 
-**Open question for you, and it affects the game, not just the trailer:** the
-current drum roll was uploaded as `28758__teleport8__sdroll.wav`. That is
-Freesound.org's `<id>__<user>__<name>` naming convention, which suggests a
-third-party sample. Freesound licences range from CC0 to CC-BY-NC, and CC-BY-NC
-would not permit promotional use. I could not check it from here. The other
-"uploaded stock sound" assets (`contact_open.wav`, `pickup.wav`) have the same
-undocumented provenance. Worth confirming before any of this goes out.
+One cue is missing: `impact` (the bullet-hit thud). The game synthesises it as a
+Web Audio earcon rather than playing an asset file, so there is no file to
+rebuild it from. Every other cue the game fired is present.
+
+**Still open, and it affects the game, not just the trailer.** The other audio
+assets have no licence, credit or attribution anywhere in the repo and carry no
+metadata. The drum roll in particular was uploaded as
+`28758__teleport8__sdroll.wav` -- Freesound.org's `<id>__<user>__<name>`
+convention, which suggests a third-party sample. Freesound licences run from
+CC0 to CC-BY-NC, and CC-BY-NC would not permit promotional use. I could not
+check it from here. `contact_open.wav` and `pickup.wav` have the same
+undocumented provenance. Worth confirming before this goes out.
 
 ## Verification notes worth knowing
 
