@@ -9,8 +9,14 @@ import Phaser from 'phaser';
 const SUCCESS_OVERLAP_MS = 250;
 // If .duration isn't known yet (should not happen for a preloaded asset,
 // but a decode can still be mid-flight on a slow device), fall back to the
-// measured length of success1.mp3 rather than guessing a round number.
-const SUCCESS1_FALLBACK_S = 3.29;
+// measured length of success1.wav rather than guessing a round number.
+const SUCCESS1_FALLBACK_S = 4.21;
+// The payoff normally lands at the end of the drum roll, but never later
+// than this. A roll mastered with trailing silence -- success1.wav runs
+// 4.21s but is inaudible past about 2.5s -- would otherwise push the horns
+// out into dead air. 3.04s is where the payoff landed on the roll this
+// sequence was built against, and it stays there.
+const SUCCESS_CUE_LATEST_S = 3.04;
 
 // Lightweight audio scaffold with graceful fallbacks (no external assets required)
 export class AudioManager {
@@ -18,7 +24,7 @@ export class AudioManager {
 
   static preloadMoments(scene) {
     scene.load.audio('contact_open', '/audio/contact_open.wav');
-    scene.load.audio('success1', '/audio/success1.mp3');
+    scene.load.audio('success1', '/audio/success1.wav');
     scene.load.audio('success2', '/audio/success2.mp3');
     scene.load.audio('success3', '/audio/success3.wav');
     scene.load.audio('mission_pickup', '/audio/pickup.wav');
@@ -330,7 +336,8 @@ export class AudioManager {
       this.play('success3', { volume: mix });
     };
     const durationS = success1.duration > 0 ? success1.duration : SUCCESS1_FALLBACK_S;
-    const fireAt = Math.max(0, durationS * 1000 - SUCCESS_OVERLAP_MS);
+    const fireAt = Math.max(0, Math.min(durationS * 1000 - SUCCESS_OVERLAP_MS,
+      SUCCESS_CUE_LATEST_S * 1000));
     if (scene?.time?.delayedCall) {
       this._completionTimer = scene.time.delayedCall(fireAt, fireFollowUps);
     } else {

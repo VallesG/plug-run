@@ -66,7 +66,7 @@ assert.equal(samples[0].options.volume, 0.24);
 assert.deepEqual(drumrolls.map(s => s.key), ['success1']);
 assert.equal(drumrolls[0].volume, 0.55 * 0.8); // mix * masterVolume (unmuted) * volSfx
 assert.equal(seqTimers.length, 1);
-assert.equal(seqTimers[0].ms, 4.2 * 1000 - 250); // measured duration minus the configurable overlap
+assert.equal(seqTimers[0].ms, 3040); // capped: this roll's tail is silence, so the payoff does not drift out into it
 seqTimers[0].fn(); // resolve this sequence before starting the next one below
 assert.deepEqual(samples.slice(1).map(s => s.key), ['success2', 'success3']);
 assert.equal(samples[1].options.volume, 0.55);
@@ -83,7 +83,7 @@ sampled.sound.locked = false; sampled.sound.context.state = 'suspended';
 assert.equal(sampled.playMoment('block'), false); assert.equal(drumrolls.length, 2);
 const loads = []; Audio.preloadMoments({ load: { audio(key, url) { loads.push([key, url]); } } });
 assert.deepEqual(loads, [['contact_open', '/audio/contact_open.wav'],
-  ['success1', '/audio/success1.mp3'], ['success2', '/audio/success2.mp3'], ['success3', '/audio/success3.wav'],
+  ['success1', '/audio/success1.wav'], ['success2', '/audio/success2.mp3'], ['success3', '/audio/success3.wav'],
   ['mission_pickup', '/audio/pickup.wav']]);
 
 // Completion sequence specifics: fallback duration, cancellation, and the
@@ -103,7 +103,7 @@ assert.deepEqual(loads, [['contact_open', '/audio/contact_open.wav'],
   // rather than guessing a round number.
   const seq1 = makeSeq(0);
   assert.equal(seq1.playCompletionSequence('block'), true);
-  assert.equal(timers[0].ms, 3.29 * 1000 - 250);
+  assert.equal(timers[0].ms, 3040); // fallback length is past the cap, so the cap wins
 
   // Cancelling before the timer fires prevents the follow-ups entirely.
   seq1.cancelPendingCompletionAudio();
@@ -122,6 +122,9 @@ assert.deepEqual(loads, [['contact_open', '/audio/contact_open.wav'],
   // Normal path: horns and applause fire together, at the configured overlap.
   const seq3 = makeSeq(2.75);
   assert.equal(seq3.playCompletionSequence('block'), true);
+  // A roll shorter than the cap still drives the cue itself -- the cap only
+  // stops a padded roll running long, it never stretches a short one.
+  assert.equal(timers[2].ms, 2.75 * 1000 - 250);
   timers[2].fn();
   assert.deepEqual(plays.map(p => p.key), ['success2', 'success3']);
 }
