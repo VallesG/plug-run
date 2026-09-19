@@ -24,7 +24,7 @@ function setup(width,height,house=1,options={}) {
  const scene={cameras:{main:{centerX:width/2,centerY:height/2}},scale:{gameSize:{width,height}},
   events:{once(){},off(){}},time:{delayedCall(delay,fn){const timer={delay,fn,remove(){}};timers.push(timer);return timer;}},role:'runner',mode:'pve',pveRound:house,retryAfterElimination:options.retryAfterElimination===true,roundPausedForMenu:false,input:{keyboard:{enabled:false}},
   add:{rectangle:(x,y,w,h)=>{const o=node(x,y,w,h);rectangles.push(o);return o;},
-   text:(x,y,value)=>{const o=node(x,y);o.text=value;texts.push(o);return o;}},
+   text:(x,y,value,style)=>{const o=node(x,y);o.text=value;o.style=style||{};texts.push(o);return o;}},
   scene:{start:key=>{scene.destination=key;}}};
  const ui={scene,showModal:opts=>{
   modalOptions=opts;
@@ -44,7 +44,17 @@ for(const [w,h]of [[280,480],[390,844],[1440,900]]) {
   const r=setup(w,h,house,{allowReplay:false,showAccount:false});
   check('all three cards editable '+w+'/'+house,r.cards.length===3);
   check('compact selected only after opening houses',r.options.compactLoadout===(house>3));
-  check('description teaching follows compact state',r.texts.some(t=>t.text==='Pass through\nwalls & bullets')===(house===1));
+  check('description teaching follows compact state',r.texts.some(t=>t.text==='Through walls\n& bullets')===(house===1));
+  // These are the first words a new player reads about a power, on a phone.
+  // Keep them short enough to fit the card and large enough to actually read.
+  const descriptions=r.texts.filter(t=>/\n/.test(t.text||'')&&/walls|danger|fire/.test(t.text||''));
+  if(house===1){
+   check('every power keeps a description '+w,descriptions.length===3);
+   check('descriptions stay short '+w,descriptions.every(t=>t.text.split('\n').every(line=>line.length<=14)));
+   check('descriptions stay legible '+w,descriptions.every(t=>parseFloat(t.style.fontSize)>=10));
+  }
+  const small=r.texts.filter(t=>(t.text||'').trim()&&parseFloat(t.style.fontSize)<10&&t.text!=='');
+  check('no sub-10px body copy in the picker '+w+'/'+house,small.every(t=>t.text.length<=4));
   check('later picker drops subtitle',house===1?r.options.subtitle.includes('powers'):r.options.subtitle===null);
   check('no charge wording',!r.texts.some(t=>/charge/i.test(t.text||'')));
   r.start.press();

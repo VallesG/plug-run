@@ -256,7 +256,7 @@ export class WindowScene extends Phaser.Scene {
 
     const cardsTop=titleY+34;
     const availableH=a.panelBottom-a.pad-cardsTop-58;
-    const cardH=Math.max(68,Math.min(118,(availableH-16)/3));
+    const cardH=Math.max(68,Math.min(126,(availableH-16)/3));
     WINDOW_GANGS.forEach((gang,i)=>{
       const y=cardsTop+cardH/2+i*(cardH+8);
       this.addPanel(a.cx,y,a.contentW,cardH,gang.color);
@@ -269,19 +269,23 @@ export class WindowScene extends Phaser.Scene {
       const name=this.add.text(textX,y-cardH/2+11,gang.name.toUpperCase(),{
         fontFamily:'Arial, sans-serif',fontSize:'17px',fontStyle:'bold',color:gang.css,letterSpacing:1
       }).setOrigin(0,0).setDepth(9);
-      const contacts=this.add.text(name.x,y-cardH/2+34,gang.primary+' · '+gang.jobs,{
-        fontFamily:'Arial, sans-serif',fontSize:'10px',color:'#b4bebf'
+      const contacts=this.add.text(name.x,y-cardH/2+33,gang.primary+' · '+gang.jobs,{
+        fontFamily:'Arial, sans-serif',fontSize:'11px',color:'#c2ccce'
       }).setOrigin(0,0).setDepth(9);
-      const pitch=this.add.text(name.x,y-cardH/2+51,cardH<100?gang.motto:gang.pitch,{
-        fontFamily:'Georgia, serif',fontSize:'12px',color:'#e9dfc7',
-        wordWrap:{width:a.contentW-(textX-(a.cx-a.contentW/2))-10},lineSpacing:2
+      const textW=a.contentW-(textX-(a.cx-a.contentW/2))-10;
+      // Picking a crew is picking a storyline, so the card's one body line is
+      // what that crew's season is actually about. Drops a size on a narrow
+      // column so the hook still lands in two lines instead of three.
+      const story=this.add.text(name.x,y-cardH/2+50,gang.story,{
+        fontFamily:'Georgia, serif',fontSize:(textW<175?11:12.5)+'px',color:'#f0e7d2',
+        wordWrap:{width:textW},lineSpacing:2
       }).setOrigin(0,0).setDepth(9);
       const hit=this.add.rectangle(a.cx,y,a.contentW,cardH,gang.color,0.001).setDepth(12)
         .setInteractive({cursor:'pointer'})
         .on('pointerover',()=>hit.setFillStyle(gang.color,0.12))
         .on('pointerout',()=>hit.setFillStyle(gang.color,0.001))
         .on('pointerup',()=>this.confirmGang(gang.id));
-      this.keep(name,contacts,pitch,hit);
+      this.keep(name,contacts,story,hit);
     });
     this.addButton(a.cx,a.panelBottom-a.pad-22,Math.min(180,a.contentW),'BACK TO RO',()=>this.showIntro(WINDOW_INTRO.length-1),COLORS.dim);
   }
@@ -388,7 +392,7 @@ export class WindowScene extends Phaser.Scene {
   renderSection(a,gang,section) {
     const content={
       jobs:['JOBS BOARD','Daily missions will use verified stash, block, REP and Rival outcomes. No mission rewards are active yet.'],
-      gang:['YOUR GANG',gang.name+' · '+gang.motto+'\n\n'+gang.primary+' keeps you in the loop. '+gang.jobs+' brings the work. Switching stays locked until its contest boundary is decided.'],
+      gang:['YOUR GANG',gang.name+' · '+gang.story+'\n\n'+gang.primary+' keeps you in the loop. '+gang.jobs+' brings the work. Switching stays locked until its contest boundary is decided.'],
       shelf:['THE SHELF','Cosmetic colorways, trails, frames, outfits and comic entrances will live here. Nothing sold here will change a race.']
     }[section];
     const y=a.cy-20;

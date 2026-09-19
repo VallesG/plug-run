@@ -6,10 +6,13 @@ import { drawPowerIcon } from './PowerIcons.js';
 import ReplaySystem from './ReplaySystem.js';
 import { createBottomLeftButtons } from '../utils/authUI.js';
 
+// Two short lines each, set large enough to read on a phone. These are the
+// first words a new player gets about a power, so they say what it does in
+// as few words as the mechanic allows.
 const POWERS = [
-  {id:'phase',name:'PHASE',description:'Pass through\nwalls & bullets',color:0xb7a3d9,css:'#c7b5e5'},
-  {id:'dash',name:'DASH',description:'Burst forward\nout of danger',color:0xddbd72,css:'#ead194'},
-  {id:'decoy',name:'DECOY',description:'Send a double\nto draw fire',color:0x81adbf,css:'#9bc4d4'}
+  {id:'phase',name:'PHASE',description:'Through walls\n& bullets',color:0xb7a3d9,css:'#c7b5e5'},
+  {id:'dash',name:'DASH',description:'Burst out\nof danger',color:0xddbd72,css:'#ead194'},
+  {id:'decoy',name:'DECOY',description:'Double draws\ntheir fire',color:0x81adbf,css:'#9bc4d4'}
 ];
 
 export function showRunnerLoadout(ui,onDone,options = {}) {
@@ -26,17 +29,17 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
   const layout=loadoutLayout(panel.width,panel.height,compact);
   const objects=[];
   const add=o=>{registerExtra(o);objects.push(o);return o;};
-  const text=(x,y,value,size=12,color='#c3cccf',bold=false)=>add(
+  const text=(x,y,value,size=12,color='#c3cccf',bold=false,wrap=null)=>add(
     scene.add.text(x,y,value,{
       fontFamily:'Arial, sans-serif',fontSize:size+'px',fontStyle:bold?'bold':'normal',
-      color,align:'center',wordWrap:{width:panel.width-40}
+      color,align:'center',wordWrap:{width:wrap ?? panel.width-40}
     }).setOrigin(0.5).setDepth(20005).setScrollFactor(0));
   const rectangle=(x,y,w,h,fill,line=0x39434c)=>add(
     scene.add.rectangle(x,y,w,h,fill,1).setStrokeStyle(1,line)
       .setDepth(20004).setScrollFactor(0));
   const button=(x,y,w,h,label,callback)=>{
     const bg=rectangle(x,y,w,h,0x19222b);
-    const labelObject=text(x,y,label,12,'#b9c7cf',true);
+    const labelObject=text(x,y,label,13,'#b9c7cf',true);
     bg.setInteractive({useHandCursor:true}).on('pointerdown',(pointer,x,y,event)=>{
       consumeModalPointer(pointer,event);callback(pointer,event);
     });
@@ -77,8 +80,10 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
     rectangle(x+2,y+r.h/2+3,r.w,r.h,0x080d13,0x080d13);
     const bg=rectangle(x,y+r.h/2,r.w,r.h,0x151e26);
     add(drawPowerIcon(scene,x,y+r.h*(compact?0.38:0.32),power.id,Math.min(36,r.w*0.5),power.color));
-    text(x,y+r.h*(compact?0.76:0.63),power.name,r.w<80?11:13,power.css,true);
-    if(!compact) text(x,y+r.h*0.84,power.description,r.w<80?9:11,'#98a7ac');
+    text(x,y+r.h*(compact?0.76:0.63),power.name,r.w<80?12:15,power.css,true);
+    // Only grow the description on a card tall enough to hold two bigger lines.
+    if(!compact) text(x,y+r.h*0.84,power.description,
+      r.w<80?10:(r.h>=100?13:11),'#bcc9cf',false,r.w-8);
     const badge=text(x+r.w/2-14,y+11,'',9,power.css,true).setVisible(false);
     cards.push({power,bg,badge});
     if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',(pointer,x,y,event)=>{
@@ -90,15 +95,15 @@ export function showRunnerLoadout(ui,onDone,options = {}) {
   for(let i=0;i<2;i++){
     const x=left+20+slotW/2+i*(slotW+10),y=top+layout.slotsY;
     const bg=rectangle(x,y,slotW,36,0x101922);
-    text(x-slotW/2+15,y,String(i+1).padStart(2,'0'),10,'#7c8f9a',true);
-    const label=text(x+8,y,'EMPTY',11,'#6f808b',true);
+    text(x-slotW/2+15,y,String(i+1).padStart(2,'0'),11,'#8fa2ad',true);
+    const label=text(x+8,y,'EMPTY',13,'#7d8f9b',true);
     slots.push({bg,label});
     if(!fixedPowers) bg.setInteractive({useHandCursor:true}).on('pointerdown',(pointer,x,y,event)=>{
       consumeModalPointer(pointer,event);
       chosen=removePowerAt(chosen,i);refresh();
     });
   }
-  const help=text(panel.x,top+layout.slotsY+37,'',11,'#879a9f').setVisible(layout.showHelp);
+  const help=text(panel.x,top+layout.slotsY+38,'',12.5,'#9fb0b6').setVisible(layout.showHelp);
   const start=button(panel.x,top+layout.startY,layout.buttonW,44,'PICK TWO POWERS',(pointer,event)=>{
     if(started||chosen.length!==2)return;
     started=true;

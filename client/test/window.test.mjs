@@ -117,6 +117,16 @@ for(const [width,height] of [[280,480],[390,844],[671,838],[1440,900]]){
   check('no identity subtitle '+width,!active.some(o=>/Identity and dialogue/.test(o.text||'')));
   check('clear sans serif heading '+width,active.some(o=>o.text==='WHO HAS YOUR BACK?'&&o.style.fontFamily==='Arial, sans-serif'));
   check('larger crew names '+width,WINDOW_GANGS.every(g=>active.some(o=>o.text===g.name.toUpperCase()&&o.style.fontSize==='17px')));
+  // Picking a crew is picking a storyline, so each card says what its season
+  // is actually about — concisely, and never in the tiny type it used to use.
+  // Picking a crew is picking a storyline, so every card previews its season
+  // — concisely, and never in the tiny type the old pitch used.
+  const stories=active.filter(o=>WINDOW_GANGS.some(g=>g.story===o.text));
+  check('every crew card previews its season '+width,stories.length===3);
+  check('crew previews stay one short sentence '+width,
+    WINDOW_GANGS.every(g=>g.story.length<=56&&g.story.split('.').length<=2));
+  check('crew previews stay legible '+width,stories.every(o=>parseFloat(o.style.fontSize)>=11));
+  check('no sub-11px crew copy '+width,!active.some(o=>/^\d+(\.\d+)?px$/.test(o.style?.fontSize||'')&&parseFloat(o.style.fontSize)<11&&(o.text||'').length>24));
   for(const portrait of portraits){
     check('portrait inside selection horizontal bounds '+width,portrait.x-portrait.displayWidth/2>=layout.cx-layout.contentW/2&&portrait.x+portrait.displayWidth/2<=layout.cx+layout.contentW/2);
     const hit=active.filter(o=>o.kind==='rectangle'&&o.depth===12).find(o=>portrait.y<=o.y+o.height/2&&portrait.y>o.y-o.height/2);

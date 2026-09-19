@@ -25,32 +25,29 @@ export const WINDOW_GANGS = Object.freeze([
   Object.freeze({
     id: 'crossline',
     name: 'Crossline',
-    motto: 'Read the street. Keep it moving.',
     color: 0x43b5c7,
     css: '#43b5c7',
     primary: 'Switch',
     jobs: 'Mags',
-    pitch: 'We keep the streets talking. Bring the stash home before the story changes.'
+    story: 'A dead channel, and the crew that vanished on it.'
   }),
   Object.freeze({
     id: 'iron-row',
     name: 'Iron Row',
-    motto: 'Finish clean. Stand your ground.',
     color: 0xd2c66a,
     css: '#d2c66a',
     primary: 'Brick',
     jobs: 'Rook',
-    pitch: 'No wasted motion. No excuses. Get in, get out, and look after your people.'
+    story: 'An unfinished ledger, and plates that don\'t exist.'
   }),
   Object.freeze({
     id: 'afterlight',
     name: 'Afterlight',
-    motto: 'Move fast. Leave a mark.',
     color: 0x9b78d0,
     css: '#9b78d0',
     primary: 'Vee',
     jobs: 'Sol',
-    pitch: 'Style counts when the whole city is watching. Win fast and make them remember it.'
+    story: 'A burned guestlist, and a signature painted over.'
   })
 ]);
 
