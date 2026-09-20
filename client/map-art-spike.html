@@ -93,18 +93,22 @@ function draw(canvas, useSource, block, seed) {
   }
   // Identical reveal ownership to the live block renderer: each 2-unit cell
   // belongs to the first house whose road or yard reaches it.
-  const fog=buildFog(block,seed);
-  ctx.fillStyle='#080d12';
-  for(let row=0;row<110;row++){
-    let col=0;
-    while(col<100){
-      const start=col;
-      const hidden=fog[row*100+col].unlock>block.visibleThrough;
-      while(col<100 && (fog[row*100+col].unlock>block.visibleThrough)===hidden)col++;
-      if(hidden)ctx.fillRect(start*2,row*2,(col-start)*2,2);
+  // The fifteenth clear is a celebration: uncover the entire block,
+  // including courtyards that no individual house's reveal radius owns.
+  if(block.visibleThrough<block.maps){
+    const fog=buildFog(block,seed);
+    ctx.fillStyle='#080d12';
+    for(let row=0;row<110;row++){
+      let col=0;
+      while(col<100){
+        const start=col;
+        const hidden=fog[row*100+col].unlock>block.visibleThrough;
+        while(col<100 && (fog[row*100+col].unlock>block.visibleThrough)===hidden)col++;
+        if(hidden)ctx.fillRect(start*2,row*2,(col-start)*2,2);
+      }
     }
   }
-  if(block.visibleThrough<15){
+  if(block.visibleThrough<block.maps){
     const {x,y}=block.marker;
     ctx.fillStyle='#ffda8e';ctx.strokeStyle='#0b1117';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+3,y-2);
