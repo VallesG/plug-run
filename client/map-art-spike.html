@@ -6,7 +6,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0b1117;color:#e8e5d9;font:14px system-ui,sans-serif}
 header{padding:16px 20px;border-bottom:1px solid #34506a}h1{font-size:18px;margin:0 0 6px}
-p{margin:4px 0;color:#aebbc5}.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px}
+p{margin:4px 0;color:#aebbc5}.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px}button{background:#172b39;border:1px solid #52738a;border-radius:4px;color:#e8e5d9;padding:6px 10px;cursor:pointer}
 main{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;padding:20px}
 figure{margin:0;width:min(400px,100%)}figcaption{margin-bottom:8px;color:#b7dfff}
 canvas{display:block;width:100%;height:auto;border:1px solid #3a5265;background:#111a19}
@@ -16,8 +16,10 @@ small{display:block;margin-top:8px;color:#aebbc5}
 <body>
 <header>
 <h1>BLOCK MAP / SOURCE-ART SCALE SPIKE</h1>
-<p>Same 15-house route in both panes. Only the roof rendering differs. This is not wired into the live game.</p>
+<p>One continuous neighborhood road and the game's one-house-at-a-time fog reveal. Only the roof rendering differs. This is not wired into the live game.</p>
 <div class="controls">
+<label>Houses cleared <input id="cleared" type="range" min="0" max="15" value="1"> <output id="cleared-value">1 / 15</output></label>
+<button id="next">Clear next house</button><button id="tour">Auto tour</button>
 <label><input id="mirror" type="checkbox"> Mirrored route</label>
 <label>Preview width <input id="width" type="range" min="240" max="400" value="320"> <output id="width-value">320px</output></label>
 </div>
@@ -28,7 +30,7 @@ small{display:block;margin-top:8px;color:#aebbc5}
 <small>If the detail disappears at phone width or rectangular crop edges show, the sheet needs cleaner isolated assets before integration.</small></figure>
 </main>
 <script type="module">
-import { layoutBlock, blockNoise } from './src/logic/blockMap.js';
+import { layoutBlock, blockNoise, buildFog } from './src/logic/blockMap.js';
 const source = new Image();
 source.src = './art-sources/maps/map-style-sheet.png';
 const crops = [
@@ -39,6 +41,9 @@ const crops = [
 const colors=['#675e4e','#505e60','#736557','#5c6150','#685758'];
 const canvases=[document.querySelector('#baseline'),document.querySelector('#prototype')];
 const widthSlider=document.querySelector('#width');
+const clearedSlider=document.querySelector('#cleared');
+const tourButton=document.querySelector('#tour');
+let tourTimer=null;
 function draw(canvas, useSource, block, seed) {
   const ctx=canvas.getContext('2d');
   ctx.setTransform(2,0,0,2,0,0);
@@ -49,21 +54,19 @@ function draw(canvas, useSource, block, seed) {
     ctx.fillStyle=['#303b30','#364032','#3a4435','#404839'][Math.floor(n*4)];
     ctx.fillRect(x,y,2,2);
   }
-  for(const street of block.streets){
-    const {a,b}=street;
-    ctx.lineCap='square';
-    for(const [lineWidth,color] of [[11,'#171c1b'],[9,'#888474'],[7,'#27343e']]){
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-      ctx.lineWidth=lineWidth;ctx.strokeStyle=color;ctx.stroke();
-    }
-    const length=Math.hypot(b.x-a.x,b.y-a.y);
-    ctx.lineWidth=.45;ctx.strokeStyle='#ead9a8';
-    for(let d=4;d<length-2;d+=7){
-      const t=d/length,e=Math.min((d+2)/length,1);
-      ctx.beginPath();ctx.moveTo(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t);
-      ctx.lineTo(a.x+(b.x-a.x)*e,a.y+(b.y-a.y)*e);ctx.stroke();
-    }
+  // Stroke the entire connected route once per layer. Muted curbs and a
+  // continuous centerline make it read as a street, not joined track pieces.
+  const points=[block.streets[0].a,...block.streets.map(street=>street.b)];
+  const route=()=>{
+    ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+    for(const point of points.slice(1))ctx.lineTo(point.x,point.y);
+  };
+  ctx.lineJoin='round';ctx.lineCap='round';
+  for(const [lineWidth,color] of [[13,'#161e22'],[11,'#596169'],[8,'#25313b']]){
+    route();ctx.lineWidth=lineWidth;ctx.strokeStyle=color;ctx.stroke();
   }
+  route();ctx.setLineDash([2,5]);ctx.lineWidth=.45;
+  ctx.strokeStyle='#a8abb0';ctx.stroke();ctx.setLineDash([]);
   for(const house of block.houses){
     const left=house.x-house.w/2,top=house.y-house.h/2;
     ctx.fillStyle='#151b1a';ctx.fillRect(left-2,top-2,house.w+4,house.h+4);
@@ -88,10 +91,32 @@ function draw(canvas, useSource, block, seed) {
     const label=String(house.index).padStart(2,'0');
     ctx.strokeText(label,house.x,top-4);ctx.fillText(label,house.x,top-4);
   }
+  // Identical reveal ownership to the live block renderer: each 2-unit cell
+  // belongs to the first house whose road or yard reaches it.
+  const fog=buildFog(block,seed);
+  ctx.fillStyle='#080d12';
+  for(let row=0;row<110;row++){
+    let col=0;
+    while(col<100){
+      const start=col;
+      const hidden=fog[row*100+col].unlock>block.visibleThrough;
+      while(col<100 && (fog[row*100+col].unlock>block.visibleThrough)===hidden)col++;
+      if(hidden)ctx.fillRect(start*2,row*2,(col-start)*2,2);
+    }
+  }
+  if(block.visibleThrough<15){
+    const {x,y}=block.marker;
+    ctx.fillStyle='#ffda8e';ctx.strokeStyle='#0b1117';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+3,y-2);
+    ctx.lineTo(x,y+1);ctx.lineTo(x-3,y-2);ctx.closePath();
+    ctx.fill();ctx.stroke();
+  }
 }
 function paint(){
   const seed=document.querySelector('#mirror').checked?1:0;
-  const block=layoutBlock({maps:15,cleared:15,layoutSeed:seed,width:400,height:440});
+  const cleared=Number(clearedSlider.value);
+  const block=layoutBlock({maps:15,cleared,layoutSeed:seed,width:400,height:440});
+  document.querySelector('#cleared-value').value=cleared+' / 15';
   draw(canvases[0],false,block,seed);
   draw(canvases[1],true,block,seed);
   const w=Number(widthSlider.value);
@@ -101,6 +126,19 @@ function paint(){
 source.onload=paint;
 source.onerror=()=>{document.querySelector('small').textContent='Style sheet failed to load. Run this page through the client Vite dev server.';paint();};
 document.querySelector('#mirror').addEventListener('change',paint);
+clearedSlider.addEventListener('input',paint);
+document.querySelector('#next').addEventListener('click',()=>{
+  clearedSlider.value=String(Math.min(15,Number(clearedSlider.value)+1));paint();
+});
+tourButton.addEventListener('click',()=>{
+  if(tourTimer){clearInterval(tourTimer);tourTimer=null;tourButton.textContent='Auto tour';return;}
+  clearedSlider.value='0';paint();tourButton.textContent='Stop tour';
+  tourTimer=setInterval(()=>{
+    const next=Number(clearedSlider.value)+1;
+    clearedSlider.value=String(next);paint();
+    if(next>=15){clearInterval(tourTimer);tourTimer=null;tourButton.textContent='Auto tour';}
+  },950);
+});
 widthSlider.addEventListener('input',paint);
 paint();
 </script>
