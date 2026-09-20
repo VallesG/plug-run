@@ -20,6 +20,7 @@ small{display:block;margin-top:8px;color:#aebbc5}
 <div class="controls">
 <label>Houses cleared <input id="cleared" type="range" min="0" max="15" value="1"> <output id="cleared-value">1 / 15</output></label>
 <button id="next">Clear next house</button><button id="tour">Auto tour</button>
+<label><input id="props" type="checkbox" checked> Trees, cars &amp; lights</label>
 <label><input id="mirror" type="checkbox"> Mirrored route</label>
 <label>Preview width <input id="width" type="range" min="240" max="400" value="320"> <output id="width-value">320px</output></label>
 </div>
@@ -30,7 +31,7 @@ small{display:block;margin-top:8px;color:#aebbc5}
 <small>If the detail disappears at phone width or rectangular crop edges show, the sheet needs cleaner isolated assets before integration.</small></figure>
 </main>
 <script type="module">
-import { layoutBlock, blockNoise, buildFog } from './src/logic/blockMap.js';
+import { layoutBlock, blockNoise, buildFog, distanceToStreet } from './src/logic/blockMap.js';
 const source = new Image();
 source.src = './art-sources/maps/map-style-sheet.png';
 const crops = [
@@ -39,6 +40,80 @@ const crops = [
   {x:684,y:501,w:148,h:242}
 ];
 const colors=['#675e4e','#505e60','#736557','#5c6150','#685758'];
+// Tight crops from the unmodified concept sheet; soft masks hide its navy
+// backdrop. These are preview-only stand-ins for future transparent exports.
+const treeCrops=[
+  {x:39,y:836,w:149,h:168},{x:207,y:836,w:162,h:168},
+  {x:392,y:832,w:170,h:164},{x:616,y:837,w:125,h:161},
+  {x:742,y:864,w:72,h:109}
+];
+const carCrops=[
+  {x:936,y:852,w:63,h:159},{x:1004,y:852,w:64,h:159},
+  {x:1073,y:850,w:62,h:160},{x:1143,y:848,w:77,h:166}
+];
+const cropCache=new Map();
+function spriteFromCrop(crop,kind){
+  if(!source.complete||!source.naturalWidth)return null;
+  const key=kind+':'+crop.x;
+  if(cropCache.has(key))return cropCache.get(key);
+  const sprite=document.createElement('canvas');
+  sprite.width=crop.w;sprite.height=crop.h;
+  const c=sprite.getContext('2d');
+  c.drawImage(source,crop.x,crop.y,crop.w,crop.h,0,0,crop.w,crop.h);
+  // Feather only the outer backdrop; retain the lit and dark interior details.
+  c.globalCompositeOperation='destination-in';
+  const radius=Math.min(crop.w,crop.h);
+  const mask=c.createRadialGradient(crop.w/2,crop.h/2,radius*.25,
+    crop.w/2,crop.h/2,radius*.72);
+  mask.addColorStop(0,'rgba(0,0,0,1)');
+  mask.addColorStop(.7,'rgba(0,0,0,1)');
+  mask.addColorStop(1,'rgba(0,0,0,0)');
+  c.fillStyle=mask;c.fillRect(0,0,crop.w,crop.h);
+  cropCache.set(key,sprite);return sprite;
+}
+function clearOfMap(x,y,block,streetMargin,houseMargin){
+  if(block.streets.some(s=>distanceToStreet(x,y,s.a,s.b)<streetMargin))return false;
+  return !block.houses.some(h=>Math.abs(x-h.x)<h.w/2+houseMargin
+    &&Math.abs(y-h.y)<h.h/2+houseMargin);
+}
+function drawTrees(ctx,block,seed){
+  for(let y=12;y<212;y+=11)for(let x=11;x<191;x+=11){
+    const n=blockNoise(x,y,seed^0x794d);
+    if(n<.925||!clearOfMap(x,y,block,9,6))continue;
+    const variant=Math.floor(blockNoise(x,y,seed^0x119a)*treeCrops.length);
+    const sprite=spriteFromCrop(treeCrops[variant],'tree');
+    if(!sprite)continue;
+    const size=5+blockNoise(x,y,seed^0x22b3)*2.5;
+    ctx.drawImage(sprite,x-size/2,y-size/2,size,size);
+  }
+}
+function drawCars(ctx,block,seed){
+  for(const street of block.streets){
+    const {a,b}=street,length=Math.hypot(b.x-a.x,b.y-a.y);
+    if(length<16||blockNoise(street.index,3,seed^0x7112)<.51)continue;
+    const vertical=a.x===b.x;
+    const t=.38+blockNoise(street.index,9,seed^0x3341)*.23;
+    const x=a.x+(b.x-a.x)*t+(vertical?2.7:0);
+    const y=a.y+(b.y-a.y)*t+(vertical?0:2.7);
+    if(block.houses.some(h=>Math.abs(x-h.x)<h.w/2+2&&Math.abs(y-h.y)<h.h/2+2))continue;
+    const variant=Math.floor(blockNoise(street.index,13,seed^0x4217)*carCrops.length);
+    const sprite=spriteFromCrop(carCrops[variant],'car');
+    if(!sprite)continue;
+    ctx.save();ctx.translate(x,y);
+    if(!vertical)ctx.rotate(Math.PI/2);
+    ctx.drawImage(sprite,-1.45,-3.25,2.9,6.5);
+    ctx.restore();
+  }
+}
+function drawLightPools(ctx,block){
+  for(const house of block.houses){
+    const {x,y}=house.lamp;
+    const light=ctx.createRadialGradient(x,y,0,x,y,7);
+    light.addColorStop(0,'rgba(255,214,128,.24)');
+    light.addColorStop(1,'rgba(255,214,128,0)');
+    ctx.fillStyle=light;ctx.fillRect(x-7,y-7,14,14);
+  }
+}
 const canvases=[document.querySelector('#baseline'),document.querySelector('#prototype')];
 const widthSlider=document.querySelector('#width');
 const clearedSlider=document.querySelector('#cleared');
@@ -54,6 +129,7 @@ function draw(canvas, useSource, block, seed) {
     ctx.fillStyle=['#303b30','#364032','#3a4435','#404839'][Math.floor(n*4)];
     ctx.fillRect(x,y,2,2);
   }
+  if(useSource && document.querySelector('#props').checked)drawTrees(ctx,block,seed);
   // Stroke the entire connected route once per layer. Muted curbs and a
   // continuous centerline make it read as a street, not joined track pieces.
   const points=[block.streets[0].a,...block.streets.map(street=>street.b)];
@@ -67,6 +143,9 @@ function draw(canvas, useSource, block, seed) {
   }
   route();ctx.setLineDash([2,5]);ctx.lineWidth=.45;
   ctx.strokeStyle='#a8abb0';ctx.stroke();ctx.setLineDash([]);
+  if(useSource && document.querySelector('#props').checked){
+    drawLightPools(ctx,block);drawCars(ctx,block,seed);
+  }
   for(const house of block.houses){
     const left=house.x-house.w/2,top=house.y-house.h/2;
     ctx.fillStyle='#151b1a';ctx.fillRect(left-2,top-2,house.w+4,house.h+4);
@@ -130,6 +209,7 @@ function paint(){
 source.onload=paint;
 source.onerror=()=>{document.querySelector('small').textContent='Style sheet failed to load. Run this page through the client Vite dev server.';paint();};
 document.querySelector('#mirror').addEventListener('change',paint);
+document.querySelector('#props').addEventListener('change',paint);
 clearedSlider.addEventListener('input',paint);
 document.querySelector('#next').addEventListener('click',()=>{
   clearedSlider.value=String(Math.min(15,Number(clearedSlider.value)+1));paint();
