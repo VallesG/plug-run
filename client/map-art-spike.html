@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run map-art scale spike</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1117;color:#e8e5d9;font:14px system-ui,sans-serif}
+header{padding:16px 20px;border-bottom:1px solid #34506a}h1{font-size:18px;margin:0 0 6px}
+p{margin:4px 0;color:#aebbc5}.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px}
+main{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;padding:20px}
+figure{margin:0;width:min(400px,100%)}figcaption{margin-bottom:8px;color:#b7dfff}
+canvas{display:block;width:100%;height:auto;border:1px solid #3a5265;background:#111a19}
+small{display:block;margin-top:8px;color:#aebbc5}
+</style>
+</head>
+<body>
+<header>
+<h1>BLOCK MAP / SOURCE-ART SCALE SPIKE</h1>
+<p>Same 15-house route in both panes. Only the roof rendering differs. This is not wired into the live game.</p>
+<div class="controls">
+<label><input id="mirror" type="checkbox"> Mirrored route</label>
+<label>Preview width <input id="width" type="range" min="240" max="400" value="320"> <output id="width-value">320px</output></label>
+</div>
+</header>
+<main>
+<figure><figcaption>Procedural roof baseline</figcaption><canvas id="baseline" width="400" height="440"></canvas></figure>
+<figure><figcaption>Generated-sheet roof crops</figcaption><canvas id="prototype" width="400" height="440"></canvas>
+<small>If the detail disappears at phone width or rectangular crop edges show, the sheet needs cleaner isolated assets before integration.</small></figure>
+</main>
+<script type="module">
+import { layoutBlock, blockNoise } from './src/logic/blockMap.js';
+const source = new Image();
+source.src = './art-sources/maps/map-style-sheet.png';
+const crops = [
+  {x:101,y:501,w:148,h:242},
+  {x:391,y:501,w:161,h:242},
+  {x:684,y:501,w:148,h:242}
+];
+const colors=['#675e4e','#505e60','#736557','#5c6150','#685758'];
+const canvases=[document.querySelector('#baseline'),document.querySelector('#prototype')];
+const widthSlider=document.querySelector('#width');
+function draw(canvas, useSource, block, seed) {
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(2,0,0,2,0,0);
+  ctx.clearRect(0,0,200,220);
+  ctx.fillStyle='#101713';ctx.fillRect(0,0,200,220);
+  for(let y=0;y<220;y+=2)for(let x=0;x<200;x+=2){
+    const n=blockNoise(x,y,seed);
+    ctx.fillStyle=['#303b30','#364032','#3a4435','#404839'][Math.floor(n*4)];
+    ctx.fillRect(x,y,2,2);
+  }
+  for(const street of block.streets){
+    const {a,b}=street;
+    ctx.lineCap='square';
+    for(const [lineWidth,color] of [[11,'#171c1b'],[9,'#888474'],[7,'#27343e']]){
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+      ctx.lineWidth=lineWidth;ctx.strokeStyle=color;ctx.stroke();
+    }
+    const length=Math.hypot(b.x-a.x,b.y-a.y);
+    ctx.lineWidth=.45;ctx.strokeStyle='#ead9a8';
+    for(let d=4;d<length-2;d+=7){
+      const t=d/length,e=Math.min((d+2)/length,1);
+      ctx.beginPath();ctx.moveTo(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t);
+      ctx.lineTo(a.x+(b.x-a.x)*e,a.y+(b.y-a.y)*e);ctx.stroke();
+    }
+  }
+  for(const house of block.houses){
+    const left=house.x-house.w/2,top=house.y-house.h/2;
+    ctx.fillStyle='#151b1a';ctx.fillRect(left-2,top-2,house.w+4,house.h+4);
+    if(useSource && source.complete && source.naturalWidth){
+      const crop=crops[(house.index-1)%crops.length];
+      ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(source,crop.x,crop.y,crop.w,crop.h,left,top,house.w,house.h);
+    }else{
+      ctx.fillStyle=colors[(house.index-1)%colors.length];
+      ctx.fillRect(left,top,house.w,house.h);
+      ctx.strokeStyle='#a09b84';ctx.lineWidth=.45;
+      ctx.beginPath();ctx.moveTo(left,top);ctx.lineTo(house.x,top+3);
+      ctx.lineTo(left+house.w,top);ctx.moveTo(house.x,top+3);
+      ctx.lineTo(house.x,top+house.h);ctx.stroke();
+    }
+    ctx.strokeStyle=house.finale?'#ffc19c':'#aaa38d';
+    ctx.lineWidth=.5;ctx.strokeRect(left,top,house.w,house.h);
+    ctx.fillStyle='#ffdc95';ctx.beginPath();
+    ctx.arc(house.lamp.x,house.lamp.y,1.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ece6d5';ctx.strokeStyle='#0c1012';
+    ctx.lineWidth=1.5;ctx.font='5px monospace';ctx.textAlign='center';
+    const label=String(house.index).padStart(2,'0');
+    ctx.strokeText(label,house.x,top-4);ctx.fillText(label,house.x,top-4);
+  }
+}
+function paint(){
+  const seed=document.querySelector('#mirror').checked?1:0;
+  const block=layoutBlock({maps:15,cleared:15,layoutSeed:seed,width:400,height:440});
+  draw(canvases[0],false,block,seed);
+  draw(canvases[1],true,block,seed);
+  const w=Number(widthSlider.value);
+  for(const canvas of canvases)canvas.parentElement.style.width=w+'px';
+  document.querySelector('#width-value').value=w+'px';
+}
+source.onload=paint;
+source.onerror=()=>{document.querySelector('small').textContent='Style sheet failed to load. Run this page through the client Vite dev server.';paint();};
+document.querySelector('#mirror').addEventListener('change',paint);
+widthSlider.addEventListener('input',paint);
+paint();
+</script>
+</body></html>
