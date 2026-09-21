@@ -266,6 +266,10 @@ console.log('\nJevStrategist\n');
   check('recovery mode is active', last.recovering === true && last.mode === 'recovery');
   check('with a recovery waypoint, not Jev\'s bag', last.objective.source === 'recovery' &&
     !(last.objective.cell.x === 10 && last.objective.cell.y === 3));
+  const wp = last.objective.cell;
+  const toBag = Math.abs(wp.x - 10) + Math.abs(wp.y - 3), fromRunner = Math.abs(wp.x - 10) + Math.abs(wp.y - 10);
+  check('the waypoint makes progress toward the bag but stops short of it', toBag >= 3 && toBag < 7 && fromRunner >= 3,
+    JSON.stringify(wp));
   const during = decide.calls.length;
   await run(s, stuck, 1000, 50, hooks);
   check('no request during recovery', decide.calls.length === during && s.current.recovering);
@@ -427,7 +431,62 @@ console.log('\nJevStrategist\n');
   check('the retry payload restarts the plan from nothing',
     JSON.parse(afterA[0]).state.plan.objective === 'none' && JSON.parse(afterA[0]).state.attempt === 2);
   check('both bags are offered again on the retry',
-    Object.keys(JSON.parse(afterA[0]).questions.objective.criteria).join() === 'target_a,target_b,hold');
+    Object.keys(JSON.parse(afterA[0]).questions.objective.criteria).sort().join() === 'target_a,target_b');
+}
+
+// 15b. Fair tactical memory: a death is remembered as a cell and a posture for
+//      the rest of that house, reaches the payload as route counts, and is
+//      forgotten when the house changes.
+{
+  clock.t = 4_500_000;
+  const { s, decide } = make(() => strategy('target_b'), { watchdog: { stallMs: 1e9 } });
+  // Attempt 1: dies beside the bottom bag while going for it.
+  await run(s, makeView({ houseKey: '5:0', house: 5, runner: { x: 10, y: 15 } }), 1600);
+  const before = decide.calls.length;
+  await run(s, makeView({ houseKey: '5:1', house: 5 }), 1600);
+  const retry = decide.calls.slice(before).map((p) => p.state).find((st) => st.event === 'retry');
+  check('the retry payload remembers the death', retry?.deaths.here === 1 && retry.deaths.carrying === 0,
+    JSON.stringify(retry?.deaths));
+  const bottom = retry?.targets.find((t) => t.died > 0);
+  check('against the route it lay on, found by position', bottom && retry.targets.filter((t) => t.died > 0).length === 1,
+    JSON.stringify(retry?.targets));
+  check('with the posture in force', retry?.deaths.balanced === 1 || retry?.deaths.safe === 1 || retry?.deaths.aggressive === 1);
+  const mark = decide.calls.length;
+  await run(s, makeView({ houseKey: '6:0', house: 6 }), 1600);
+  const next = decide.calls.slice(mark).map((p) => p.state).find((st) => st.event === 'house_start');
+  check('a new house starts with no deaths remembered', next?.deaths.here === 0 && next.targets.every((t) => t.died === 0));
+}
+
+// 15b-2. Exploit, then explore: direct routes until a house has cost two
+//        deaths, then the plan lets the motor take the long way round.
+{
+  clock.t = 4_600_000;
+  const { s } = make(() => strategy('target_b'), { watchdog: { stallMs: 1e9 } });
+  const first = await run(s, makeView({ houseKey: '8:0', house: 8 }), 1600);
+  check('a fresh house plans direct routes', first.at(-1).explore === false);
+  await run(s, makeView({ houseKey: '8:1', house: 8 }), 1600);
+  const oneDeath = s.tick(makeView({ houseKey: '8:1', house: 8 }));
+  check('still direct after one death', oneDeath.explore === false);
+  const two = await run(s, makeView({ houseKey: '8:2', house: 8 }), 1600);
+  check('exploratory after two deaths in the house', two.at(-1).explore === true);
+  const next = await run(s, makeView({ houseKey: '9:0', house: 9 }), 1600);
+  check('and direct again in the next house', next.at(-1).explore === false);
+  check('exploring attempts are counted', s.report().motorDetail.exploringAttempts === 1, JSON.stringify(s.report().motorDetail));
+}
+
+// 15c. A rested posture cannot come back through the answer. After three
+//      deaths on balanced it is not offered; an answer that says balanced
+//      anyway (the mapper's default for a missing posture) gets the first
+//      posture that was offered.
+{
+  clock.t = 4_700_000;
+  const { s, decide } = make(() => strategy('target_b', { posture: 'balanced' }), { watchdog: { stallMs: 1e9 } });
+  for (let k = 0; k < 4; k++) await run(s, makeView({ houseKey: '7:' + k, house: 7 }), 1600);
+  const offered = Object.keys(decide.calls.at(-1).questions.posture.criteria);
+  check('balanced is rested after three deaths on it', !offered.includes('balanced') && offered.length === 2, offered.join());
+  const plans = await run(s, makeView({ houseKey: '7:3', house: 7 }), 200);
+  check('an answer naming it is adopted with the first offered posture instead',
+    plans.at(-1).posture === offered[0] && s.current.posture === offered[0], `${plans.at(-1).posture}`);
 }
 
 // 16. Not live (countdown): nothing is asked, and the fair fallback is still

@@ -151,6 +151,20 @@ for (const [objective, realTop, cell] of [['target_a', false, { x: 6, y: 2 }], [
   }
 }
 
+// 5b. The runner AI's random detour follows the plan: off on a direct plan,
+//     on once the strategist says the house calls for exploring.
+{
+  reseed(9); clock.t = 580_000;
+  const scene = makeScene({ realTop: true });
+  const { bot } = hybrid(scene, () => strategy('target_a'));
+  await frames(bot, 10);
+  check('no detour on a direct plan', bot._plan.explore === false && bot._borrowed.allowDetour === false);
+  bot.strategist.houseDeaths.push({ cell: { x: 6, y: 5 }, carrying: false, posture: 'balanced' },
+    { cell: { x: 6, y: 5 }, carrying: false, posture: 'balanced' });
+  await frames(bot, 2);
+  check('the detour is allowed once the plan explores', bot._plan.explore === true && bot._borrowed.allowDetour === true);
+}
+
 // 6. The watchdog takes control. The runner is wedged (moves are swallowed):
 //    after ~2s the strategy is marked stalled and the runner AI is handed a
 //    recovery waypoint, not Jev's bag, with its direction lock cleared.

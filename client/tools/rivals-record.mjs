@@ -42,6 +42,11 @@ function arg(name, fallback = null) {
 // the Node relay below. --jevMock: the same page and code path answered by a
 // deterministic local script (tools/lib/jevMock.mjs) — free, offline, and
 // marked as a mock in every file it produces.
+//
+// Jev's motor defaults to the Ace preset (level 5 with the exposure-aware
+// routing and dodge range on). Over Street, which routes by length alone,
+// the first Jev bank died within 3 cells of a plug in 101 of 118 deaths.
+// --style still overrides it.
 const JEV_MOCK = Boolean(arg('jevMock', false));
 const JEV = Boolean(arg('jev', false)) || JEV_MOCK;
 
@@ -354,7 +359,7 @@ async function main() {
   const plan = arg('plan');
   let jobs = plan
     ? JSON.parse(readFileSync(plan, 'utf8'))
-    : [{ slot: Number(arg('slot', 1)), style: arg('style', arg('skillPreset', 'street')),
+    : [{ slot: Number(arg('slot', 1)), style: arg('style', arg('skillPreset', JEV ? 'ace' : 'street')),
          powers: arg('powers', 'phase,dash'), runs: Number(arg('runs', 3)) }];
   // --resume: skip jobs whose output already exists, so a batch interrupted
   // after hours can be picked up without re-running what it already recorded.

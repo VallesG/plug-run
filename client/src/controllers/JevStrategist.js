@@ -36,6 +36,24 @@
 //   - triggers arriving during the gap are coalesced into ONE later request;
 //   - nothing is asked while the watchdog has recovery control.
 //
+// WHAT IT REMEMBERS
+// Where the runner died in this house, and on which posture — a cell, a flag
+// for whether it was carrying, a posture name. Nothing about bags: which one
+// paid out or was bunk is never recorded, because it rerolls every attempt.
+// Cleared when the house changes. jevState turns it into "deaths on this
+// route" per choice, by position.
+//
+// EXPLOIT, THEN EXPLORE
+// Until a house has cost exploreAfterDeaths deaths the motor walks the direct
+// route and a stall is broken by a sidestep toward the objective. From then
+// on the plan says `explore`: BotDriver lets the runner AI take its own
+// random detour on the way to a bag, and a stall is broken by a random
+// sidestep out of the firing lanes. A guarded house (a plug sitting between
+// every bag and the car) is only ever cleared by going the long way round;
+// with the detour off in every house the second Jev bank looped 61 times on
+// Switchyard Seven house 3 and forfeited, where the first, detour always on,
+// got out in 14.
+//
 // WHAT IT TRUSTS
 // An answer is adopted only if it arrives for the state it was asked about
 // (house, stash and carrying unchanged — the "epoch"), names a legal
@@ -84,6 +102,8 @@ export const DEFAULTS = Object.freeze({
   armMs: 6000,
   // A fresh attempt: the runner is still respawning, so no stall is counted.
   attemptGraceMs: 1500,
+  // Deaths in one house before the plan turns exploratory (see the header).
+  exploreAfterDeaths: 2,
 
   // SAFETY CEILINGS. Past either the strategist stops asking for the rest of
   // the session; the runner AI keeps playing on the fallback objective, so a
@@ -127,7 +147,7 @@ export default class JevStrategist {
       invalidated: 0, expired: 0 };
     this.powers = { requested: 0, accepted: 0, activated: 0, expiredUnused: 0, saved: 0, unarmedActivations: 0,
       rejected: {}, byName: {}, last: null };
-    this.motor = { detours: 0, evadingMs: 0 };
+    this.motor = { detours: 0, evadingMs: 0, exploringAttempts: 0 };
     this.recoveryStats = { invalidatedByStall: 0, watchdogRequests: 0, suppressed: 0 };
     this.time = { jevMs: 0, fallbackMs: 0, recoveryMs: 0, idleMs: 0 };
     this.houses = [];
@@ -155,6 +175,8 @@ export default class JevStrategist {
     this._distKey = null;
     this._attemptStartedAt = -Infinity;
     this._lastWaypoint = null;
+    this.houseDeaths = [];
+    this._lastLive = null;
   }
 
   /** Walking distances from the runner, recomputed only when its cell changes. */
@@ -200,6 +222,7 @@ export default class JevStrategist {
 
     const dist = this._distances(view);
     this._view = view;
+    this._lastLive = { cell: { ...view.runner }, carrying: !!view.carrying, posture: this.current?.posture ?? 'balanced' };
     this._detect(view, now);
 
     if (this.armed && now >= this.armed.until) {
@@ -244,7 +267,16 @@ export default class JevStrategist {
         this.strategies.invalidated++;
         this.recoveryStats.invalidatedByStall++;
       }
-      const cell = recoveryCell(view, dist, { rng: this.rng, exposed: (c) => !!view.exposedAt?.(c) });
+      // Aimed at the objective, away from plugs and out of lanes: recovery
+      // breaks the stall without throwing away the progress already made.
+      // Once exploring, the random sidestep instead: the direct way has failed.
+      const plugMaps = (view.plugs || []).map((p) => pathDistances(view, p, 3));
+      const cell = recoveryCell(view, dist, {
+        rng: this.rng,
+        exposed: (c) => !!view.exposedAt?.(c),
+        goal: aim && !this.exploring ? pathDistances(view, aim) : null,
+        nearPlug: (c) => plugMaps.some((m) => distTo(m, c) != null)
+      });
       this.recovery = { cell, startedAt: now };
       this.watchdogOwed = true;
       hooks.onRecovery?.(cell);
@@ -276,6 +308,11 @@ export default class JevStrategist {
     return this._plan(target, recovering, mode);
   }
 
+  /** The direct way has failed often enough in this house to try others. */
+  get exploring() {
+    return this.houseDeaths.length >= this.cfg.exploreAfterDeaths;
+  }
+
   _plan(target, recovering, mode) {
     const s = this.strategy;
     const posture = (!recovering && s && !s.stalled) ? s.posture : 'balanced';
@@ -289,7 +326,8 @@ export default class JevStrategist {
       stalled: !!s?.stalled,
       armedPower: this.armed?.name ?? null
     };
-    return { objective: target, posture, recovering, mode, armedPower: this.armed?.name ?? null };
+    return { objective: target, posture, recovering, mode, armedPower: this.armed?.name ?? null,
+      explore: this.exploring && !recovering };
   }
 
   /* ---------------- events ---------------- */
@@ -298,6 +336,10 @@ export default class JevStrategist {
     const prev = this.houses[this.houses.length - 1];
     const retry = !!prev && prev.house === view.house;
     if (prev) prev.endedAt = now;
+    if (!retry) this.houseDeaths = [];
+    else if (this._lastLive) this.houseDeaths.push(this._lastLive);
+    this._lastLive = null;
+    if (this.exploring) this.motor.exploringAttempts++;
     this.houseKey = view.houseKey;
     this.attempt = retry ? (prev.attempt || 1) + 1 : 1;
     this.epoch++;
@@ -403,6 +445,7 @@ export default class JevStrategist {
       dist,
       plugDists: (view.plugs || []).map((p) => pathDistances(view, p, 60)),
       trigger: primary,
+      deaths: this.houseDeaths,
       plan: s ? {
         objective: s.objective, posture: s.posture, ageMs: now - s.adoptedAt,
         progress: s.stalled ? 'stalled' : 'advancing'
@@ -423,7 +466,8 @@ export default class JevStrategist {
     this.lastDispatchAt = now;
     this.stats.tokensApprox += Math.ceil(JSON.stringify(payload).length / 4);
 
-    const token = { id: ++this._seq, epoch: this.epoch, startedAt: now, trigger: primary };
+    const token = { id: ++this._seq, epoch: this.epoch, startedAt: now, trigger: primary,
+      postures: Object.keys(payload.questions.posture?.criteria || {}) };
     this.inFlight = token;
     this._log(now, 'request', { trigger: primary, merged: triggers.length });
 
@@ -504,12 +548,15 @@ export default class JevStrategist {
     }
     if (!cur || !sameCell(cur.cell, cell)) resetWatchdog(this.watchdog, now);
 
+    // Only a posture that was on offer: the answer mapper turns a missing one
+    // into 'balanced', which may be the one being rested.
+    const posture = !token.postures?.length || token.postures.includes(answer.posture) ? answer.posture : token.postures[0];
     this.strategy = {
-      objective, posture: answer.posture, power: answer.power, confidence: answer.confidence,
+      objective, posture, power: answer.power, confidence: answer.confidence,
       cell: { ...cell }, adoptedAt: now, targetSince, stalled: false, trigger: token.trigger
     };
     this.strategies.adopted++;
-    this._log(now, 'adopted', { objective, posture: answer.posture, power: answer.power,
+    this._log(now, 'adopted', { objective, posture, power: answer.power,
       confidence: answer.confidence, trigger: token.trigger });
 
     this._armPower(answer.power, view, now);
@@ -629,7 +676,8 @@ export default class JevStrategist {
         activated: this.powers.activated, expiredUnused: this.powers.expiredUnused,
         saved: this.powers.saved, unarmedActivations: this.powers.unarmedActivations,
         rejected: { ...this.powers.rejected }, byName: { ...this.powers.byName }, last: this.powers.last },
-      motorDetail: { detours: this.motor.detours, evadingMs: Math.round(this.motor.evadingMs) },
+      motorDetail: { detours: this.motor.detours, evadingMs: Math.round(this.motor.evadingMs),
+        exploringAttempts: this.motor.exploringAttempts },
       time: {
         jevMs: Math.round(t.jevMs), fallbackMs: Math.round(t.fallbackMs),
         recoveryMs: Math.round(t.recoveryMs), idleMs: Math.round(t.idleMs),

@@ -296,10 +296,14 @@ export default class BotDriver {
       // falling through to its own objective code, which targets the real bag.
       const cell = this._plan.objective?.cell ?? s.toCell(me.x, me.y);
       this._borrowed.objectiveProvider = () => cell;
-      // The AI's own random detour is route variety, not a destination: it
-      // stays on unless the strategy asked for the direct line (aggressive)
-      // or the watchdog is steering a recovery.
-      this._borrowed.allowDetour = this._plan.posture !== 'aggressive' && !this._plan.recovering;
+      // The AI's own random detour — half of all attempts, a walk to a
+      // random cell anywhere on the board before the objective — is off
+      // until the strategist says the house calls for exploring (repeated
+      // deaths; see JevStrategist). In the first Jev bank it fired on 84 of
+      // 167 attempts, clean houses included, and was most of what looked
+      // like Jev "not taking the best path"; in a guarded house it is the
+      // long way round that gets out.
+      this._borrowed.allowDetour = !!this._plan.explore;
       armed = this._plan.armedPower || null;
     } else if (this._borrowed.objectiveProvider) {
       this._borrowed.objectiveProvider = null;

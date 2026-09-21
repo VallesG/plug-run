@@ -156,12 +156,42 @@ export function postureTactics(posture, base = {}) {
 }
 
 /**
- * A recovery waypoint: somewhere reachable 4-10 cells away, preferring cells
- * out of every plug's firing lane. Used while the watchdog has taken the plan
- * away — it is the runner AI's own route-variety mechanism (a detour cell),
- * aimed so that it breaks a loop rather than walking back into it.
+ * A recovery waypoint while the watchdog has taken the plan away.
+ *
+ * With a `goal` (a pathDistances map from what the runner was walking to):
+ * a cell 3-8 steps away that is as close to the goal as possible while still
+ * short of it (at least 3 steps out, so it is a waypoint and not the same
+ * destination again), preferring one off the direct route that just stalled,
+ * penalised for sitting in a firing lane or within reach of a plug, with a
+ * little jitter so two stalls in one spot do not pick the same cell. The
+ * stall is broken by a short sidestep that keeps the progress already made,
+ * rather than by a walk in a random direction.
+ *
+ * Without one: somewhere reachable 4-10 cells away, preferring cells out of
+ * every plug's firing lane.
  */
-export function recoveryCell(view, dist, { rng = Math.random, exposed = () => false } = {}) {
+export function recoveryCell(view, dist, { rng = Math.random, exposed = () => false, goal = null, nearPlug = () => false } = {}) {
+  const total = goal && view.runner ? distTo(goal, view.runner) : null;
+  if (goal && total != null) {
+    const near = [];
+    for (let i = 0; i < dist.d.length; i++) {
+      const d = dist.d[i];
+      if (d < 3 || d > 8) continue;
+      const g = goal.d[i];
+      if (g < 3) continue;
+      const x = i % dist.cols, y = (i - x) / dist.cols;
+      near.push({ x, y, g, onRoute: d + g <= total + 1 });
+    }
+    if (near.length) {
+      near.sort((a, b) => a.g - b.g);
+      let best = null, bestScore = Infinity;
+      for (const c of near.slice(0, 24)) {
+        const score = c.g + (c.onRoute ? 4 : 0) + (exposed(c) ? 6 : 0) + (nearPlug(c) ? 10 : 0) + rng() * 3;
+        if (score < bestScore) { best = c; bestScore = score; }
+      }
+      return { x: best.x, y: best.y };
+    }
+  }
   const pool = [];
   for (let i = 0; i < dist.d.length; i++) {
     const d = dist.d[i];

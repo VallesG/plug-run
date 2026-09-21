@@ -23,11 +23,11 @@ function check(name, cond, detail = '') {
 const botFor = (scene) => new BotDriver(scene, { aiLevel: 5, dangerCells: 5, coverPenalty: 0,
   wrongTurnChance: 0, hesitateChance: 0, strategist: { tick: () => ({ objective: null, posture: 'balanced' }), report: () => ({}) } }, AI_HOOKS);
 
-function payloadFor(scene, trigger = 'house_start') {
+function payloadFor(scene, trigger = 'house_start', deaths = []) {
   const view = botFor(scene)._jevView(scene.attacker);
   const dist = pathDistances(view, view.runner);
   const plugDists = view.plugs.map((p) => pathDistances(view, p, 60));
-  return { view, payload: jevState(view, { dist, plugDists, trigger }) };
+  return { view, payload: jevState(view, { dist, plugDists, trigger, deaths }) };
 }
 
 console.log('\njevState — strategic payload\n');
@@ -38,8 +38,12 @@ console.log('\njevState — strategic payload\n');
   const q = payload.questions;
   check('asks exactly objective, posture and power', JSON.stringify(Object.keys(q).sort()) === '["objective","posture","power"]',
     Object.keys(q).join(','));
-  check('objective choices are the two bags and hold',
-    JSON.stringify(Object.keys(q.objective.criteria)) === '["target_a","target_b","hold"]');
+  check('objective choices are the two bags, safest first; no plug near, so no hold',
+    JSON.stringify(Object.keys(q.objective.criteria)) === '["target_b","target_a"]', Object.keys(q.objective.criteria).join());
+  check('each bag choice states its distance', /^Bag, 3 steps/.test(q.objective.criteria.target_b) &&
+    /^Bag, \d+ steps/.test(q.objective.criteria.target_a), JSON.stringify(q.objective.criteria));
+  check('and the walk on from it to the car', Object.values(q.objective.criteria).every((d) => /then \d+ steps? to the car/.test(d)),
+    JSON.stringify(q.objective.criteria));
   check('extract is not offered before pickup', !('extract' in q.objective.criteria));
   check('posture choices', JSON.stringify(Object.keys(q.posture.criteria)) === '["safe","balanced","aggressive"]');
   check('power choices are the ready powers plus none', JSON.stringify(Object.keys(q.power.criteria)) === '["none","phase","dash"]');
@@ -56,8 +60,8 @@ console.log('\njevState — strategic payload\n');
   const text = JSON.stringify(payload).toLowerCase();
   const word = MOVEMENT_WORDS.find((w) => new RegExp('\\b' + w + '\\b').test(text));
   check('no direction words anywhere, not even in instructions', !word, word);
-  check('targets are summarised by distance and exposure only',
-    payload.state.targets.every((t) => JSON.stringify(Object.keys(t)) === '["id","dist","plug","exposed"]'));
+  check('targets are summarised by distance, exposure and deaths on the route only',
+    payload.state.targets.every((t) => JSON.stringify(Object.keys(t)) === '["id","dist","car","plug","exposed","died"]'));
 }
 
 // 3. Carrying: extraction (or a pause) is the only choice.
@@ -65,8 +69,8 @@ console.log('\njevState — strategic payload\n');
   const scene = makeScene();
   scene.hasStash = true;
   const { payload } = payloadFor(scene, 'extract_available');
-  check('carrying offers extract and hold only',
-    JSON.stringify(Object.keys(payload.questions.objective.criteria)) === '["extract","hold"]');
+  check('carrying offers extract only (no plug near to wait out)',
+    JSON.stringify(Object.keys(payload.questions.objective.criteria)) === '["extract"]');
   check('no bag summaries once carrying', !('targets' in payload.state));
   check('extract marked available', payload.state.extract.available === true);
   check('the trigger is named', payload.state.event === 'extract_available');
@@ -127,11 +131,16 @@ console.log('\njevState — strategic payload\n');
 {
   const scene = makeScene({ plug: { x: 6, y: 4 } });
   const { payload } = payloadFor(scene);
-  const allowed = ['house', 'attempt', 'runner', 'threat', 'decoyOut', 'powers', 'plan', 'event', 'targets', 'extract'];
+  // deaths: this house's deaths as counts (where they lay, which posture) —
+  // the fair tactical history. Never a bag outcome.
+  const allowed = ['house', 'attempt', 'runner', 'threat', 'decoyOut', 'powers', 'plan', 'event', 'targets', 'extract', 'deaths'];
   const extra = Object.keys(payload.state).filter((k) => !allowed.includes(k));
   check('state carries only allow-listed fields', extra.length === 0, extra.join(','));
-  check('targets carry only id, distance, plug distance and exposure',
-    payload.state.targets.every((t) => Object.keys(t).join() === 'id,dist,plug,exposed'));
+  check('targets carry only id, distance, distance on to the car, plug distance, exposure and route deaths',
+    payload.state.targets.every((t) => Object.keys(t).join() === 'id,dist,car,plug,exposed,died'));
+  check('deaths carry only counts',
+    Object.keys(payload.state.deaths).join() === 'here,carrying,safe,balanced,aggressive' &&
+    Object.values(payload.state.deaths).every((v) => Number.isInteger(v)));
   check('plan carries only the current strategy, no history',
     Object.keys(payload.state.plan).join() === 'objective,posture,ageS,progress');
   const text = JSON.stringify(payload).toLowerCase();
@@ -139,10 +148,63 @@ console.log('\njevState — strategic payload\n');
   check('no word about past bag outcomes anywhere in the payload', !leak, leak);
 }
 
+// 6c. Fair tactical memory: where Jev died this house, by position only.
+{
+  const none = payloadFor(makeScene()).payload;
+  check('a fresh house remembers no deaths', none.state.deaths.here === 0 && none.state.targets.every((t) => t.died === 0));
+
+  // Three deaths beside the bottom bag, all on balanced.
+  const deaths = [0, 1, 2].map(() => ({ cell: { x: 6, y: 11 }, carrying: false, posture: 'balanced' }));
+  const { payload } = payloadFor(makeScene(), 'retry', deaths);
+  const t = Object.fromEntries(payload.state.targets.map((x) => [x.id, x]));
+  check('deaths count against the route they lay on, and only that one', t.target_b.died === 3 && t.target_a.died === 0,
+    JSON.stringify(payload.state.targets));
+  check('the route that keeps killing drops behind the other bag',
+    Object.keys(payload.questions.objective.criteria)[0] === 'target_a');
+  check('and its description says why', /3 deaths on this route this house/.test(payload.questions.objective.criteria.target_b));
+  check('deaths per posture are counted', payload.state.deaths.here === 3 && payload.state.deaths.balanced === 3 &&
+    payload.state.deaths.safe === 0);
+  check('a posture that died 3 more times than the others is rested',
+    Object.keys(payload.questions.posture.criteria).join() === 'safe,aggressive',
+    Object.keys(payload.questions.posture.criteria).join());
+  const two = payloadFor(makeScene(), 'retry', deaths.slice(0, 2)).payload.questions.posture.criteria;
+  check('below that it is still offered, listed last, with its deaths', Object.keys(two).join() === 'safe,aggressive,balanced' &&
+    /2 deaths with it this house/.test(two.balanced), JSON.stringify(two));
+  const rotate = (counts) => Object.keys(payloadFor(makeScene(), 'retry', Object.entries(counts).flatMap(([p, n]) =>
+    Array.from({ length: n }, () => ({ cell: { x: 1, y: 13 }, carrying: false, posture: p })))).payload.questions.posture.criteria).join();
+  check('the rotation moves on when the next posture dies as often', rotate({ balanced: 3, safe: 3 }) === 'aggressive');
+  check('and every posture comes back once all have died alike', rotate({ balanced: 3, safe: 3, aggressive: 3 }) === 'safe,balanced,aggressive');
+  check('deaths while carrying count against the car, not a bag', (() => {
+    const carried = [{ cell: { x: 6, y: 11 }, carrying: true, posture: 'safe' }];
+    const q = payloadFor(makeScene(), 'retry', carried).payload;
+    return q.state.targets.every((x) => x.died === 0) && q.state.deaths.carrying === 1;
+  })());
+
+  // The swap test again, with deaths remembered.
+  const a = payloadFor(makeScene({ realTop: true }), 'retry', deaths);
+  const b = payloadFor(makeScene({ realTop: false }), 'retry', deaths);
+  check('with deaths remembered, swapping the real bag still leaves the payload byte-identical',
+    JSON.stringify(a.payload) === JSON.stringify(b.payload));
+}
+
+// 6d. Hold is offered only with a plug close enough to wait out, and a bag
+//     with the plug beside it is listed after a clear one.
+{
+  const near = payloadFor(makeScene({ plug: { x: 6, y: 11 } })).payload;
+  check('hold offered with a plug 2 steps off', /plug 2 steps away/.test(near.questions.objective.criteria.hold || ''),
+    JSON.stringify(near.questions.objective.criteria));
+  check('the bag beside the plug is listed after the farther clear one',
+    Object.keys(near.questions.objective.criteria)[0] === 'target_a' &&
+    /plug 1 step from it/.test(near.questions.objective.criteria.target_b));
+  const far = payloadFor(makeScene({ plug: { x: 11, y: 1 } })).payload;
+  check('no hold with the plug far off', !('hold' in far.questions.objective.criteria), JSON.stringify(far.state.threat));
+}
+
 // 7. It is still cheap. The old per-frame payload measured ~136 tokens; this
 //    one is sent tens of times a race, not several times a second.
 {
-  const { payload } = payloadFor(makeScene({ plug: { x: 2, y: 3 } }));
+  const deaths = [{ cell: { x: 6, y: 11 }, carrying: false, posture: 'balanced' }, { cell: { x: 3, y: 3 }, carrying: false, posture: 'safe' }];
+  const { payload } = payloadFor(makeScene({ plug: { x: 2, y: 3 } }), 'retry', deaths);
   const approx = Math.ceil(JSON.stringify(payload).length / 4);
   check('payload stays compact (<450 estimated tokens)', approx < 450, `${approx}`);
 }
