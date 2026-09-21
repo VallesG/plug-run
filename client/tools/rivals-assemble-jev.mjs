@@ -134,7 +134,9 @@ function main() {
 
   const banked = readJevBank(ROOT);
   const existing = FRESH ? [] : banked;
-  const captures = readCaptures(IN);
+  // Provenance names each capture relative to tools/recordings, whatever
+  // --in was, so a bank built from a subfolder still points at its files.
+  const captures = readCaptures(IN).map((c) => ({ ...c, file: relative('tools/recordings', join(IN, c.file)).split(sep).join('/') }));
   const { accepted, rejected, reimported } = selectJevBank(existing, captures);
   const kept = new Set(accepted.map((a) => a.record.recordingID));
   const report = {

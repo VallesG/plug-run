@@ -61,18 +61,31 @@ Jev is asked for a **Strategy**:
 in `updateRunnerBehavior` — `aiController.objectiveProvider` — and the AI
 walks there. The seam exists because the AI's own objective code heads for
 `scene.stash`, **the real bag**, which a player cannot know; when a provider
-is attached that code is never consulted. The one thing still allowed to
-route *via* somewhere else is the AI's own random detour — route variety, a
-waypoint chosen at random and dropped once reached — and only while the
-posture is not `aggressive` and the watchdog is not steering a recovery
-(`aiController.allowDetour`). The AI's power rules reason about the provided
-objective too. Without a provider the AI is byte-for-byte what it was.
+is attached that code is never consulted. The AI's power rules reason about
+the provided objective too. Without a provider the AI is byte-for-byte what
+it was.
 
-Why the detour stays: the first mock run disabled it, and the runner then
-took an identical route on every retry of Low End Rush house 4 and died 32
-times — the same loop `rivalPresets.js` documents for high-level AIs (made
-worse, at the time, by every retry also having the same genuine bag; see
-below). The detour carries no knowledge; it is the motor's variety.
+**Exploit, then explore.** The AI's own random detour (route variety: on half
+of all attempts, a walk to a random cell anywhere on the board before the
+bag) is off until a house has cost two deaths; from then on the plan says
+`explore`, BotDriver sets `aiController.allowDetour`, and stall recovery
+switches from a sidestep toward the objective to a random one out of the
+lanes. Both halves were measured:
+
+- Always on (the first bank): it fired on 84 of 167 attempts, clean houses
+  included, and was most of what looked like Jev "not taking the best path".
+- Always off (the second bank's first batch): Switchyard Seven house 3 —
+  the plug starts between the car and the far bag, so every way out of the
+  near bag walks into it — looped 61 times on the direct route and
+  forfeited at 6/7. The first bank, detour on, got out in 14 attempts, on the
+  long ones that went round.
+
+Level 5 still keeps its wander and hesitation.
+
+The motor defaults to the **Ace** preset for `--jev` (level 5 with
+exposure-aware routing, `coverPenalty` 3, `dangerCells` 6) rather than Street
+(routing by length alone). Over Street, 101 of the first bank's 118 deaths
+were within 3 cells of a plug.
 
 Posture changes only how exposure is treated: the dodge range
 (`dangerCells`) and the cover-routing weight (`coverPenalty`), via
@@ -118,8 +131,28 @@ authenticity, and a retry's A may be genuine where the last attempt's A was
 bunk. Jev is sent no previous bunk or genuine outcome — the payload is an
 allow-listed set of fields, and a test runs two races that differ only in
 which bag was bunk on attempt 1 and asserts the retry's payloads are
-byte-identical. Fair tactical history (death cause, posture, power policy,
-progress, repeated failure) may be added later; bag outcomes may not.
+byte-identical. Bag outcomes may never be sent.
+
+**What Jev does remember: where it died this house.** On a retry the
+strategist records the runner's last live cell, whether it was carrying, and
+the posture in force — nothing about bags — and forgets it when the house
+changes. `jevState` turns that into counts by position: per bag, the deaths
+that lay on the route from the runner to it (within 3 steps of the bag, or
+no more than 3 steps off the direct walk); for the car, the deaths while
+carrying; and deaths per posture. The swap test runs again with deaths
+remembered.
+
+**Each choice carries its facts, safest first.** A choice used to read "Go
+for bag A", with the numbers in a separate table the model had to
+cross-reference; in the first bank it picked whichever bag was listed first
+58% of the time (86% on one course). Now each reads like "Bag, 9 steps; plug
+3 steps from it; in a firing lane; 2 deaths on this route this house", and
+the bags are listed by a risk score built from those same facts (distance,
++14/+8/+3 for a plug within 2/4/6 steps, +3 in a lane, +10 per death on the
+route), so a first-listed bias now points at the safer bag. Postures are
+listed least-died-with first, so after deaths on one posture another leads.
+`hold` is offered only with a plug within 6 steps to wait out. All of it is
+position-only and identical for either bag.
 
 Before this fix the assignment was one draw per house seed, so every
 attempt at a house had the genuine bag in the same pocket. That is why the
@@ -152,16 +185,20 @@ because they were still billed.
 
 ### The progress watchdog
 
-`src/logic/jevWatchdog.js`. It measures walking distance to what the motor is
-actually walking to — its detour waypoint when it has one, the objective
-otherwise; progress is a new best by at least a cell. The clock is held while
+`src/logic/jevWatchdog.js`. It measures walking distance to the objective the
+motor is walking to; progress is a new best by at least a cell. The clock is held while
 holding, phasing, while BotDriver's dodge layer is steering (evasion is
 working, not stuck) and for the first 1.5s of an attempt (respawning). After
 **2s** without progress it declares a stall, and it *acts*:
 
 1. marks the current strategy stalled (invalidated);
-2. hands the runner AI a recovery waypoint 4–10 cells away, preferring cover,
-   for 1.8s, and clears the AI's direction lock so it can turn;
+2. hands the runner AI a recovery waypoint for 1.8s and clears the AI's
+   direction lock so it can turn. The waypoint is 3–8 steps away and as close
+   to the objective as it can be while still at least 3 steps short of it,
+   preferring a cell off the direct route that just stalled, out of firing
+   lanes and away from plugs — a sidestep that keeps the progress made. Once
+   the house is being explored (two deaths) it is a random cell 4–10 away
+   out of the lanes instead, which is what it always used to be.
 3. asks Jev nothing during recovery;
 4. afterwards queues at most one `watchdog` request, and no more than one per
    5s, subject to the global gap;
@@ -227,7 +264,7 @@ npm run build && npx vite preview --host 127.0.0.1 --port 4173 --strictPort
 ### Free first: the mock strategist
 
 ```sh
-node tools/rivals-record.mjs --slot 1 --style street --powers phase,dash \
+node tools/rivals-record.mjs --slot 1 --powers phase,dash \
   --runs 1 --opponentIndex 9160 --jevMock --video \
   --videoDir tools/recordings/jev/mock/video --url http://127.0.0.1:4173 \
   --out tools/recordings/jev/mock
@@ -243,7 +280,7 @@ Captures are tagged `-jevmock` and their provenance says `route: 'mock'`.
 
 ```sh
 $env:TYPESAFE_API_KEY = Read-Host -Prompt "key"     # PowerShell; never paste it into a chat
-node tools/rivals-record.mjs --slot 1 --style street --powers phase,dash \
+node tools/rivals-record.mjs --slot 1 --powers phase,dash \
   --runs 1 --opponentIndex 9201 --jev --jevMaxRequests 100 --jevMaxInputTokens 500000 \
   --video --videoDir tools/recordings/jev/video --url http://127.0.0.1:4173 \
   --out tools/recordings/jev
@@ -321,12 +358,20 @@ Record paid races with circuit breakers high enough that Jev stays on for
 the whole race, then assemble:
 
 ```sh
-node tools/rivals-record.mjs --slot 3 --style street --powers phase,dash --runs 1 \
+node tools/rivals-record.mjs --slot 3 --powers phase,dash --runs 1 \
   --opponentIndex 9303 --jev --jevMaxRequests 500 --jevMaxInputTokens 2000000 \
   --video --videoDir tools/recordings/jev/bank/video --url http://127.0.0.1:4173 \
   --out tools/recordings/jev/bank
 node tools/rivals-assemble-jev.mjs --in tools/recordings --dry
 node tools/rivals-assemble-jev.mjs --in tools/recordings
+```
+
+A pass keeps what is already in the bank and adds to it. `--fresh` builds it
+from the captures under `--in` alone and lists the entries it retires (git
+keeps them); that is how the current bank replaced the first one:
+
+```sh
+node tools/rivals-assemble-jev.mjs --in tools/recordings/jev/v4 --fresh --dry
 ```
 
 `tools/rivals-assemble-jev.mjs` examines every capture under `--in`
@@ -354,6 +399,37 @@ time, and rules / record / replay / capture / bank versions.
 
 The ordinary assembler (`tools/rivals-assemble.mjs`) now refuses any Jev
 race, so a Jev capture cannot reach `rivals/v2` by accident.
+
+## Route quality
+
+`tools/jev-report.mjs` measures a bank (or, with `--in`, captures beside the
+bank race on their course) from the replays: deaths and how many ended
+within 3 cells of a plug, whether the first bag reached was the nearer one,
+distance walked over the shortest spawn → bag → car walk on clears that went
+straight to the real bag, stalls, recovery time, motor detours, cost.
+
+The first bank (Street motor, detour always on, choices "Go for bag A"):
+route walking was no worse than the ordinary bots' head to head (1.40 vs
+1.43 on the same houses), but two-thirds of race time went to failed
+attempts. What changed, and why, is under *The interface* and *Fairness*
+above; the current bank was rebuilt from one batch recorded on the final
+code (`--fresh`):
+
+| | first bank | current bank |
+|---|---|---|
+| race time, 7 courses | 1,495s | 1,173s |
+| deaths | 118 | 78 |
+| deaths within 3 cells of a plug | 101 | 63 |
+| walked / shortest (median of courses) | 1.56 | 1.21 |
+| runner-AI detours | 84 | 24 |
+| cost | $0.015 | $0.014 |
+
+Faster on Copper Climb (189 vs 243s), Freight Run (75 vs 427s) and
+Switchyard Seven (260 vs 282s); level on Low End Rush and Lastlight Loop;
+slower on Afterglow Mile (159 vs 133s) and Blacktop Crown (174 vs 97s, both
+new runs slower there, the deaths in house 7 where the plug holds the car).
+One race per course is a small sample — Freight Run alone took 427s, 296s,
+253s and 75s across four recordings — so read the totals, not a course.
 
 ## Watching the runs
 
@@ -416,6 +492,19 @@ exist and threw inside the bot's try/catch, silently dropping that frame's
 steering exactly while carrying through an exposed lane. The penalty is now
 rounded; `test/cover.test.mjs` covers it.
 
+`BotDriver._phaseEscape` spends phase outside the borrowed-AI spoof, so the
+strategist was never told: its activation count came up one short of the
+input trace and the armed phase was later counted as expired unused. Street
+(`phaseEscapeCells` 0) never took that path; Ace does, and the bank's trace
+check refused the first race it happened in. `test/botDriverJev.test.mjs` §9b.
+
+The replay capture named a pickup by the pocket nearest where it happened.
+The game's anti-camp rule moves a camped bag to a random floor cell, so a
+real bag picked up after a move could be recorded as a pickup of the bunk —
+the replay faded the wrong duffel and the bank's assignment check refused an
+honest race. Pickup and bunk now name the bag by the pocket it started the
+attempt in (`test/rivalStashReroll.test.mjs`).
+
 ## Known, unrelated
 
 - On a Windows checkout with `core.autocrlf=true`, `blockComplete`,
@@ -426,6 +515,8 @@ rounded; `test/cover.test.mjs` covers it.
 - `BotDriver.driveBorrowedAI` restores `scene.runnerSpeed` after
   `applyRunnerProgression` clobbers it, but not
   `scene.runnerPowerStats.decoy.speed`. Harness-only.
+- The replay format has no event for an anti-camp move, so a replay shows a
+  moved bag still in its pocket until it is taken. Records are unaffected.
 - The runner AI's own objective code targets `scene.stash` (the real bag).
   Every existing borrowed-AI bank recording was driven that way. The hybrid
   cannot, because of the objective seam; the plain bot still does.

@@ -2,7 +2,7 @@
  "schemaVersion": 1,
  "bank": "jev-v1",
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-21T19:05:43.462Z",
+ "generatedAt": "2026-09-21T22:21:17.489Z",
  "note": "Opponents driven by the Jev strategist above the runner AI. Kept apart from rivals/v2; the game pools both per course.",
  "courses": [
   {
@@ -11,16 +11,16 @@
    "courseID": "rivals-v1-2722422571",
    "opponents": 1,
    "recordingIDs": [
-    "rec-low-end-rush-street-9301-12f3kk4"
+    "rec-low-end-rush-ace-9421-xer0nl"
    ],
    "elapsedMs": [
-    191520.60000002384
+    190399.40000003576
    ],
    "retries": [
-    15
+    14
    ],
    "costUsd": [
-    0.0019
+    0.0022
    ]
   },
   {
@@ -29,16 +29,16 @@
    "courseID": "rivals-v1-2917822448",
    "opponents": 1,
    "recordingIDs": [
-    "rec-copper-climb-street-9302-1m8oc9l"
+    "rec-copper-climb-ace-9422-aijsg"
    ],
    "elapsedMs": [
-    243076.2999998927
+    188535.39999997616
    ],
    "retries": [
-    19
+    13
    ],
    "costUsd": [
-    0.0023
+    0.0021
    ]
   },
   {
@@ -47,16 +47,16 @@
    "courseID": "rivals-v1-1245351574",
    "opponents": 1,
    "recordingIDs": [
-    "rec-freight-run-street-9303-1gqshvf"
+    "rec-freight-run-ace-9423-12qqh2t"
    ],
    "elapsedMs": [
-    427094.2000000477
+    74701.50000011921
    ],
    "retries": [
-    44
+    3
    ],
    "costUsd": [
-    0.0044
+    0.0009
    ]
   },
   {
@@ -65,16 +65,16 @@
    "courseID": "rivals-v1-2476136539",
    "opponents": 1,
    "recordingIDs": [
-    "rec-afterglow-mile-street-9304-od2x97"
+    "rec-afterglow-mile-ace-9444-1gcmkxr"
    ],
    "elapsedMs": [
-    133473.9999999404
+    158907.29999995232
    ],
    "retries": [
-    5
+    12
    ],
    "costUsd": [
-    0.0014
+    0.0018
    ]
   },
   {
@@ -83,16 +83,16 @@
    "courseID": "rivals-v1-2143714553",
    "opponents": 1,
    "recordingIDs": [
-    "rec-switchyard-seven-street-9305-gf13aj"
+    "rec-switchyard-seven-ace-9425-146lviw"
    ],
    "elapsedMs": [
-    282078.60000008345
+    260017.5
    ],
    "retries": [
-    25
+    20
    ],
    "costUsd": [
-    0.0029
+    0.0033
    ]
   },
   {
@@ -101,16 +101,16 @@
    "courseID": "rivals-v1-2077357177",
    "opponents": 1,
    "recordingIDs": [
-    "rec-lastlight-loop-street-9306-183s3yf"
+    "rec-lastlight-loop-ace-9426-d6js4d"
    ],
    "elapsedMs": [
-    120656.79999995232
+    126374.59999990463
    ],
    "retries": [
-    6
+    8
    ],
    "costUsd": [
-    0.0011
+    0.0016
    ]
   },
   {
@@ -119,16 +119,16 @@
    "courseID": "rivals-v1-2334749748",
    "opponents": 1,
    "recordingIDs": [
-    "rec-blacktop-crown-street-9307-1lkuf4n"
+    "rec-blacktop-crown-ace-9427-vf2svz"
    ],
    "elapsedMs": [
-    96717.49999988079
+    174307.09999996424
    ],
    "retries": [
-    4
+    8
    ],
    "costUsd": [
-    0.0011
+    0.0018
    ]
   }
  ]
