@@ -261,14 +261,22 @@ TypeSafe with the real key; the page holds a sentinel. The relay also refuses
 
 `--video` (optional `--videoDir`, git-ignored under `tools/recordings/`)
 records the whole attempt, countdown to result screen, as H.264 MP4 through
-Chrome's own MediaRecorder — no ffmpeg or Playwright download. The strip
-*below* the board shows house, clock, retries, the active objective and its
-source, posture, confidence and age, logical requests, strategies adopted /
-rejected / held, strategy-active share, motor and recovery state, stalls and
-recoveries, powers left and the last power call, billed tokens, cost and
-budget status. A `.events.json` next to it has every strategist event
-(request, adopted, rejected, held, stall, recovery-end, restored,
-power-activated/rejected, budget-stopped) in video time and race time.
+Chrome's own MediaRecorder — no ffmpeg or Playwright download. The video is
+the board alone. `--videoStats` adds a diagnostic strip *below* the board
+(house, clock, retries, the active objective and its source, posture,
+confidence and age, logical requests, strategies adopted / rejected / held,
+strategy-active share, motor and recovery state, stalls and recoveries,
+powers left and the last power call, billed tokens, cost and budget status).
+Either way a `.events.json` next to it has every strategist event (request,
+adopted, rejected, held, stall, recovery-end, restored, power-armed /
+activated / rejected, budget-stopped) in video time and race time.
+
+`--renderer gpu` (the default on Windows and macOS) records with hardware
+WebGL — what players see. `--renderer canvas` (the default on Linux, for
+GPU-less containers) uses Chromium's Canvas renderer, which cannot tint, so
+the characters appear as bare blue and red blobs. That is cosmetic: records
+and replays store positions, and the game draws them with the player's own
+renderer. On this machine (Intel Iris Xe, ANGLE/D3D11) both hold 60fps.
 
 ### Playing it by hand
 
@@ -282,8 +290,25 @@ never from a `VITE_*` env var — Vite inlines those into the bundle.
 
 ## The Jev opponent bank (`public/rivals/jev-v1/`)
 
-A separate bank of races driven by the strategist, never mixed with the
-ordinary bot bank in `public/rivals/v2/`. **The game does not read it yet.**
+A separate bank of races driven by the strategist. Its files are never mixed
+into the ordinary bot bank in `public/rivals/v2/`; **the game reads both
+into one opponent pool per course** (`utils/rivalSession.js`) and the same
+skill matching picks from it, so a player meets Jev the way they meet any
+rival. Jev is shown by name — "Jev", like a handle — where the style bots show
+their style ("RIVAL · Ace"). A course with no Jev race yet simply has a
+style-only pool. Each bank admits only its own kind: a Jev race in `v2` or a
+style bot in `jev-v1` is dropped on load.
+
+**Finding a rival** (`RivalsRace.findMatch`, `logic/rivalMatchmaking.js`):
+sonar rings pulse behind a name card while a search clock runs and the
+status steps through the course, matching the player's pace, and picking a
+rival; the card cycles the names actually in this course's pool, runs a
+varied 2.4–4.2s, then slows like a wheel and lands on the actual pick. The
+found card shows the rival's name, how their measured pace compares with the
+player's (EVEN MATCH / TOUGH RIVAL / YOU HAVE THE EDGE, or nothing if either
+is unknown), and their opening powers. Everything on it is true: no one is
+claimed online or queued, no population is invented, nothing mentions
+recordings (`test/rivalsCopy.test.mjs`, `test/rivalMatchmaking.test.mjs`).
 
 ```
 public/rivals/jev-v1/

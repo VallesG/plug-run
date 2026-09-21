@@ -9,6 +9,7 @@ import {
   rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock, validRivalPowers
 } from '../logic/rivals.js';
 import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome } from '../utils/rivalSession.js';
+import { matchSearchMs, matchSearchSteps, matchCarousel, matchLanding, matchQuality, matchClock } from '../logic/rivalMatchmaking.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
 import { playExtraction } from './extractionAnimation.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
@@ -87,36 +88,87 @@ export default class RivalsRace {
     this.entryModal?.destroy?.({resumeTouch:false});
     this.entryModal=this.scene.gameUI.showModal({
       // No claim is made about anyone being online, in a queue or playing now,
-      // and no recording vocabulary reaches the player. The carousel carries
-      // the moment; internal provenance stays in the record, not on screen.
+      // and no recording vocabulary reaches the player. Everything shown is
+      // true: the course, that the pick is matched to the player's measured
+      // pace, the names actually in this course's pool, and how the chosen
+      // rival's measured pace compares (logic/rivalMatchmaking.js).
       title:'FINDING RIVAL',subtitle:this.race.course.name?this.race.course.name.toUpperCase():'BLOCK RIVALS',
       lines:['SEVEN HOUSES · ONE RACE'],
       buttons:[{label:'CANCEL',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}]
     });
-    // An on-floor name card provides animation without re-creating modal input.
-    const w=this.scene.scale.gameSize.width,h=this.scene.scale.gameSize.height;
-    this.searchCard=this.scene.add.text(w/2,h*.47,'RIVAL',{
+    const scene=this.scene,w=scene.scale.gameSize.width,h=scene.scale.gameSize.height;
+    const cx=w/2,cy=h*.47,D=22000;
+    const add=o=>{this.objects.push(o);return o.setScrollFactor(0);};
+    // Sonar: three rings pulsing out from behind the name card.
+    const rings=[0,1,2].map(i=>{
+      const ring=add(scene.add.circle(cx,cy,34,0x000000,0).setStrokeStyle(2,0x7fd1c7,0.85).setDepth(D-1));
+      scene.tweens.add({targets:ring,scale:{from:1,to:4.4},alpha:{from:0.85,to:0},duration:1800,delay:i*600,repeat:-1,ease:'Sine.easeOut'});
+      return ring;
+    });
+    this.searchCard=add(scene.add.text(cx,cy,'RIVAL',{
       fontFamily:'Arial, sans-serif',fontSize:'22px',fontStyle:'bold',color:'#eee3c7',wordWrap:{width:w-70},
       backgroundColor:'#111c23',padding:{x:20,y:12},align:'center'
-    }).setOrigin(.5).setScrollFactor(0).setDepth(22000);
-    this.objects.push(this.searchCard);
-    let settled=false,cycles=0;
+    }).setOrigin(.5).setDepth(D));
+    const status=add(scene.add.text(cx,cy+58,'',{fontFamily:'Arial, sans-serif',fontSize:'13px',fontStyle:'bold',color:'#7fd1c7',align:'center'}).setOrigin(.5).setDepth(D));
+    const clock=add(scene.add.text(cx,cy-60,'0:00',{fontFamily:'Arial, sans-serif',fontSize:'13px',color:'#9aa7ad',align:'center'}).setOrigin(.5).setDepth(D));
+
+    const started=performance.now();
+    const salt=(this.race.territoryUser||'')+'/'+this.race.course.id+'/'+Math.round(started);
+    const minMs=matchSearchMs(salt), steps=matchSearchSteps(this.race.course.name);
+    const tick=()=>{
+      const el=performance.now()-started;
+      clock.setText(matchClock(el));
+      status.setText(steps[Math.min(steps.length-1,Math.floor(el/(minMs/steps.length)))]);
+    };
+    let settled=false,i=0;
     let task;try{task=resolveRivalOpponent(this.race);}catch{task=null;}
     Promise.resolve(task).catch(()=>false).then(()=>{settled=true;});
-    const cycle=()=>{
+    const names=()=>matchCarousel((this.race.searchNames?.length?this.race.searchNames:['RIVAL']).map(n=>this.rivalDisplayName(n)),salt);
+
+    // Candidates cycle until the pick is known AND the search has run its
+    // course; then the wheel slows and lands on the actual pick.
+    const spin=()=>{
       if(this.disposed||this.race.status!=='ready')return;
-      const names=this.race.searchNames?.length?this.race.searchNames:['RIVAL / 01','RIVAL / 02','RIVAL / 03','RIVAL / 04'];
-      this.searchCard.setText(this.rivalDisplayName(names[cycles%names.length]));cycles++;
-      if(settled&&cycles>=12){
-        this.searchCard.setText('RIVAL FOUND\n'+this.rivalDisplayName(this.race.opponent?.displayName||'RIVAL')+(this.race.opponent?.orderedPowers?'\n'+this.race.opponent.orderedPowers.map(p=>p.toUpperCase()).join(' → '):''));
-        this.searchTimer=this.scene.time.delayedCall(550,()=>{
-          if(this.disposed)return;
-          this.searchCard?.destroy?.();this.entryModal?.destroy?.();
-          this.searching=false;this.race.entryStage='matched';this.preparePickupProgress();this.armCountdown();
-        });
-      }else this.searchTimer=this.scene.time.delayedCall(150,cycle);
+      tick();
+      const pool=names();
+      if(settled&&performance.now()-started>=minMs){land(pool);return;}
+      this.searchCard.setText(pool[i++%pool.length]);
+      this.searchTimer=scene.time.delayedCall(110,spin);
     };
-    cycle();
+    const land=pool=>{
+      if(!this.race.opponent){found();return;}
+      const tail=matchLanding(pool,this.rivalDisplayName(this.race.opponent.displayName));
+      let k=0;
+      const step=()=>{
+        if(this.disposed||this.race.status!=='ready')return;
+        tick();
+        this.searchCard.setText(tail[k].name);
+        const ms=tail[k++].ms;
+        this.searchTimer=scene.time.delayedCall(ms,k<tail.length?step:found);
+      };
+      step();
+    };
+    const found=()=>{
+      if(this.disposed||this.race.status!=='ready')return;
+      rings.forEach(r=>{scene.tweens.killTweensOf(r);r.setVisible(false);});
+      const o=this.race.opponent;
+      if(o){
+        const quality=matchQuality(this.race.playerSkill?.estimateMs,o.benchmarkMs);
+        status.setText('RIVAL FOUND');
+        this.searchCard.setText(this.rivalDisplayName(o.displayName||'RIVAL')+(quality?'\n'+quality:'')
+          +(o.orderedPowers?'\n'+o.orderedPowers.map(p=>p.toUpperCase()).join(' → '):''));
+      }else{
+        status.setText('PACE TRIAL');
+        this.searchCard.setText('PACE TRIAL\nBeat the clock');
+      }
+      scene.tweens.add({targets:this.searchCard,scale:{from:1.18,to:1},duration:260,ease:'Back.easeOut'});
+      this.searchTimer=scene.time.delayedCall(1600,()=>{
+        if(this.disposed)return;
+        [this.searchCard,status,clock,...rings].forEach(x=>x?.destroy?.());this.entryModal?.destroy?.();
+        this.searching=false;this.race.entryStage='matched';this.preparePickupProgress();this.armCountdown();
+      });
+    };
+    spin();
   }
   armCountdown(){
     if(this.disposed||this.race.status!=='ready')return;

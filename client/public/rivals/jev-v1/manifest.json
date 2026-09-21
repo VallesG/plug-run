@@ -2,9 +2,45 @@
  "schemaVersion": 1,
  "bank": "jev-v1",
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-21T18:24:59.907Z",
- "note": "Opponents driven by the Jev strategist above the runner AI. Separate from rivals/v2; not read by the game.",
+ "generatedAt": "2026-09-21T19:05:43.462Z",
+ "note": "Opponents driven by the Jev strategist above the runner AI. Kept apart from rivals/v2; the game pools both per course.",
  "courses": [
+  {
+   "slot": 1,
+   "name": "Low End Rush",
+   "courseID": "rivals-v1-2722422571",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-low-end-rush-street-9301-12f3kk4"
+   ],
+   "elapsedMs": [
+    191520.60000002384
+   ],
+   "retries": [
+    15
+   ],
+   "costUsd": [
+    0.0019
+   ]
+  },
+  {
+   "slot": 2,
+   "name": "Copper Climb",
+   "courseID": "rivals-v1-2917822448",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-copper-climb-street-9302-1m8oc9l"
+   ],
+   "elapsedMs": [
+    243076.2999998927
+   ],
+   "retries": [
+    19
+   ],
+   "costUsd": [
+    0.0023
+   ]
+  },
   {
    "slot": 3,
    "name": "Freight Run",
@@ -24,6 +60,42 @@
    ]
   },
   {
+   "slot": 4,
+   "name": "Afterglow Mile",
+   "courseID": "rivals-v1-2476136539",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-afterglow-mile-street-9304-od2x97"
+   ],
+   "elapsedMs": [
+    133473.9999999404
+   ],
+   "retries": [
+    5
+   ],
+   "costUsd": [
+    0.0014
+   ]
+  },
+  {
+   "slot": 5,
+   "name": "Switchyard Seven",
+   "courseID": "rivals-v1-2143714553",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-switchyard-seven-street-9305-gf13aj"
+   ],
+   "elapsedMs": [
+    282078.60000008345
+   ],
+   "retries": [
+    25
+   ],
+   "costUsd": [
+    0.0029
+   ]
+  },
+  {
    "slot": 6,
    "name": "Lastlight Loop",
    "courseID": "rivals-v1-2077357177",
@@ -36,6 +108,24 @@
    ],
    "retries": [
     6
+   ],
+   "costUsd": [
+    0.0011
+   ]
+  },
+  {
+   "slot": 7,
+   "name": "Blacktop Crown",
+   "courseID": "rivals-v1-2334749748",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-blacktop-crown-street-9307-1lkuf4n"
+   ],
+   "elapsedMs": [
+    96717.49999988079
+   ],
+   "retries": [
+    4
    ],
    "costUsd": [
     0.0011

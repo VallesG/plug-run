@@ -7,8 +7,8 @@
 // Writes ONLY public/rivals/jev-v1/ (manifest.json, courses/<courseID>/
 // opponents.json, replays/<recordingID>.json). It never reads from, writes to
 // or deletes anything under public/rivals/v2, refuses a --root there, and
-// checks v2's bytes are unchanged after a write. The game does not read this
-// bank yet.
+// checks v2's bytes are unchanged after a write. The game reads both banks
+// into one opponent pool per course (utils/rivalSession.js).
 //
 // What gets in, and what is refused, is decided in tools/lib/jevBank.mjs —
 // the same module the bank test uses. Every capture found under --in is
@@ -83,7 +83,7 @@ export function writeJevBank(root, accepted) {
   const manifest = {
     schemaVersion: JEV_BANK_SCHEMA, bank: JEV_BANK_ID, rulesVersion: RIVAL_RULES_VERSION,
     generatedAt: new Date().toISOString(),
-    note: 'Opponents driven by the Jev strategist above the runner AI. Separate from rivals/v2; not read by the game.',
+    note: 'Opponents driven by the Jev strategist above the runner AI. Kept apart from rivals/v2; the game pools both per course.',
     courses: []
   };
   for (const course of RIVAL_COURSE_POOL) {

@@ -6,8 +6,9 @@
 // A SEPARATE BANK
 // public/rivals/jev-v1/ holds only races driven by the Jev strategist above
 // the runner AI, recorded against the paid TypeSafe API, that finished all
-// seven houses with Jev still asking at the finish. It is never mixed with
-// public/rivals/v2 (the ordinary bot bank), and the game does not read it.
+// seven houses with Jev still asking at the finish. Its files are never
+// mixed into public/rivals/v2 (the ordinary bot bank); the game reads both
+// and puts their opponents in one pool per course (utils/rivalSession.js).
 //
 // WHAT CAN NEVER GET IN
 // A failed, forfeited, abandoned or incomplete race; a race finished after a

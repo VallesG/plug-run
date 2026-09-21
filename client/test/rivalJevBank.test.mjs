@@ -117,7 +117,11 @@ for (const e of entries) {
     if (n.isDirectory()) walk(p); else if (/\.(js|mjs)$/.test(n.name) && readFileSync(p, 'utf8').includes('jev-v1')) srcHits.push(p);
   } };
   walk(decodeURIComponent(new URL('../src/', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
-  check('the game does not read the Jev bank yet', srcHits.length === 0, srcHits.join(', '));
+  // The game reads it through ONE place — rivalSession's opponent pool — and
+  // from the path the assembler writes, which public/ serves as-is.
+  const session = readFileSync(new URL('../src/utils/rivalSession.js', import.meta.url), 'utf8');
+  check('the game reads the Jev bank only through the opponent pool',
+    srcHits.length === 1 && /utils[\\/]rivalSession\.js$/.test(srcHits[0]) && session.includes("'/rivals/jev-v1/'"), srcHits.join(', '));
 }
 
 /* ---------------- admission rules, on the banked races ---------------- */

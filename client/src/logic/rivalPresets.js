@@ -139,7 +139,11 @@ export function rivalPreset(name) {
 export function rivalPresetByTier(tier) {
   return Object.values(RIVAL_SKILL_PRESETS).find(p => p.tier === tier) ?? null;
 }
-/** How a bot opponent is labelled everywhere a player sees it. Never a name. */
+/**
+ * How a style bot is labelled. Never a person's name: the style is the name.
+ * Jev is the one opponent shown by a name, because Jev IS its name — see
+ * rivalOpponentName in utils/rivalSession.js.
+ */
 export function rivalBotDisplayName(presetKey) {
   const p = rivalPreset(presetKey);
   return 'BOT · ' + (p ? p.label : 'Unknown');

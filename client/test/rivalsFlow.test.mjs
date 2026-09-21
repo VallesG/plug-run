@@ -4,6 +4,7 @@ import * as rules from '../src/logic/rivals.js';
 import * as presets from '../src/logic/rivalPresets.js';
 import * as skill from '../src/logic/rivalSkill.js';
 import * as capture from '../src/controllers/RivalReplayCapture.js';
+import * as matchmaking from '../src/logic/rivalMatchmaking.js';
 import { playExtraction } from '../src/controllers/extractionAnimation.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
@@ -12,7 +13,7 @@ const source=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta
   .replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const bindings={
   trackScene:()=>{},
-  ...rules, ...presets, ...capture,
+  ...rules, ...presets, ...capture, ...matchmaking,
   crewSigil:()=>null,completeRivalDistrict:()=>({applied:false}),
   rivalCityView:index=>({index}),drawCityMap:(s,o)=>{s.cityOptions=o;return {destroy(){s.cityDestroyed=true;}};},
   drawRivalDistrictMap:(s,m,r,o)=>{s.districtDraws=(s.districtDraws||0)+1;}, performance:{now:()=>now}, clearTimeout:()=>{},
@@ -36,8 +37,9 @@ function setup(state,house=1){
   const events=[],restarts=[],modals=[];
   const scene={rivalRace:state,pveRound:house,cell:24,pad:{x:3,y:2},grid:Array.from({length:35},()=>Array(16).fill(0)),scale:{gameSize:{width:390,height:844}},
     input:{keyboard:{enabled:true}},events:{once(){}},
-    add:{rectangle:node,text:node},scene:{restart:d=>restarts.push(d),start(){}},
+    add:{rectangle:node,text:node,circle:node},scene:{restart:d=>restarts.push(d),start(){}},
     gameUI:{showModal:o=>{const modal={...o,destroy(){this.destroyed=true;}};modals.push(modal);return modal;}},roundOver:false,
+    tweens:{add(config){return config;},killTweensOf(){}},
     time:{delayedCall:(delay,fn)=>{const e={delay,fn,removed:false,remove(){this.removed=true;}};events.push(e);return e;}}
   };
   scene.gameUI.scene=scene;
@@ -380,8 +382,17 @@ check('mix chosen before the opponent carousel',loadouts===oldLoadouts+1&&lastPi
 city.scene.runnerPowersSelected=['dash','decoy'];lastPicker.done();
 await Promise.resolve();await Promise.resolve();
 check('search does not start race clock',entry.status==='ready'&&entry.startedAt===null&&entry.entryStage==='search');
-for(let i=0;i<20&&entry.status!=='countdown';i++)city.events.at(-1).fn();
+// The search runs a varied minimum (2.4-4.2s) before landing, so the clock
+// moves with each scheduled step here.
+const shownDuringSearch=[];
+for(let i=0;i<80&&entry.status!=='countdown';i++){
+  const card=city.controller.searchCard;if(card?.text)shownDuringSearch.push(card.text);
+  now+=city.events.at(-1).delay||100;city.events.at(-1).fn();
+}
 check('opponent reveal starts countdown automatically',entry.status==='countdown'&&loadouts===oldLoadouts+1&&entry.powers.join()==='dash,decoy');
+check('the search ran its minimum before landing',now-1000>=2400);
+check('the found card names the rival the race is against',
+  shownDuringSearch.some(t=>t.startsWith(city.controller.rivalDisplayName(entry.opponent?.displayName||'PACE TRIAL'))||t.startsWith('PACE TRIAL')));
 check('search keeps movement frozen',city.scene.roundPausedForMenu&&!city.scene.input.keyboard.enabled);
 city.controller.dispose();
 check('search timer removed on shutdown',city.events.at(-1).removed);
@@ -394,12 +405,14 @@ check('resized block entrance skips city and keeps match button',!resumed.scene.
 resumed.controller.dispose();
 console.log('Rivals district entry: '+passed+' total assertions passed');
 
-let finishOpponents,requests=0;
-const delayedBindings={...chooseBindings,fetch:()=>{requests++;return new Promise(r=>{finishOpponents=r;});}};
+// One request per bank (the style bots and Jev); both must settle.
+const pendingFetches=[];let requests=0;
+const finishOpponents=(res)=>pendingFetches.splice(0).forEach(r=>r(res));
+const delayedBindings={...chooseBindings,fetch:()=>{requests++;return new Promise(r=>{pendingFetches.push(r);});}};
 const delayedResolve=new Function(...Object.keys(delayedBindings),sessionSource+';return resolveRivalOpponent;')(...Object.values(delayedBindings));
 const shared=rules.newRivalRace(rules.rivalPoolCourse(1),splits);
 const lookup=delayedResolve(shared),afterResize=delayedResolve(shared);
-check('resize shares pending opponent lookup',lookup===afterResize&&requests===1);
+check('resize shares pending opponent lookup',lookup===afterResize&&requests===2);
 finishOpponents({ok:true,text:async()=>JSON.stringify({schemaVersion:1,rulesVersion:rules.RIVAL_RULES_VERSION,opponents:[{record:opponentRecord,replay:null}]})});
 await lookup;
 check('shared lookup settles and clears pending',shared.opponentPending===null&&shared.opponentKind==='recorded-bot');

@@ -70,13 +70,32 @@ export function createRivalSession(selection = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Recorded opponents: static JSON under /rivals/v2/, served by Vite/Netlify.
-// One small per-course file is fetched at race creation; a replay bundle is
-// prefetched for pickup progress, then reused by Watch Rival Replay. Every payload is validated
-// as corruption checking; a failure leaves the race on the labeled simulated
-// pace rather than presenting anything as a recording.
+// Recorded opponents: static JSON under /rivals/v2/ (the style bots) and
+// /rivals/jev-v1/ (races driven by the Jev strategist), served by
+// Vite/Netlify. Both banks feed ONE pool per course, and the same skill
+// matching picks from it, so a player meets Jev or a style bot the way they
+// would meet anyone. One small per-course file per bank is fetched at race
+// creation; a replay bundle is prefetched for pickup progress, then reused by
+// Watch Rival Replay. Every payload is validated as corruption checking; a
+// failure leaves the race on the labeled simulated pace rather than
+// presenting anything as a recording.
 // ---------------------------------------------------------------------------
 export const RIVALS_ASSET_ROOT = '/rivals/v2/';
+export const JEV_ASSET_ROOT = '/rivals/jev-v1/';
+const OPPONENT_BANKS = [
+  { root: RIVALS_ASSET_ROOT, jev: false },
+  { root: JEV_ASSET_ROOT, jev: true }
+];
+/** A Jev-strategist race, by what its own record says drove it. */
+export function isJevRecord(record) {
+  return record?.driverConfig?.driver === 'jev-strategist' && !!record.driverConfig.jev;
+}
+// The name a player sees. Jev races by its own name, like a handle; the
+// style bots keep their style names (the HUD strips any BOT/AI prefix).
+export const JEV_DISPLAY_NAME = 'Jev';
+export function rivalOpponentName(record) {
+  return isJevRecord(record) ? JEV_DISPLAY_NAME : (record?.opponent?.displayName ?? 'RIVAL');
+}
 const FETCH_TIMEOUT_MS = 3500;
 const opponentCache = new Map();
 async function fetchJSON(url, { timeoutMs = FETCH_TIMEOUT_MS, maxBytes = 512 * 1024 } = {}) {
@@ -91,25 +110,36 @@ async function fetchJSON(url, { timeoutMs = FETCH_TIMEOUT_MS, maxBytes = 512 * 1
     return JSON.parse(text);
   } finally { clearTimeout(timer); }
 }
-/** Valid, course-matching records for a course. Empty on any failure. */
+/** One bank's valid, course-matching entries for a course. Empty on any failure. */
+async function loadBankOpponents(course, bank) {
+  try {
+    const data = await fetchJSON(bank.root + 'courses/' + encodeURIComponent(course.id) + '/opponents.json');
+    if (data?.schemaVersion !== 1 || data.rulesVersion !== RIVAL_RULES_VERSION || !Array.isArray(data.opponents)) return [];
+    // Each entry is { record, replay }: the record is hashed as recorded and
+    // must not be decorated, so the replay path travels beside it.
+    return data.opponents
+      .filter(e => e && validateRivalRunRecord(e.record).ok && rivalRecordMatchesCourse(e.record, course, RIVAL_RULES_VERSION)
+        && e.record.opponent?.kind === 'bot' && (e.replay == null || typeof e.replay === 'string')
+        // Each bank holds only its own kind: a Jev race in the style bank, or
+        // a style bot in the Jev bank, is a mis-assembled file, not an opponent.
+        && isJevRecord(e.record) === bank.jev)
+      .map(e => ({ record: e.record, replay: e.replay ?? null, root: bank.root }));
+  } catch (e) {
+    // A course with no Jev race yet has no file there; that is normal.
+    if (!bank.jev) console.warn('[Rivals] opponents unavailable for', course.id, e?.message || e);
+    return [];
+  }
+}
+/** Valid, course-matching records for a course, from every bank. */
 export async function loadRivalOpponents(course) {
   if (!course?.id) return [];
   if (opponentCache.has(course.id)) return opponentCache.get(course.id);
-  const task = (async () => {
-    try {
-      const data = await fetchJSON(RIVALS_ASSET_ROOT + 'courses/' + encodeURIComponent(course.id) + '/opponents.json');
-      if (data?.schemaVersion !== 1 || data.rulesVersion !== RIVAL_RULES_VERSION || !Array.isArray(data.opponents)) return [];
-      // Each entry is { record, replay }: the record is hashed as recorded and
-      // must not be decorated, so the replay path travels beside it.
-      return data.opponents
-        .filter(e => e && validateRivalRunRecord(e.record).ok && rivalRecordMatchesCourse(e.record, course, RIVAL_RULES_VERSION)
-          && e.record.opponent?.kind === 'bot' && (e.replay == null || typeof e.replay === 'string'))
-        .map(e => ({ record: e.record, replay: e.replay ?? null }));
-    } catch (e) {
-      console.warn('[Rivals] opponents unavailable for', course.id, e?.message || e);
-      return [];
-    }
-  })();
+  const task = Promise.all(OPPONENT_BANKS.map(bank => loadBankOpponents(course, bank)))
+    .then(lists => {
+      // One recordingID, one opponent, whichever bank it came from first.
+      const seen = new Set();
+      return lists.flat().filter(e => !seen.has(e.record.recordingID) && seen.add(e.record.recordingID));
+    });
   opponentCache.set(course.id, task);
   return task;
 }
@@ -157,7 +187,7 @@ export function resolveRivalOpponent(race) {
   race.opponentResolved = true;
   const pending=loadRivalOpponents(race.course).then(entries => {
     if (!entries.length || race.status !== 'ready') return false;
-    race.searchNames=entries.map(e=>e.record.opponent.displayName);
+    race.searchNames=[...new Set(entries.map(e=>rivalOpponentName(e.record)))];
     const history = rivalHistory();
     const played = history.filter(r => r?.courseID === race.course.id).length;
 
@@ -192,14 +222,16 @@ export function resolveRivalOpponent(race) {
       });
     }
     if (!pick) return false;
-    const replay = entries.find(e => e.record === pick)?.replay ?? null;
+    const chosen = entries.find(e => e.record === pick);
+    const replay = chosen?.replay ?? null;
     race.rivalTimes = pick.clearTimes.slice();
     race.opponentKind = 'recorded-bot';
     race.opponentRecord = pick;
     race.opponent = {
-      recordingID: pick.recordingID, kind: pick.opponent.kind, displayName: pick.opponent.displayName,
+      recordingID: pick.recordingID, kind: pick.opponent.kind, displayName: rivalOpponentName(pick),
       skillPreset: pick.opponent.skillPreset, retries: pick.retries, elapsedMs: pick.elapsedMs,
-      orderedPowers: pick.orderedPowers.slice(), replayURL: replay ? RIVALS_ASSET_ROOT + replay : null,
+      orderedPowers: pick.orderedPowers.slice(),
+      replayURL: replay ? (chosen?.root || RIVALS_ASSET_ROOT) + replay : null,
       // Kept for adaptation after the race. Not shown to the player.
       benchmarkMs: recordBenchmark(pick, race.course.scales)?.clearMs ?? null
     };
