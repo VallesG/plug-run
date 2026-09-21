@@ -5,7 +5,7 @@ import { crewStoryProgress } from '../logic/contactProgress.js';
 import { shouldShowCity } from '../logic/city.js';
 import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
-import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout } from '../logic/rivals.js';
+import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout, rivalGenuinePocket, rivalUpcomingAttempt } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
 import RivalsRace from '../controllers/RivalsRace.js';
 import { advanceJourney, worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
@@ -1562,9 +1562,12 @@ export class BaseGameScene extends Phaser.Scene {
     this.bunkStash?.destroy?.();
 
     // Choose randomly which pocket is the real package (deterministic based on seed)
-    // Always create fresh RNG from seed to ensure same round = same real/bunk assignment
-    const bunkRng = makeRng((this.seed ^ 0xC0FFEE) | 0);
-    const realAtPrimary = (bunkRng() < 0.5);
+    // Always create fresh RNG from seed to ensure same round = same real/bunk assignment.
+    // Rivals rerolls it per ATTEMPT: a retry keeps the house but not the answer
+    // (see rivalGenuinePocket). Attempt 1 is the same draw as below.
+    const realAtPrimary = this.runKind === 'rivals'
+      ? rivalGenuinePocket(this.seed, (this.rivalAttempt = rivalUpcomingAttempt(this.rivalRace, this.pveRound))) === 0
+      : (makeRng((this.seed ^ 0xC0FFEE) | 0)() < 0.5);
 
     // Spawn visually identical packages at both pockets
     const pkgA = makeDuffel(sx, sy, 1);

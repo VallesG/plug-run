@@ -82,8 +82,9 @@ function buildHouse(course, i) {
   const arena = generateSquareMaze(course.cols, course.rows, {
     rng: createSeededRNG(houseSeed), role: 'runner', clusterScale: course.scales[i]
   });
-  // Mirrors BaseGameScene: stash assignment from seed ^ 0xC0FFEE, and the
-  // Rivals defender weapon is the first gameplayRNG draw (seed ^ 0xABCDEF01).
+  // Mirrors BaseGameScene: a first attempt's stash assignment is the first
+  // draw of seed ^ 0xC0FFEE (retries reroll; see rivalStashReroll.test), and
+  // the Rivals defender weapon is the first gameplayRNG draw (seed ^ 0xABCDEF01).
   const realAtPrimary = createSeededRNG((houseSeed ^ 0xC0FFEE) | 0)() < 0.5;
   const weapon = ['pistol', 'doublebarrel', 'rifle'][Math.floor(createSeededRNG(houseSeed ^ 0xABCDEF01)() * 3)];
   return { arena, realAtPrimary, weapon };

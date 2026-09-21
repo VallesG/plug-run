@@ -119,6 +119,26 @@ console.log('\njevState — strategic payload\n');
   check('and B is no longer offered', !('target_b' in payload.questions.objective.criteria));
 }
 
+// 6b. An allow-list, not a deny-list. The state carries exactly these fields;
+//     in particular nothing about previous attempts' bags — which one was
+//     bunk or genuine last time — because the genuine bag rerolls on every
+//     attempt and A/B are only positions. A field added later must be added
+//     here, on purpose.
+{
+  const scene = makeScene({ plug: { x: 6, y: 4 } });
+  const { payload } = payloadFor(scene);
+  const allowed = ['house', 'attempt', 'runner', 'threat', 'decoyOut', 'powers', 'plan', 'event', 'targets', 'extract'];
+  const extra = Object.keys(payload.state).filter((k) => !allowed.includes(k));
+  check('state carries only allow-listed fields', extra.length === 0, extra.join(','));
+  check('targets carry only id, distance, plug distance and exposure',
+    payload.state.targets.every((t) => Object.keys(t).join() === 'id,dist,plug,exposed'));
+  check('plan carries only the current strategy, no history',
+    Object.keys(payload.state.plan).join() === 'objective,posture,ageS,progress');
+  const text = JSON.stringify(payload).toLowerCase();
+  const leak = ['previous', 'last', 'history', 'revealed', 'was', 'bunk', 'genuine', 'real'].find((w) => new RegExp('\\b' + w + '\\b').test(text));
+  check('no word about past bag outcomes anywhere in the payload', !leak, leak);
+}
+
 // 7. It is still cheap. The old per-frame payload measured ~136 tokens; this
 //    one is sent tens of times a race, not several times a second.
 {

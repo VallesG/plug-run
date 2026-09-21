@@ -400,6 +400,36 @@ console.log('\nJevStrategist\n');
   check('report names the motor and strategist', r.driver === 'jev-strategist' && r.motor === 'runner-ai');
 }
 
+// 15b. NO HISTORICAL LABEL. The genuine bag rerolls on every attempt, so
+//      which bag turned out bunk last attempt says nothing about this one —
+//      and must not reach Jev. Two races identical except for which bag was
+//      revealed bunk on attempt 1 must send byte-identical payloads on every
+//      request of attempt 2.
+{
+  const retryPayloads = async (bunkOnFirstAttempt) => {
+    clock.t = 4_000_000;
+    const { s, decide } = make(() => strategy('target_a'), { watchdog: { stallMs: 1e9 } });
+    const both = [{ x: 10, y: 3 }, { x: 10, y: 16 }];
+    const survivor = bunkOnFirstAttempt === 'target_a' ? [{ x: 10, y: 16 }] : [{ x: 10, y: 3 }];
+    // Attempt 1: both bags, then one fades as bunk, then the runner dies.
+    await run(s, makeView({ houseKey: '4:0', house: 4 }), 1600);
+    await run(s, makeView({ houseKey: '4:0', house: 4, bags: survivor }), 1600);
+    const before = decide.calls.length;
+    // Attempt 2 (retry): the same two bags again, fresh.
+    await run(s, makeView({ houseKey: '4:1', house: 4, runner: { x: 10, y: 11 } }), 6000);
+    return decide.calls.slice(before).map((p) => JSON.stringify(p));
+  };
+  const afterA = await retryPayloads('target_a');
+  const afterB = await retryPayloads('target_b');
+  check('the retry asked at least once', afterA.length >= 1 && afterA[0].includes('"event":"retry"'));
+  check('which bag was bunk last attempt changes nothing Jev is sent on the retry',
+    afterA.length === afterB.length && afterA.every((p, i) => p === afterB[i]));
+  check('the retry payload restarts the plan from nothing',
+    JSON.parse(afterA[0]).state.plan.objective === 'none' && JSON.parse(afterA[0]).state.attempt === 2);
+  check('both bags are offered again on the retry',
+    Object.keys(JSON.parse(afterA[0]).questions.objective.criteria).join() === 'target_a,target_b,hold');
+}
+
 // 16. Not live (countdown): nothing is asked, and the fair fallback is still
 //     handed over so the runner AI never runs on its own objective code.
 {

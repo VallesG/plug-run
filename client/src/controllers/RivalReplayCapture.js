@@ -10,12 +10,14 @@
 // Semantic state in grid cells at 15Hz plus discrete events. The house itself
 // is not recorded; playback regenerates it from the house seed. Which stash
 // is real is not recorded either; it becomes knowable at the pickup event,
-// which is exactly when the runner learned it.
+// which is exactly when the runner learned it. It is reproducible, though:
+// rivalGenuinePocket(houseSeed, attempt) — both on every segment — gives the
+// same pocket the house was built with, and a mismatch is reported here.
 //
 // The race-level capture lives on the race object (race.capture) because that
 // is the one thing RivalsRace carries across scene.restart(); the scene and
 // every display object are rebuilt per house.
-import { RIVAL_RULES_VERSION, rivalElapsed } from '../logic/rivals.js';
+import { RIVAL_RULES_VERSION, rivalElapsed, rivalGenuinePocket, rivalUpcomingAttempt } from '../logic/rivals.js';
 import {
   RIVAL_REPLAY_STEP_MS, newReplaySegment, packFlags, pushReplayFrame, pushReplayEvent, sealReplaySegment
 } from '../logic/rivalReplay.js';
@@ -39,7 +41,8 @@ export function beginAttemptCapture(scene, race, now) {
   const cap = race.capture;
   if (!cap || cap.current) return null;
   const house = scene.pveRound || 1;
-  cap.houseAttempts[house] = (cap.houseAttempts[house] || 0) + 1;
+  // The same count the house was built for (BaseGameScene.makeObjectives).
+  cap.houseAttempts[house] = rivalUpcomingAttempt(race, house);
   const carSide = scene.egress?.side ?? null;
   const seg = newReplaySegment({
     house, attempt: cap.houseAttempts[house],
@@ -51,6 +54,15 @@ export function beginAttemptCapture(scene, race, now) {
     plugSpawn: scene.defender ? cellOf(scene, scene.defender.x, scene.defender.y) : { x: 0, y: 0 },
     weapon: scene.allowedGuns?.[0] ?? scene.weapon ?? null
   });
+  // The board must hold the genuine stash where the replay will say it is.
+  if (scene.stash && scene.stashCell) {
+    const onBoard = nearestStash(seg.stashes, cellOf(scene, scene.stash.x, scene.stash.y));
+    const derived = rivalGenuinePocket(seg.houseSeed, seg.attempt);
+    if (onBoard !== derived) {
+      console.error('[RIVALS] stash assignment mismatch: house ' + house + ' attempt ' + seg.attempt +
+        ' has the genuine stash in pocket ' + onBoard + ', expected ' + derived);
+    }
+  }
   cap.current = {
     house, attempt: seg.attempt, startedMs: rivalElapsed(race, now), t0: now, nextSampleAt: now, seg,
     seenBullets: new WeakSet(), lastShotT: -1, hadStash: false, bunked: [false, false],

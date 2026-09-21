@@ -22,6 +22,47 @@ export function rivalHudLayout(width, height) {
 // Existing combat balance is authored at a 24px cell. Race distances must
 // scale with the arena so a narrower viewport does not make bullets faster.
 export function rivalPixels(value, cell) { return value * cell / 24; }
+
+// WHICH POCKET HOLDS THE GENUINE STASH, PER ATTEMPT.
+//
+// A retry replays the same house — same seed, same layout — but must NOT
+// replay which bag is genuine: a player (or a bot, or Jev) that died once
+// would otherwise know the answer on every retry, and a bot that never learns
+// walks into the same bunk forever. It used to be one fixed draw per house
+// seed, so on Low End Rush house 4 the same pocket was bunk on all 59
+// attempts of a paid Jev run.
+//
+// Attempt k takes the k-th draw of the house's stash stream,
+// mulberry32(houseSeed ^ 0xC0FFEE). Attempt 1 is therefore exactly the old
+// single draw — the simulated pace, the course tests and the first attempt of
+// every shipped recording are unchanged — and each retry rerolls
+// independently. Deterministic and replayable from (houseSeed, attempt),
+// both of which every replay segment already records. Genuinely random: two
+// attempts in a row can land on the same pocket.
+//
+// @returns 0 = primary pocket (arena.objectives.stash), 1 = secondary
+//          (arena.objectives.extract pocket)
+export function rivalGenuinePocket(houseSeed, attempt = 1) {
+  let t = ((houseSeed ^ 0xC0FFEE) | 0) >>> 0;
+  let v = 0;
+  const draws = Math.max(1, Math.floor(Number(attempt) || 1));
+  for (let i = 0; i < draws; i++) {
+    t = (t + 0x6D2B79F5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    v = ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  }
+  return v < 0.5 ? 0 : 1;
+}
+
+// The attempt a house is about to start: one more than the attempts the
+// race's capture has already opened there. The same count
+// RivalReplayCapture.beginAttemptCapture stamps on the segment, so the
+// assignment made when the house is built is the one the replay records.
+export function rivalUpcomingAttempt(race, house) {
+  const done = race?.capture?.houseAttempts?.[house];
+  return (Number.isInteger(done) && done > 0 ? done : 0) + 1;
+}
 const POWERS = ['phase', 'dash', 'decoy'];
 
 export function rivalHash(value) {

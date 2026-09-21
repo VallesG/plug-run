@@ -23,6 +23,14 @@ real-time runner cell by cell from a 70–500ms remote call is simply the wrong
 job. That design is gone — there is no code path left by which Jev produces a
 direction.
 
+The third paid run used the strategist below (runner AI as the motor, 100
+logical requests, $0.0030). It cleared houses 1–3 with the strategy in force,
+then died 58 times on Low End Rush house 4, spent its request budget there
+and forfeited at 5/7. Part of that was a fairness bug in the game, not in
+Jev: every attempt at a house had the genuine bag in the same pocket, and
+Jev chose the other one every time. Fixed; see *Nothing carries across
+attempts* below.
+
 ## The architecture: three layers
 
 | layer | file | decides |
@@ -62,8 +70,9 @@ objective too. Without a provider the AI is byte-for-byte what it was.
 
 Why the detour stays: the first mock run disabled it, and the runner then
 took an identical route on every retry of Low End Rush house 4 and died 32
-times — the same loop `rivalPresets.js` documents for high-level AIs. The
-detour carries no knowledge; it is the motor's variety.
+times — the same loop `rivalPresets.js` documents for high-level AIs (made
+worse, at the time, by every retry also having the same genuine bag; see
+below). The detour carries no knowledge; it is the motor's variety.
 
 Posture changes only how exposure is treated: the dodge range
 (`dangerCells`) and the cover-routing weight (`coverPenalty`), via
@@ -99,6 +108,27 @@ view recursively for any key, string or object reference that names or holds
 either bag. The fallback objective (no strategy, rejected answer, budget
 stopped) is the **nearest** bag by walking distance — a choice a player can
 make — never the real one.
+
+**Nothing carries across attempts either.** Which bag is genuine rerolls on
+every Rivals attempt (`rivalGenuinePocket(houseSeed, attempt)` in
+`logic/rivals.js`: attempt *k* takes the *k*-th draw of the house's stash
+stream, so attempt 1 is the old single draw and each retry is an independent,
+replayable reroll). A and B are positions only; neither label implies
+authenticity, and a retry's A may be genuine where the last attempt's A was
+bunk. Jev is sent no previous bunk or genuine outcome — the payload is an
+allow-listed set of fields, and a test runs two races that differ only in
+which bag was bunk on attempt 1 and asserts the retry's payloads are
+byte-identical. Fair tactical history (death cause, posture, power policy,
+progress, repeated failure) may be added later; bag outcomes may not.
+
+Before this fix the assignment was one draw per house seed, so every
+attempt at a house had the genuine bag in the same pocket. That is why the
+third paid run chose the bunk on all 21 answered attempts at Low End Rush
+house 4 — it was not bad luck — and why the plain bot, which reads
+`scene.stash`, never paid for it. Every shipped bank recording predates the
+reroll: its retries used its first attempt's assignment. Their replays are
+unaffected — a replay plays the recorded pickup and bunk events — and their
+first attempts match the new derivation exactly.
 
 ### When Jev is asked
 

@@ -1,7 +1,7 @@
 import { getRivalTerritory } from './rivalCityProgress.js';
 import { rivalDistrict } from '../logic/rivalCity.js';
 import { getWindowState } from './windowProgress.js';
-import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, nextRivalSlot, validRivalPowers } from '../logic/rivals.js';
+import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, nextRivalSlot, validRivalPowers, rivalGenuinePocket } from '../logic/rivals.js';
 import { validateRivalRunRecord, rivalRecordMatchesCourse, validateRivalReplayBundle, RIVAL_MAX_BUNDLE_BYTES } from '../logic/rivalRecords.js';
 import { validateReplaySegment } from '../logic/rivalReplay.js';
 import { chooseRivalOpponent, rivalTierForHistory } from '../logic/rivalPresets.js';
@@ -40,9 +40,10 @@ export function createRivalSession(selection = {}) {
       rng:createSeededRNG(houseSeed),role:'runner',clusterScale:course.scales[i]
     });
     const primary = arena.objectives.stash, secondary = arena.objectives.extract;
-    // Match BaseGameScene's real/bunk assignment. Simulate searching the primary
-    // pocket first; the pace includes a detour if that pocket is bunk.
-    const realAtPrimary = createSeededRNG(houseSeed ^ 0xC0FFEE)() < 0.5;
+    // Match BaseGameScene's real/bunk assignment for a first attempt (a
+    // simulated pace never retries). Simulate searching the primary pocket
+    // first; the pace includes a detour if that pocket is bunk.
+    const realAtPrimary = rivalGenuinePocket(houseSeed, 1) === 0;
     const real = realAtPrimary ? primary : secondary;
     const searchSteps = rivalPathSteps(arena.grid,arena.spawns.runner,primary) +
       (realAtPrimary ? 0 : rivalPathSteps(arena.grid,primary,secondary));
