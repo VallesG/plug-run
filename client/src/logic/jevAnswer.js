@@ -12,20 +12,23 @@
 
 /**
  * @param body   parsed JSON from either route
- * @returns { move, power, confidence, usage } — move is null when unusable
+ * @returns { move, power, confidence, model, usage } — move is null when
+ *          unusable. `model` is the version that answered, which matters
+ *          because 'jev-latest' is an alias that moves.
  */
 export function mapJevAnswer(body) {
   const out = body?.result ?? body;
   const answers = out?.answers;
   const move = answers?.move;
   if (!move || typeof move.choice !== 'string') {
-    return { move: null, power: null, confidence: null, usage: out?.usage || null };
+    return { move: null, power: null, confidence: null, model: out?.model || null, usage: out?.usage || null };
   }
   return {
     move: move.choice,
     // 'none' is a real answer meaning "save it", not an absent one.
     power: answers.power?.choice && answers.power.choice !== 'none' ? answers.power.choice : null,
     confidence: Number.isFinite(move.confidence) ? move.confidence : null,
+    model: out.model || null,
     usage: out.usage || null
   };
 }

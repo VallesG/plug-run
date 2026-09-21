@@ -51,21 +51,142 @@ const ok = (answers, usage = { input_tokens: 392, output_tokens: 65 }) => ({
 
 // --- Failures ----------------------------------------------------------------
 {
-  const limited = typesafeJev({ apiKey: 'k',
-    fetchImpl: async () => ({ ok: false, status: 429, json: async () => ({}) }) });
-  let threw = null;
-  try { await limited({ state: {}, questions: {} }); } catch (e) { threw = e; }
-  check('rate limiting is called out distinctly', /rate limited/.test(threw?.message || ''));
-
   const down = typesafeJev({ apiKey: 'k',
     fetchImpl: async () => ({ ok: false, status: 503, json: async () => ({}) }) });
-  threw = null;
+  let threw = null;
   try { await down({ state: {}, questions: {} }); } catch (e) { threw = e; }
   check('other failures carry the status', /jev http 503/.test(threw?.message || ''));
 
   let threw2 = null;
   try { typesafeJev({}); } catch (e) { threw2 = e; }
   check('missing key caught at construction', /needs an apiKey/.test(threw2?.message || ''));
+}
+
+/* ---------------- retrying ----------------
+ *
+ * A scripted fetch and a scripted clock, so backoff is asserted rather than
+ * waited for. `slept` is the proof: a test that only checked the final answer
+ * could not tell a retry from a first attempt that happened to work.
+ */
+
+function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
+  const calls = [];
+  const slept = [];
+  let t = 0;
+  const queue = [...statuses];
+  const decide = typesafeJev({
+    apiKey: 'k', signalMs,
+    ...(maxRetries === undefined ? {} : { maxRetries }),
+    now: () => t,
+    sleep: async (ms) => { slept.push(ms); t += ms; },
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      const next = queue.shift();
+      const status = typeof next === 'number' ? next : next.status;
+      const headers = next.retryAfter !== undefined
+        ? { get: (k) => (k.toLowerCase() === 'retry-after' ? String(next.retryAfter) : null) }
+        : { get: () => null };
+      if (status === 200) {
+        return { ok: true, status, headers,
+          json: async () => ({ model: 'jev-1.13.0',
+            answers: { move: { type: 'choice', choice: 'up', confidence: 0.9 } },
+            usage: { input_tokens: 400 } }) };
+      }
+      return { ok: false, status, headers, json: async () => ({}) };
+    }
+  });
+  return { decide, calls, slept, at: () => t, advance: (ms) => { t += ms; } };
+}
+
+// A 429 that clears on the retry is a recovery, not a failure.
+{
+  const r = rig([429, 200]);
+  const answer = await r.decide({ state: {}, questions: {} });
+  check('recovers from a 429', answer.move === 'up');
+  check('it really did retry', r.calls.length === 2);
+  check('and waited before doing so', r.slept.length === 1 && r.slept[0] === 150);
+  check('the model that answered is reported', answer.model === 'jev-1.13.0');
+}
+
+// 529 is the other retryable one.
+{
+  const r = rig([529, 529, 200]);
+  const answer = await r.decide({ state: {}, questions: {} });
+  check('recovers from repeated 529s', answer.move === 'up');
+  check('backoff is exponential', JSON.stringify(r.slept) === '[150,300]');
+}
+
+// Two retries and no more. Three failures is a failure.
+{
+  const r = rig([429, 429, 429]);
+  let threw = null;
+  try { await r.decide({ state: {}, questions: {} }); } catch (e) { threw = e; }
+  check('gives up after the cap', /rate limited \(429\)/.test(threw?.message || ''));
+  check('exactly three attempts — the original and two retries', r.calls.length === 3);
+  check('the message says how many retries were spent', /after 2 retries/.test(threw?.message || ''));
+}
+
+{
+  const r = rig([529, 529, 529]);
+  let threw = null;
+  try { await r.decide({ state: {}, questions: {} }); } catch (e) { threw = e; }
+  check('529 exhaustion is named distinctly', /overloaded \(529\)/.test(threw?.message || ''));
+  check('still capped at three attempts', r.calls.length === 3);
+}
+
+// Nothing else is retried — a 401 or a 422 fails the same way twice, and
+// trying again only spends the deadline.
+{
+  for (const status of [400, 401, 403, 422, 500, 503]) {
+    const r = rig([status, 200]);
+    let threw = null;
+    try { await r.decide({ state: {}, questions: {} }); } catch (e) { threw = e; }
+    check(status + ' is not retried', threw !== null && r.calls.length === 1);
+  }
+}
+
+// Retrying must not outlive the decision it answers.
+{
+  // 120ms of budget: the first attempt fails, and the 150ms backoff would
+  // land past the deadline, so it gives up instead of sleeping through it.
+  const r = rig([429, 200], { signalMs: 120 });
+  let threw = null;
+  try { await r.decide({ state: {}, questions: {} }); } catch (e) { threw = e; }
+  check('no budget left to retry is its own message', /no budget left/.test(threw?.message || ''));
+  check('the retry never went out', r.calls.length === 1);
+  check('and it did not sleep through the deadline', r.slept.length === 0);
+}
+
+// Retry-After wins over the backoff curve when the server sends a usable one.
+{
+  const r = rig([{ status: 429, retryAfter: 1 }, 200], { signalMs: 5000 });
+  const answer = await r.decide({ state: {}, questions: {} });
+  check('Retry-After honoured over the default backoff',
+    answer.move === 'up' && r.slept[0] === 1000);
+
+  const junk = rig([{ status: 429, retryAfter: 'Wed, 21 Oct 2026 07:28:00 GMT' }, 200]);
+  await junk.decide({ state: {}, questions: {} });
+  check('an HTTP-date Retry-After falls back to the backoff curve', junk.slept[0] === 150);
+}
+
+// Retrying can be switched off entirely.
+{
+  const r = rig([429, 200], { maxRetries: 0 });
+  let threw = null;
+  try { await r.decide({ state: {}, questions: {} }); } catch (e) { threw = e; }
+  check('maxRetries 0 means one attempt', r.calls.length === 1 && threw !== null);
+}
+
+// The endpoint is overridable, which is how the recorder keeps the real key
+// in Node and off the page.
+{
+  let seen = null;
+  const decide = typesafeJev({ apiKey: 'sentinel', url: 'http://127.0.0.1:4173/v1/systemone',
+    fetchImpl: async (u) => { seen = u; return { ok: true, status: 200, headers: { get: () => null },
+      json: async () => ({ answers: { move: { choice: 'up' } } }) }; } });
+  await decide({ state: {}, questions: {} });
+  check('a same-origin proxy URL is used when given',
+    seen === 'http://127.0.0.1:4173/v1/systemone');
 }
 
 // --- The shared mapper handles both envelopes ------------------------------

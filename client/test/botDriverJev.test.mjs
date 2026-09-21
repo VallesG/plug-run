@@ -124,9 +124,17 @@ function stubJev(answer = null) {
     answer,
     ticks: 0,
     resets: 0,
+    // Counters live on the driver, not on BotDriver: a BotDriver is rebuilt
+    // on every scene restart, so kept there they would describe one house.
+    drive: { steps: 0, illegal: 0, lowConfidence: 0, fallbacks: 0, powers: 0 },
     tick() { this.ticks++; return this.answer; },
     reset() { this.resets++; this.answer = null; },
-    report: () => ({ requests: 1, answers: 1, costUsd: 0.0001 })
+    report() {
+      const d = this.drive;
+      const decisions = d.steps + d.illegal + d.lowConfidence + d.fallbacks;
+      return { requests: 1, answers: 1, costUsd: 0.0001, ...d, decisions,
+        steerShare: decisions ? +(d.steps / decisions).toFixed(3) : 0 };
+    }
   };
 }
 
@@ -157,7 +165,7 @@ console.log('\nBotDriver + Jev wiring\n');
   const m = lastMove(s);
   check('Jev answer steers the runner', m && m.x === 0 && m.y === 1,
     m ? `got ${m.x},${m.y}` : 'no move');
-  check('counted as a Jev step', d._jevStats.steps === 1);
+  check('counted as a Jev step', d.jev.drive.steps === 1);
 }
 
 // 2. Without Jev the bot is exactly what it was.
@@ -169,7 +177,7 @@ console.log('\nBotDriver + Jev wiring\n');
   // Pathfinder routes toward the near bag at (2,1): straight right.
   check('no Jev means the pathfinder still drives', m && m.x === 1 && m.y === 0);
   check('no Jev report to give', d.jevReport() === null);
-  check('nothing counted', d._jevStats.steps === 0 && d._jevStats.fallbacks === 0);
+  check('no driver to count against', d.jev === null);
 }
 
 // 3. No answer yet — fall through, and say so.
@@ -179,8 +187,8 @@ console.log('\nBotDriver + Jev wiring\n');
   d.update();
   const m = lastMove(s);
   check('a missing answer falls back to the pathfinder', m && m.x === 1 && m.y === 0);
-  check('fallback counted', d._jevStats.fallbacks === 1);
-  check('not counted as a Jev step', d._jevStats.steps === 0);
+  check('fallback counted', d.jev.drive.fallbacks === 1);
+  check('not counted as a Jev step', d.jev.drive.steps === 0);
 }
 
 // 4. A step into a wall is refused, however confident Jev was.
@@ -190,7 +198,7 @@ console.log('\nBotDriver + Jev wiring\n');
   check('the test board really does wall that step', s.isWalkableCell(5, 4) === false);
   const d = plain(s, stubJev(dirAnswer('right')));
   d.update();
-  check('an illegal step is not driven', d._jevStats.illegal === 1 && d._jevStats.steps === 0);
+  check('an illegal step is not driven', d.jev.drive.illegal === 1 && d.jev.drive.steps === 0);
   check('the pathfinder steered instead', !!lastMove(s));
 }
 
@@ -199,22 +207,22 @@ console.log('\nBotDriver + Jev wiring\n');
   const s = makeScene();
   const open = plain(s, stubJev(dirAnswer('down', { confidence: 0.1 })));
   open.update();
-  check('default takes every answer, unsure or not', open._jevStats.steps === 1);
+  check('default takes every answer, unsure or not', open.jev.drive.steps === 1);
 
   const s2 = makeScene();
   const gated = plain(s2, stubJev(dirAnswer('down', { confidence: 0.1 })), { jevMinConfidence: 0.5 });
   gated.update();
-  check('below threshold falls back', gated._jevStats.lowConfidence === 1 && gated._jevStats.steps === 0);
+  check('below threshold falls back', gated.jev.drive.lowConfidence === 1 && gated.jev.drive.steps === 0);
 
   const s3 = makeScene();
   const sure = plain(s3, stubJev(dirAnswer('down', { confidence: 0.9 })), { jevMinConfidence: 0.5 });
   sure.update();
-  check('above threshold steers', sure._jevStats.steps === 1);
+  check('above threshold steers', sure.jev.drive.steps === 1);
 
   const s4 = makeScene();
   const none = plain(s4, stubJev(dirAnswer('down', { confidence: null })), { jevMinConfidence: 0.5 });
   none.update();
-  check('a missing confidence cannot pass a threshold', none._jevStats.lowConfidence === 1);
+  check('a missing confidence cannot pass a threshold', none.jev.drive.lowConfidence === 1);
 }
 
 // 6. A power is spent once per ANSWER, not once per frame.
@@ -225,7 +233,7 @@ console.log('\nBotDriver + Jev wiring\n');
   d.update(); d.update(); d.update();
   const powers = s._driven.filter((x) => x.kind === 'power');
   check('the dash is spent', powers.length === 1 && powers[0].i === 1);
-  check('and only once across three frames', d._jevStats.powers === 1);
+  check('and only once across three frames', d.jev.drive.powers === 1);
   check('the spend is traced', s._driven.some((x) => x.kind === 'recordPower' && x.i === 1));
 
   // A new answer is a new decision.
@@ -241,7 +249,7 @@ console.log('\nBotDriver + Jev wiring\n');
   const d = plain(s, stubJev(dirAnswer('down', { power: 'decoy' })));
   d.update();
   check('an unheld power is ignored', s._driven.every((x) => x.kind !== 'power'));
-  check('and not counted as spent', d._jevStats.powers === 0);
+  check('and not counted as spent', d.jev.drive.powers === 0);
 
   const spent = makeScene({ runnerPowersSelected: ['dash'], runnerPowersConsumed: [true] });
   const d2 = plain(spent, stubJev(dirAnswer('down', { power: 'dash' })));
@@ -296,7 +304,7 @@ console.log('\nBotDriver + Jev wiring\n');
   check('the borrowed arm really is the one running', d.useBorrowedAI === true);
   d.update();
   check('borrowed AI never consults Jev', jev.ticks === 0);
-  check('and nothing is billed for it', d._jevStats.steps + d._jevStats.fallbacks === 0);
+  check('and nothing is billed for it', d.jev.drive.steps + d.jev.drive.fallbacks === 0);
 }
 
 // 12. jevReport() reconciles what Jev cost with what it actually drove.
@@ -339,7 +347,7 @@ console.log('\nBotDriver + Jev wiring\n');
   // carrying on down a corridor on a decision from a second ago.
   t = 1000 + 5000;
   d.update();
-  check('a stale answer stops steering', d._jevStats.fallbacks >= 1);
+  check('a stale answer stops steering', d.jev.drive.fallbacks >= 1);
   const rep = d.jevReport();
   check('cost came from the API, not a character count', rep.tokenSource === 'api');
   check('billed tokens reported', rep.tokensBilled === 400);

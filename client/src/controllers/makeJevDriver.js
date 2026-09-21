@@ -44,6 +44,14 @@ export function jevConfig() {
 
     return {
       route: p.get('jevRoute') === 'cloudflare' ? 'cloudflare' : 'typesafe',
+      // Post to a same-origin path instead of api.typesafe.ai. The Node
+      // recorder intercepts that path and forwards the body with the real
+      // key, so the page never holds one -- and, because the request never
+      // leaves the origin, there is no CORS preflight to go wrong either.
+      proxy: p.get('jevProxy') === '1',
+      // Safety ceilings, passed through to the driver. See JevDriver.DEFAULTS.
+      maxRequests: num('jevMaxRequests', undefined),
+      maxInputTokens: num('jevMaxInputTokens', undefined),
       // Pin a version to stop an alias moving the answers under a threshold
       // tuned against a different one.
       model: p.get('jevModel') || null,
@@ -72,6 +80,8 @@ export function makeJevDriver(cfg = jevConfig()) {
   const opts = {};
   if (cfg.minIntervalMs) opts.minIntervalMs = cfg.minIntervalMs;
   if (cfg.timeoutMs) opts.timeoutMs = cfg.timeoutMs;
+  if (cfg.maxRequests) opts.maxRequests = cfg.maxRequests;
+  if (cfg.maxInputTokens) opts.maxInputTokens = cfg.maxInputTokens;
 
   let decide;
   if (cfg.route === 'cloudflare') {
@@ -92,11 +102,15 @@ export function makeJevDriver(cfg = jevConfig()) {
     decide = typesafeJev({
       apiKey: cfg.apiKey,
       ...(cfg.model ? { model: cfg.model } : {}),
+      ...(cfg.proxy ? { url: window.location.origin + '/v1/systemone' } : {}),
+      // Total budget across retries. A little over the driver's own timeout,
+      // so a retry has somewhere to happen but cannot outlive the decision.
       signalMs: (opts.timeoutMs || 900) + 400
     });
   }
 
-  console.log('[JEV] driver on —', JSON.stringify({ route: cfg.route, model: cfg.model || 'default', ...opts }));
+  console.log('[JEV] driver on —', JSON.stringify({
+    route: cfg.route, proxied: !!cfg.proxy, model: cfg.model || 'default', ...opts }));
   return new JevDriver(decide, opts);
 }
 

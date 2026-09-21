@@ -32,15 +32,9 @@
 //
 // Requires: a served build or dev server (`npm run dev`, default :5173) and
 // playwright-core plus a Chromium binary.
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-const CHROMIUM_CANDIDATES = [
-  process.env.PLUGRUN_CHROMIUM,
-  process.env.PLAYWRIGHT_BROWSERS_PATH && join(process.env.PLAYWRIGHT_BROWSERS_PATH, 'chromium-1194/chrome-linux/chrome'),
-  '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-  '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome'
-].filter(Boolean);
+import { chromium } from './lib/browsers.mjs';
 
 function arg(name, fallback = null) {
   const i = process.argv.indexOf('--' + name);
@@ -59,6 +53,11 @@ const OPTIONS = {
   route: arg('route', 'typesafe'),
   model: arg('model', null),              // pin e.g. jev-1.13.0
   minConfidence: Number(arg('minConfidence', 0)),
+  // Safety ceilings, same as the recorder's. JevDriver has finite defaults of
+  // its own, so a spike is never unbounded; these make the budget explicit in
+  // the output file next to the spend it produced.
+  jevMaxRequests: Number(arg('jevMaxRequests', 2500)),
+  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 2_000_000)),
   width: Number(arg('width', 390)),
   height: Number(arg('height', 844)),
   headed: arg('headed', false),
@@ -73,6 +72,7 @@ const ARMS = {
   ai:   { label: 'borrowed AI', params: (o) => ({ aiLevel: o.aiLevel }) },
   path: { label: 'pathfinder',  params: () => ({ aiLevel: 0 }) },
   jev:  { label: 'Jev',         params: (o) => ({ aiLevel: 0, jev: 1,
+            jevMaxRequests: o.jevMaxRequests, jevMaxInputTokens: o.jevMaxInputTokens,
             ...(o.route === 'cloudflare' ? { jevRoute: 'cloudflare' } : {}),
             ...(o.model ? { jevModel: o.model } : {}),
             ...(o.minConfidence > 0 ? { jevMinConfidence: o.minConfidence } : {}) }) }
@@ -87,21 +87,6 @@ function credentials(route) {
     };
   }
   return { jevKey: process.env.TYPESAFE_API_KEY || '' };
-}
-
-async function chromium() {
-  let pw;
-  try { pw = await import('playwright-core'); }
-  catch {
-    console.error('playwright-core is not installed. Run: npm i -D playwright-core');
-    process.exit(2);
-  }
-  const executablePath = CHROMIUM_CANDIDATES.find(p => existsSync(p));
-  if (!executablePath) {
-    console.error('No Chromium found. Set PLUGRUN_CHROMIUM to a Chromium binary.\nTried:\n  ' + CHROMIUM_CANDIDATES.join('\n  '));
-    process.exit(2);
-  }
-  return { pw: pw.chromium, executablePath };
 }
 
 /** Run one arm to `maps` completed rounds and bring back its telemetry. */
@@ -194,6 +179,7 @@ function summarise(result) {
     deaths: runs.filter(r => r.outcome !== 'extracted').length,
     timedOut: result.timedOut,
     costUsd: result.jev?.costUsd ?? 0,
+    budgetStopped: result.jev?.budgetStopped ?? null,
     tokenSource: result.jev?.tokenSource ?? null,
     answerRate: result.jev?.answerRate ?? null,
     steerShare: result.jev?.steerShare ?? null,

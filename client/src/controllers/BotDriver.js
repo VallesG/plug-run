@@ -187,9 +187,6 @@ export default class BotDriver {
     this.jev = jev;
     this._jevIntent = null;
     this._jevPowerAt = null;
-    // Cumulative across rounds: the spike is asking what Jev did over a
-    // session, not over one house.
-    this._jevStats = { steps: 0, illegal: 0, lowConfidence: 0, fallbacks: 0, powers: 0 };
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._startedAt = performance.now();
@@ -626,15 +623,19 @@ export default class BotDriver {
    * the pathfinder underneath is what makes that true.
    */
   _route(me, goal) {
-    const intent = this.jev ? this._jevIntent : null;
+    if (!this.jev) return this.plan(me, goal);
+    // Counted on the driver, not here: this object is rebuilt on every scene
+    // restart, and a seven-house race would report only its last house.
+    const tally = this.jev.drive;
+    const intent = this._jevIntent;
     if (!intent) {
-      if (this.jev) this._jevStats.fallbacks++;
+      tally.fallbacks++;
       return this.plan(me, goal);
     }
 
     const min = this.cfg.jevMinConfidence ?? 0;
     if (min > 0 && !(intent.confidence >= min)) {
-      this._jevStats.lowConfidence++;
+      tally.lowConfidence++;
       return this.plan(me, goal);
     }
 
@@ -645,11 +646,11 @@ export default class BotDriver {
     const s = this.scene;
     const cell = s.toCell(me.x, me.y);
     if (s.isWalkableCell?.(cell.x + intent.dir.x, cell.y + intent.dir.y) === false) {
-      this._jevStats.illegal++;
+      tally.illegal++;
       return this.plan(me, goal);
     }
 
-    this._jevStats.steps++;
+    tally.steps++;
     // driveMove normalises, so the unit cardinal is the whole vector.
     return { x: intent.dir.x, y: intent.dir.y };
   }
@@ -685,29 +686,19 @@ export default class BotDriver {
       // Mid-spoof the scene skips its own intent record, exactly as it does
       // for the borrowed AI, so log it here for the trace.
       s.intent?.recordPower?.(slot);
-      this._jevStats.powers++;
+      this.jev.drive.powers++;
       return true;
     }
     return false;
   }
 
   /**
-   * Jev's share of the driving, for the spike. Null when Jev is not wired.
-   *
-   * steerShare is the number that matters alongside answerRate: answers
-   * arriving and then being rejected is a different problem from answers not
-   * arriving, and one figure cannot tell them apart.
+   * Jev's cost, answer rate and share of the driving. Null when Jev is not
+   * wired. The numbers are the driver's own, so they cover the whole session
+   * rather than the scene this object happens to belong to.
    */
   jevReport() {
-    if (!this.jev) return null;
-    const st = this._jevStats;
-    const decisions = st.steps + st.illegal + st.lowConfidence + st.fallbacks;
-    return {
-      ...this.jev.report(),
-      ...st,
-      decisions,
-      steerShare: decisions ? +(st.steps / decisions).toFixed(3) : 0
-    };
+    return this.jev ? this.jev.report() : null;
   }
 
   plan(me, goal) {

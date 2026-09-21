@@ -57,9 +57,11 @@ round of Jev therefore costs steps, never the run.
 | `src/controllers/makeJevDriver.js` | builds one from the page, only on `?jev=1` |
 | `src/controllers/BotDriver.js` | `_route()`, `_maybeJevPower()`, `jevReport()` |
 | `tools/jev-spike.mjs` | three arms, same maps, one table |
+| `tools/lib/browsers.mjs` | browser discovery, incl. Windows Chrome/Edge |
+| `tools/rivals-record.mjs` | `--jev` records a Jev opponent into a raw capture |
 
-Tests: `jevState`, `jevDriver`, `jevTypesafe`, `jevCloudflare`, `botDriverJev`
-— all in `npm test`, all plain Node, no browser and no network.
+Tests: `jevState`, `jevDriver`, `jevTypesafe`, `jevCloudflare`, `botDriverJev`,
+`toolBrowsers` — all in `npm test`, all plain Node, no browser and no network.
 
 ## Running the spike
 
@@ -99,6 +101,37 @@ balance you topped up, and the gateway's Workers AI Billing setting must be
 against that, TypeSafe's purchased credits expire 12 months after purchase and
 are non-refundable, so buy small and often.
 
+## Recording a Jev opponent
+
+```sh
+export TYPESAFE_API_KEY=...          # or: $env:TYPESAFE_API_KEY = Read-Host
+node tools/rivals-record.mjs --slot 1 --style street --powers phase,dash \
+  --runs 1 --opponentIndex 9001 --jev \
+  --jevMaxRequests 2500 --jevMaxInputTokens 2000000 \
+  --url http://127.0.0.1:4173 --out tools/recordings/jev
+```
+
+`--jev` forces sequential recording: parallel pages share one rate limit and
+one budget, so a ceiling would trip in whichever tab reached it first and the
+others would quietly finish on the pathfinder — a batch of captures that are
+partly Jev and do not say which parts.
+
+**The key never enters the browser.** The page posts to a same-origin path
+(`?jevProxy=1` makes the driver use `location.origin + /v1/systemone`), the
+recorder intercepts that path with `page.route`, and Node forwards the body to
+TypeSafe with the real key. The page is handed a sentinel string that exists
+only so the driver constructs. Same-origin also means there is no CORS
+preflight — and a preflight is the one request Playwright's routing does not
+reliably see, so intercepting `api.typesafe.ai` directly works right up until
+the browser sends an `OPTIONS` first and it fails looking like an outage.
+
+**`aiLevel=0` is not optional.** The borrowed runner AI returns from
+`update()` before Jev is ever consulted, so with it enabled a race would look
+Jev-driven — a driver is built, requests go out — while Jev steered nothing.
+The recorder always passes `bot=1&aiLevel=0` alongside `jev=1`, and
+`botConfig()` is merged last over the preset's knobs, which is what makes it
+stick. Check `steerShare > 0` in the output before believing any capture.
+
 ## Playing it by hand
 
 ```
@@ -113,11 +146,51 @@ time, and a key put there would ride into whatever `dist/` got deployed.
 
 ## Budget
 
-At $0.042/M input tokens and ~400 billed tokens per decision, ~5 decisions/sec
-is roughly $0.08 per minute of driving. A $5 balance is therefore about an
-hour of Jev at the wheel — enough for the spike several times over, not enough
-to drive live races for players. That is the point of **recording**: pay once
-per opponent, replay it for free forever.
+**Corrected.** An earlier version of this file said $0.08/min. That did not
+follow from its own assumptions and was wrong by about 16x. The arithmetic:
+
+```
+400 input tokens x 5 decisions/sec x 60 sec  =  120,000 tokens/min
+120,000 / 1,000,000 x $0.042                 =  $0.00504 /min
+```
+
+So roughly **half a cent a minute**, and a $5 balance is on the order of
+sixteen hours of Jev at the wheel rather than one.
+
+Treat that as an order of magnitude, not a quote. It rests on two guesses —
+400 tokens per request and 5 requests per second — and only one of them is
+ours to control. **The API's own `usage.input_tokens` is the authoritative
+number**, which is why `JevDriver` reports `tokenSource: 'api'` vs
+`'estimated'` and every tool prints it. A cost figure marked `estimated` means
+nothing was billed and nothing was measured; do not quote it as spend.
+
+Even at the corrected rate, recording is still the right shape: pay once per
+opponent, replay it for free forever.
+
+## Safety ceilings
+
+`JevDriver` takes `maxRequests` and `maxInputTokens`. Past either one it stops
+making paid requests for the rest of the session and the pathfinder underneath
+keeps playing, so a runaway loop costs a worse recording rather than a bill.
+`report()` carries `requestLimit`, `tokenLimit` and `budgetStopped`.
+
+Two ceilings because neither is sufficient alone. The token ceiling tracks
+actual spend but can only count what came back — if every request fails,
+nothing is ever billed to count and it never trips. The request ceiling cannot
+be fooled that way, so it is the backstop.
+
+The recorder defaults to 2,500 requests / 2,000,000 input tokens (~$0.08
+worst case) per job.
+
+## Retries
+
+The TypeSafe adapter retries **429 and 529 only**, at most twice, with
+exponential backoff (150ms, 300ms) and `Retry-After` honoured when the server
+sends a delta-seconds value. `signalMs` is a **total** budget across every
+attempt and the waits between them, not per attempt: a retrying adapter given
+the full deadline three times over would outlive the decision it answers, and
+the driver would have timed out and moved on long before the last attempt
+left. Nothing else is retried — a 401 or a 422 fails the same way twice.
 
 ## What is not decided yet
 

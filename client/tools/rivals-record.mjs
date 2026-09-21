@@ -21,13 +21,7 @@
 //   npm i -D playwright-core           (browser: PLAYWRIGHT_BROWSERS_PATH)
 import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-
-const CHROMIUM_CANDIDATES = [
-  process.env.PLUGRUN_CHROMIUM,
-  process.env.PLAYWRIGHT_BROWSERS_PATH && join(process.env.PLAYWRIGHT_BROWSERS_PATH, 'chromium-1194/chrome-linux/chrome'),
-  '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-  '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome'
-].filter(Boolean);
+import { chromium } from './lib/browsers.mjs';
 
 function arg(name, fallback = null) {
   const i = process.argv.indexOf('--' + name);
@@ -36,29 +30,69 @@ function arg(name, fallback = null) {
   return next && !next.startsWith('--') ? next : true;
 }
 
+const JEV = Boolean(arg('jev', false));
+
 const OPTIONS = {
   url: arg('url', 'http://127.0.0.1:5173'),
   out: arg('out', 'tools/recordings'),
   width: Number(arg('width', 390)),
   height: Number(arg('height', 844)),
   hardLimitMs: Number(arg('hardLimitMs', 12 * 60_000)),
-  parallel: Math.max(1, Number(arg('parallel', 1))),
-  indexBase: Number(arg('opponentIndex', 1))
+  // Jev races run one at a time, always. Parallel pages share one rate limit
+  // and one budget, so a ceiling would trip in whichever tab got there first
+  // and the others would silently finish on the pathfinder -- a batch of
+  // recordings that are partly Jev and do not say which parts.
+  parallel: JEV ? 1 : Math.max(1, Number(arg('parallel', 1))),
+  indexBase: Number(arg('opponentIndex', 1)),
+  jev: JEV,
+  jevMaxRequests: Number(arg('jevMaxRequests', 2500)),
+  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 2_000_000))
 };
 
-async function chromium() {
-  let pw;
-  try { pw = await import('playwright-core'); }
-  catch {
-    console.error('playwright-core is not installed. Run: npm i -D playwright-core');
-    process.exit(2);
-  }
-  const executablePath = CHROMIUM_CANDIDATES.find(p => existsSync(p));
-  if (!executablePath) {
-    console.error('No Chromium found. Set PLUGRUN_CHROMIUM to a Chromium binary.\nTried:\n  ' + CHROMIUM_CANDIDATES.join('\n  '));
-    process.exit(2);
-  }
-  return { pw: pw.chromium, executablePath };
+// The page is given this instead of a key. It exists only so makeJevDriver
+// constructs a driver; the Node side replaces the Authorization header with
+// the real one before the request leaves the machine. The real key is read
+// from the environment here and never enters the browser, the URL, the page,
+// or any file this tool writes.
+const BROWSER_SENTINEL = 'browser-sentinel-not-a-key';
+const TYPESAFE_URL = 'https://api.typesafe.ai/v1/systemone';
+
+/**
+ * Forward the page's Jev calls from Node, with the real key.
+ *
+ * The page posts to a SAME-ORIGIN path (?jevProxy=1 makes makeJevDriver use
+ * location.origin + /v1/systemone). Same origin means no CORS preflight, and
+ * a preflight is the one request Playwright's routing does not reliably see —
+ * routing api.typesafe.ai directly works until the browser decides to send an
+ * OPTIONS first, and then it fails in a way that looks like the API is down.
+ *
+ * Returns a counter object so the tool can report what it actually relayed,
+ * independently of what the page claims.
+ */
+async function installJevProxy(page, apiKey) {
+  const relay = { requests: 0, ok: 0, failed: 0, statuses: {} };
+  await page.route('**/v1/systemone', async (route) => {
+    relay.requests++;
+    try {
+      const res = await fetch(TYPESAFE_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: route.request().postData() || '{}'
+      });
+      const body = await res.text();
+      relay.statuses[res.status] = (relay.statuses[res.status] || 0) + 1;
+      if (res.ok) relay.ok++; else relay.failed++;
+      await route.fulfill({ status: res.status, contentType: 'application/json', body });
+    } catch (e) {
+      relay.failed++;
+      relay.statuses.network = (relay.statuses.network || 0) + 1;
+      // 503 rather than abort: the adapter turns a status into a countable
+      // failure, where an aborted fetch is an opaque throw.
+      await route.fulfill({ status: 503, contentType: 'application/json',
+        body: JSON.stringify({ error: 'relay failed' }) });
+    }
+  });
+  return relay;
 }
 
 /** One job = one course slot, one style, one ordered power mix, N races. */
@@ -78,7 +112,10 @@ export async function recordJob(job, shared) {
   // slot, style and powers, so without it both arms collapse to one tag and
   // --resume would skip the treatment arm as already recorded.
   const tag = `slot${job.slot}-${job.style}-${job.powers.replace(/,/g, '')}` +
-    (job.openingDecoy ? '-odecoy' : '');
+    (job.openingDecoy ? '-odecoy' : '') +
+    // In the filename, because a directory of raw captures is the one place
+    // someone will look without opening anything.
+    (OPTIONS.jev ? '-jev' : '');
   const log = m => console.log(`${((Date.now() - started) / 1000).toFixed(0).padStart(5)}s [${tag}] ${m}`);
   let openingDecoyFires = 0;
   const problems = [];
@@ -90,7 +127,19 @@ export async function recordJob(job, shared) {
     const t = m.text();
     if (/\[RIVALS-REC\]/.test(t)) log(t.replace('[RIVALS-REC] ', ''));
     else if (/\[BOT\] opening decoy/.test(t)) openingDecoyFires++;
+    // A ceiling being reached is the one thing that silently changes what is
+    // being recorded, so it is never filtered out.
+    else if (/\[JEV\]/.test(t)) log(t);
   });
+
+  let relay = null;
+  if (OPTIONS.jev) {
+    relay = await installJevProxy(page, process.env.TYPESAFE_API_KEY);
+    // Before any script runs, so the driver exists by the time the game boots.
+    await page.addInitScript((sentinel) => {
+      try { sessionStorage.setItem('jevKey', sentinel); } catch {}
+    }, BROWSER_SENTINEL);
+  }
 
   const query = new URLSearchParams({
     rivalsRecord: '1', courseSlot: String(job.slot), skillPreset: job.style,
@@ -99,7 +148,17 @@ export async function recordJob(job, shared) {
     opponentIndex: String(job.indexBase ?? OPTIONS.indexBase),
     // Opt-in driver behaviour. Recorded into driverConfig by the harness, so
     // an opening-Decoy race is identifiable in the bank forever after.
-    ...(job.openingDecoy ? { openingDecoy: '1' } : {})
+    ...(job.openingDecoy ? { openingDecoy: '1' } : {}),
+    // bot=1 is what makes botConfig() read the URL at all, and its result is
+    // merged LAST over the preset's knobs -- which is the only reason
+    // aiLevel=0 sticks. Without aiLevel=0 the borrowed AI runs and update()
+    // returns before Jev is ever consulted, so the race would look Jev-driven
+    // (a driver is built, requests go out) while Jev steered nothing.
+    ...(OPTIONS.jev ? {
+      jev: '1', bot: '1', aiLevel: '0', jevProxy: '1',
+      jevMaxRequests: String(OPTIONS.jevMaxRequests),
+      jevMaxInputTokens: String(OPTIONS.jevMaxInputTokens)
+    } : {})
   });
   await page.goto(`${OPTIONS.url}/?${query}`, { waitUntil: 'load' });
 
@@ -126,6 +185,9 @@ export async function recordJob(job, shared) {
   }
   const store = await page.evaluate(() =>
     window.__plugRunRivals ? JSON.parse(JSON.stringify(window.__plugRunRivals)) : null).catch(() => null);
+  const jevReport = OPTIONS.jev
+    ? await page.evaluate(() => window.__plugRunJev?.() ?? null).catch(() => null)
+    : null;
   await browser.close();
 
   if (!store) { log('no recorder output'); return { job, ok: 0, races: [] }; }
@@ -134,7 +196,15 @@ export async function recordJob(job, shared) {
     tool: 'rivals-record/1', recordedAt: new Date().toISOString(),
     job, done, problems,
     environment: { url: OPTIONS.url, viewport: { width: OPTIONS.width, height: OPTIONS.height }, renderer, fpsMedian: median, fpsSamples: fps.length },
-    config: store.config, course: store.course, races: store.races
+    config: store.config, course: store.course, races: store.races,
+    // Two independent accounts of the same traffic: `relay` is what Node
+    // actually sent, `report` is what the page believes happened. They should
+    // agree, and a disagreement is worth knowing about.
+    jev: OPTIONS.jev ? {
+      driver: 'jev', route: 'typesafe-direct',
+      ceilings: { maxRequests: OPTIONS.jevMaxRequests, maxInputTokens: OPTIONS.jevMaxInputTokens },
+      relay, report: jevReport
+    } : null
   };
   mkdirSync(OPTIONS.out, { recursive: true });
   const file = join(OPTIONS.out, `${tag}-${Date.now()}.json`);
@@ -145,10 +215,38 @@ export async function recordJob(job, shared) {
     log(`  ${r.ok ? 'OK ' : 'REJ'} ${r.result} ${r.houses}/7 ${Math.round((r.elapsedMs || 0) / 1000)}s retries=${r.retries}${r.reason ? ' ' + r.reason : ''}`);
   }
   if (job.openingDecoy) log(`opening decoy fired ${openingDecoyFires} time(s)`);
-  return { job, ok, races: store.races, fps: median, renderer, openingDecoyFires };
+  if (OPTIONS.jev) {
+    const r = jevReport || {};
+    log(`jev: ${r.requests ?? 0} req, ${r.answers ?? 0} answers ` +
+      `(${Math.round((r.answerRate ?? 0) * 100)}%), steered ${Math.round((r.steerShare ?? 0) * 100)}% ` +
+      `of ${r.decisions ?? 0} decisions, ${r.failureRate ? Math.round(r.failureRate * 100) + '% failures, ' : ''}` +
+      `${r.tokensBilled ?? 0} billed tokens (${r.tokenSource ?? '?'}) = $${(r.costUsd ?? 0).toFixed(4)}` +
+      (r.budgetStopped ? `  [STOPPED ON ${r.budgetStopped.toUpperCase()} CEILING]` : '') +
+      `, model ${r.model || '?'}`);
+    log(`jev relay: ${relay.requests} forwarded, ${relay.ok} ok, ${relay.failed} failed` +
+      `, statuses ${JSON.stringify(relay.statuses)}`);
+    if (!r.requests) log('jev: NO REQUESTS WERE MADE — this is not a Jev recording.');
+    else if (!r.steerShare) log('jev: steerShare is 0 — Jev drove nothing. Check aiLevel=0.');
+  }
+  return { job, ok, races: store.races, fps: median, renderer, openingDecoyFires, jev: jevReport, relay };
 }
 
 async function main() {
+  if (OPTIONS.jev) {
+    // Existence only. Never printed, never length-checked into a log, never
+    // written anywhere.
+    if (!process.env.TYPESAFE_API_KEY) {
+      console.error('--jev needs TYPESAFE_API_KEY in this shell.\n' +
+        '  PowerShell:  $env:TYPESAFE_API_KEY = Read-Host -Prompt "key"\n' +
+        '  bash/zsh:    read -rs TYPESAFE_API_KEY && export TYPESAFE_API_KEY\n' +
+        'Both read it as input, so it does not land in shell history.');
+      process.exit(2);
+    }
+    console.log(`jev: ON — sequential, ceilings ${OPTIONS.jevMaxRequests} requests / ` +
+      `${OPTIONS.jevMaxInputTokens.toLocaleString('en-US')} input tokens ` +
+      `(~$${(OPTIONS.jevMaxInputTokens / 1e6 * 0.042).toFixed(2)} worst case). ` +
+      'The key stays in Node; the page gets a sentinel.');
+  }
   const shared = await chromium();
   const plan = arg('plan');
   let jobs = plan
@@ -160,7 +258,8 @@ async function main() {
   // Output files are named <slot>-<style>-<powers>-<timestamp>.json, so a job
   // counts as done when any file carries its tag. Recording the same job twice
   // is harmless (more races is more coverage) — this only saves the time.
-  const jobTag = j => `slot${j.slot}-${j.style}-${String(j.powers).replace(/,/g, '')}`;
+  const jobTag = j => `slot${j.slot}-${j.style}-${String(j.powers).replace(/,/g, '')}` +
+    (j.openingDecoy ? '-odecoy' : '') + (OPTIONS.jev ? '-jev' : '');
   const all = jobs.slice();
   if (arg('resume', false)) {
     const done = new Set();

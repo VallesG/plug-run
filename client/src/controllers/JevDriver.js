@@ -24,7 +24,20 @@ export const DEFAULTS = {
   // never strand the runner.
   timeoutMs: 900,
   // An answer older than this is not worth steering on any more.
-  staleMs: 1200
+  staleMs: 1200,
+
+  // SAFETY CEILINGS. Past either one the driver stops making paid requests
+  // for the rest of the session and the pathfinder underneath keeps playing,
+  // so a runaway loop costs a worse recording rather than a bill.
+  //
+  // Two of them, because neither is sufficient alone. The token ceiling is
+  // the one that tracks actual spend, but it can only count what came back:
+  // if every request fails, nothing is ever billed to count and it never
+  // trips. The request ceiling cannot be fooled that way, so it is the
+  // backstop. Callers that know their budget should set both explicitly;
+  // these defaults exist so a forgotten session still has a floor under it.
+  maxRequests: 5000,
+  maxInputTokens: 4_000_000      // ~$0.17 at $0.042/Mtok
 };
 
 export default class JevDriver {
@@ -38,8 +51,36 @@ export default class JevDriver {
     this.now = opts.now || (() => performance.now());
     this.last = null;          // { move, power, at }
     this.inFlight = null;      // { startedAt }
+    this.model = null;         // the version the API actually answered with
     this.stats = { requests: 0, answers: 0, errors: 0, timeouts: 0, reused: 0,
       tokensApprox: 0, tokensBilled: 0 };
+    // What the caller did with the answers. These live here and not on
+    // BotDriver because a BotDriver is rebuilt on every scene restart: kept
+    // there, steerShare would describe the current house rather than the run,
+    // which for a seven-house race is the wrong number by a factor of seven.
+    this.drive = { steps: 0, illegal: 0, lowConfidence: 0, fallbacks: 0, powers: 0 };
+    this.budgetStopped = null; // 'requests' | 'tokens' once a ceiling trips
+  }
+
+  /** Input tokens spent so far — the API's count once it has given one. */
+  get spentTokens() {
+    return this.stats.tokensBilled || this.stats.tokensApprox;
+  }
+
+  /**
+   * Has a ceiling been reached? Latched: once stopped, stopped for good, so
+   * a later answer carrying usage cannot quietly reopen the tap.
+   */
+  overBudget() {
+    if (this.budgetStopped) return true;
+    let why = null;
+    if (this.stats.requests >= this.cfg.maxRequests) why = 'requests';
+    else if (this.spentTokens >= this.cfg.maxInputTokens) why = 'tokens';
+    if (!why) return false;
+    this.budgetStopped = why;
+    console.warn(`[JEV] ${why} ceiling reached — no further paid requests this session;` +
+      ' the pathfinder continues.');
+    return true;
   }
 
   /**
@@ -56,7 +97,8 @@ export default class JevDriver {
       this.stats.timeouts++;
     }
 
-    if (!this.inFlight && now - (this.last?.at ?? -Infinity) >= this.cfg.minIntervalMs) {
+    if (!this.inFlight && !this.overBudget() &&
+        now - (this.last?.at ?? -Infinity) >= this.cfg.minIntervalMs) {
       const payload = jevState(scene);
       if (payload) this._ask(payload, now);
     }
@@ -95,6 +137,10 @@ export default class JevDriver {
         const move = answer && answer.move;
         if (!JEV_DIRECTIONS[move]) { this.stats.errors++; return; }
         this.stats.answers++;
+        // Which version actually answered. An alias can move under you, and a
+        // recording that does not say what produced it cannot be compared
+        // with one made a month later.
+        if (typeof answer.model === 'string') this.model = answer.model;
         // Jev returns usage.input_tokens; prefer it over the guess above.
         if (Number.isFinite(answer.usage?.input_tokens)) {
           this.stats.tokensBilled += answer.usage.input_tokens;
@@ -131,11 +177,23 @@ export default class JevDriver {
     // Real token counts once any answer has carried usage; the estimate is a
     // stand-in and is marked as such so a spike never quotes a guess as spend.
     const tokens = tokensBilled || tokensApprox;
+    const d = this.drive;
+    const decisions = d.steps + d.illegal + d.lowConfidence + d.fallbacks;
     return {
       ...this.stats,
+      ...d,
+      model: this.model,
+      decisions,
       tokenSource: tokensBilled ? 'api' : 'estimated',
       answerRate: requests ? +(answers / requests).toFixed(3) : 0,
       failureRate: requests ? +((errors + timeouts) / requests).toFixed(3) : 0,
+      // Answers arriving and then being rejected is a different diagnosis
+      // from answers not arriving, and answerRate alone cannot tell them
+      // apart.
+      steerShare: decisions ? +(d.steps / decisions).toFixed(3) : 0,
+      requestLimit: this.cfg.maxRequests,
+      tokenLimit: this.cfg.maxInputTokens,
+      budgetStopped: this.budgetStopped,
       costUsd: +(tokens / 1e6 * 0.042).toFixed(4)
     };
   }

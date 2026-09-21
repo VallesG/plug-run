@@ -88,6 +88,13 @@ function boundNames(code) {
   for (const m of code.matchAll(/\bcatch\s*\(([^)]*)\)/g)) add(m[1]);
   // Any parenthesised group can be a parameter list; over-collecting is the point.
   for (const m of code.matchAll(/\(([^()]*)\)\s*(?:=>|\{)/g)) add(m[1]);
+  // A destructuring pattern with a default. The rule above cannot see these
+  // when any default contains parentheses, because its [^()]* stops at the
+  // first one: `function f({ a, now = () => Date.now() } = {})` binds `now`,
+  // but the parameter list never matches as a whole and `now()` then reads as
+  // undeclared. Matching the brace pattern itself catches the binding
+  // wherever it sits — parameter list, const, or nested.
+  for (const m of code.matchAll(/\{([^{}]*)\}\s*=/g)) add(m[1]);
   // Method shorthand and class methods: `name(args) {`
   for (const m of code.matchAll(/(?:^|[\s;{,])([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/gm)) names.add(m[1]);
   for (const m of code.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) names.add(m[1]);
@@ -110,6 +117,22 @@ function boundNames(code) {
   if (!/const\s+render\s*=/.test(strippedSample) || !/function\s+realFunction/.test(strippedSample)) {
     console.error('  regression failed: quote-stripping ate real declarations');
     console.error('  stripped sample: ' + JSON.stringify(strippedSample));
+    process.exit(1);
+  }
+}
+
+// Regression: a destructured parameter whose default contains a call still
+// binds its names. This is the exact shape of jevTypesafe.js's signature, and
+// before the brace rule above it reported `now()` and `sleep()` as undeclared.
+{
+  const sample = [
+    'export function f({ apiKey, sleep = wait, now = () => Date.now() } = {}) {',
+    '  return async () => { await sleep(now()); };',
+    '}'
+  ].join('\n');
+  const bound = boundNames(strip(sample));
+  if (!bound.has('now') || !bound.has('sleep')) {
+    console.error('  regression failed: destructured parameter defaults are not bound');
     process.exit(1);
   }
 }

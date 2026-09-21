@@ -11,7 +11,7 @@ import ProgressionManager from './ProgressionManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
-import { makeJevDriver } from './makeJevDriver.js';
+import { makeJevDriver, jevConfig } from './makeJevDriver.js';
 import { mapStats } from '../logic/runStats.js';
 import { advanceCursor, advanceSweep } from '../logic/seedCursor.js';
 import { MenuScene } from '../scenes/MenuScene.js';
@@ -396,7 +396,7 @@ export function installBotDriver() {
   installModalAutoDismiss(cfg);
   installRoundLock(cfg);
   installAutoStart(activeConfig);
-  if (rec) installRivalsRecorder(rec, cfg);
+  if (rec) installRivalsRecorder(rec, cfg, jev);
   const origUpdate = BaseGameScene.prototype.update;
 
   BaseGameScene.prototype.update = function (time, delta) {
@@ -588,9 +588,32 @@ export function rivalsRecordConfig() {
   } catch { return null; }
 }
 
-function installRivalsRecorder(rec, cfg) {
+/**
+ * Non-secret provenance for a Jev-driven capture.
+ *
+ * Deliberately nothing that could carry a credential: the report is counts,
+ * rates and model strings. `modelReturned` is the version the API actually
+ * answered with, which is the one that matters — 'jev-latest' is an alias and
+ * it moves.
+ */
+function jevProvenance(jev) {
+  const r = jev.report();
+  return {
+    driver: 'jev',
+    route: 'typesafe-direct',
+    modelRequested: jevConfig()?.model || 'jev-latest',
+    modelReturned: r.model || null,
+    ceilings: { maxRequests: r.requestLimit, maxInputTokens: r.tokenLimit },
+    budgetStopped: r.budgetStopped,
+    report: r
+  };
+}
+
+function installRivalsRecorder(rec, cfg, jev = null) {
   const entry = rivalPoolEntry(rec.slot);
-  const store = (window.__plugRunRivals = { config: { ...rec, driver: { ...DEFAULTS, ...cfg } }, course: entry, races: [], done: false });
+  const store = (window.__plugRunRivals = {
+    config: { ...rec, driver: { ...DEFAULTS, ...cfg }, jev: jev ? jevProvenance(jev) : null },
+    course: entry, races: [], done: false });
 
   // Straight into the race: no menu tap, no picker (fixed loadout), and the
   // placeholder opponent cannot finish before the hard limit.
@@ -652,14 +675,26 @@ function installRivalsRecorder(rec, cfg) {
       },
       recordingID: rivalRecordingID(entry.slug, rec.preset.key, index, this.race.clearTimes),
       recordedAt: new Date().toISOString(),
-      driverConfig: { aiLevel: cfg.aiLevel, coverPenalty: cfg.coverPenalty, phaseEscapeCells: cfg.phaseEscapeCells, dangerCells: cfg.dangerCells, openingDecoy: Boolean(cfg.openingDecoy) }
+      driverConfig: {
+        aiLevel: cfg.aiLevel, coverPenalty: cfg.coverPenalty, phaseEscapeCells: cfg.phaseEscapeCells,
+        dangerCells: cfg.dangerCells, openingDecoy: Boolean(cfg.openingDecoy),
+        // WHO ACTUALLY DROVE THIS. skillPreset stays what the existing
+        // validators expect, and this says separately that a model chose the
+        // route, because a Jev race is not an ordinary 'street' bot race and
+        // a bank that cannot tell them apart is a bank you cannot reason
+        // about later.
+        ...(jev ? { driver: 'jev', jev: jevProvenance(jev) } : { driver: 'bot' })
+      }
     });
     const traces = (window.__plugRunTraces || []).slice(store._traceMark || 0);
     store._traceMark = (window.__plugRunTraces || []).length;
     store.races.push({
       ok: out.ok, reason: out.ok ? null : out.reason, result: this.race.result,
       houses: this.race.clearTimes.length, retries: this.race.retries, elapsedMs: this.race.finishedMs,
-      record: out.record ?? null, bundle: out.bundle ?? null, traces
+      record: out.record ?? null, bundle: out.bundle ?? null, traces,
+      // Snapshotted per race rather than read once at the end: a ceiling that
+      // trips on race two should not make race one look like it was capped.
+      jev: jev ? jevProvenance(jev) : null
     });
     console.log('[RIVALS-REC] race ' + store.races.length + '/' + rec.runs + (out.ok ? ' OK ' + Math.round(this.race.finishedMs / 1000) + 's, ' + this.race.retries + ' retries'
       : ' REJECTED: ' + out.reason + ' (' + this.race.result + ', ' + this.race.clearTimes.length + '/7)'));
