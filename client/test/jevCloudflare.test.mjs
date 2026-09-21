@@ -48,6 +48,23 @@ const ok = (answers, usage = { input_tokens: 412, output_tokens: 44 }) => ({
   check('usage returned for billing', answer.usage.input_tokens === 412);
 }
 
+// --- Prepaid credits need the gateway header -------------------------------
+{
+  let seen = null;
+  const withGw = cloudflareJev({ accountId: 'a', apiToken: 't', gatewayId: 'plug-run',
+    fetchImpl: async (u, i) => { seen = i; return ok({ move: { type: 'choice', choice: 'up' } }); } });
+  await withGw({ state: {}, questions: {} });
+  check('gateway id sent so prepaid credits are used',
+    seen.headers['cf-aig-gateway-id'] === 'plug-run');
+
+  let bare = null;
+  const noGw = cloudflareJev({ accountId: 'a', apiToken: 't',
+    fetchImpl: async (u, i) => { bare = i; return ok({ move: { type: 'choice', choice: 'up' } }); } });
+  await noGw({ state: {}, questions: {} });
+  check('header omitted entirely when no gateway configured',
+    !('cf-aig-gateway-id' in bare.headers));
+}
+
 // --- Both response envelopes are accepted ----------------------------------
 {
   const bare = cloudflareJev({ accountId: 'a', apiToken: 't',

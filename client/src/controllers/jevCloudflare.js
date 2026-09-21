@@ -17,11 +17,15 @@ export const JEV_INPUT_USD_PER_MTOK = 0.042;   // output tokens are not billed
 /**
  * @param accountId  Cloudflare account id
  * @param apiToken   Cloudflare API token with Workers AI access
+ * @param gatewayId  AI Gateway id. REQUIRED to spend prepaid credits: without
+ *                   it the call bills Workers Paid neurons instead of the
+ *                   balance you topped up. The gateway's Workers AI Billing
+ *                   setting must also be "Unified billing".
  * @param fetchImpl  injectable for tests
  * @param signalMs   abort a request that outlives the driver's own timeout
  * @returns async ({state, questions}) => { move, power, confidence, usage }
  */
-export function cloudflareJev({ accountId, apiToken, fetchImpl, signalMs = 2000 } = {}) {
+export function cloudflareJev({ accountId, apiToken, gatewayId, fetchImpl, signalMs = 2000 } = {}) {
   if (!accountId || !apiToken) throw new Error('cloudflareJev needs accountId and apiToken');
   const doFetch = fetchImpl || globalThis.fetch;
   if (!doFetch) throw new Error('no fetch available');
@@ -35,7 +39,13 @@ export function cloudflareJev({ accountId, apiToken, fetchImpl, signalMs = 2000 
     try {
       res = await doFetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          'Content-Type': 'application/json',
+          // Routes the call through the gateway so it draws on prepaid
+          // credits; omitted, the same request bills neurons instead.
+          ...(gatewayId ? { 'cf-aig-gateway-id': gatewayId } : {})
+        },
         body: JSON.stringify({ model: JEV_MODEL, input: payload }),
         signal: ctrl?.signal
       });
