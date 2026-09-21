@@ -1,38 +1,28 @@
-// Serialise a live scene into the payload Jev evaluates.
+// The payload Jev decides on: a strategic summary, never a steering problem.
 //
-// Pure and dependency-free so it can be exercised under plain node against a
-// stub scene, like everything else in logic/.
+// Pure and dependency-free so it can be exercised under plain Node against a
+// stub view, like everything else in logic/.
 //
-// TWO RULES SHAPE THIS FILE.
+// THREE RULES SHAPE THIS FILE.
 //
 // 1. IT MAY NOT LEAK WHAT A PLAYER CANNOT SEE. The scene stores the real bag
-//    as `stash` and the decoy as `bunkStash`. Handing those labels to a driver
-//    would let it walk straight to the real one, which no player can do, and
-//    every recorded time made that way would be unbeatable and dishonest. Bags
-//    go out as an unlabelled list in a fixed spatial order. Same principle as
-//    BotDriver steering through driveMove(): a driver may not do what a player
-//    could not.
+//    as `stash` and the decoy as `bunkStash`. The view this reads has already
+//    dropped those names (BotDriver._jevView hands over bare cells), and the
+//    two bags go out as target_a / target_b in row-then-column order. Every
+//    number attached to a bag is computed the same way for both, so swapping
+//    which one is real cannot change a single byte of the payload — and there
+//    is a test that swaps them and compares.
 //
-// 2. EVERY FIELD COSTS MONEY. Billing is per input token and this is sent
-//    several times a second, so the payload carries a local view and a handful
-//    of distances rather than the whole 16x35 grid. Short keys, integers, no
-//    prose.
+// 2. IT ASKS FOR STRATEGY, NOT STEERING. No open-direction list, no local
+//    grid, no coordinates to steer by. Jev is asked which objective, what
+//    posture, and whether to spend a power; the runner AI does the walking.
+//
+// 3. EVERY FIELD COSTS MONEY. Short keys, integers, no prose in the state.
+//    Requests are event-driven (JevStrategist), so this goes out tens of times
+//    a race rather than several times a second, but it is still billed.
 
-const DIRS = [
-  { k: 'up', x: 0, y: -1 },
-  { k: 'down', x: 0, y: 1 },
-  { k: 'left', x: -1, y: 0 },
-  { k: 'right', x: 1, y: 0 }
-];
+import { distTo, legalObjectives } from './jevStrategy.js';
 
-/** Directions, exported so the driver maps Jev's answer back without guessing. */
-export const JEV_DIRECTIONS = DIRS.reduce((acc, d) => (acc[d.k] = { x: d.x, y: d.y }, acc), {});
-
-const cellsBetween = (a, b) => Math.round(Math.hypot(a.x - b.x, a.y - b.y));
-
-// Short because every character is billed, explicit because the model has to
-// map a direction word onto the coordinates in the state.
-const MOVE_HINT = { up: 'y-1', down: 'y+1', left: 'x-1', right: 'x+1' };
 // The game's own wording for each power, so the model is told what a player
 // is told.
 const POWER_HINT = {
@@ -41,75 +31,114 @@ const POWER_HINT = {
   decoy: 'Double draws their fire'
 };
 
-/** Cell coordinates of a sprite, or null when it is absent. */
-function cellOf(scene, sprite) {
-  if (!sprite || !Number.isFinite(sprite.x) || !Number.isFinite(sprite.y)) return null;
-  const c = scene.toCell(sprite.x, sprite.y);
-  return Number.isFinite(c?.x) && Number.isFinite(c?.y) ? { x: c.x, y: c.y } : null;
+const OBJECTIVE_HINT = {
+  target_a: 'Go for bag A',
+  target_b: 'Go for bag B',
+  extract: 'Carry it to the car',
+  hold: 'Wait here briefly'
+};
+
+const POSTURE_HINT = {
+  safe: 'Avoid open lanes, longer routes',
+  balanced: 'Default routing',
+  aggressive: 'Shortest route, accept exposure'
+};
+
+const round1 = (n) => Math.round(n * 10) / 10;
+
+/** Nearest live plug's walking distance to a cell, or null. */
+function plugNear(view, distFromPlugs, cell) {
+  let best = null;
+  for (const d of distFromPlugs) {
+    const v = distTo(d, cell);
+    if (v != null && (best == null || v < best)) best = v;
+  }
+  return best;
 }
 
 /**
- * @returns {{state: object, questions: object}} ready for Jev's `input`.
+ * @param view  BotDriver._jevView(): cells and flags, no bag identities
+ * @param ctx   { dist, plugDists, trigger, plan: { objective, posture, ageMs,
+ *                progress } } — `dist` is walking distance from the runner,
+ *                `plugDists` one map per live plug
+ * @returns {{state, questions}} ready for Jev's `input`
  */
-export function jevState(scene) {
-  const me = cellOf(scene, scene.attacker);
-  if (!me) return null;
+export function jevState(view, ctx = {}) {
+  if (!view || !view.runner) return null;
+  const dist = ctx.dist || new Map();
+  const plugDists = ctx.plugDists || [];
+  const exposed = (c) => !!view.exposedAt?.(c);
+  const plan = ctx.plan || {};
 
-  const carrying = !!scene.hasStash;
-
-  // Which way can the runner actually go. Sending this stops Jev spending a
-  // decision on a direction the grid was never going to allow.
-  const open = DIRS.filter(d => scene.isWalkableCell?.(me.x + d.x, me.y + d.y) !== false)
-    .map(d => d.k);
-
-  // Bags, deliberately unlabelled. Sorted by position so ordering cannot be
-  // read as a hint -- see rule 1 above.
-  const bags = (carrying ? [] : [scene.stash, scene.bunkStash])
-    .map(b => cellOf(scene, b))
-    .filter(Boolean)
-    .sort((a, b) => (a.y - b.y) || (a.x - b.x))
-    .map(c => ({ x: c.x, y: c.y, d: cellsBetween(me, c) }));
-
-  const plugs = [scene.defender, scene.defender2]
-    .filter(p => p && p.active !== false && p.visible !== false)
-    .map(p => cellOf(scene, p))
-    .filter(Boolean)
-    .map(c => ({ x: c.x, y: c.y, d: cellsBetween(me, c) }))
-    .sort((a, b) => a.d - b.d);
-
-  const car = cellOf(scene, scene.extract);
-  const selected = scene.runnerPowersSelected || [];
-  const consumed = scene.runnerPowersConsumed || [];
-  const powers = selected.filter((name, i) => name && !consumed[i]);
+  const ready = [];
+  const spent = [];
+  (view.powers?.selected || []).forEach((p, i) => {
+    if (!p) return;
+    (view.powers.consumed?.[i] ? spent : ready).push(p);
+  });
 
   const state = {
-    me: { x: me.x, y: me.y, hp: scene.attacker?.hp ?? 0 },
-    carrying,
-    open,
-    plugs,
-    powers,
-    goal: carrying ? 'reach the car' : 'pick up a bag, then reach the car'
+    house: view.house ?? 1,
+    attempt: view.attempt ?? 1,
+    runner: { hp: view.hp ?? 0, carrying: !!view.carrying, phasing: !!view.phasing },
+    threat: {
+      nearest: plugNear(view, plugDists, view.runner),
+      count: plugDists.length,
+      inLane: !!view.inLane
+    },
+    decoyOut: !!view.decoyActive,
+    powers: { ready, spent },
+    plan: {
+      objective: plan.objective ?? 'none',
+      posture: plan.posture ?? 'balanced',
+      ageS: round1((plan.ageMs ?? 0) / 1000),
+      progress: plan.progress ?? 'none'
+    },
+    event: ctx.trigger ?? 'house_start'
   };
-  if (bags.length) state.bags = bags;
-  if (car) state.car = { x: car.x, y: car.y, d: cellsBetween(me, car) };
+
+  if (!view.carrying) {
+    state.targets = view.candidates.map((c) => ({
+      id: c.id,
+      dist: distTo(dist, c.cell),
+      plug: plugNear(view, plugDists, c.cell),
+      exposed: exposed(c.cell)
+    }));
+  }
+  if (view.extract) {
+    state.extract = {
+      available: !!view.carrying,
+      dist: distTo(dist, view.extract),
+      plug: plugNear(view, plugDists, view.extract),
+      exposed: exposed(view.extract)
+    };
+  }
 
   // `choice` criteria is an OBJECT of key -> description. (Arrays are the
   // `score` primitive's shape; passing one here is silently the wrong type.)
-  const legal = open.length ? open : Object.keys(JEV_DIRECTIONS);
+  const objectives = legalObjectives(view);
   const questions = {
-    move: {
+    objective: {
       type: 'choice',
-      instructions: 'Which way should the runner move? x grows right, y grows down.',
-      criteria: legal.reduce((acc, k) => (acc[k] = MOVE_HINT[k], acc), {})
+      instructions: view.carrying
+        ? 'The runner has the bag. Head for the car now, or wait briefly?'
+        : 'Two identical bags; only one pays out. Which should the runner go for?',
+      criteria: objectives.reduce((acc, k) => (acc[k] = OBJECTIVE_HINT[k], acc), {})
+    },
+    posture: {
+      type: 'choice',
+      instructions: 'How cautiously should the route treat exposure to the plugs?',
+      criteria: { ...POSTURE_HINT }
     }
   };
-  // Only ask about powers when one is actually available. An unanswerable
-  // question is tokens spent for nothing.
-  if (powers.length) {
+  // Only ask about a power when one could actually be spent. A decoy while a
+  // decoy is out does nothing, so it is not offered.
+  const spendable = ready.filter((p, i, a) => a.indexOf(p) === i && !(p === 'decoy' && view.decoyActive));
+  if (spendable.length) {
     questions.power = {
       type: 'choice',
       instructions: 'Spend a power now, or save it? Each is single use.',
-      criteria: powers.reduce((acc, p) => (acc[p] = POWER_HINT[p] || p, acc),
+      criteria: spendable.reduce((acc, p) => (acc[p] = POWER_HINT[p] || p, acc),
         { none: 'Save them for later' })
     };
   }

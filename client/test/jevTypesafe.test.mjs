@@ -1,19 +1,18 @@
 import { typesafeJev, TYPESAFE_URL, JEV_MODEL } from '../src/controllers/jevTypesafe.js';
 import { mapJevAnswer, jevCostUsd } from '../src/logic/jevAnswer.js';
 import { jevState } from '../src/logic/jevState.js';
+import { orderCandidates, pathDistances } from '../src/logic/jevStrategy.js';
 let passed = 0;
 const check = (name, value) => { if (!value) throw new Error(name); passed++; };
 
-const CELL = 24;
-const sp = (x, y, e = {}) => ({ x: x * CELL + CELL / 2, y: y * CELL + CELL / 2, ...e });
-const scene = {
-  cell: CELL, pad: { x: 0, y: 0 },
-  toCell(x, y) { return { x: Math.floor(x / CELL), y: Math.floor(y / CELL) }; },
-  isWalkableCell: () => true,
-  attacker: sp(5, 5, { hp: 2 }), defender: sp(9, 5),
-  stash: sp(2, 9), bunkStash: sp(12, 3), extract: sp(1, 1), hasStash: false,
-  runnerPowersSelected: ['phase', 'dash'], runnerPowersConsumed: [false, false]
+// A strategic payload, built the way JevStrategist builds one.
+const view = {
+  cols: 14, rows: 12, isWalkable: (x, y) => x > 0 && y > 0 && x < 13 && y < 11,
+  runner: { x: 5, y: 5 }, house: 2, attempt: 1, hp: 2, carrying: false, phasing: false, decoyActive: false,
+  candidates: orderCandidates([{ x: 2, y: 9 }, { x: 12, y: 3 }]), extract: { x: 1, y: 1 },
+  inLane: false, exposedAt: () => false, powers: { selected: ['phase', 'dash'], consumed: [false, false] }
 };
+const payload = () => jevState(view, { dist: pathDistances(view, view.runner), plugDists: [pathDistances(view, { x: 9, y: 5 })], trigger: 'house_start' });
 // TypeSafe's documented response, unwrapped.
 const ok = (answers, usage = { input_tokens: 392, output_tokens: 65 }) => ({
   ok: true, status: 200, json: async () => ({ model: 'jev-1.13.0', answers, usage })
@@ -24,8 +23,9 @@ const ok = (answers, usage = { input_tokens: 392, output_tokens: 65 }) => ({
   let seen = null;
   const decide = typesafeJev({ apiKey: 'sk-test',
     fetchImpl: async (url, init) => { seen = { url, init }; return ok({
-      move: { type: 'choice', choice: 'right', confidence: 0.7 } }); } });
-  const answer = await decide(jevState(scene));
+      objective: { type: 'choice', choice: 'target_b', confidence: 0.7 },
+      posture: { type: 'choice', choice: 'safe', confidence: 0.6 } }); } });
+  const answer = await decide(payload());
 
   check('posts to the systemone endpoint', seen.url === TYPESAFE_URL
     && TYPESAFE_URL === 'https://api.typesafe.ai/v1/systemone');
@@ -33,9 +33,9 @@ const ok = (answers, usage = { input_tokens: 392, output_tokens: 65 }) => ({
   const body = JSON.parse(seen.init.body);
   check('state is top level, not nested under input',
     !!body.state && body.input === undefined);
-  check('questions are top level', !!body.questions.move);
+  check('questions are top level and strategic', !!body.questions.objective && !body.questions.move);
   check('model defaults to the alias', body.model === JEV_MODEL && JEV_MODEL === 'jev-latest');
-  check('answer mapped', answer.move === 'right' && answer.confidence === 0.7);
+  check('answer mapped to a strategy', answer.objective === 'target_b' && answer.posture === 'safe' && answer.confidence === 0.7 && answer.valid);
   check('usage returned', answer.usage.input_tokens === 392);
 }
 
@@ -44,7 +44,7 @@ const ok = (answers, usage = { input_tokens: 392, output_tokens: 65 }) => ({
   let body = null;
   const pinned = typesafeJev({ apiKey: 'k', model: 'jev-1.13.0',
     fetchImpl: async (u, i) => { body = JSON.parse(i.body); return ok({
-      move: { type: 'choice', choice: 'up' } }); } });
+      objective: { type: 'choice', choice: 'target_a' } }); } });
   await pinned({ state: {}, questions: {} });
   check('version pinned when asked', body.model === 'jev-1.13.0');
 }
@@ -89,7 +89,7 @@ function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
       if (status === 200) {
         return { ok: true, status, headers,
           json: async () => ({ model: 'jev-1.13.0',
-            answers: { move: { type: 'choice', choice: 'up', confidence: 0.9 } },
+            answers: { objective: { type: 'choice', choice: 'target_a', confidence: 0.9 } },
             usage: { input_tokens: 400 } }) };
       }
       return { ok: false, status, headers, json: async () => ({}) };
@@ -102,7 +102,8 @@ function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
 {
   const r = rig([429, 200]);
   const answer = await r.decide({ state: {}, questions: {} });
-  check('recovers from a 429', answer.move === 'up');
+  check('recovers from a 429', answer.objective === 'target_a');
+  check('attempts counted apart from decisions', r.decide.http.attempts === 2 && r.decide.http.retries === 1);
   check('it really did retry', r.calls.length === 2);
   check('and waited before doing so', r.slept.length === 1 && r.slept[0] === 150);
   check('the model that answered is reported', answer.model === 'jev-1.13.0');
@@ -112,7 +113,7 @@ function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
 {
   const r = rig([529, 529, 200]);
   const answer = await r.decide({ state: {}, questions: {} });
-  check('recovers from repeated 529s', answer.move === 'up');
+  check('recovers from repeated 529s', answer.objective === 'target_a');
   check('backoff is exponential', JSON.stringify(r.slept) === '[150,300]');
 }
 
@@ -162,7 +163,7 @@ function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
   const r = rig([{ status: 429, retryAfter: 1 }, 200], { signalMs: 5000 });
   const answer = await r.decide({ state: {}, questions: {} });
   check('Retry-After honoured over the default backoff',
-    answer.move === 'up' && r.slept[0] === 1000);
+    answer.objective === 'target_a' && r.slept[0] === 1000);
 
   const junk = rig([{ status: 429, retryAfter: 'Wed, 21 Oct 2026 07:28:00 GMT' }, 200]);
   await junk.decide({ state: {}, questions: {} });
@@ -183,7 +184,7 @@ function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
   let seen = null;
   const decide = typesafeJev({ apiKey: 'sentinel', url: 'http://127.0.0.1:4173/v1/systemone',
     fetchImpl: async (u) => { seen = u; return { ok: true, status: 200, headers: { get: () => null },
-      json: async () => ({ answers: { move: { choice: 'up' } } }) }; } });
+      json: async () => ({ answers: { objective: { choice: 'hold' } } }) }; } });
   await decide({ state: {}, questions: {} });
   check('a same-origin proxy URL is used when given',
     seen === 'http://127.0.0.1:4173/v1/systemone');
@@ -191,18 +192,22 @@ function rig(statuses, { signalMs = 2000, maxRetries } = {}) {
 
 // --- The shared mapper handles both envelopes ------------------------------
 {
-  const bare = mapJevAnswer({ answers: { move: { type: 'choice', choice: 'left', confidence: 0.5 } },
+  const bare = mapJevAnswer({ answers: { objective: { type: 'choice', choice: 'target_a', confidence: 0.5 } },
     usage: { input_tokens: 10 } });
-  const wrapped = mapJevAnswer({ result: { answers: { move: { type: 'choice', choice: 'left', confidence: 0.5 } },
+  const wrapped = mapJevAnswer({ result: { answers: { objective: { type: 'choice', choice: 'target_a', confidence: 0.5 } },
     usage: { input_tokens: 10 } }, success: true });
   check('bare and wrapped map identically', JSON.stringify(bare) === JSON.stringify(wrapped));
 
-  check('a missing move answer is null, not a throw', mapJevAnswer({ answers: {} }).move === null);
-  check('junk maps to null', mapJevAnswer(null).move === null);
-  check('"none" power means saved, not chosen',
-    mapJevAnswer({ answers: { move: { choice: 'up' }, power: { choice: 'none' } } }).power === null);
+  check('a missing objective is invalid, not a throw', mapJevAnswer({ answers: {} }).valid === false);
+  check('junk maps to invalid', mapJevAnswer(null).valid === false && mapJevAnswer(null).objective === null);
+  check('"none" power means saved',
+    mapJevAnswer({ answers: { objective: { choice: 'hold' }, power: { choice: 'none' } } }).power === 'none');
   check('a real power comes through',
-    mapJevAnswer({ answers: { move: { choice: 'up' }, power: { choice: 'phase' } } }).power === 'phase');
+    mapJevAnswer({ answers: { objective: { choice: 'hold' }, power: { choice: 'phase' } } }).power === 'phase');
+  check('an unknown posture defaults to balanced',
+    mapJevAnswer({ answers: { objective: { choice: 'hold' }, posture: { choice: 'reckless' } } }).posture === 'balanced');
+  check('a 200 with no objective is returned (and billed), not thrown',
+    mapJevAnswer({ answers: { move: { choice: 'up' } }, usage: { input_tokens: 5 } }).usage.input_tokens === 5);
   check('cost helper shared', jevCostUsd(1e6) === 0.042);
 }
 

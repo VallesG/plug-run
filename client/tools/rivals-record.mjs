@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from './lib/browsers.mjs';
 import { installVideo, probeMp4 } from './lib/video.mjs';
+import { mockAnswer } from './lib/jevMock.mjs';
 
 function arg(name, fallback = null) {
   const i = process.argv.indexOf('--' + name);
@@ -32,7 +33,12 @@ function arg(name, fallback = null) {
   return next && !next.startsWith('--') ? next : true;
 }
 
-const JEV = Boolean(arg('jev', false));
+// --jev: Jev as the STRATEGIST above the preset's runner AI, paid, through
+// the Node relay below. --jevMock: the same page and code path answered by a
+// deterministic local script (tools/lib/jevMock.mjs) — free, offline, and
+// marked as a mock in every file it produces.
+const JEV_MOCK = Boolean(arg('jevMock', false));
+const JEV = Boolean(arg('jev', false)) || JEV_MOCK;
 
 const OPTIONS = {
   url: arg('url', 'http://127.0.0.1:5173'),
@@ -42,13 +48,16 @@ const OPTIONS = {
   hardLimitMs: Number(arg('hardLimitMs', 12 * 60_000)),
   // Jev races run one at a time, always. Parallel pages share one rate limit
   // and one budget, so a ceiling would trip in whichever tab got there first
-  // and the others would silently finish on the pathfinder -- a batch of
-  // recordings that are partly Jev and do not say which parts.
+  // and the others would silently finish on the fallback objective -- a batch
+  // of recordings that are partly Jev and do not say which parts.
   parallel: JEV ? 1 : Math.max(1, Number(arg('parallel', 1))),
   indexBase: Number(arg('opponentIndex', 1)),
   jev: JEV,
-  jevMaxRequests: Number(arg('jevMaxRequests', 2500)),
-  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 2_000_000)),
+  jevMock: JEV_MOCK,
+  // Logical strategic requests, not HTTP attempts. A seven-house race should
+  // need tens of these; see JevStrategist for what triggers one.
+  jevMaxRequests: Number(arg('jevMaxRequests', 100)),
+  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 500_000)),
   // --video: an MP4 of each job, start to finish, with a diagnostic strip
   // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
   // which is git-ignored — keep --videoDir there.
@@ -56,8 +65,8 @@ const OPTIONS = {
   videoDir: arg('videoDir', 'tools/recordings/jev/video')
 };
 
-// The page is given this instead of a key. It exists only so makeJevDriver
-// constructs a driver; the Node side replaces the Authorization header with
+// The page is given this instead of a key. It exists only so
+// makeJevStrategist constructs a strategist; the Node side replaces the Authorization header with
 // the real one before the request leaves the machine. The real key is read
 // from the environment here and never enters the browser, the URL, the page,
 // or any file this tool writes.
@@ -67,7 +76,7 @@ const TYPESAFE_URL = 'https://api.typesafe.ai/v1/systemone';
 /**
  * Forward the page's Jev calls from Node, with the real key.
  *
- * The page posts to a SAME-ORIGIN path (?jevProxy=1 makes makeJevDriver use
+ * The page posts to a SAME-ORIGIN path (?jevProxy=1 makes makeJevStrategist use
  * location.origin + /v1/systemone). Same origin means no CORS preflight, and
  * a preflight is the one request Playwright's routing does not reliably see —
  * routing api.typesafe.ai directly works until the browser decides to send an
@@ -76,10 +85,31 @@ const TYPESAFE_URL = 'https://api.typesafe.ai/v1/systemone';
  * Returns a counter object so the tool can report what it actually relayed,
  * independently of what the page claims.
  */
-async function installJevProxy(page, apiKey) {
-  const relay = { requests: 0, ok: 0, failed: 0, statuses: {} };
+async function installJevProxy(page, apiKey, { mock = false } = {}) {
+  const relay = { requests: 0, ok: 0, failed: 0, statuses: {}, blocked: 0, mock, directBlocked: 0 };
+  // Belt and braces: the page has no reason to reach TypeSafe directly (it
+  // posts same-origin), so anything that tries is stopped and counted. In a
+  // mock run this is what proves nothing left the machine.
+  await page.route('https://api.typesafe.ai/**', (route) => { relay.directBlocked++; return route.abort(); });
   await page.route('**/v1/systemone', async (route) => {
     relay.requests++;
+    // Only strategic questions are ever paid for. A body asking anything
+    // else — a movement question from stale code, say — is refused here,
+    // before it can be forwarded or billed.
+    let parsed = null;
+    try { parsed = JSON.parse(route.request().postData() || '{}'); } catch {}
+    const asked = Object.keys(parsed?.questions || {});
+    if (!asked.length || asked.some((q) => !['objective', 'posture', 'power'].includes(q))) {
+      relay.blocked++;
+      relay.statuses.blocked = (relay.statuses.blocked || 0) + 1;
+      return route.fulfill({ status: 422, contentType: 'application/json',
+        body: JSON.stringify({ error: 'non-strategic question refused by the recorder' }) });
+    }
+    if (mock) {
+      relay.ok++;
+      relay.statuses.mock = (relay.statuses.mock || 0) + 1;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAnswer(parsed)) });
+    }
     try {
       const res = await fetch(TYPESAFE_URL, {
         method: 'POST',
@@ -122,7 +152,7 @@ export async function recordJob(job, shared) {
     (job.openingDecoy ? '-odecoy' : '') +
     // In the filename, because a directory of raw captures is the one place
     // someone will look without opening anything.
-    (OPTIONS.jev ? '-jev' : '');
+    (OPTIONS.jev ? (OPTIONS.jevMock ? '-jevmock' : '-jev') : '');
   const log = m => console.log(`${((Date.now() - started) / 1000).toFixed(0).padStart(5)}s [${tag}] ${m}`);
   let openingDecoyFires = 0;
   // Deduplicated: headless Chrome has no audio output, and every sound the
@@ -151,7 +181,8 @@ export async function recordJob(job, shared) {
 
   let relay = null;
   if (OPTIONS.jev) {
-    relay = await installJevProxy(page, process.env.TYPESAFE_API_KEY);
+    relay = await installJevProxy(page, OPTIONS.jevMock ? null : process.env.TYPESAFE_API_KEY,
+      { mock: OPTIONS.jevMock });
     // Before any script runs, so the driver exists by the time the game boots.
     await page.addInitScript((sentinel) => {
       try { sessionStorage.setItem('jevKey', sentinel); } catch {}
@@ -169,13 +200,13 @@ export async function recordJob(job, shared) {
     // Opt-in driver behaviour. Recorded into driverConfig by the harness, so
     // an opening-Decoy race is identifiable in the bank forever after.
     ...(job.openingDecoy ? { openingDecoy: '1' } : {}),
-    // bot=1 is what makes botConfig() read the URL at all, and its result is
-    // merged LAST over the preset's knobs -- which is the only reason
-    // aiLevel=0 sticks. Without aiLevel=0 the borrowed AI runs and update()
-    // returns before Jev is ever consulted, so the race would look Jev-driven
-    // (a driver is built, requests go out) while Jev steered nothing.
+    // No bot=1 and no aiLevel: the preset's own knobs stand, so the capable
+    // runner AI is the motor and Jev sits above it as the strategist. (The
+    // old aiLevel=0 override switched that AI off; the strategist now refuses
+    // to attach without it.)
     ...(OPTIONS.jev ? {
-      jev: '1', bot: '1', aiLevel: '0', jevProxy: '1',
+      jev: '1', jevProxy: '1',
+      ...(OPTIONS.jevMock ? { jevMock: '1' } : {}),
       jevMaxRequests: String(OPTIONS.jevMaxRequests),
       jevMaxInputTokens: String(OPTIONS.jevMaxInputTokens)
     } : {})
@@ -245,7 +276,8 @@ export async function recordJob(job, shared) {
     // actually sent, `report` is what the page believes happened. They should
     // agree, and a disagreement is worth knowing about.
     jev: OPTIONS.jev ? {
-      driver: 'jev', route: 'typesafe-direct',
+      driver: 'jev-strategist', motor: 'runner-ai',
+      route: OPTIONS.jevMock ? 'mock' : 'typesafe-direct',
       ceilings: { maxRequests: OPTIONS.jevMaxRequests, maxInputTokens: OPTIONS.jevMaxInputTokens },
       relay, report: jevReport
     } : null
@@ -261,22 +293,34 @@ export async function recordJob(job, shared) {
   if (job.openingDecoy) log(`opening decoy fired ${openingDecoyFires} time(s)`);
   if (OPTIONS.jev) {
     const r = jevReport || {};
-    log(`jev: ${r.requests ?? 0} req, ${r.answers ?? 0} answers ` +
-      `(${Math.round((r.answerRate ?? 0) * 100)}%), steered ${Math.round((r.steerShare ?? 0) * 100)}% ` +
-      `of ${r.decisions ?? 0} decisions, ${r.failureRate ? Math.round(r.failureRate * 100) + '% failures, ' : ''}` +
-      `${r.tokensBilled ?? 0} billed tokens (${r.tokenSource ?? '?'}) = $${(r.costUsd ?? 0).toFixed(4)}` +
+    const t = r.time || {}, w = r.watchdog || {}, st = r.strategies || {}, pw = r.powers || {};
+    log(`jev${OPTIONS.jevMock ? ' [MOCK]' : ''}: ${r.logicalRequests ?? 0} logical requests ` +
+      `(${JSON.stringify(r.triggers?.requested || {})}, ${r.triggers?.coalesced ?? 0} coalesced), ` +
+      `${r.answers ?? 0} answers, ${r.invalid ?? 0} invalid, ${r.errors ?? 0} errors, ${r.timeouts ?? 0} timeouts, ` +
+      `${r.obsolete ?? 0} obsolete`);
+    log(`jev strategies: ${st.adopted ?? 0} adopted, rejected ${JSON.stringify(st.rejected || {})}, ` +
+      `${st.objectiveHeld ?? 0} held by commitment, ${st.switches ?? 0} switches, ${st.invalidated ?? 0} invalidated; ` +
+      `strategy active ${Math.round((t.strategyActiveShare ?? 0) * 100)}% of live time, ` +
+      `fallback ${Math.round((t.fallbackShare ?? 0) * 100)}%, recovery ${Math.round((w.recoveryShare ?? 0) * 100)}%`);
+    log(`jev watchdog: ${w.stalls ?? 0} stalls, ${w.recoveries ?? 0} recoveries (${w.recoveryMs ?? 0} ms), ` +
+      `${w.watchdogRequests ?? 0} requests caused, ${w.restored ?? 0} restored / ${w.notRestored ?? 0} not`);
+    log(`jev powers: ${pw.requested ?? 0} requested, ${pw.accepted ?? 0} accepted, ${pw.activated ?? 0} activated, ` +
+      `rejected ${JSON.stringify(pw.rejected || {})}`);
+    log(`jev motor: ${r.motor ?? '?'}, raw Jev movement actions ${r.rawMovementActions ?? '?'}, ` +
+      `drive sources ${JSON.stringify(r.driveSources || {})}, stray movement answers dropped ${r.strayMovementDropped ?? 0}`);
+    log(`jev cost: ${r.tokensBilled ?? 0} billed tokens (${r.tokenSource ?? '?'}) = $${(r.costUsd ?? 0).toFixed(4)}` +
       (r.budgetStopped ? `  [STOPPED ON ${r.budgetStopped.toUpperCase()} CEILING]` : '') +
-      `, model ${r.model || '?'}`);
-    log(`jev relay: ${relay.requests} forwarded, ${relay.ok} ok, ${relay.failed} failed` +
-      `, statuses ${JSON.stringify(relay.statuses)}`);
-    if (!r.requests) log('jev: NO REQUESTS WERE MADE — this is not a Jev recording.');
-    else if (!r.steerShare) log('jev: steerShare is 0 — Jev drove nothing. Check aiLevel=0.');
+      `, model ${r.model || '?'}, http ${JSON.stringify(r.http || {})}`);
+    log(`jev relay: ${relay.requests} received, ${relay.ok} ok, ${relay.failed} failed, ${relay.blocked} blocked` +
+      `, ${relay.directBlocked} direct-to-TypeSafe blocked, statuses ${JSON.stringify(relay.statuses)}`);
+    if (!r.logicalRequests) log('jev: NO REQUESTS WERE MADE — this is not a Jev recording.');
+    else if (!st.adopted) log('jev: NO STRATEGY WAS ADOPTED — Jev decided nothing.');
   }
   return { job, ok, races: store.races, fps: median, renderer, openingDecoyFires, jev: jevReport, relay };
 }
 
 async function main() {
-  if (OPTIONS.jev) {
+  if (OPTIONS.jev && !OPTIONS.jevMock) {
     // Existence only. Never printed, never length-checked into a log, never
     // written anywhere.
     if (!process.env.TYPESAFE_API_KEY) {
@@ -286,10 +330,13 @@ async function main() {
         'Both read it as input, so it does not land in shell history.');
       process.exit(2);
     }
-    console.log(`jev: ON — sequential, ceilings ${OPTIONS.jevMaxRequests} requests / ` +
-      `${OPTIONS.jevMaxInputTokens.toLocaleString('en-US')} input tokens ` +
+    console.log(`jev: ON — strategist above the runner AI, sequential, ceilings ${OPTIONS.jevMaxRequests} ` +
+      `logical requests / ${OPTIONS.jevMaxInputTokens.toLocaleString('en-US')} input tokens ` +
       `(~$${(OPTIONS.jevMaxInputTokens / 1e6 * 0.042).toFixed(2)} worst case). ` +
       'The key stays in Node; the page gets a sentinel.');
+  } else if (OPTIONS.jevMock) {
+    console.log('jev: MOCK strategist (tools/lib/jevMock.mjs) above the runner AI — offline, nothing billed, ' +
+      'direct TypeSafe traffic blocked.');
   }
   const shared = await chromium();
   const plan = arg('plan');
@@ -303,7 +350,7 @@ async function main() {
   // counts as done when any file carries its tag. Recording the same job twice
   // is harmless (more races is more coverage) — this only saves the time.
   const jobTag = j => `slot${j.slot}-${j.style}-${String(j.powers).replace(/,/g, '')}` +
-    (j.openingDecoy ? '-odecoy' : '') + (OPTIONS.jev ? '-jev' : '');
+    (j.openingDecoy ? '-odecoy' : '') + (OPTIONS.jev ? (OPTIONS.jevMock ? '-jevmock' : '-jev') : '');
   const all = jobs.slice();
   if (arg('resume', false)) {
     const done = new Set();

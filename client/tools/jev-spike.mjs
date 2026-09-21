@@ -5,12 +5,14 @@
 //   TYPESAFE_API_KEY=... node tools/jev-spike.mjs --arms path,jev --round 12
 //
 // WHAT THIS ANSWERS
-// Whether Jev's route intent is worth paying for. That question only means
-// something against the two drivers already in the repo, on the same maps:
+// Whether Jev's strategy is worth paying for. That question only means
+// something against the drivers already in the repo, on the same maps:
 //
 //   ai    the game's own tuned runner AI, borrowed (the bank's driver today)
 //   path  the naive pathfinder with no AI (the floor)
-//   jev   Jev choosing the route, pathfinder underneath as the fallback
+//   jev   the SAME runner AI at the same level, with Jev above it choosing
+//         the objective, posture and powers (JevStrategist). ai vs jev is
+//         therefore a clean A/B: one thing differs, and it is Jev.
 //
 // It reports clear rate, median clear time, and — for jev only — real spend
 // from the API's own token counts. A cheaper arm that never clears is not a
@@ -49,15 +51,15 @@ const OPTIONS = {
   arms: String(arg('arms', 'ai,path,jev')).split(',').map(s => s.trim()).filter(Boolean),
   round: Number(arg('round', 12)),        // difficulty, held still across arms
   maps: Number(arg('maps', 8)),           // how many maps each arm plays
-  aiLevel: Number(arg('aiLevel', 20)),    // skill for the borrowed-AI arm
+  aiLevel: Number(arg('aiLevel', 20)),    // skill for the runner AI in the ai AND jev arms
   route: arg('route', 'typesafe'),
   model: arg('model', null),              // pin e.g. jev-1.13.0
-  minConfidence: Number(arg('minConfidence', 0)),
-  // Safety ceilings, same as the recorder's. JevDriver has finite defaults of
-  // its own, so a spike is never unbounded; these make the budget explicit in
-  // the output file next to the spend it produced.
-  jevMaxRequests: Number(arg('jevMaxRequests', 2500)),
-  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 2_000_000)),
+  // Safety ceilings, same as the recorder's. JevStrategist has finite
+  // defaults of its own, so a spike is never unbounded; these make the budget
+  // explicit in the output file next to the spend it produced. Logical
+  // strategic requests, not HTTP attempts.
+  jevMaxRequests: Number(arg('jevMaxRequests', 100)),
+  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 500_000)),
   width: Number(arg('width', 390)),
   height: Number(arg('height', 844)),
   headed: arg('headed', false),
@@ -71,11 +73,12 @@ const OPTIONS = {
 const ARMS = {
   ai:   { label: 'borrowed AI', params: (o) => ({ aiLevel: o.aiLevel }) },
   path: { label: 'pathfinder',  params: () => ({ aiLevel: 0 }) },
-  jev:  { label: 'Jev',         params: (o) => ({ aiLevel: 0, jev: 1,
+  // Never aiLevel 0: the strategist directs the runner AI and refuses to
+  // attach without it.
+  jev:  { label: 'Jev strategist', params: (o) => ({ aiLevel: o.aiLevel, jev: 1,
             jevMaxRequests: o.jevMaxRequests, jevMaxInputTokens: o.jevMaxInputTokens,
             ...(o.route === 'cloudflare' ? { jevRoute: 'cloudflare' } : {}),
-            ...(o.model ? { jevModel: o.model } : {}),
-            ...(o.minConfidence > 0 ? { jevMinConfidence: o.minConfidence } : {}) }) }
+            ...(o.model ? { jevModel: o.model } : {}) }) }
 };
 
 function credentials(route) {
@@ -181,9 +184,10 @@ function summarise(result) {
     costUsd: result.jev?.costUsd ?? 0,
     budgetStopped: result.jev?.budgetStopped ?? null,
     tokenSource: result.jev?.tokenSource ?? null,
-    answerRate: result.jev?.answerRate ?? null,
-    steerShare: result.jev?.steerShare ?? null,
-    failureRate: result.jev?.failureRate ?? null
+    logicalRequests: result.jev?.logicalRequests ?? null,
+    strategiesAdopted: result.jev?.strategies?.adopted ?? null,
+    strategyActiveShare: result.jev?.time?.strategyActiveShare ?? null,
+    watchdogRecoveries: result.jev?.watchdog?.recoveries ?? null
   };
 }
 
@@ -276,7 +280,8 @@ function headToHead(results) {
   if (jev) {
     const perMap = jev.runs ? jev.costUsd / jev.runs : 0;
     console.log(`Jev: $${jev.costUsd.toFixed(4)} over ${jev.runs} maps = $${perMap.toFixed(4)}/map` +
-      `, answered ${(jev.answerRate * 100).toFixed(0)}% and steered ${(jev.steerShare * 100).toFixed(0)}% of decisions.`);
+      `, ${jev.logicalRequests} strategic requests, ${jev.strategiesAdopted} adopted, ` +
+      `strategy in force ${((jev.strategyActiveShare ?? 0) * 100).toFixed(0)}% of live time.`);
     if (jev.tokenSource !== 'api') console.log('  NOTE: that figure is an estimate — no answer carried usage, so nothing was actually billed.');
   }
 })().catch((e) => { console.error(e); process.exit(1); });

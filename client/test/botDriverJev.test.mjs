@@ -1,20 +1,17 @@
-// BotDriver <-> JevDriver wiring, under plain Node.
+// The hybrid: Jev strategist above the REAL runner AI, under plain Node.
 //
 //   node client/test/botDriverJev.test.mjs
 //
-// The point of the wiring is that Jev is an ADVISOR, not the driver: it
-// answers "which way" and everything else — evasion, firing, the frame-by-
-// frame steering — stays with the tuned code, with the pathfinder underneath
-// as the fallback. These tests are mostly about that fallback holding when
-// Jev is late, wrong, unsure or absent, because that is what decides whether
-// a bad round of Jev costs a few steps or costs the run.
-//
-// A stub scene implements only what BotDriver touches. `jev` is usually a
-// stub too, so latency is scripted rather than raced; one case drives a real
-// JevDriver to check the two actually fit together.
+// The runner AI here is the shipped one (RunnerAI.updateRunnerBehavior),
+// loaded with Phaser stubbed out, driving a stub board through BotDriver
+// exactly as installBotDriver wires it. Jev is a real JevStrategist with a
+// scripted decide(). So when a test says "the runner reached bag A", the
+// runner AI walked it there, every step, around a wall Jev knows nothing
+// about — Jev only named the bag.
 
+import { clock, flush, makeScene, cellOf, scriptedDecide, strategy, AI_HOOKS, RunnerAI, reseed } from './_jevWorld.mjs';
 import BotDriver from '../src/controllers/BotDriver.js';
-import JevDriver from '../src/controllers/JevDriver.js';
+import JevStrategist from '../src/controllers/JevStrategist.js';
 
 let passed = 0;
 const failures = [];
@@ -22,338 +19,256 @@ function check(name, cond, detail = '') {
   if (cond) { passed++; console.log(`  ok  ${name}`); }
   else { failures.push(`${name}${detail ? ' — ' + detail : ''}`); console.log(`  FAIL ${name}${detail ? ' — ' + detail : ''}`); }
 }
-const flush = () => new Promise((r) => setImmediate(r));
 
-/* ---------------- stub scene ---------------- */
+// Street's knobs, with the deliberate-mistake knobs off so a wrong step can't
+// be mistaken for anything else. aiLevel 8: the runner AI with wander and
+// hesitation at zero (applyRunnerProgression), so a run is repeatable.
+const CFG = { aiLevel: 8, dangerCells: 5, coverPenalty: 0, phaseEscapeCells: 0,
+  wrongTurnChance: 0, hesitateChance: 0, openingDecoy: false };
 
-const CELL = 24;
-
-// 10x10, border walls, and a vertical block at x=5 so a direction can be
-// legal in one place and into a wall in another.
-function makeScene(over = {}) {
-  const grid = Array.from({ length: 10 }, (_, y) =>
-    Array.from({ length: 10 }, (_, x) => (x === 0 || y === 0 || x === 9 || y === 9) ? 1 : 0)
-  );
-  for (let y = 3; y <= 6; y++) grid[y][5] = 1;
-
-  const driven = [];
-  const scene = {
-    role: 'runner',
-    hasStash: false,
-    roundOver: false,
-    roundPausedForMenu: false,
-    cell: CELL,
-    pad: { x: 0, y: 0 },
-    cols: 10,
-    rows: 10,
-    grid,
-    simTick: 1,
-
-    toCell: (x, y) => ({ x: Math.floor(x / CELL), y: Math.floor(y / CELL) }),
-    toWorldX: (cx) => cx * CELL + CELL / 2,
-    toWorldY: (cy) => cy * CELL + CELL / 2,
-    inBoundsCell: (cx, cy) => cx >= 0 && cy >= 0 && cx < 10 && cy < 10,
-    isWalkableCell(cx, cy) {
-      return this.inBoundsCell(cx, cy) && this.grid[cy][cx] !== 1;
-    },
-    neighbors4(c) {
-      return [
-        { x: c.x + 1, y: c.y }, { x: c.x - 1, y: c.y },
-        { x: c.x, y: c.y + 1 }, { x: c.x, y: c.y - 1 }
-      ].filter((n) => this.isWalkableCell(n.x, n.y));
-    },
-    findPath(sx, sy, gx, gy) {
-      const s = this.toCell(sx, sy), g = this.toCell(gx, gy);
-      if (!this.isWalkableCell(s.x, s.y) || !this.isWalkableCell(g.x, g.y)) return null;
-      const key = (c) => `${c.x},${c.y}`;
-      const q = [{ ...s, path: [] }];
-      const seen = new Set([key(s)]);
-      while (q.length) {
-        const cur = q.shift();
-        if (cur.x === g.x && cur.y === g.y) {
-          return cur.path.map((c) => ({ x: this.toWorldX(c.x), y: this.toWorldY(c.y) }));
-        }
-        for (const n of this.neighbors4(cur)) {
-          if (seen.has(key(n))) continue;
-          seen.add(key(n));
-          q.push({ ...n, path: [...cur.path, n] });
-        }
-      }
-      return null;
-    },
-
-    runnerPowersSelected: ['phase', 'dash'],
-    runnerPowersConsumed: [false, false],
-    activateRunnerPowerByIndex(i) {
-      driven.push({ kind: 'power', i });
-      this.runnerPowersConsumed[i] = true;
-    },
-
-    intent: {
-      driveMove(x, y) {
-        const len = Math.hypot(x, y);
-        if (len < 1e-6) return false;
-        driven.push({ kind: 'move', x: x / len, y: y / len });
-        return true;
-      },
-      driveGun() { return true; },
-      driveFire() {},
-      recordPower(i) { driven.push({ kind: 'recordPower', i }); }
-    },
-
-    // Runner at (1,1). The bag it will steer for is at (2,1) — one step
-    // right — so the pathfinder's own answer is unambiguous and any other
-    // heading in `driven` came from Jev.
-    attacker: { x: CELL * 1.5, y: CELL * 1.5, active: true, visible: true, hp: 3 },
-    defender: { x: CELL * 8.5, y: CELL * 8.5, active: true, visible: true },
-    stash: { x: CELL * 7.5, y: CELL * 7.5, active: true, visible: true },
-    bunkStash: { x: CELL * 2.5, y: CELL * 1.5, active: true, visible: true },
-    extract: { x: CELL * 8.5, y: CELL * 1.5, active: true, visible: true },
-
-    ...over
-  };
-  scene._driven = driven;
-  return scene;
+function hybrid(scene, answers, cfg = {}, hooks = AI_HOOKS) {
+  const decide = scriptedDecide(answers);
+  const strategist = new JevStrategist(decide, { now: () => clock.t, rng: () => 0.5 });
+  const bot = new BotDriver(scene, { ...CFG, ...cfg, strategist }, hooks);
+  return { bot, strategist, decide };
 }
 
-// A Jev stand-in. `answer` is whatever tick() should hand back; `at` is held
-// steady for a given answer so the once-per-answer power rule is exercised
-// the way the real driver exercises it.
-function stubJev(answer = null) {
-  return {
-    answer,
-    ticks: 0,
-    resets: 0,
-    // Counters live on the driver, not on BotDriver: a BotDriver is rebuilt
-    // on every scene restart, so kept there they would describe one house.
-    drive: { steps: 0, illegal: 0, lowConfidence: 0, fallbacks: 0, powers: 0 },
-    tick() { this.ticks++; return this.answer; },
-    reset() { this.resets++; this.answer = null; },
-    report() {
-      const d = this.drive;
-      const decisions = d.steps + d.illegal + d.lowConfidence + d.fallbacks;
-      return { requests: 1, answers: 1, costUsd: 0.0001, ...d, decisions,
-        steerShare: decisions ? +(d.steps / decisions).toFixed(3) : 0 };
-    }
-  };
+async function frames(bot, n, each = null) {
+  for (let i = 0; i < n; i++) {
+    clock.t += 16.67;
+    bot.update(16.67);
+    if (each && each(i) === false) return i;
+    if (i % 3 === 0) await flush();
+  }
+  return n;
 }
 
-const dirAnswer = (move, extra = {}) => ({
-  move,
-  dir: { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[move],
-  power: null, confidence: 1, at: 1000, ...extra
-});
-
-// replanMs 0 so every update() is a decision, and the imperfection knobs off
-// so a wrong turn can't be mistaken for Jev's answer.
-const plain = (scene, jev, cfg = {}) =>
-  new BotDriver(scene, { replanMs: 0, wrongTurnChance: 0, hesitateChance: 0,
-    openingDecoy: false, jev, ...cfg });
-
+const at = (scene, cell) => { const c = cellOf(scene, scene.attacker); return c.x === cell.x && c.y === cell.y; };
 const moves = (s) => s._driven.filter((d) => d.kind === 'move');
-const lastMove = (s) => [...moves(s)].pop();
 
-/* ---------------- tests ---------------- */
+console.log('\nBotDriver + JevStrategist + real RunnerAI\n');
 
-console.log('\nBotDriver + Jev wiring\n');
-
-// 1. Jev's answer is what actually steers.
+// 0. The seam on its own. Without a provider the shipped AI heads for
+//    scene.stash — the REAL bag, which a player cannot know. With one, the
+//    provided cell wins and nothing replaces it.
 {
-  const s = makeScene();
-  const d = plain(s, stubJev(dirAnswer('down')));
-  d.update();
-  const m = lastMove(s);
-  check('Jev answer steers the runner', m && m.x === 0 && m.y === 1,
-    m ? `got ${m.x},${m.y}` : 'no move');
-  check('counted as a Jev step', d.jev.drive.steps === 1);
-}
-
-// 2. Without Jev the bot is exactly what it was.
-{
-  const s = makeScene();
-  const d = plain(s, null);
-  d.update();
-  const m = lastMove(s);
-  // Pathfinder routes toward the near bag at (2,1): straight right.
-  check('no Jev means the pathfinder still drives', m && m.x === 1 && m.y === 0);
-  check('no Jev report to give', d.jevReport() === null);
-  check('no driver to count against', d.jev === null);
-}
-
-// 3. No answer yet — fall through, and say so.
-{
-  const s = makeScene();
-  const d = plain(s, stubJev(null));
-  d.update();
-  const m = lastMove(s);
-  check('a missing answer falls back to the pathfinder', m && m.x === 1 && m.y === 0);
-  check('fallback counted', d.jev.drive.fallbacks === 1);
-  check('not counted as a Jev step', d.jev.drive.steps === 0);
-}
-
-// 4. A step into a wall is refused, however confident Jev was.
-{
-  // Runner at (4,4); the block at x=5 makes 'right' illegal from there.
-  const s = makeScene({ attacker: { x: CELL * 4.5, y: CELL * 4.5, active: true, visible: true, hp: 3 } });
-  check('the test board really does wall that step', s.isWalkableCell(5, 4) === false);
-  const d = plain(s, stubJev(dirAnswer('right')));
-  d.update();
-  check('an illegal step is not driven', d.jev.drive.illegal === 1 && d.jev.drive.steps === 0);
-  check('the pathfinder steered instead', !!lastMove(s));
-}
-
-// 5. Confidence gate — off by default, honoured when set.
-{
-  const s = makeScene();
-  const open = plain(s, stubJev(dirAnswer('down', { confidence: 0.1 })));
-  open.update();
-  check('default takes every answer, unsure or not', open.jev.drive.steps === 1);
-
-  const s2 = makeScene();
-  const gated = plain(s2, stubJev(dirAnswer('down', { confidence: 0.1 })), { jevMinConfidence: 0.5 });
-  gated.update();
-  check('below threshold falls back', gated.jev.drive.lowConfidence === 1 && gated.jev.drive.steps === 0);
-
-  const s3 = makeScene();
-  const sure = plain(s3, stubJev(dirAnswer('down', { confidence: 0.9 })), { jevMinConfidence: 0.5 });
-  sure.update();
-  check('above threshold steers', sure.jev.drive.steps === 1);
-
-  const s4 = makeScene();
-  const none = plain(s4, stubJev(dirAnswer('down', { confidence: null })), { jevMinConfidence: 0.5 });
-  none.update();
-  check('a missing confidence cannot pass a threshold', none.jev.drive.lowConfidence === 1);
-}
-
-// 6. A power is spent once per ANSWER, not once per frame.
-{
-  const s = makeScene();
-  const jev = stubJev(dirAnswer('down', { power: 'dash' }));
-  const d = plain(s, jev);
-  d.update(); d.update(); d.update();
-  const powers = s._driven.filter((x) => x.kind === 'power');
-  check('the dash is spent', powers.length === 1 && powers[0].i === 1);
-  check('and only once across three frames', d.jev.drive.powers === 1);
-  check('the spend is traced', s._driven.some((x) => x.kind === 'recordPower' && x.i === 1));
-
-  // A new answer is a new decision.
-  jev.answer = dirAnswer('down', { power: 'phase', at: 2000 });
-  d.update();
-  check('a later answer can spend a different power',
-    s._driven.filter((x) => x.kind === 'power').length === 2);
-}
-
-// 7. A power Jev names but does not hold is ignored, not conjured.
-{
-  const s = makeScene({ runnerPowersSelected: ['phase'], runnerPowersConsumed: [false] });
-  const d = plain(s, stubJev(dirAnswer('down', { power: 'decoy' })));
-  d.update();
-  check('an unheld power is ignored', s._driven.every((x) => x.kind !== 'power'));
-  check('and not counted as spent', d.jev.drive.powers === 0);
-
-  const spent = makeScene({ runnerPowersSelected: ['dash'], runnerPowersConsumed: [true] });
-  const d2 = plain(spent, stubJev(dirAnswer('down', { power: 'dash' })));
-  d2.update();
-  check('an already-spent power is ignored', spent._driven.every((x) => x.kind !== 'power'));
-}
-
-// 8. Plug rounds never spend runner powers.
-{
-  const s = makeScene({ role: 'plug' });
-  const d = plain(s, stubJev(dirAnswer('down', { power: 'dash' })));
-  d.update();
-  check('no runner power on a plug round', s._driven.every((x) => x.kind !== 'power'));
-}
-
-// 9. A new round drops the last house's answer.
-{
-  const s = makeScene();
-  const jev = stubJev(dirAnswer('down', { power: 'dash' }));
-  const d = plain(s, jev);
-  d.update();
-  s.simTick = 0;                  // beginRoundTimer() zeroes it
-  d.update();
-  check('the Jev driver was reset', jev.resets === 1);
-  check('the held answer was dropped', d._jevIntent === null || jev.answer === null);
-  check('the power gate reopened for the new house', d._jevPowerAt === null);
-}
-
-// 10. The driver object must not become a config knob.
-{
-  const jev = stubJev(null);
-  const d = new BotDriver(makeScene(), { jev, replanMs: 5 });
-  check('jev is held on the driver', d.jev === jev);
-  check('and kept out of cfg, where a query string could reach it', d.cfg.jev === undefined);
-  check('other options still land in cfg', d.cfg.replanMs === 5);
-}
-
-// 11. The borrowed AI arm is untouched by Jev — that is the whole point of
-//     having three separable arms to compare.
-{
-  const s = makeScene();
-  const jev = stubJev(dirAnswer('down'));
-  // The shipped AI hooks, stubbed down to the calls driveBorrowedAI makes.
-  const hooks = {
-    makeController: () => ({}),
-    applyRunnerProgression: () => {},
-    updateRunnerBehavior: () => {},
-    considerRunnerPowerUse: () => {}
+  reseed(1); clock.t = 10_000;
+  const probe = (scene, provider) => {
+    const ctrl = {};
+    if (provider) ctrl.objectiveProvider = provider;
+    scene.role = 'plug'; scene.pveRound = 8;
+    RunnerAI.applyRunnerProgression(scene);
+    for (let i = 0; i < 8; i++) { clock.t += 20; RunnerAI.updateRunnerBehavior(scene, ctrl, 20); }
+    scene.role = 'runner';
+    return { x: Math.sign(ctrl._aiVX || 0), y: Math.sign(ctrl._aiVY || 0) };
   };
-  const d = new BotDriver(s, { replanMs: 0, wrongTurnChance: 0, hesitateChance: 0,
-    openingDecoy: false, aiLevel: 12, jev }, hooks);
-  check('the borrowed arm really is the one running', d.useBorrowedAI === true);
-  d.update();
-  check('borrowed AI never consults Jev', jev.ticks === 0);
-  check('and nothing is billed for it', d.jev.drive.steps + d.jev.drive.fallbacks === 0);
+  const own = probe(makeScene({ realTop: false }));
+  check('no provider: the shipped AI goes straight for the real bag (down)', own.x === 0 && own.y === 1, JSON.stringify(own));
+  const told = probe(makeScene({ realTop: false }), () => ({ x: 6, y: 2 }));
+  check('provider: the AI routes for the provided bag instead (sideways, round the wall)', told.y === 0 && told.x !== 0, JSON.stringify(told));
+  const s3 = makeScene({ realTop: false });
+  s3._aiDetourCell = { x: 11, y: 12 };
+  const detoured = probe(s3, () => ({ x: 6, y: 2 }));
+  check('a random detour cannot overrule a provided objective', detoured.y === 0 && detoured.x !== 0, JSON.stringify(detoured));
 }
 
-// 12. jevReport() reconciles what Jev cost with what it actually drove.
+// 1. Objective A: Jev names the top bag (the bunk, here); the runner AI walks
+//    there, round the wall, and every steer comes out of BotDriver's motor
+//    path. Jev never produces a move.
+for (const [objective, realTop, cell] of [['target_a', false, { x: 6, y: 2 }], ['target_b', true, { x: 6, y: 12 }]]) {
+  reseed(2); clock.t = 100_000;
+  const scene = makeScene({ realTop });
+  const { bot, strategist } = hybrid(scene, () => strategy(objective));
+  const reached = await frames(bot, 900, () => !at(scene, cell));
+  const r = bot.jevReport();
+  check(`${objective}: Jev chose it and the runner AI reached it (${objective === 'target_a' ? 'the bunk' : 'the bunk'})`,
+    reached < 900 && at(scene, cell), `frame ${reached}, at ${JSON.stringify(cellOf(scene, scene.attacker))}`);
+  check(`${objective}: every steer came from the motor path (_driveOrCoast)`,
+    moves(scene).length > 0 && moves(scene).every((m) => m.via.includes('_driveOrCoast') && !/JevStrategist|jevState|jevStrategy/.test(m.via)));
+  check(`${objective}: drive sources are motor layers only`,
+    r.driveSources.motor > 0 && Object.keys(r.driveSources).every((k) => ['motor', 'dodge', 'cover', 'phaseWindow'].includes(k)));
+  check(`${objective}: strategy was active, not fallback`, r.time.strategyActiveShare > 0.9, `${r.time.strategyActiveShare}`);
+  check(`${objective}: the runner AI's own power logic never ran`, !scene._driven.some((d) => d.kind === 'power'));
+  void strategist;
+}
+
+// 2. Carrying: extraction is the only destination. Jev asks for a bag; it is
+//    refused, and the runner AI takes the stash to the car.
 {
-  const s = makeScene();
-  const jev = stubJev(dirAnswer('down'));
-  const d = plain(s, jev);
-  d.update();
-  jev.answer = null;
-  d.update(); d.update();
-  const rep = d.jevReport();
-  check('decisions counts every replan, not just Jev\'s', rep.decisions === 3);
-  check('steer share reported', rep.steerShare === +(1 / 3).toFixed(3));
-  check('cost carried through from the driver', rep.costUsd === 0.0001);
+  reseed(3); clock.t = 200_000;
+  const scene = makeScene();
+  scene.hasStash = true;
+  const { bot } = hybrid(scene, () => strategy('target_a'));
+  const car = { x: 11, y: 7 };
+  const reached = await frames(bot, 900, () => !at(scene, car));
+  const r = bot.jevReport();
+  check('carrying: a bag answer is rejected', r.strategies.rejected.carrying >= 1);
+  check('carrying: the runner AI reached the car', reached < 900 && at(scene, car), JSON.stringify(cellOf(scene, scene.attacker)));
 }
 
-// 13. Against the real JevDriver, end to end.
+// 3. Invalid objective: the runner still goes somewhere a player could
+//    choose — the nearest bag — and not the real one.
 {
-  const s = makeScene();
-  let t = 1000;
-  const pending = [];
-  const jev = new JevDriver(
-    (payload) => new Promise((res) => pending.push({ payload, res })),
-    { now: () => t });
-  const d = plain(s, jev);
-
-  d.update();
-  check('a real request went out on the first frame', jev.stats.requests === 1);
-  check('the payload is the honest one (no real-vs-decoy label)',
-    !('stash' in pending[0].payload.state) && Array.isArray(pending[0].payload.state.bags));
-  check('nothing stalled waiting for it', moves(s).length === 1);
-
-  pending[0].res({ move: 'down', usage: { input_tokens: 400 } });
-  await flush();
-  d.update();
-  const m = lastMove(s);
-  check('the answer steers once it lands', m.x === 0 && m.y === 1);
-
-  // Let it go stale: the pathfinder must take over rather than the runner
-  // carrying on down a corridor on a decision from a second ago.
-  t = 1000 + 5000;
-  d.update();
-  check('a stale answer stops steering', d.jev.drive.fallbacks >= 1);
-  const rep = d.jevReport();
-  check('cost came from the API, not a character count', rep.tokenSource === 'api');
-  check('billed tokens reported', rep.tokensBilled === 400);
+  reseed(4); clock.t = 300_000;
+  // Runner nearer the bottom bag; the real bag is the top one.
+  const scene = makeScene({ realTop: true, runner: { x: 6, y: 10 } });
+  const { bot } = hybrid(scene, () => ({ valid: false, reason: 'bad-objective', usage: { input_tokens: 10 } }));
+  await frames(bot, 900, () => !at(scene, { x: 6, y: 12 }));
+  check('invalid answers: fallback walks to the NEAREST bag (the bunk), not the real one',
+    at(scene, { x: 6, y: 12 }), JSON.stringify(cellOf(scene, scene.attacker)));
 }
 
-/* ---------------- summary ---------------- */
+// 4. Evasion outranks the objective, then the objective resumes.
+{
+  reseed(5); clock.t = 400_000;
+  const scene = makeScene({ realTop: true, runner: { x: 6, y: 9 }, plug: { x: 6, y: 12 } });  // same column, 3 cells
+  const { bot } = hybrid(scene, () => strategy('target_a'));
+  await frames(bot, 6);
+  const r1 = bot.jevReport();
+  const firstDodge = moves(scene).find((m) => Math.abs(m.x) > 0.9);
+  check('a plug in the lane: the dodge layer steers', r1.driveSources.dodge > 0);
+  check('sideways, out of the column', !!firstDodge);
+  scene.defender.active = false; scene.defender.visible = false;
+  const before = r1.driveSources.motor || 0;
+  const reached = await frames(bot, 900, () => !at(scene, { x: 6, y: 2 }));
+  const r2 = bot.jevReport();
+  check('lane clear: the motor steers again', (r2.driveSources.motor || 0) > before);
+  check('and the runner AI completes the objective', reached < 900 && at(scene, { x: 6, y: 2 }));
+}
+
+// 5. Posture changes tactics, never the destination. A plug six cells down
+//    the column is outside Street's 5-cell danger range, inside safe's 7.
+{
+  for (const posture of ['balanced', 'safe']) {
+    reseed(6); clock.t = 500_000 + (posture === 'safe' ? 50_000 : 0);
+    const scene = makeScene({ realTop: true, runner: { x: 6, y: 5 }, plug: { x: 6, y: 11 } });
+    const { bot } = hybrid(scene, () => strategy('target_a', { posture }));
+    await frames(bot, 20);
+    const r = bot.jevReport();
+    if (posture === 'balanced') check('balanced: a plug at 6 cells is not a lane threat', !r.driveSources.dodge);
+    else check('safe: the same plug is dodged', r.driveSources.dodge > 0);
+    check(`${posture}: the objective is still bag A`, bot._plan.objective.objective === 'target_a');
+  }
+}
+
+// 6. The watchdog takes control. The runner is wedged (moves are swallowed):
+//    after ~2s the strategy is marked stalled and the runner AI is handed a
+//    recovery waypoint, not Jev's bag, with its direction lock cleared.
+{
+  reseed(7); clock.t = 600_000;
+  const scene = makeScene({ realTop: true });
+  const real = scene.intent.driveMove;
+  let wedged = true;
+  scene.intent.driveMove = (x, y) => (wedged ? true : real(x, y));
+  const { bot } = hybrid(scene, () => strategy('target_a'));
+  await frames(bot, 250);           // ~4.2s: attempt grace, then 2s without progress
+  const r = bot.jevReport();
+  const provided = bot._borrowed.objectiveProvider();
+  check('stall detected on a wedged runner', r.watchdog.stalls === 1);
+  check('the plan is in recovery', bot._plan.recovering === true && bot._plan.objective.source === 'recovery');
+  check('the runner AI is steering for the recovery waypoint', provided && !(provided.x === 6 && provided.y === 2));
+  check('its direction lock was cleared', bot._borrowed._aiFlipGuardUntil === 0 || bot._borrowed._aiFlipGuardUntil < clock.t + 400);
+  wedged = false;
+  await frames(bot, 400);
+  const r2 = bot.jevReport();
+  check('recovery ends and progress is restored', r2.watchdog.restored >= 1, JSON.stringify(r2.watchdog));
+  check('no request storm: requests stay single digits', r2.logicalRequests <= 6, `${r2.logicalRequests}`);
+}
+
+// 7. Legal powers activate through the real path: Jev ARMS one, the shipped
+//    runner AI's own reflex rule (considerRunnerPowerUse) picks the moment,
+//    and activateRunnerPowerByIndex spends it — recorded exactly once — for
+//    phase, dash and decoy alike. A plug 4 cells up the column satisfies the
+//    defensive rule for each of them.
+for (const name of ['phase', 'dash', 'decoy']) {
+  reseed(8); clock.t = 700_000;
+  const scene = makeScene({ plug: { x: 6, y: 5 },
+    over: { runnerPowersSelected: [name, name === 'dash' ? 'phase' : 'dash'], runnerPowersConsumed: [false, false] } });
+  const { bot } = hybrid(scene, [strategy('target_a', { power: name })]);
+  await frames(bot, 40);
+  const spent = scene._driven.filter((d) => d.kind === 'power');
+  const recorded = scene._driven.filter((d) => d.kind === 'recordPower');
+  check(`${name}: armed by Jev, fired by the runner AI's own rule through activateRunnerPowerByIndex`,
+    spent.length === 1 && spent[0].power === name, JSON.stringify(spent.map((x) => x.power)));
+  check(`${name}: intent recorded exactly once`, recorded.length === 1);
+  check(`${name}: credited to the arm`, bot.jevReport().powers.activated === 1 && bot.jevReport().powers.unarmedActivations === 0);
+}
+
+// 7b. Save means save: the same threat, nothing armed, nothing spent — even
+//     though the runner AI's rules would have fired.
+{
+  reseed(8); clock.t = 750_000;
+  const scene = makeScene({ plug: { x: 6, y: 5 } });
+  const { bot } = hybrid(scene, () => strategy('target_a', { power: 'none' }));
+  await frames(bot, 120);
+  check('nothing armed: no power spent under the same threat', !scene._driven.some((d) => d.kind === 'power'));
+  const plain = makeScene({ plug: { x: 6, y: 5 } });
+  const alone = new BotDriver(plain, { ...CFG }, AI_HOOKS);
+  await frames(alone, 40);
+  check('(whereas the runner AI on its own does spend one there)', plain._driven.some((d) => d.kind === 'power'));
+}
+
+// 8. Unavailable and consumed powers are refused and never activate.
+{
+  reseed(9); clock.t = 800_000;
+  const scene = makeScene({ over: { runnerPowersSelected: ['phase', 'dash'], runnerPowersConsumed: [false, true] } });
+  const { bot } = hybrid(scene, [strategy('target_a', { power: 'dash' }), strategy('target_a', { power: 'decoy' })], { });
+  await frames(bot, 10);
+  bot.strategist.pending.add('expired');
+  await frames(bot, 120);
+  const p = bot.jevReport().powers;
+  check('a consumed dash is refused', p.rejected.consumed === 1);
+  check('a decoy not in the loadout is refused', p.rejected['not-in-loadout'] === 1);
+  check('nothing was activated', !scene._driven.some((d) => d.kind === 'power'));
+}
+
+// 9. With nothing armed the runner AI's power rules are not even consulted,
+//    and the phase escape never fires; with a power armed they see only it.
+{
+  reseed(10); clock.t = 900_000;
+  const scene = makeScene({ plug: { x: 6, y: 12 } });
+  let consulted = 0, visible = [];
+  const hooks = { ...AI_HOOKS, considerRunnerPowerUse: (sc, ...a) => { consulted++; visible = [...(sc.aiRunnerPowersSelected || [])]; return AI_HOOKS.considerRunnerPowerUse(sc, ...a); } };
+  const { bot } = hybrid(scene, () => strategy('target_a'), { phaseEscapeCells: 9 }, hooks);
+  await frames(bot, 200);
+  check('nothing armed: considerRunnerPowerUse is never consulted', consulted === 0);
+  check('and the phase escape never fires', !scene._driven.some((d) => d.kind === 'power'));
+
+  reseed(10); clock.t = 950_000;
+  const s2 = makeScene({ plug: { x: 1, y: 13 } });   // far: nothing should fire
+  const h2 = { ...AI_HOOKS, considerRunnerPowerUse: (sc, ...a) => { visible = [...(sc.aiRunnerPowersSelected || [])]; return AI_HOOKS.considerRunnerPowerUse(sc, ...a); } };
+  const { bot: b2 } = hybrid(s2, () => strategy('target_a', { power: 'dash' }), {}, h2);
+  await frames(b2, 30);
+  check('dash armed: the AI\'s rules see only the dash slot', JSON.stringify(visible) === JSON.stringify([null, 'dash']), JSON.stringify(visible));
+  check('the player\'s own selection is never touched, and the spoof is undone',
+    JSON.stringify(s2.runnerPowersSelected) === JSON.stringify(['phase', 'dash']) && s2.aiRunnerPowersSelected === undefined);
+}
+
+// 10. No capable motor, no strategist. aiLevel 0 is refused outright.
+{
+  reseed(11); clock.t = 1_000_000;
+  const scene = makeScene();
+  let ticks = 0;
+  const fake = { tick() { ticks++; return {}; }, report() { return {}; } };
+  const errors = [];
+  const orig = console.error; console.error = (...a) => errors.push(a.join(' '));
+  const bot = new BotDriver(scene, { ...CFG, aiLevel: 0, strategist: fake }, AI_HOOKS);
+  await frames(bot, 20);
+  console.error = orig;
+  check('aiLevel 0: the strategist is never ticked', ticks === 0);
+  check('and the refusal is loud', errors.some((e) => /strategist needs the capable runner AI/.test(e)));
+}
+
+// 11. Without a strategist the bot is exactly what it was: the runner AI on
+//     its own objective (which is why the seam exists).
+{
+  reseed(12); clock.t = 1_100_000;
+  const scene = makeScene({ realTop: false, runner: { x: 6, y: 9 } });
+  const bot = new BotDriver(scene, { ...CFG }, AI_HOOKS);
+  await frames(bot, 900, () => !at(scene, { x: 6, y: 12 }));
+  check('no strategist: the runner AI walks to scene.stash as before', at(scene, { x: 6, y: 12 }));
+  check('no strategist: nothing to report', bot.jevReport() === null);
+}
 
 console.log('');
 if (failures.length) {

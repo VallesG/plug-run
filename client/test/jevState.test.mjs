@@ -1,114 +1,136 @@
-import assert from 'node:assert/strict';
-import { jevState, JEV_DIRECTIONS } from '../src/logic/jevState.js';
+// The strategic payload, under plain Node.
+//
+//   node client/test/jevState.test.mjs
+//
+// Two properties matter above all. The payload asks for STRATEGY (objective,
+// posture, power) and carries nothing a steering answer could be built from.
+// And it cannot tell which bag is real: the view BotDriver builds drops the
+// scene's stash/bunkStash names, and a board with the real bag swapped to the
+// other position produces a byte-identical payload.
+
+import { makeScene, keyPaths, AI_HOOKS } from './_jevWorld.mjs';
+import BotDriver from '../src/controllers/BotDriver.js';
+import { jevState } from '../src/logic/jevState.js';
+import { pathDistances, MOVEMENT_KEYS, MOVEMENT_WORDS } from '../src/logic/jevStrategy.js';
+
 let passed = 0;
-const check = (name, value) => { if (!value) throw new Error(name); passed++; };
-
-const CELL = 24;
-const sprite = (cx, cy, extra = {}) => ({ x: cx * CELL + CELL / 2, y: cy * CELL + CELL / 2, ...extra });
-function scene(over = {}) {
-  const walls = over.walls || [];
-  const blocked = new Set(walls.map(([x, y]) => x + ',' + y));
-  return {
-    cell: CELL, pad: { x: 0, y: 0 },
-    toCell(x, y) { return { x: Math.floor(x / CELL), y: Math.floor(y / CELL) }; },
-    isWalkableCell(cx, cy) { return !blocked.has(cx + ',' + cy); },
-    attacker: sprite(5, 5, { hp: 2 }),
-    defender: sprite(9, 5),
-    stash: sprite(2, 9),            // the REAL bag
-    bunkStash: sprite(12, 3),       // the decoy
-    extract: sprite(1, 1),
-    hasStash: false,
-    runnerPowersSelected: ['phase', 'dash'],
-    runnerPowersConsumed: [false, false],
-    ...over
-  };
+const failures = [];
+function check(name, cond, detail = '') {
+  if (cond) { passed++; console.log(`  ok  ${name}`); }
+  else { failures.push(`${name}${detail ? ' — ' + detail : ''}`); console.log(`  FAIL ${name}${detail ? ' — ' + detail : ''}`); }
 }
 
-// --- The fairness invariant, which is the whole point of the file ----------
+const botFor = (scene) => new BotDriver(scene, { aiLevel: 5, dangerCells: 5, coverPenalty: 0,
+  wrongTurnChance: 0, hesitateChance: 0, strategist: { tick: () => ({ objective: null, posture: 'balanced' }), report: () => ({}) } }, AI_HOOKS);
+
+function payloadFor(scene, trigger = 'house_start') {
+  const view = botFor(scene)._jevView(scene.attacker);
+  const dist = pathDistances(view, view.runner);
+  const plugDists = view.plugs.map((p) => pathDistances(view, p, 60));
+  return { view, payload: jevState(view, { dist, plugDists, trigger }) };
+}
+
+console.log('\njevState — strategic payload\n');
+
+// 1. Only strategic questions, only legal choices.
 {
-  const s = scene();
-  const { state } = jevState(s);
-  const blob = JSON.stringify(state);
-  check('bags are present', state.bags.length === 2);
-  check('nothing names the real bag', !/stash|bunk|real|decoy|fake/i.test(blob));
-  check('bags carry no distinguishing flag',
-    state.bags.every(b => Object.keys(b).sort().join() === 'd,x,y'));
-
-  // Swapping which bag the scene considers real must not change the payload.
-  const swapped = scene({ stash: sprite(12, 3), bunkStash: sprite(2, 9) });
-  check('payload is identical when real and decoy swap',
-    JSON.stringify(jevState(swapped).state) === blob);
+  const { payload } = payloadFor(makeScene());
+  const q = payload.questions;
+  check('asks exactly objective, posture and power', JSON.stringify(Object.keys(q).sort()) === '["objective","posture","power"]',
+    Object.keys(q).join(','));
+  check('objective choices are the two bags and hold',
+    JSON.stringify(Object.keys(q.objective.criteria)) === '["target_a","target_b","hold"]');
+  check('extract is not offered before pickup', !('extract' in q.objective.criteria));
+  check('posture choices', JSON.stringify(Object.keys(q.posture.criteria)) === '["safe","balanced","aggressive"]');
+  check('power choices are the ready powers plus none', JSON.stringify(Object.keys(q.power.criteria)) === '["none","phase","dash"]');
+  check('every question is a choice with object criteria',
+    Object.values(q).every((x) => x.type === 'choice' && x.criteria && !Array.isArray(x.criteria)));
 }
 
-// --- Only legal moves are offered -----------------------------------------
+// 2. Nothing a direction could be built from.
 {
-  const s = scene({ walls: [[5, 4], [4, 5]] });   // up and left are walls
-  const { state, questions } = jevState(s);
-  check('walls removed from open moves', state.open.sort().join() === 'down,right');
-  // choice criteria is an object of key -> description, not an array.
-  check('move criteria is an object', !Array.isArray(questions.move.criteria)
-    && typeof questions.move.criteria === 'object');
-  check('move question offers only legal directions',
-    Object.keys(questions.move.criteria).sort().join() === 'down,right');
-  check('each direction carries a coordinate hint',
-    questions.move.criteria.down === 'y+1' && questions.move.criteria.right === 'x+1');
-  check('every direction maps to a vector',
-    state.open.every(k => JEV_DIRECTIONS[k] && Number.isFinite(JEV_DIRECTIONS[k].x)));
+  const { payload } = payloadFor(makeScene({ plug: { x: 6, y: 4 } }));
+  const all = keyPaths(payload);
+  const badKey = all.find((p) => MOVEMENT_KEYS.includes(p.key) || ['open', 'x', 'y', 'me', 'grid', 'local'].includes(p.key));
+  check('no movement or coordinate keys anywhere', !badKey, badKey?.path);
+  const text = JSON.stringify(payload).toLowerCase();
+  const word = MOVEMENT_WORDS.find((w) => new RegExp('\\b' + w + '\\b').test(text));
+  check('no direction words anywhere, not even in instructions', !word, word);
+  check('targets are summarised by distance and exposure only',
+    payload.state.targets.every((t) => JSON.stringify(Object.keys(t)) === '["id","dist","plug","exposed"]'));
 }
 
-// --- Carrying changes the objective, and drops the bags from the payload ---
+// 3. Carrying: extraction (or a pause) is the only choice.
 {
-  const { state, questions } = jevState(scene({ hasStash: true }));
-  check('carrying is reported', state.carrying === true);
-  check('bags omitted once carrying', state.bags === undefined);
-  check('goal reflects carrying', state.goal === 'reach the car');
-  check('car distance present', state.car.d === Math.round(Math.hypot(4, 4)));
-  check('move question still asked', questions.move.type === 'choice');
+  const scene = makeScene();
+  scene.hasStash = true;
+  const { payload } = payloadFor(scene, 'extract_available');
+  check('carrying offers extract and hold only',
+    JSON.stringify(Object.keys(payload.questions.objective.criteria)) === '["extract","hold"]');
+  check('no bag summaries once carrying', !('targets' in payload.state));
+  check('extract marked available', payload.state.extract.available === true);
+  check('the trigger is named', payload.state.event === 'extract_available');
 }
 
-// --- Powers -----------------------------------------------------------------
+// 4. A decoy already out is not offered again; spent powers are listed apart.
 {
-  const both = jevState(scene());
-  check('power criteria is an object', !Array.isArray(both.questions.power.criteria));
-  check('available powers offered with none',
-    Object.keys(both.questions.power.criteria).join() === 'none,phase,dash');
-  check('powers described in the game\'s own words',
-    both.questions.power.criteria.phase === 'Through walls & bullets');
-
-  const spent = jevState(scene({ runnerPowersConsumed: [true, false] }));
-  check('consumed powers drop out', spent.state.powers.join() === 'dash');
-
-  const none = jevState(scene({ runnerPowersConsumed: [true, true] }));
-  check('no power question when nothing is available', none.questions.power === undefined);
-  check('unanswerable question is not billed', Object.keys(none.questions).join() === 'move');
+  const scene = makeScene({ over: { runnerPowersSelected: ['decoy', 'dash'], runnerPowersConsumed: [false, true], decoySprite: { active: true } } });
+  const { payload } = payloadFor(scene);
+  check('a second decoy is not offered while one is out', !payload.questions.power);
+  check('ready and spent are reported apart',
+    JSON.stringify(payload.state.powers) === JSON.stringify({ ready: ['decoy'], spent: ['dash'] }));
+  check('decoyOut reported', payload.state.decoyOut === true);
 }
 
-// --- Plugs ------------------------------------------------------------------
+// 5. THE FAIRNESS TEST. Swap which bag is real; nothing strategic may change.
 {
-  const two = jevState(scene({ defender2: sprite(6, 5) }));
-  check('both plugs reported', two.state.plugs.length === 2);
-  check('nearest plug first', two.state.plugs[0].d < two.state.plugs[1].d);
+  const a = payloadFor(makeScene({ realTop: true }));
+  const b = payloadFor(makeScene({ realTop: false }));
+  check('swapping the real bag leaves the payload byte-identical',
+    JSON.stringify(a.payload) === JSON.stringify(b.payload));
+  check('and the candidate list identical', JSON.stringify(a.view.candidates) === JSON.stringify(b.view.candidates));
 
-  const dead = jevState(scene({ defender: sprite(9, 5, { active: false }) }));
-  check('inactive plug omitted', dead.state.plugs.length === 0);
+  // Recursive scan of payload AND view: no identity words or keys, and no
+  // object reference to either scene sprite.
+  const scene = makeScene();
+  const bot = botFor(scene);
+  const view = bot._jevView(scene.attacker);
+  const { payload } = payloadFor(scene);
+  const ident = /\b(stash|bunk|bunkstash|real|genuine|fake|decoybag|isreal)\b/i;
+  for (const [label, obj] of [['payload', payload], ['view', view]]) {
+    const paths = keyPaths(obj);
+    const hit = paths.find((p) => ident.test(p.key) || (typeof p.value === 'string' && ident.test(p.value)));
+    check(`${label}: no key or string names a real or bunk bag`, !hit, hit?.path);
+    const ref = paths.find((p) => p.value === scene.stash || p.value === scene.bunkStash);
+    check(`${label}: holds no reference to either bag sprite`, !ref, ref?.path);
+  }
+  check('A is the top bag by position, whichever is real',
+    view.candidates[0].id === 'target_a' && view.candidates[0].cell.y === 2);
 }
 
-// --- Cost discipline --------------------------------------------------------
+// 6. A bag mid-fade (a bunk just picked up) is not a candidate — the player
+//    sees it vanish — and the remaining bag is relabelled by position.
 {
-  const { state, questions } = jevState(scene());
-  const chars = JSON.stringify({ state, questions }).length;
-  // Billing is per input token several times a second. The whole 16x35 grid
-  // would be ~600 chars on its own; a local view plus distances must stay far
-  // under that or the recording pass stops being cheap.
-  check('payload stays compact (' + chars + ' chars)', chars < 700);
-  check('no grid was sent', !/grid|walls|tiles/i.test(JSON.stringify(state)));
+  const scene = makeScene({ realTop: true });
+  scene.bunkStash._fading = true;           // bottom bag was the bunk
+  const { view, payload } = payloadFor(scene, 'stash_change');
+  check('a fading bag drops out', view.candidates.length === 1 && view.candidates[0].cell.y === 2);
+  check('the survivor is target_a', payload.state.targets.length === 1 && payload.state.targets[0].id === 'target_a');
+  check('and B is no longer offered', !('target_b' in payload.questions.objective.criteria));
 }
 
-// --- Degenerate scenes ------------------------------------------------------
+// 7. It is still cheap. The old per-frame payload measured ~136 tokens; this
+//    one is sent tens of times a race, not several times a second.
 {
-  check('no runner yields no payload', jevState(scene({ attacker: null })) === null);
-  const noCar = jevState(scene({ extract: null }));
-  check('missing car omitted rather than crashing', noCar.state.car === undefined);
+  const { payload } = payloadFor(makeScene({ plug: { x: 2, y: 3 } }));
+  const approx = Math.ceil(JSON.stringify(payload).length / 4);
+  check('payload stays compact (<450 estimated tokens)', approx < 450, `${approx}`);
 }
 
-console.log('jevState: ' + passed + ' assertions passed');
+console.log('');
+if (failures.length) {
+  console.log(`jevState: ${passed} passed, ${failures.length} FAILED`);
+  failures.forEach((f) => console.log('  - ' + f));
+  process.exit(1);
+}
+console.log(`jevState: ${passed} assertions passed`);

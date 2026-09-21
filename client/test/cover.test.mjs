@@ -68,6 +68,15 @@ console.log('\nCover routing\n');
   check('penalty 0 reproduces the old shortest-path behaviour', openRow.x === 2 && openRow.y === 4);
   check('with a penalty it steps out of the firing lane instead',
     covered.y !== 4, JSON.stringify(covered));
+
+  // BotDriver multiplies the penalty by coverCarryMul (1.8) while carrying,
+  // so a fractional penalty is the normal case, not an edge: 3 x 1.8 = 5.4.
+  // It used to index a bucket that did not exist and throw.
+  let threw = null, carried = null;
+  try { carried = coverAwareStep({ ...w, from: { x: 1, y: 4 }, goal: { x: 8, y: 4 }, threats, penalty: 3 * 1.8 }); }
+  catch (e) { threw = e; }
+  check('a fractional (carry-scaled) penalty does not throw', threw === null, threw?.message);
+  check('and still routes out of the lane', carried && carried.y !== 4, JSON.stringify(carried));
 }
 
 // Cover is a preference, not a phobia: when the only route is exposed, take it.

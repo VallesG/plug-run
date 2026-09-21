@@ -1,12 +1,12 @@
-// A decide() for JevDriver, backed by Jev on Cloudflare Workers AI.
+// A decide() for JevStrategist, backed by Jev on Cloudflare Workers AI.
 //
 // Request shape, from Cloudflare's model docs:
 //   POST /client/v4/accounts/{account}/ai/run
 //   { "model": "typesafe/jev", "input": { state, questions } }
 //
 // Answers come back keyed by question name, typed to the primitive asked:
-//   answers.move  = { type:'choice', choice:'left', confidence:0.8, probabilities:{...} }
-//   answers.power = { type:'choice', choice:'none',  confidence:0.9, probabilities:{...} }
+//   answers.objective = { type:'choice', choice:'target_a', confidence:0.8, probabilities:{...} }
+//   answers.power     = { type:'choice', choice:'none', confidence:0.9, probabilities:{...} }
 //
 // `usage.input_tokens` is the real billing figure, so the driver reports spend
 // from the API rather than from a character-count guess.
@@ -25,7 +25,7 @@ export { JEV_INPUT_USD_PER_MTOK, jevCostUsd } from '../logic/jevAnswer.js';
  *                   setting must also be "Unified billing".
  * @param fetchImpl  injectable for tests
  * @param signalMs   abort a request that outlives the driver's own timeout
- * @returns async ({state, questions}) => { move, power, confidence, usage }
+ * @returns async ({state, questions}) => mapJevAnswer(...) — a strategy, never a move
  */
 export function cloudflareJev({ accountId, apiToken, gatewayId, fetchImpl, signalMs = 2000 } = {}) {
   if (!accountId || !apiToken) throw new Error('cloudflareJev needs accountId and apiToken');
@@ -56,8 +56,8 @@ export function cloudflareJev({ accountId, apiToken, gatewayId, fetchImpl, signa
     }
     if (!res?.ok) throw new Error('jev http ' + (res?.status ?? '?'));
 
-    const answer = mapJevAnswer(await res.json());
-    if (!answer.move) throw new Error('jev returned no move answer');
-    return answer;
+    // Returned even when it names no usable objective: the strategist counts
+    // it as invalid, and its usage is still billed.
+    return mapJevAnswer(await res.json());
   };
 }

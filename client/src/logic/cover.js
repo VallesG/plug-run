@@ -64,7 +64,12 @@ export function coverAwareStep({ cols, rows, isWalkable, from, goal, threats, pe
   if (from.x === goal.x && from.y === goal.y) return null;
 
   const exposed = exposedCells({ cols, rows, isWalkable, threats });
-  const costOf = (x, y) => 1 + (exposed.has(key(x, y)) ? penalty : 0);
+  // Whole cells only: the bucket queue below is indexed by cost, and a
+  // fractional penalty (coverPenalty x coverCarryMul, e.g. 3 x 1.8 = 5.4)
+  // indexed a bucket that did not exist and threw — silently, inside the
+  // bot's try/catch, costing the frame's steering exactly while carrying.
+  const pen = Math.max(0, Math.round(penalty));
+  const costOf = (x, y) => 1 + (exposed.has(key(x, y)) ? pen : 0);
 
   // Small integer costs over ~560 cells: a bucket queue is both faster and
   // more predictable than a heap, and keeps the whole thing allocation-light

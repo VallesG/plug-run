@@ -11,7 +11,7 @@ import ProgressionManager from './ProgressionManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
-import { makeJevDriver, jevConfig } from './makeJevDriver.js';
+import { makeJevStrategist, jevConfig } from './makeJevStrategist.js';
 import { mapStats } from '../logic/runStats.js';
 import { advanceCursor, advanceSweep } from '../logic/seedCursor.js';
 import { MenuScene } from '../scenes/MenuScene.js';
@@ -387,12 +387,21 @@ export function installBotDriver() {
 
   BaseGameScene.prototype.__botInstalled = true;
   activeConfig = { ...DEFAULTS, ...cfg };
-  // ONE driver for the whole session, not one per scene: a BotDriver is
-  // rebuilt on every restart (see below), and a per-scene Jev would reset the
-  // cost and answer-rate figures on each house — which is exactly the data
-  // the spike exists to collect. Null unless ?jev=1, so nothing changes for
-  // anyone else.
-  const jev = makeJevDriver();
+  // ONE strategist for the whole session, not one per scene: a BotDriver is
+  // rebuilt on every restart (see below), and a per-scene strategist would
+  // reset the cost and decision figures on each house — which is exactly the
+  // data the spike exists to collect. Null unless ?jev=1, so nothing changes
+  // for anyone else.
+  //
+  // And only above the capable runner AI. With aiLevel 0 there is no motor
+  // for a strategy to direct, and the old answer — Jev steering cell by cell
+  // — is exactly what this design replaced, so it is refused outright.
+  let jev = makeJevStrategist();
+  if (jev && !(activeConfig.aiLevel > 0)) {
+    console.error('[JEV] refusing the strategist: aiLevel is ' + activeConfig.aiLevel +
+      '. Jev directs the runner AI and needs it switched on; drop aiLevel=0.');
+    jev = null;
+  }
   installModalAutoDismiss(cfg);
   installRoundLock(cfg);
   installAutoStart(activeConfig);
@@ -405,12 +414,13 @@ export function installBotDriver() {
       // Built lazily: no scene exists at install time, and each round's
       // scene.restart() must get a bot with fresh timers.
       if (!this._bot || this._bot.scene !== this) {
-        this._bot = new BotDriver(this, jev ? { ...cfg, jev } : cfg, AI_HOOKS);
+        this._bot = new BotDriver(this, jev ? { ...cfg, strategist: jev } : cfg, AI_HOOKS);
       }
       window.__plugRunLiveScene = this; // harness-only handle for inspection
       this._bot.update(delta);
     } catch (e) {
-      console.error('[BOT] update error:', e);
+      // The stack, not just the message: a recorder only sees console text.
+      console.error('[BOT] update error:', e?.stack ? String(e.stack).split(/\r?\n/).slice(0, 5).join(' | ') : e);
     }
   };
 
@@ -526,16 +536,17 @@ function installSummaryHelper() {
 }
 
 /**
- * window.__plugRunJev() — what Jev answered, drove, and cost.
+ * window.__plugRunJev() — what Jev decided, what was adopted, and what it cost.
  *
  * Read alongside __plugRunSummary(): the summary says how the runs went,
- * this says how much of that was Jev. A high answerRate with a low
- * steerShare means the answers arrived and were rejected, which is a
- * different diagnosis from the answers not arriving.
+ * this says how much of that was Jev's strategy. strategyActiveShare is the
+ * share of live race time a Jev-chosen objective was in force; the rest is
+ * the fair fallback objective or watchdog recovery, with the runner AI
+ * driving throughout.
  */
 function installJevHelper(jev) {
   if (typeof window === 'undefined') return;
-  window.__plugRunJevDriver = jev;
+  window.__plugRunJevStrategist = jev;
   window.__plugRunJev = function () {
     const bot = window.__plugRunLiveScene?._bot;
     const report = bot?.jevReport?.() || jev.report();
@@ -599,9 +610,10 @@ export function rivalsRecordConfig() {
 function jevProvenance(jev) {
   const r = jev.report();
   return {
-    driver: 'jev',
-    route: 'typesafe-direct',
-    modelRequested: jevConfig()?.model || 'jev-latest',
+    driver: 'jev-strategist',
+    motor: 'runner-ai',
+    route: jev.route || 'typesafe-direct',
+    modelRequested: jevConfig()?.mock ? 'mock-strategist' : (jevConfig()?.model || 'jev-latest'),
     modelReturned: r.model || null,
     ceilings: { maxRequests: r.requestLimit, maxInputTokens: r.tokenLimit },
     budgetStopped: r.budgetStopped,
@@ -680,10 +692,10 @@ function installRivalsRecorder(rec, cfg, jev = null) {
         dangerCells: cfg.dangerCells, openingDecoy: Boolean(cfg.openingDecoy),
         // WHO ACTUALLY DROVE THIS. skillPreset stays what the existing
         // validators expect, and this says separately that a model chose the
-        // route, because a Jev race is not an ordinary 'street' bot race and
+        // strategy, because a Jev race is not an ordinary 'street' bot race and
         // a bank that cannot tell them apart is a bank you cannot reason
         // about later.
-        ...(jev ? { driver: 'jev', jev: jevProvenance(jev) } : { driver: 'bot' })
+        ...(jev ? { driver: 'jev-strategist', jev: jevProvenance(jev) } : { driver: 'bot' })
       }
     });
     const traces = (window.__plugRunTraces || []).slice(store._traceMark || 0);

@@ -37,6 +37,7 @@
 
 import { planDodge } from '../logic/evasion.js';
 import { coverAwareStep, isExposedAt, phaseEscapeDir } from '../logic/cover.js';
+import { orderCandidates, postureTactics } from '../logic/jevStrategy.js';
 
 export const DEFAULTS = {
   // How often the bot re-decides, in ms. Human reaction floor is ~200ms and
@@ -158,15 +159,11 @@ export const DEFAULTS = {
 
   // Start a round straight from the menu instead of waiting for a tap, so an
   // unattended batch needs no human at all. 0 = off; see installAutoStart.
-  autoStart: 0,
-
-  // Reject a Jev answer the model itself is unsure of and let the tuned
-  // pathfinder take that step instead. Only consulted when a Jev driver is
-  // attached at all (?jev=1), so it is inert for every other session. 0
-  // means "take every answer", which is the honest default for a spike whose
-  // job is to measure Jev rather than a threshold picked in advance.
-  jevMinConfidence: 0
+  autoStart: 0
 };
+
+// Said once per session, not once per frame.
+let strategistRefusedLogged = false;
 
 export default class BotDriver {
   /**
@@ -178,15 +175,18 @@ export default class BotDriver {
    *                 free of the Phaser dependency graph and testable in Node.
    */
   constructor(scene, opts = {}, aiHooks = null) {
-    // `jev` is an object, not a knob — keep it out of cfg so nothing can set
-    // a driver from a query string.
-    const { jev = null, ...cfg } = opts;
+    // `strategist` is an object, not a knob — keep it out of cfg so nothing
+    // can set one from a query string.
+    const { strategist = null, ...cfg } = opts;
     this.scene = scene;
     this.cfg = { ...DEFAULTS, ...cfg };
     this.aiHooks = aiHooks;
-    this.jev = jev;
-    this._jevIntent = null;
-    this._jevPowerAt = null;
+    // The Jev strategist (JevStrategist), or null. It only ever supplies an
+    // objective, a posture and power decisions to the capable runner AI —
+    // see driveBorrowedAI — and it needs that AI: with aiLevel 0 there is no
+    // motor to direct, so it is refused rather than driving anything itself.
+    this.strategist = strategist;
+    this._plan = null;
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._startedAt = performance.now();
@@ -217,10 +217,10 @@ export default class BotDriver {
    */
   _onNewRound() {
     this._startedAt = performance.now();
-    // An answer about the last house must not steer the next one.
-    this.jev?.reset();
-    this._jevIntent = null;
-    this._jevPowerAt = null;
+    // The strategist notices the new house itself (houseKey in _jevView) and
+    // discards the last one's plan; only this object's copy goes here.
+    this._plan = null;
+    this._roundSeq = (this._roundSeq || 0) + 1;
     this._progressionApplied = false;
     this._borrowed = null;
     this._lastDir = null;
@@ -242,6 +242,11 @@ export default class BotDriver {
   /** Should we be driving with the game's own runner AI? */
   get useBorrowedAI() {
     return !!(this.aiHooks && this.cfg.aiLevel > 0 && this.scene.role === 'runner');
+  }
+
+  /** Jev strategist above the runner AI. Both, or it is not the hybrid. */
+  get hybrid() {
+    return !!this.strategist && this.useBorrowedAI;
   }
 
   /**
@@ -274,6 +279,33 @@ export default class BotDriver {
 
     if (!this._borrowed) this._borrowed = h.makeController(s);
 
+    // THE HYBRID. The strategist decides WHERE (an objective cell), HOW
+    // CAUTIOUSLY (a posture) and WHETHER A POWER MAY BE SPENT; the runner AI
+    // below decides every step and the instant any armed power fires. The
+    // objective reaches the AI through its objectiveProvider seam.
+    const hybrid = this.hybrid;
+    let armed = null;
+    if (hybrid) {
+      this._plan = this.strategist.tick(this._jevView(me), {
+        // Recovery hands the AI a fresh waypoint; clear its direction
+        // commitment so it can actually turn toward it.
+        onRecovery: () => { if (this._borrowed) this._borrowed._aiFlipGuardUntil = 0; }
+      });
+      // Never null in the hybrid: with no objective at all (a transient,
+      // e.g. both bags mid-change) the AI holds where it is rather than
+      // falling through to its own objective code, which targets the real bag.
+      const cell = this._plan.objective?.cell ?? s.toCell(me.x, me.y);
+      this._borrowed.objectiveProvider = () => cell;
+      // The AI's own random detour is route variety, not a destination: it
+      // stays on unless the strategy asked for the direct line (aggressive)
+      // or the watchdog is steering a recovery.
+      this._borrowed.allowDetour = this._plan.posture !== 'aggressive' && !this._plan.recovering;
+      armed = this._plan.armedPower || null;
+    } else if (this._borrowed.objectiveProvider) {
+      this._borrowed.objectiveProvider = null;
+      this._borrowed.allowDetour = false;
+    }
+
     const saved = {
       role: s.role,
       round: s.pveRound,
@@ -303,9 +335,16 @@ export default class BotDriver {
       // Throttled: considerRunnerPowerUse logs several lines per call and
       // enforces a 2s cooldown internally, so per-frame checking buys nothing
       // and buries the [RUN] telemetry under console spam.
-      if (now >= (this._nextPowerCheckAt || 0)) {
+      //
+      // In the hybrid, spending or saving is Jev's decision and only the
+      // armed power is visible to the AI's rules — every other slot is
+      // masked out, so "save it" is honoured by construction. Its offensive
+      // rules reason about the provided objective, not scene.stash.
+      if ((!hybrid || armed) && now >= (this._nextPowerCheckAt || 0)) {
         this._nextPowerCheckAt = now + 250;
+        if (hybrid) s.aiRunnerPowersSelected = (s.runnerPowersSelected || []).map((p) => (p === armed ? p : null));
         h.considerRunnerPowerUse(s, this._borrowed, now);
+        if (hybrid) s.aiRunnerPowersSelected = s.runnerPowersSelected;
       }
     } catch (e) {
       console.error('[BOT] borrowed AI failed, falling back:', e);
@@ -328,6 +367,7 @@ export default class BotDriver {
       if (after[i] && !before[i]) {
         s.intent?.recordPower(i);
         console.log('[BOT] used power slot', i, '->', s.runnerPowersSelected?.[i]);
+        if (hybrid) this.strategist.onPowerActivated?.(s.runnerPowersSelected?.[i]);
       }
     }
 
@@ -335,13 +375,15 @@ export default class BotDriver {
     // is already paid for, and spending it drifting toward the objective
     // instead of through the wall wastes it entirely.
     if (this._phaseDrive && now < this._phaseDrive.until && s.runnerIsPhasing?.()) {
+      this._countDrive('phaseWindow');
       return this._driveOrCoast(me, this._phaseDrive.dir);
     }
 
     // Phase out of a lane before reaching for footwork: if the run is pinned
     // in the open, the wall is the way out. Throttled — activateRunnerPower
     // is a one-shot, so this only needs to be asked occasionally.
-    if (now >= (this._nextPhaseAt || 0)) {
+    // In the hybrid only when Jev armed phase, as with considerRunnerPowerUse.
+    if ((!hybrid || armed === 'phase') && now >= (this._nextPhaseAt || 0)) {
       this._nextPhaseAt = now + 250;
       this._phaseEscape(me);
     }
@@ -363,17 +405,79 @@ export default class BotDriver {
       restMs: this.cfg.dodgeRestMs ?? DEFAULTS.dodgeRestMs
     });
     this._dodge = plan.state;
-    if (plan.dir) return this._driveOrCoast(me, plan.dir);
+    // Read by next frame's _jevView: the watchdog does not count a dodge as
+    // a stall — the evasion layer is working, not stuck.
+    this._evading = !!plan.dir;
+    if (plan.dir) { this._countDrive('dodge'); return this._driveOrCoast(me, plan.dir); }
 
     // Routing: prefer a covered approach over a short exposed one. This runs
     // on the replan tick rather than every frame — it is a route decision, not
     // a reflex, and the dodge above is the reflex layer.
     const routed = this._coverStep(me, now);
-    if (routed) return this._driveOrCoast(me, routed);
+    if (routed) { this._countDrive('cover'); return this._driveOrCoast(me, routed); }
 
     const vx = this._borrowed._aiVX || 0;
     const vy = this._borrowed._aiVY || 0;
+    this._countDrive('motor');
     return this._driveOrCoast(me, { x: vx, y: vy });
+  }
+
+  /**
+   * Which layer produced this frame's steer. Session-level (kept on the
+   * strategist, which outlives this object) and hybrid-only. There is no
+   * 'jev' bucket because there is no code path by which Jev steers.
+   */
+  _countDrive(layer) {
+    if (!this.hybrid) return;
+    const d = (this.strategist.driveSources ||= { motor: 0, dodge: 0, cover: 0, phaseWindow: 0 });
+    d[layer] = (d[layer] || 0) + 1;
+  }
+
+  /** The dodge range and cover weight in force: the preset's, shaded by posture. */
+  _tactics() {
+    const base = { dangerCells: this.cfg.dangerCells, coverPenalty: this.cfg.coverPenalty ?? DEFAULTS.coverPenalty };
+    return this.hybrid && this._plan ? postureTactics(this._plan.posture, base) : base;
+  }
+
+  /**
+   * What the strategist is allowed to know, as bare cells.
+   *
+   * THIS IS WHERE BAG IDENTITY IS DROPPED. scene.stash is the real bag and
+   * scene.bunkStash the decoy; both become anonymous cells here, before
+   * anything strategic sees them, and orderCandidates labels them by position
+   * alone. A bag mid-fade (a bunk just picked up — the player sees it vanish)
+   * is not a candidate.
+   */
+  _jevView(me) {
+    const s = this.scene;
+    const cellOf = (o) => (o && Number.isFinite(o.x) && Number.isFinite(o.y)) ? s.toCell(o.x, o.y) : null;
+    const liveBag = (d) => d && d.active !== false && d.visible !== false && !d._fading;
+    const bags = s.hasStash ? [] : [s.stash, s.bunkStash].filter(liveBag).map(cellOf).filter(Boolean);
+    const world = this._world();
+    const race = s.rivals?.race;
+    const house = race ? Math.min(7, (race.clearTimes?.length ?? 0) + 1) : 1;
+    const retries = race ? (race.retries ?? 0) : (this._roundSeq || 0);
+    return {
+      cols: s.cols, rows: s.rows, isWalkable: world.isWalkable,
+      runner: cellOf(me),
+      house, houseKey: house + ':' + retries,
+      live: !s.roundOver && !s.roundPausedForMenu && (!race || race.status === 'racing'),
+      isRunner: s.role === 'runner',
+      hp: me?.hp ?? null,
+      carrying: !!s.hasStash,
+      phasing: !!s.runnerIsPhasing?.(),
+      decoyActive: !!(s.decoySprite && s.decoySprite.active !== false),
+      candidates: orderCandidates(bags),
+      extract: cellOf(s.extract),
+      plugs: world.threats,
+      inLane: !!this.firingLaneRisk(me),
+      evading: !!this._evading,
+      // The motor's own detour waypoint, when it is walking one: the
+      // watchdog measures progress toward what the motor is actually doing.
+      motorWaypoint: (!s.hasStash && this._borrowed?.allowDetour && s._aiDetourCell) ? { x: s._aiDetourCell.x, y: s._aiDetourCell.y } : null,
+      exposedAt: (c) => isExposedAt(world, c),
+      powers: { selected: [...(s.runnerPowersSelected || [])], consumed: [...(s.runnerPowersConsumed || [])] }
+    };
   }
 
   /* ---------------- cover-aware routing ---------------- */
@@ -406,7 +510,7 @@ export default class BotDriver {
    * router for a freshly written one.
    */
   _coverStep(me, now) {
-    const penalty = (this.cfg.coverPenalty ?? DEFAULTS.coverPenalty);
+    const penalty = this._tactics().coverPenalty;
     if (!(penalty > 0)) return null;
 
     const s = this.scene;
@@ -503,6 +607,11 @@ export default class BotDriver {
   currentGoal() {
     const s = this.scene;
 
+    // In the hybrid the goal is the strategist's objective, so dodges and
+    // cover steps break ties toward the place Jev chose.
+    const planned = this.hybrid ? this._plan?.objective?.cell : null;
+    if (planned) return { x: s.toWorldX(planned.x), y: s.toWorldY(planned.y) };
+
     if (s.role === 'plug') {
       const t = s.attacker;
       return (t && t.active) ? { x: t.x, y: t.y } : null;
@@ -564,7 +673,7 @@ export default class BotDriver {
     if (!plugs.length) return null;
 
     const tol = s.cell * this.cfg.laneToleranceCells;
-    const range = s.cell * this.cfg.dangerCells;
+    const range = s.cell * this._tactics().dangerCells;
 
     // Nearest threat wins — it shoots first and its lane is the urgent one.
     let best = null;
@@ -613,92 +722,14 @@ export default class BotDriver {
   /* ---------------- steering ---------------- */
 
   /**
-   * Which way to go this replan, asking Jev first.
-   *
-   * WHAT JEV DECIDES, AND WHAT IT DOES NOT
-   * One cardinal step — route intent, nothing else. Evasion still outranks
-   * it (see update()), firing is still the tuned code's, and every answer
-   * that is late, missing, unusable or unsure falls straight through to
-   * plan(). A bad round of Jev therefore costs steps, never the run, and
-   * the pathfinder underneath is what makes that true.
-   */
-  _route(me, goal) {
-    if (!this.jev) return this.plan(me, goal);
-    // Counted on the driver, not here: this object is rebuilt on every scene
-    // restart, and a seven-house race would report only its last house.
-    const tally = this.jev.drive;
-    const intent = this._jevIntent;
-    if (!intent) {
-      tally.fallbacks++;
-      return this.plan(me, goal);
-    }
-
-    const min = this.cfg.jevMinConfidence ?? 0;
-    if (min > 0 && !(intent.confidence >= min)) {
-      tally.lowConfidence++;
-      return this.plan(me, goal);
-    }
-
-    // Jev is told which directions are open, but the board moves between the
-    // question and the answer landing up to half a second later. Walking the
-    // runner into a wall on a stale answer reads as the bot malfunctioning,
-    // so check the step is still legal before committing to it.
-    const s = this.scene;
-    const cell = s.toCell(me.x, me.y);
-    if (s.isWalkableCell?.(cell.x + intent.dir.x, cell.y + intent.dir.y) === false) {
-      tally.illegal++;
-      return this.plan(me, goal);
-    }
-
-    tally.steps++;
-    // driveMove normalises, so the unit cardinal is the whole vector.
-    return { x: intent.dir.x, y: intent.dir.y };
-  }
-
-  /**
-   * Spend a power because Jev asked for it.
-   *
-   * Through activateRunnerPowerByIndex — the slot a player's own tap reaches,
-   * and the one the opening Decoy and the borrowed AI already use. A power
-   * Jev names that is not in the loadout, or already spent, is ignored rather
-   * than conjured.
-   */
-  _maybeJevPower(intent) {
-    const name = intent?.power;
-    if (!name) return false;
-    // An answer is a decision, not a standing order. The same answer steers
-    // several frames (JevDriver.staleMs), and without this every one of them
-    // would burn another slot.
-    if (intent.at === this._jevPowerAt) return false;
-    this._jevPowerAt = intent.at;
-
-    const s = this.scene;
-    if (s.role !== 'runner') return false;
-    const sel = s.runnerPowersSelected || [];
-    const used = s.runnerPowersConsumed || [];
-    const slot = sel.findIndex((p, i) => p === name && !used[i]);
-    if (slot < 0) return false;
-
-    // Snapshot before activating: the scene mutates `used` in place.
-    const wasUsed = used[slot] === true;
-    s.activateRunnerPowerByIndex?.(slot);
-    if (s.runnerPowersConsumed?.[slot] && !wasUsed) {
-      // Mid-spoof the scene skips its own intent record, exactly as it does
-      // for the borrowed AI, so log it here for the trace.
-      s.intent?.recordPower?.(slot);
-      this.jev.drive.powers++;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Jev's cost, answer rate and share of the driving. Null when Jev is not
-   * wired. The numbers are the driver's own, so they cover the whole session
-   * rather than the scene this object happens to belong to.
+   * The Jev strategist's measurements. Null when none is attached. The
+   * numbers are the strategist's own, so they cover the whole session rather
+   * than the scene this object happens to belong to.
    */
   jevReport() {
-    return this.jev ? this.jev.report() : null;
+    if (!this.strategist) return null;
+    const r = this.strategist.report();
+    return { ...r, driveSources: { ...(this.strategist.driveSources || {}) } };
   }
 
   plan(me, goal) {
@@ -819,13 +850,12 @@ export default class BotDriver {
       return;
     }
 
-    // Asked every frame, not every replan: the driver rate limits itself and
-    // never blocks, so ticking here only means the next request leaves as
-    // soon as the last one lands rather than waiting for the replan that will
-    // consume it. Fresher answers for the same money.
-    if (this.jev) {
-      this._jevIntent = this.jev.tick(s);
-      this._maybeJevPower(this._jevIntent);
+    // A strategist with no capable motor under it is refused, loudly: it has
+    // nothing to direct, and it must never fall back to steering itself.
+    if (this.strategist && !strategistRefusedLogged) {
+      strategistRefusedLogged = true;
+      console.error('[JEV] strategist needs the capable runner AI (aiLevel > 0, runner role);' +
+        ' not attached — this session is the plain pathfinder, not a Jev run.');
     }
 
     if (now < this._nextPlanAt) {
@@ -859,7 +889,7 @@ export default class BotDriver {
       }
     }
 
-    this._driveOrCoast(me, this._route(me, goal));
+    this._driveOrCoast(me, this.plan(me, goal));
     this._maybeFire(me, now);
   }
 

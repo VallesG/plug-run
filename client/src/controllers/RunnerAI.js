@@ -167,7 +167,24 @@ export function updateRunnerBehavior(scene, aiController, delta) {
     // Dual AI: Check if THIS runner is the stash carrier
     const thisRunnerHasStash = scene.stashCarrier === scene.attacker;
 
-    if (!scene.hasStash) {
+    // OBJECTIVE PROVIDER. The bot harness can supply the objective cell (the
+    // Jev strategist, through BotDriver). When it does, that cell is the
+    // target and the real-stash choice below — which reads scene.stash,
+    // knowledge a player does not have — is never consulted. The one thing
+    // allowed to route *via* somewhere else is the AI's own random detour
+    // (route variety, below), and only when the provider's owner says so
+    // (aiController.allowDetour): it is a waypoint on the way, chosen at
+    // random, and the run returns to the provided cell once it is reached.
+    // Everything after target selection (pathing, wall sliding, stuck
+    // recovery, phase steering) is unchanged and is what walks the runner
+    // there. Absent a provider this block does nothing.
+    const provided = typeof aiController.objectiveProvider === 'function'
+      ? aiController.objectiveProvider(scene, attackerCell) : null;
+    const hasProvided = !!provided && Number.isFinite(provided.x) && Number.isFinite(provided.y);
+
+    if (hasProvided) {
+      objectiveTarget = { x: provided.x, y: provided.y };
+    } else if (!scene.hasStash) {
       // No one has stash yet - go pick it up
       if (scene.role === 'plug' && scene.mode === 'pve') {
         const bunkVisible = scene.bunkStash && scene.bunkStash.active && scene.bunkStash.visible;
@@ -201,7 +218,7 @@ export function updateRunnerBehavior(scene, aiController, delta) {
         }
       }
     }
-    if (scene._aiDetourCell && !scene.hasStash) {
+    if (scene._aiDetourCell && !scene.hasStash && (!hasProvided || aiController.allowDetour === true)) {
       if (toroDist(attackerCell, scene._aiDetourCell, scene.cols, scene.rows) <= 2) {
         scene._aiDetourCell = null; // reached — continue to the real objective
       } else {
@@ -509,6 +526,15 @@ export function considerRunnerPowerUse(scene, aiController, now) {
   // Legacy deterministic system: Use powers based on simple distance checks
   // Check BOTH powers each frame and use the most appropriate one for current situation
 
+  // The harness's objective when it supplies one (see updateRunnerBehavior's
+  // OBJECTIVE PROVIDER): the offensive rules below then reason about the
+  // place the runner is actually going, not about scene.stash.
+  const providedObjective = () => {
+    const c = typeof aiController?.objectiveProvider === 'function'
+      ? aiController.objectiveProvider(scene, scene.toCell(scene.attacker.x, scene.attacker.y)) : null;
+    return c && Number.isFinite(c.x) && Number.isFinite(c.y) ? { x: c.x, y: c.y } : null;
+  };
+
   // Helper function to check if phasing through walls would create a tactical advantage
   const shouldPhaseForTactics = () => {
     // No skill gate here. There used to be a `powerSkill < 0.4` bail with a
@@ -521,9 +547,11 @@ export function considerRunnerPowerUse(scene, aiController, now) {
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
 
     // Determine current objective (dual AI: use stashCarrier check)
-    let objectiveCell;
+    let objectiveCell = providedObjective();
     const thisRunnerHasStash = scene.stashCarrier === scene.attacker;
-    if (!scene.hasStash) {
+    if (objectiveCell) {
+      // supplied by the harness; see updateRunnerBehavior
+    } else if (!scene.hasStash) {
       objectiveCell = scene.toCell(scene.stash.x, scene.stash.y);
     } else {
       // Go to extraction regardless of who has stash
@@ -578,9 +606,11 @@ export function considerRunnerPowerUse(scene, aiController, now) {
     const attackerCell = scene.toCell(scene.attacker.x, scene.attacker.y);
 
     // Calculate distance to current objective (dual AI: use stashCarrier check)
-    let objectiveCell;
+    let objectiveCell = providedObjective();
     const thisRunnerHasStash = scene.stashCarrier === scene.attacker;
-    if (!scene.hasStash) {
+    if (objectiveCell) {
+      // supplied by the harness; see updateRunnerBehavior
+    } else if (!scene.hasStash) {
       objectiveCell = scene.toCell(scene.stash.x, scene.stash.y);
     } else {
       // Go to extraction regardless of who has stash

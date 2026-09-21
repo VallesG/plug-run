@@ -1,6 +1,6 @@
 import { mapJevAnswer } from '../logic/jevAnswer.js';
 
-// A decide() for JevDriver, backed by TypeSafe's own API.
+// A decide() for JevStrategist, backed by TypeSafe's own API.
 //
 //   POST https://api.typesafe.ai/v1/systemone
 //   Authorization: Bearer <TYPESAFE_API_KEY>
@@ -70,7 +70,12 @@ export function typesafeJev({
   if (!doFetch) throw new Error('no fetch available');
   const retries = Math.max(0, Math.min(maxRetries, MAX_RETRIES));
 
-  return async function decide({ state, questions }) {
+  // HTTP attempts, counted apart from the strategist's logical requests: one
+  // logical decision can cost up to 1 + MAX_RETRIES attempts, and the
+  // difference is exactly what a rate-limit problem looks like.
+  const http = { attempts: 0, retries: 0, statuses: {} };
+
+  async function decide({ state, questions }) {
     const body = JSON.stringify({ state, model, questions });
     const deadline = now() + signalMs;
     let attempt = 0;
@@ -84,6 +89,8 @@ export function typesafeJev({
       const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
       const timer = ctrl ? setTimeout(() => ctrl.abort(), left) : null;
       let res;
+      http.attempts++;
+      if (attempt > 0) http.retries++;
       try {
         res = await doFetch(url, {
           method: 'POST',
@@ -91,15 +98,19 @@ export function typesafeJev({
           body,
           signal: ctrl?.signal
         });
+      } catch (e) {
+        http.statuses.network = (http.statuses.network || 0) + 1;
+        throw e;
       } finally {
         if (timer) clearTimeout(timer);
       }
 
       const status = res?.status;
+      http.statuses[status ?? '?'] = (http.statuses[status ?? '?'] || 0) + 1;
       if (res?.ok) {
-        const answer = mapJevAnswer(await res.json());
-        if (!answer.move) throw new Error('jev returned no move answer');
-        return answer;
+        // Returned even when it names no usable objective: the strategist
+        // counts it as invalid, and its usage is still billed and counted.
+        return mapJevAnswer(await res.json());
       }
 
       const retryable = RETRY_STATUSES.includes(status) && attempt < retries;
@@ -121,5 +132,7 @@ export function typesafeJev({
       await sleep(backoff);
       attempt++;
     }
-  };
+  }
+  decide.http = http;
+  return decide;
 }

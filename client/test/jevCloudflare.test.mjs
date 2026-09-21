@@ -1,18 +1,17 @@
 import { cloudflareJev, jevCostUsd, JEV_MODEL } from '../src/controllers/jevCloudflare.js';
 import { jevState } from '../src/logic/jevState.js';
+import { orderCandidates, pathDistances } from '../src/logic/jevStrategy.js';
 let passed = 0;
 const check = (name, value) => { if (!value) throw new Error(name); passed++; };
 
-const CELL = 24;
-const sp = (x, y, e = {}) => ({ x: x * CELL + CELL / 2, y: y * CELL + CELL / 2, ...e });
-const scene = {
-  cell: CELL, pad: { x: 0, y: 0 },
-  toCell(x, y) { return { x: Math.floor(x / CELL), y: Math.floor(y / CELL) }; },
-  isWalkableCell: () => true,
-  attacker: sp(5, 5, { hp: 2 }), defender: sp(9, 5),
-  stash: sp(2, 9), bunkStash: sp(12, 3), extract: sp(1, 1), hasStash: false,
-  runnerPowersSelected: ['phase', 'dash'], runnerPowersConsumed: [false, false]
+// A strategic payload, built the way JevStrategist builds one.
+const view = {
+  cols: 14, rows: 12, isWalkable: (x, y) => x > 0 && y > 0 && x < 13 && y < 11,
+  runner: { x: 5, y: 5 }, house: 2, attempt: 1, hp: 2, carrying: false, phasing: false, decoyActive: false,
+  candidates: orderCandidates([{ x: 2, y: 9 }, { x: 12, y: 3 }]), extract: { x: 1, y: 1 },
+  inLane: false, exposedAt: () => false, powers: { selected: ['phase', 'dash'], consumed: [false, false] }
 };
+const payload = () => jevState(view, { dist: pathDistances(view, view.runner), plugDists: [pathDistances(view, { x: 9, y: 5 })], trigger: 'house_start' });
 
 // Response shaped exactly like Cloudflare's documented example for a choice
 // question, wrapped in the REST envelope the endpoint actually returns.
@@ -27,10 +26,9 @@ const ok = (answers, usage = { input_tokens: 412, output_tokens: 44 }) => ({
   const decide = cloudflareJev({
     accountId: 'acct123', apiToken: 'tok456',
     fetchImpl: async (url, init) => { seen = { url, init }; return ok({
-      move: { type: 'choice', choice: 'left', confidence: 0.8, probabilities: { left: 0.8 } } }); }
+      objective: { type: 'choice', choice: 'target_a', confidence: 0.8, probabilities: { target_a: 0.8 } } }); }
   });
-  const payload = jevState(scene);
-  const answer = await decide(payload);
+  const answer = await decide(payload());
 
   check('posts to the account ai/run endpoint',
     seen.url === 'https://api.cloudflare.com/client/v4/accounts/acct123/ai/run');
@@ -41,9 +39,9 @@ const ok = (answers, usage = { input_tokens: 412, output_tokens: 44 }) => ({
   check('state and questions are nested, not flattened',
     body.state === undefined && body.questions === undefined);
   check('choice criteria survive as an object',
-    !Array.isArray(body.input.questions.move.criteria));
+    !Array.isArray(body.input.questions.objective.criteria));
 
-  check('choice answer mapped to move', answer.move === 'left');
+  check('choice answer mapped to an objective', answer.objective === 'target_a' && answer.valid);
   check('confidence mapped', answer.confidence === 0.8);
   check('usage returned for billing', answer.usage.input_tokens === 412);
 }
@@ -52,14 +50,14 @@ const ok = (answers, usage = { input_tokens: 412, output_tokens: 44 }) => ({
 {
   let seen = null;
   const withGw = cloudflareJev({ accountId: 'a', apiToken: 't', gatewayId: 'plug-run',
-    fetchImpl: async (u, i) => { seen = i; return ok({ move: { type: 'choice', choice: 'up' } }); } });
+    fetchImpl: async (u, i) => { seen = i; return ok({ objective: { type: 'choice', choice: 'hold' } }); } });
   await withGw({ state: {}, questions: {} });
   check('gateway id sent so prepaid credits are used',
     seen.headers['cf-aig-gateway-id'] === 'plug-run');
 
   let bare = null;
   const noGw = cloudflareJev({ accountId: 'a', apiToken: 't',
-    fetchImpl: async (u, i) => { bare = i; return ok({ move: { type: 'choice', choice: 'up' } }); } });
+    fetchImpl: async (u, i) => { bare = i; return ok({ objective: { type: 'choice', choice: 'hold' } }); } });
   await noGw({ state: {}, questions: {} });
   check('header omitted entirely when no gateway configured',
     !('cf-aig-gateway-id' in bare.headers));
@@ -70,25 +68,25 @@ const ok = (answers, usage = { input_tokens: 412, output_tokens: 44 }) => ({
   const bare = cloudflareJev({ accountId: 'a', apiToken: 't',
     fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({
       model: 'jev-1.13.0',
-      answers: { move: { type: 'choice', choice: 'up', confidence: 1 } },
+      answers: { objective: { type: 'choice', choice: 'hold', confidence: 1 } },
       usage: { input_tokens: 100 } }) }) });
   const a = await bare({ state: {}, questions: {} });
-  check('bare Workers-binding shape works', a.move === 'up' && a.usage.input_tokens === 100);
+  check('bare Workers-binding shape works', a.objective === 'hold' && a.usage.input_tokens === 100);
 }
 
 // --- Powers -----------------------------------------------------------------
 {
   const decide = cloudflareJev({ accountId: 'a', apiToken: 't',
     fetchImpl: async () => ok({
-      move: { type: 'choice', choice: 'down', confidence: 0.6 },
+      objective: { type: 'choice', choice: 'target_b', confidence: 0.6 },
       power: { type: 'choice', choice: 'dash', confidence: 0.9 } }) });
   const a = await decide({ state: {}, questions: {} });
   check('power answer mapped', a.power === 'dash');
 
   const noPower = cloudflareJev({ accountId: 'a', apiToken: 't',
-    fetchImpl: async () => ok({ move: { type: 'choice', choice: 'down' } }) });
-  check('missing power answer is null, not undefined',
-    (await noPower({ state: {}, questions: {} })).power === null);
+    fetchImpl: async () => ok({ objective: { type: 'choice', choice: 'target_b' } }) });
+  check('missing power answer means save it',
+    (await noPower({ state: {}, questions: {} })).power === 'none');
 }
 
 // --- Failures surface as throws, for the driver to count and fall back -----
@@ -101,9 +99,9 @@ const ok = (answers, usage = { input_tokens: 412, output_tokens: 44 }) => ({
 
   const empty = cloudflareJev({ accountId: 'a', apiToken: 't',
     fetchImpl: async () => ok({}) });
-  threw = null;
-  try { await empty({ state: {}, questions: {} }); } catch (e) { threw = e; }
-  check('a response with no move answer throws', /no move answer/.test(threw?.message || ''));
+  const none = await empty({ state: {}, questions: {} });
+  check('a response with no objective comes back invalid for the strategist to count',
+    none.valid === false && none.reason === 'no-objective');
 }
 
 // --- Credentials are required up front, not at first call ------------------
