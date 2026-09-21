@@ -1,4 +1,5 @@
 import { carParkCenter, carDepartureTargets, carSkidLines, carExtractionOverlap } from '../src/logic/getawayCar.js';
+import { playExtraction } from '../src/controllers/extractionAnimation.js';
 import { readFileSync } from 'node:fs';
 let passed = 0;
 function check(name, ok) { if (!ok) throw Error(name); passed++; }
@@ -53,8 +54,10 @@ check('AI still guards exact extraction target',ai.includes('moveX = scene.extra
 const start = progression.indexOf('  async startExtractionSequence() {');
 const end = progression.indexOf('  endRound(winner)',start);
 const body = progression.slice(start,end).replace(/\/\*\*[\s\S]*?\*\/\s*$/,'');
-const extract = new Function('missionExitAllowed','ReplaySystem','carDepartureTargets','carSkidLines',
-  'return {'+body+'}.startExtractionSequence;')(()=>true,{finalize(){}},carDepartureTargets,carSkidLines);
+// The departure animation now lives in extractionAnimation.js, shared with
+// Block Rivals. Inject the real one so this still exercises the code that ships.
+const extract = new Function('missionExitAllowed','ReplaySystem','playExtraction',
+  'return {'+body+'}.startExtractionSequence;')(()=>true,{finalize(){}},playExtraction);
 for (const dir of directions) {
   const tweens = [], strokes = [];
   const vehicle = {...car,_outline:car._outline.map(o=>({...o}))};

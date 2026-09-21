@@ -4,6 +4,7 @@ import * as rules from '../src/logic/rivals.js';
 import * as presets from '../src/logic/rivalPresets.js';
 import * as skill from '../src/logic/rivalSkill.js';
 import * as capture from '../src/controllers/RivalReplayCapture.js';
+import { playExtraction } from '../src/controllers/extractionAnimation.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
@@ -19,7 +20,10 @@ const bindings={
   resolveRivalOpponent:(race)=>resolver(race), noteRivalOutcome:()=>true, loadRivalReplay:(race)=>replayLoader(race), playRivalReplay:(scene,opts)=>{played.push(opts);return {end(){}};},
   showRunnerLoadout:(ui,done,options)=>{loadouts++;lastPicker={ui,done,options};},
   drawPowerIcon:()=>node(), AudioManager:{get:()=>({isMusicMuted:()=>false,isMuted:()=>false,setMusicMute(){},setMute(){}})},
-  ReplaySystem:{finalize(){}}
+  ReplaySystem:{finalize(){}},
+  // Real module: with no car in these stub scenes it fires its callback
+  // immediately, so the flow assertions below stay synchronous.
+  playExtraction
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -448,3 +452,58 @@ const mixedSummary=rules.rivalRecord({...rules.newRivalRace(course,splits),power
 check('local race summary also retains initial mix',mixedSummary.powers.join()==='phase,dash');
 check('local summary exposes actual changed attempt mix',mixedSummary.attemptPowers[1].powers.join()==='decoy,phase');
 console.log('Rivals mixed summary: '+passed+' total assertions passed');
+
+// ---------------------------------------------------------------------------
+// Block Rivals plays the getaway instead of cutting to the card.
+//
+// Rivals used to call freeze() + removeCarryPackage() and jump straight to
+// "NEXT HOUSE" the moment the extraction sensor tripped, so the run appeared
+// to break off mid-escape. It now runs the same animation the campaign does.
+// The race clock is raw wall time, so the time the animation costs is credited
+// back -- the recorded opponents only ever paid RIVAL_TRANSITION_MS between
+// houses (rivals.js), and watching the getaway must not lose you the race.
+{
+  const tweens=[],events=[],restarts=[];
+  const raceState=rules.newRivalRace(rules.rivalCourse(91),[10000,20000,30000,40000,50000,60000,70000]);
+  const car={x:200,y:300,_outline:[]};
+  const scene={rivalRace:raceState,pveRound:1,cell:24,seed:5,pad:{x:0,y:0},
+    grid:Array.from({length:35},()=>Array(16).fill(0)),scale:{gameSize:{width:390,height:844}},
+    input:{keyboard:{enabled:true}},events:{once(){}},roundOver:false,
+    car,carOutDir:{x:1,y:0},carLights:null,
+    attacker:{active:true,x:180,y:300,setVisible(){this.hidden=true;return this;}},
+    removeCarryPackage(){this.packageRemoved=true;},
+    finalizeRun(){},forensics:null,
+    add:{rectangle:node,text:node,graphics(){return {setDepth(){return this;},lineStyle(){return this;},lineBetween(){return this;}};}},
+    scene:{restart:d=>restarts.push(d),start(){}},
+    gameUI:{showModal:o=>({...o,destroy(){}})},
+    tweens:{add(config){tweens.push(config);return config;}},
+    time:{delayedCall:(delay,fn)=>{const e={delay,fn,remove(){}};events.push(e);return e;}}
+  };
+  scene.gameUI.scene=scene;
+  const controller=new Race(scene);
+  controller.prepare(()=>{});
+  scene.runnerPowersSelected=['phase','dash'];
+  lastPicker.done();
+  now=4000;controller.update();
+  check('rivals getaway: race running',scene.rivalRace.status==='racing');
+
+  now=9000;controller.clearHouse();
+  check('clear time recorded before the animation',scene.rivalRace.clearTimes[0]===5000);
+  check('getaway animates rather than cutting away',tweens.length===1);
+  check('no house transition until the getaway finishes',events.length===0);
+
+  // Runner is pulled into the car.
+  now=9400;tweens[0].onComplete();
+  check('runner boards the car',scene.attacker.hidden===true && scene.packageRemoved===true);
+  check('car departure follows the boarding',tweens.length===2);
+  check('still no transition mid-getaway',events.length===0);
+
+  // Car leaves frame.
+  now=10000;tweens[1].onComplete();
+  check('transition scheduled once the car is gone',events.length===1 && events[0].delay===rules.RIVAL_TRANSITION_MS);
+  const credited=scene.rivalRace;
+  check('animation time credited back to the clock',credited.startedAt===4000+1000);
+  check('recorded clear time untouched by the credit',credited.clearTimes[0]===5000);
+  check('watching the getaway costs no race time',rules.rivalElapsed(credited,10000)===5000);
+}
+console.log('rivals getaway animation: assertions passed');

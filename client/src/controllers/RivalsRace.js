@@ -10,6 +10,7 @@ import {
 } from '../logic/rivals.js';
 import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome } from '../utils/rivalSession.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
+import { playExtraction } from './extractionAnimation.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
 import ReplaySystem from './ReplaySystem.js';
 import { drawPowerIcon } from './PowerIcons.js';
@@ -389,6 +390,11 @@ export default class RivalsRace {
       });
     });
   }
+  // Same pull-in as the campaign so the beat reads identically; a shorter
+  // drive-off because this is a race and it happens seven times.
+  static BOARD_MS = 400;
+  static DRIVE_MS = 600;
+
   clearHouse() {
     if (this.scene.roundOver || this.race.status!=='racing') return;
     const now=performance.now(), elapsed=rivalElapsed(this.race,now);
@@ -405,10 +411,24 @@ export default class RivalsRace {
     this.scene.finalizeRun?.('rivals_extracted');
     ReplaySystem.finalize();
     this.freeze();
-    this.scene.removeCarryPackage?.();
     const outcome=rivalOutcome(next.clearTimes,next.rivalTimes,elapsed);
-    if (outcome) this.finish(outcome,now);
-    else this.transition(this.scene.pveRound+1,RIVAL_TRANSITION_MS,'NEXT HOUSE');
+    // Show the getaway rather than cutting straight to the card, and credit
+    // back the time it actually takes, measured rather than
+    // assumed: the clear time is already recorded, but the race clock is raw
+    // wall time and the recorded opponents only ever paid
+    // RIVAL_TRANSITION_MS between houses (see rivals.js). Measuring also
+    // keeps the no-car path honest, where playExtraction calls back
+    // immediately and nothing should be credited.
+    const animStart=performance.now();
+    playExtraction(this.scene,{
+      boardMs:RivalsRace.BOARD_MS, driveMs:RivalsRace.DRIVE_MS,
+      onComplete:()=>{
+        if (this.disposed || this.race.status==='finished') return;
+        if (outcome) { this.finish(outcome,now); return; }
+        const spent=Math.max(0,performance.now()-animStart);
+        if (spent>0 && this.race.startedAt!=null) this.setRace({...this.race,startedAt:this.race.startedAt+spent});
+        this.transition(this.scene.pveRound+1,RIVAL_TRANSITION_MS,'NEXT HOUSE');
+      }});
   }
   retryHouse(reason='ended') {
     if (this.scene.roundOver || this.race.status!=='racing') return;

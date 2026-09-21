@@ -1,6 +1,7 @@
 import { eliminationTip } from '../logic/eliminationTips.js';
 import { drawEliminationTip } from './EliminationTip.js';
-import { carDepartureTargets, carSkidLines, carExtractionOverlap } from '../logic/getawayCar.js';
+import { carExtractionOverlap } from '../logic/getawayCar.js';
+import { playExtraction } from './extractionAnimation.js';
 import { drawBlockComplete } from './BlockComplete.js';
 import { crewSigil } from '../logic/crewSigils.js';
 import { seasonChapter } from '../logic/crewSeason.js';
@@ -328,66 +329,9 @@ export default class ProgressionManager {
       });
     };
 
-    // Runner boards the car: move to the car nose and shrink/fade
-    const boardThenDrive = () => {
-      if (this.scene.car) {
-        const dist = this.scene.cell * 8;
-        const dx = this.scene.carOutDir?.x || 0;
-        const dy = this.scene.carOutDir?.y || 0;
-
-        // The ink silhouette is part of the car, not a parked floor decal.
-        const targets = carDepartureTargets(this.scene);
-        const skidLines = carSkidLines(this.scene.seed, this.scene.car, this.scene.carOutDir, this.scene.cell);
-        if (skidLines.length) {
-          const marks = this.scene.add.graphics().setDepth(5);
-          marks.lineStyle(Math.max(1, this.scene.cell * 0.08), 0x080b0c, 0.55);
-          for (const line of skidLines) marks.lineBetween(line.x1, line.y1, line.x2, line.y2);
-        }
-
-        this.scene.tweens.add({
-          targets: targets,
-          x: `+=${dx * dist}`,
-          y: `+=${dy * dist}`,
-          duration: 1200,
-          ease: 'Sine.easeIn',
-          onComplete: doFade
-        });
-      } else {
-        doFade();
-      }
-    };
-
-    // Dual AI: Animate the CARRIER (who has the stash), not just attacker
-    const carrier = this.scene.stashCarrier || this.scene.attacker;
-
-    if (carrier && carrier.active && this.scene.car) {
-      const noseX = this.scene.car.x + (this.scene.carOutDir?.x || 0) * (this.scene.cell * 0.8);
-      const noseY = this.scene.car.y + (this.scene.carOutDir?.y || 0) * (this.scene.cell * 0.8);
-      // "Sucked into vehicle" effect matching tutorial animation
-      // Keep carry package attached so it shrinks with runner (looks more natural)
-      this.scene.tweens.add({
-        targets: carrier,
-        x: noseX,
-        y: noseY,
-        scaleX: 0.1,
-        scaleY: 0.1,
-        alpha: 0,
-        duration: 400,
-        ease: 'Sine.easeIn',
-        onComplete: () => {
-          carrier.setVisible(false);
-          // Remove carry package after animation completes
-          try {
-            this.scene.removeCarryPackage?.();
-          } catch {}
-          boardThenDrive();
-        }
-      });
-    } else {
-      // No animation, just cleanup and proceed
-      this.scene.removeCarryPackage?.();
-      boardThenDrive();
-    }
+    // Runner boards the car, then the car leaves. Shared with Block Rivals
+    // via extractionAnimation so the two modes cannot drift apart.
+    playExtraction(this.scene, { onComplete: doFade });
   }
 
   /**
