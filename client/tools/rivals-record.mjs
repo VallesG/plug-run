@@ -21,7 +21,9 @@
 //   npm i -D playwright-core           (browser: PLAYWRIGHT_BROWSERS_PATH)
 import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { chromium } from './lib/browsers.mjs';
+import { installVideo, probeMp4 } from './lib/video.mjs';
 
 function arg(name, fallback = null) {
   const i = process.argv.indexOf('--' + name);
@@ -46,7 +48,12 @@ const OPTIONS = {
   indexBase: Number(arg('opponentIndex', 1)),
   jev: JEV,
   jevMaxRequests: Number(arg('jevMaxRequests', 2500)),
-  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 2_000_000))
+  jevMaxInputTokens: Number(arg('jevMaxInputTokens', 2_000_000)),
+  // --video: an MP4 of each job, start to finish, with a diagnostic strip
+  // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
+  // which is git-ignored — keep --videoDir there.
+  video: Boolean(arg('video', false)),
+  videoDir: arg('videoDir', 'tools/recordings/jev/video')
 };
 
 // The page is given this instead of a key. It exists only so makeJevDriver
@@ -118,8 +125,18 @@ export async function recordJob(job, shared) {
     (OPTIONS.jev ? '-jev' : '');
   const log = m => console.log(`${((Date.now() - started) / 1000).toFixed(0).padStart(5)}s [${tag}] ${m}`);
   let openingDecoyFires = 0;
-  const problems = [];
-  page.on('pageerror', e => problems.push('pageerror: ' + e.message));
+  // Deduplicated: headless Chrome has no audio output, and every sound the
+  // game loads fails with "Unable to decode audio data" — hundreds of copies
+  // of one line that would bury anything else. First occurrence kept, with
+  // when it first happened and how many times. Audio failing never fails a run.
+  const problemCounts = new Map();
+  const problem = (msg) => {
+    const seen = problemCounts.get(msg);
+    if (seen) seen.count++;
+    else problemCounts.set(msg, { message: msg, count: 1, firstAtS: Math.round((Date.now() - started) / 1000) });
+  };
+  page.on('pageerror', e => problem('pageerror: ' + e.message));
+  page.on('console', m => { if (m.type() === 'error') problem('console: ' + m.text().slice(0, 300)); });
   // [RIVALS-REC] is the harness's own narration. The opening-Decoy line is let
   // through too: it is one line per house, and without it an openingDecoy run
   // is indistinguishable from a control run until the batch is over.
@@ -140,6 +157,9 @@ export async function recordJob(job, shared) {
       try { sessionStorage.setItem('jevKey', sentinel); } catch {}
     }, BROWSER_SENTINEL);
   }
+
+  // Armed before goto so the file starts at boot and the countdown is in it.
+  const video = OPTIONS.video ? await installVideo(page, { dir: OPTIONS.videoDir, tag }) : null;
 
   const query = new URLSearchParams({
     rivalsRecord: '1', courseSlot: String(job.slot), skillPreset: job.style,
@@ -178,7 +198,7 @@ export async function recordJob(job, shared) {
         renderer: s ? (s.renderer?.type === 2 ? 'WEBGL' : 'CANVAS') : null
       };
     }).catch(() => null);
-    if (!probe) { problems.push('page went away'); break; }
+    if (!probe) { problem('page went away'); break; }
     if (probe.fps) fps.push(probe.fps);
     if (probe.renderer) renderer = probe.renderer;
     if (probe.done) { done = true; break; }
@@ -188,7 +208,28 @@ export async function recordJob(job, shared) {
   const jevReport = OPTIONS.jev
     ? await page.evaluate(() => window.__plugRunJev?.() ?? null).catch(() => null)
     : null;
+  let videoOut = null;
+  if (video) {
+    // A few seconds of the result screen, then finalize BEFORE closing: an
+    // unstopped MediaRecorder leaves a truncated file behind.
+    if (done) await page.waitForTimeout(3000);
+    videoOut = await video.stop();
+    videoOut.events = video.events;
+    if (videoOut.ok && videoOut.path.endsWith('.mp4')) {
+      try { videoOut.container = probeMp4(videoOut.path); } catch (e) { videoOut.container = { error: e.message }; }
+    }
+    if (videoOut.ok) {
+      writeFileSync(videoOut.path.replace(/\.(mp4|webm)$/, '.events.json'), JSON.stringify(videoOut, null, 1));
+      log(`video ${videoOut.path}: ${(videoOut.bytes / 1e6).toFixed(1)} MB, ${videoOut.mime}, ` +
+        `${Math.round((videoOut.durationMs || 0) / 1000)}s, ~${videoOut.compositeFps} fps composited` +
+        (videoOut.container?.codec ? `; file: ${videoOut.container.codec} ${videoOut.container.width}x${videoOut.container.height}, ` +
+          `${videoOut.container.durationS}s, ${videoOut.container.frames} frames, ${videoOut.container.fps} fps` : ''));
+    } else log(`video FAILED: ${videoOut.reason}`);
+  }
+  await page.context().close();
   await browser.close();
+  const problems = [...problemCounts.values()];
+  for (const p of problems) log(`problem x${p.count} (first at ${p.firstAtS}s): ${p.message.slice(0, 160)}`);
 
   if (!store) { log('no recorder output'); return { job, ok: 0, races: [] }; }
   const median = fps.length ? fps.slice().sort((a, b) => a - b)[fps.length >> 1] : null;
@@ -197,6 +238,9 @@ export async function recordJob(job, shared) {
     job, done, problems,
     environment: { url: OPTIONS.url, viewport: { width: OPTIONS.width, height: OPTIONS.height }, renderer, fpsMedian: median, fpsSamples: fps.length },
     config: store.config, course: store.course, races: store.races,
+    video: videoOut ? { path: videoOut.path ?? null, mime: videoOut.mime ?? null, bytes: videoOut.bytes ?? null,
+      durationMs: videoOut.durationMs ?? null, compositeFps: videoOut.compositeFps ?? null,
+      container: videoOut.container ?? null } : null,
     // Two independent accounts of the same traffic: `relay` is what Node
     // actually sent, `report` is what the page believes happened. They should
     // agree, and a disagreement is worth knowing about.
@@ -288,4 +332,6 @@ async function main() {
   console.log(`\ndone: ${valid} valid of ${attempted} attempted across ${results.length} jobs`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+// pathToFileURL, not `file://${argv[1]}`: on Windows argv[1] is `C:\...`, the
+// template never matches, and the tool exits 0 having done nothing.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
