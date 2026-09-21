@@ -1,0 +1,66 @@
+// A decide() for JevDriver, backed by Jev on Cloudflare Workers AI.
+//
+// Request shape, from Cloudflare's model docs:
+//   POST /client/v4/accounts/{account}/ai/run
+//   { "model": "typesafe/jev", "input": { state, questions } }
+//
+// Answers come back keyed by question name, typed to the primitive asked:
+//   answers.move  = { type:'choice', choice:'left', confidence:0.8, probabilities:{...} }
+//   answers.power = { type:'choice', choice:'none',  confidence:0.9, probabilities:{...} }
+//
+// `usage.input_tokens` is the real billing figure, so the driver reports spend
+// from the API rather than from a character-count guess.
+
+export const JEV_MODEL = 'typesafe/jev';
+export const JEV_INPUT_USD_PER_MTOK = 0.042;   // output tokens are not billed
+
+/**
+ * @param accountId  Cloudflare account id
+ * @param apiToken   Cloudflare API token with Workers AI access
+ * @param fetchImpl  injectable for tests
+ * @param signalMs   abort a request that outlives the driver's own timeout
+ * @returns async ({state, questions}) => { move, power, confidence, usage }
+ */
+export function cloudflareJev({ accountId, apiToken, fetchImpl, signalMs = 2000 } = {}) {
+  if (!accountId || !apiToken) throw new Error('cloudflareJev needs accountId and apiToken');
+  const doFetch = fetchImpl || globalThis.fetch;
+  if (!doFetch) throw new Error('no fetch available');
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run`;
+
+  return async function decide(payload) {
+    // Abort rather than let a stalled socket outlive the decision it answers.
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), signalMs) : null;
+    let res;
+    try {
+      res = await doFetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: JEV_MODEL, input: payload }),
+        signal: ctrl?.signal
+      });
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+    if (!res?.ok) throw new Error('jev http ' + (res?.status ?? '?'));
+
+    const body = await res.json();
+    // The REST endpoint wraps results in { result, success, errors }; the
+    // Workers binding returns the payload bare. Accept either.
+    const out = body?.result ?? body;
+    const answers = out?.answers;
+    if (!answers?.move) throw new Error('jev returned no move answer');
+
+    return {
+      move: answers.move.choice,
+      power: answers.power?.choice ?? null,
+      confidence: answers.move.confidence ?? null,
+      usage: out.usage || null
+    };
+  };
+}
+
+/** Dollars for a run, from the API's own token counts. */
+export function jevCostUsd(inputTokens) {
+  return (Number(inputTokens) || 0) / 1e6 * JEV_INPUT_USD_PER_MTOK;
+}

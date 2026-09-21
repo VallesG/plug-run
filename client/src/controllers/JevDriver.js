@@ -38,7 +38,8 @@ export default class JevDriver {
     this.now = opts.now || (() => performance.now());
     this.last = null;          // { move, power, at }
     this.inFlight = null;      // { startedAt }
-    this.stats = { requests: 0, answers: 0, errors: 0, timeouts: 0, reused: 0, tokensApprox: 0 };
+    this.stats = { requests: 0, answers: 0, errors: 0, timeouts: 0, reused: 0,
+      tokensApprox: 0, tokensBilled: 0 };
   }
 
   /**
@@ -69,7 +70,7 @@ export default class JevDriver {
   _ask(payload, startedAt) {
     this.inFlight = { startedAt };
     this.stats.requests++;
-    // Rough, for cost reporting during a spike -- not a billing figure.
+    // A character-count guess, only used until the API reports real usage.
     this.stats.tokensApprox += Math.ceil(JSON.stringify(payload).length / 4);
 
     let settled = false;
@@ -94,6 +95,10 @@ export default class JevDriver {
         const move = answer && answer.move;
         if (!JEV_DIRECTIONS[move]) { this.stats.errors++; return; }
         this.stats.answers++;
+        // Jev returns usage.input_tokens; prefer it over the guess above.
+        if (Number.isFinite(answer.usage?.input_tokens)) {
+          this.stats.tokensBilled += answer.usage.input_tokens;
+        }
         this.last = {
           move,
           dir: JEV_DIRECTIONS[move],
@@ -108,12 +113,16 @@ export default class JevDriver {
 
   /** Cost and health, for deciding whether the spike was worth it. */
   report() {
-    const { requests, answers, errors, timeouts } = this.stats;
+    const { requests, answers, errors, timeouts, tokensBilled, tokensApprox } = this.stats;
+    // Real token counts once any answer has carried usage; the estimate is a
+    // stand-in and is marked as such so a spike never quotes a guess as spend.
+    const tokens = tokensBilled || tokensApprox;
     return {
       ...this.stats,
+      tokenSource: tokensBilled ? 'api' : 'estimated',
       answerRate: requests ? +(answers / requests).toFixed(3) : 0,
       failureRate: requests ? +((errors + timeouts) / requests).toFixed(3) : 0,
-      costApproxUsd: +(this.stats.tokensApprox / 1e6 * 0.042).toFixed(4)
+      costUsd: +(tokens / 1e6 * 0.042).toFixed(4)
     };
   }
 }

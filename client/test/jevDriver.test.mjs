@@ -115,9 +115,22 @@ function rig(answerer, opts = {}) {
   await flush();
   const rep = r.d.report();
   check('tokens estimated', rep.tokensApprox > 50 && rep.tokensApprox < 400);
-  check('cost reported', rep.costApproxUsd >= 0);
+  check('estimate flagged as such', rep.tokenSource === 'estimated');
+  check('cost reported', rep.costUsd >= 0);
   check('answer rate tracked', rep.answerRate === 1);
   check('failure rate tracked', rep.failureRate === 0);
+}
+
+// --- Real usage from the API beats the character-count guess ---------------
+{
+  const r = rig();
+  r.tick();
+  r.pending[0].res({ move: 'up', usage: { input_tokens: 412, output_tokens: 40 } });
+  await flush();
+  const rep = r.d.report();
+  check('billed tokens recorded', rep.tokensBilled === 412);
+  check('cost comes from the API', rep.tokenSource === 'api');
+  check('cost uses billed tokens', rep.costUsd === +(412 / 1e6 * 0.042).toFixed(4));
 }
 
 // --- A scene with no runner asks nothing ------------------------------------

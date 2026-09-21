@@ -25,7 +25,21 @@ const DIRS = [
   { k: 'right', x: 1, y: 0 }
 ];
 
+/** Directions, exported so the driver maps Jev's answer back without guessing. */
+export const JEV_DIRECTIONS = DIRS.reduce((acc, d) => (acc[d.k] = { x: d.x, y: d.y }, acc), {});
+
 const cellsBetween = (a, b) => Math.round(Math.hypot(a.x - b.x, a.y - b.y));
+
+// Short because every character is billed, explicit because the model has to
+// map a direction word onto the coordinates in the state.
+const MOVE_HINT = { up: 'y-1', down: 'y+1', left: 'x-1', right: 'x+1' };
+// The game's own wording for each power, so the model is told what a player
+// is told.
+const POWER_HINT = {
+  phase: 'Through walls & bullets',
+  dash: 'Burst out of danger',
+  decoy: 'Double draws their fire'
+};
 
 /** Cell coordinates of a sprite, or null when it is absent. */
 function cellOf(scene, sprite) {
@@ -79,11 +93,14 @@ export function jevState(scene) {
   if (bags.length) state.bags = bags;
   if (car) state.car = { x: car.x, y: car.y, d: cellsBetween(me, car) };
 
+  // `choice` criteria is an OBJECT of key -> description. (Arrays are the
+  // `score` primitive's shape; passing one here is silently the wrong type.)
+  const legal = open.length ? open : Object.keys(JEV_DIRECTIONS);
   const questions = {
     move: {
       type: 'choice',
-      instructions: 'Which way should the runner move right now?',
-      criteria: open.length ? open : ['up', 'down', 'left', 'right']
+      instructions: 'Which way should the runner move? x grows right, y grows down.',
+      criteria: legal.reduce((acc, k) => (acc[k] = MOVE_HINT[k], acc), {})
     }
   };
   // Only ask about powers when one is actually available. An unanswerable
@@ -91,13 +108,11 @@ export function jevState(scene) {
   if (powers.length) {
     questions.power = {
       type: 'choice',
-      instructions: 'Use a power this instant, or none? Powers are single use.',
-      criteria: ['none', ...powers]
+      instructions: 'Spend a power now, or save it? Each is single use.',
+      criteria: powers.reduce((acc, p) => (acc[p] = POWER_HINT[p] || p, acc),
+        { none: 'Save them for later' })
     };
   }
 
   return { state, questions };
 }
-
-/** Directions, exported so the driver maps Jev's answer back without guessing. */
-export const JEV_DIRECTIONS = DIRS.reduce((acc, d) => (acc[d.k] = { x: d.x, y: d.y }, acc), {});

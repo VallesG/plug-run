@@ -45,8 +45,13 @@ function scene(over = {}) {
   const s = scene({ walls: [[5, 4], [4, 5]] });   // up and left are walls
   const { state, questions } = jevState(s);
   check('walls removed from open moves', state.open.sort().join() === 'down,right');
+  // choice criteria is an object of key -> description, not an array.
+  check('move criteria is an object', !Array.isArray(questions.move.criteria)
+    && typeof questions.move.criteria === 'object');
   check('move question offers only legal directions',
-    questions.move.criteria.sort().join() === 'down,right');
+    Object.keys(questions.move.criteria).sort().join() === 'down,right');
+  check('each direction carries a coordinate hint',
+    questions.move.criteria.down === 'y+1' && questions.move.criteria.right === 'x+1');
   check('every direction maps to a vector',
     state.open.every(k => JEV_DIRECTIONS[k] && Number.isFinite(JEV_DIRECTIONS[k].x)));
 }
@@ -64,7 +69,11 @@ function scene(over = {}) {
 // --- Powers -----------------------------------------------------------------
 {
   const both = jevState(scene());
-  check('available powers offered with none', both.questions.power.criteria.join() === 'none,phase,dash');
+  check('power criteria is an object', !Array.isArray(both.questions.power.criteria));
+  check('available powers offered with none',
+    Object.keys(both.questions.power.criteria).join() === 'none,phase,dash');
+  check('powers described in the game\'s own words',
+    both.questions.power.criteria.phase === 'Through walls & bullets');
 
   const spent = jevState(scene({ runnerPowersConsumed: [true, false] }));
   check('consumed powers drop out', spent.state.powers.join() === 'dash');
