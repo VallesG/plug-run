@@ -355,6 +355,26 @@ time, and rules / record / replay / capture / bank versions.
 The ordinary assembler (`tools/rivals-assemble.mjs`) now refuses any Jev
 race, so a Jev capture cannot reach `rivals/v2` by accident.
 
+## Watching the runs
+
+`tools/jev-preview.mjs` builds a local page for every run in the Jev bank:
+its race footage, a replay render where one exists, the run's numbers from
+its provenance, per-house splits and deaths, and a clickable timeline
+(clears, deaths, pickups, bunk bags, and each strategy Jev adopted) built
+from the footage's `.events.json`. It reads only files already on disk and
+writes only `tools/recordings/jev/preview/index.html`.
+
+    node tools/jev-preview.mjs
+    npx vite tools/recordings/jev --port 4180 --host 127.0.0.1   # open /preview/
+
+`tools/rivals-replay-video.mjs` renders a banked run through the game's own
+replay player — what a player sees behind WATCH RIVAL — into the same
+folder. Use it when a run's footage is missing or was recorded with the
+Canvas renderer; the page then defaults to the replay. It needs a served
+build (`npx vite preview --host 127.0.0.1 --port 4173 --strictPort`).
+
+    node tools/rivals-replay-video.mjs --bank jev-v1 --ids <recordingID>,...
+
 ## Budget
 
 Event-driven requests change the arithmetic entirely. The old design asked

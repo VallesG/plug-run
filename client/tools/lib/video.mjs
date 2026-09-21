@@ -28,7 +28,7 @@ import { spawnSync } from 'node:child_process';
 export const STRIP_PX = 112;
 
 /** Runs in the page, before any game script. Everything it needs is passed in. */
-function pageSide({ strip, fps }) {
+function pageSide({ strip, fps, manual = false }) {
   const TYPES = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1',
     'video/webm;codecs=vp9', 'video/webm;codecs=vp8'];
   const mime = TYPES.find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || null;
@@ -179,7 +179,12 @@ function pageSide({ strip, fps }) {
   }
 
   // Recording starts as soon as the game canvas exists, so the countdown and
-  // race start are in the file.
+  // race start are in the file — or, with manual, when the caller says so
+  // (window.__plugRunVideoBegin), e.g. at the moment a replay starts playing.
+  if (manual) {
+    window.__plugRunVideoBegin = () => { const c = document.querySelector('canvas'); if (c) start(c); return !!c; };
+    return;
+  }
   const boot = setInterval(() => {
     const c = document.querySelector('canvas');
     if (!c) return;
@@ -192,7 +197,7 @@ function pageSide({ strip, fps }) {
  * Arm video capture on a page. Call before page.goto().
  * Returns { stop() } — stop() finalizes the file and returns what was made.
  */
-export async function installVideo(page, { dir, tag, fps = 30, stats = false }) {
+export async function installVideo(page, { dir, tag, fps = 30, stats = false, manual = false }) {
   mkdirSync(dir, { recursive: true });
   const base = join(dir, `${tag}-${Date.now()}`);
   let stream = null, path = null, bytes = 0;
@@ -210,7 +215,7 @@ export async function installVideo(page, { dir, tag, fps = 30, stats = false }) 
   await page.exposeFunction('__plugRunVideoEvent', (e) => {
     events.push(e);
   });
-  await page.addInitScript(pageSide, { strip: stats ? STRIP_PX : 0, fps });
+  await page.addInitScript(pageSide, { strip: stats ? STRIP_PX : 0, fps, manual });
 
   return {
     events,
