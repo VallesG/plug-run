@@ -139,6 +139,34 @@ check('another house is counted separately', rivalUpcomingAttempt({ capture: { h
     check(`attempt ${seg.attempt}: the genuine pocket is still not stored on the segment`,
       !('real' in seg) && !('genuine' in seg) && !('realAtPrimary' in seg));
   }
+  // Anti-camp can move a camped bag to a random floor cell mid-attempt
+  // (BaseGameScene: randomFloorCellFarFrom). Events still name the bag by the
+  // pocket it started in: here both bags are moved next to each other's
+  // pocket before they are taken, and nothing is mislabelled.
+  {
+    const attempt = rivalUpcomingAttempt(race, HOUSE);
+    const genuine = rivalGenuinePocket(houseSeed, attempt);
+    const pockets = [arena.objectives.stash, arena.objectives.extract];
+    const scene = {
+      pveRound: HOUSE, seed: houseSeed, cols: course.cols, rows: course.rows, cell: CELL, pad: { x: 0, y: 0 },
+      stashCell: pockets[0], extractCell: pockets[1], egress: arena.egress,
+      attacker: { ...world(arena.spawns.runner), active: true, visible: true, hp: 1 },
+      stash: { ...world(pockets[genuine]), active: true, visible: true },
+      bunkStash: { ...world(pockets[1 - genuine]), active: true, visible: true },
+      runnerPowersSelected: ['phase', 'dash'], runnerPowersConsumed: [false, false], hasStash: false
+    };
+    beginAttemptCapture(scene, race, clock += 100);
+    Object.assign(scene.stash, world(pockets[1 - genuine]));
+    Object.assign(scene.bunkStash, world(pockets[genuine]));
+    scene.bunkStash._fading = true; tickAttemptCapture(scene, race, clock += 700);
+    scene.hasStash = true; tickAttemptCapture(scene, race, clock += 700);
+    endAttemptCapture(scene, race, 'caught', clock += 700);
+    const seg = race.capture.segments.at(-1);
+    const ev = (k) => seg.events.find((e) => e.k === k);
+    check('a relocated real bag is still recorded as the genuine pocket', ev('pickup')?.i === genuine, JSON.stringify(seg.events));
+    check('a relocated bunk is still recorded as the other pocket', ev('bunk')?.i === 1 - genuine);
+  }
+
   // And the guard is real: a board built the OLD way (one draw per seed) on
   // an attempt where the reroll differs is reported, not silently recorded.
   {

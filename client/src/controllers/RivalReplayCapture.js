@@ -55,8 +55,9 @@ export function beginAttemptCapture(scene, race, now) {
     weapon: scene.allowedGuns?.[0] ?? scene.weapon ?? null
   });
   // The board must hold the genuine stash where the replay will say it is.
+  let realPocket = null;
   if (scene.stash && scene.stashCell) {
-    const onBoard = nearestStash(seg.stashes, cellOf(scene, scene.stash.x, scene.stash.y));
+    const onBoard = realPocket = nearestStash(seg.stashes, cellOf(scene, scene.stash.x, scene.stash.y));
     const derived = rivalGenuinePocket(seg.houseSeed, seg.attempt);
     if (onBoard !== derived) {
       console.error('[RIVALS] stash assignment mismatch: house ' + house + ' attempt ' + seg.attempt +
@@ -65,7 +66,7 @@ export function beginAttemptCapture(scene, race, now) {
   }
   cap.current = {
     house, attempt: seg.attempt, startedMs: rivalElapsed(race, now), t0: now, nextSampleAt: now, seg,
-    seenBullets: new WeakSet(), lastShotT: -1, hadStash: false, bunked: [false, false],
+    seenBullets: new WeakSet(), lastShotT: -1, hadStash: false, bunked: [false, false], realPocket,
     orderedPowers: [...(scene.runnerPowersSelected || race.powers)],
     powers: [...(scene.runnerPowersConsumed || [false, false])], hp: scene.attacker?.hp ?? null, dead: false
   };
@@ -113,15 +114,20 @@ export function tickAttemptCapture(scene, race, now) {
       }
     }
   }
+  // Pickup and bunk name WHICH bag, by the pocket it started the attempt in —
+  // not the pocket nearest where it was taken. The game's anti-camp rule can
+  // move a camped bag to a random floor cell mid-attempt, and a real bag
+  // picked up there sat nearer the bunk's pocket often enough to record a
+  // pickup of the bunk.
   if (!cur.hadStash && scene.hasStash) {
     cur.hadStash = true;
     const real = scene.stash ? cellOf(scene, scene.stash.x, scene.stash.y) : null;
-    const i = real ? nearestStash(cur.seg.stashes, real) : 0;
+    const i = cur.realPocket ?? (real ? nearestStash(cur.seg.stashes, real) : 0);
     pushReplayEvent(cur.seg, t, 'pickup', { i });
   }
   const bunk = scene.bunkStash;
   if (bunk && bunk._fading && !cur.bunked[0] && !cur.bunked[1]) {
-    const i = nearestStash(cur.seg.stashes, cellOf(scene, bunk.x, bunk.y));
+    const i = cur.realPocket != null ? 1 - cur.realPocket : nearestStash(cur.seg.stashes, cellOf(scene, bunk.x, bunk.y));
     cur.bunked[i] = true;
     pushReplayEvent(cur.seg, t, 'bunk', { i });
   }
