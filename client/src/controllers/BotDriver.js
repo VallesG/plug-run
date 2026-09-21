@@ -584,6 +584,11 @@ export default class BotDriver {
 
     console.log('[BOT] phasing out of a lane through', exit.dir, '-> landing', exit.landing);
     s.activateRunnerPowerByIndex?.(slot);
+    // This spend happens outside the borrowed-AI spoof, so the after-loop in
+    // driveBorrowedAI never sees it: tell the strategist here, or its
+    // activation count comes up one short of the trace (and the armed phase
+    // is later counted as expired unused).
+    if (this.hybrid && used[slot]) this.strategist.onPowerActivated?.('phase');
 
     // Commit the window to the direction we picked. Without this the borrowed
     // AI's phase steering aims at the distant objective instead, which is

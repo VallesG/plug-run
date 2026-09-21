@@ -244,6 +244,23 @@ for (const name of ['phase', 'dash', 'decoy']) {
     JSON.stringify(s2.runnerPowersSelected) === JSON.stringify(['phase', 'dash']) && s2.aiRunnerPowersSelected === undefined);
 }
 
+// 9b. A phase spent by the lane escape (BotDriver's own layer, outside the
+//     borrowed AI) is the armed power's activation like any other: every
+//     power in the trace is counted, so the bank's trace check holds. The
+//     runner stands under the one-cell wall with the plug down its column.
+{
+  reseed(12); clock.t = 1_050_000;
+  const scene = makeScene({ runner: { x: 6, y: 8 }, plug: { x: 6, y: 12 } });
+  const hooks = { ...AI_HOOKS, considerRunnerPowerUse: () => {} };   // only the escape may spend
+  const { bot } = hybrid(scene, () => strategy('target_a', { power: 'phase' }), { phaseEscapeCells: 9 }, hooks);
+  await frames(bot, 60);
+  const p = bot.jevReport().powers;
+  const spent = scene._driven.filter((d) => d.kind === 'power');
+  check('the lane escape spent the armed phase', spent.length === 1 && spent[0].power === 'phase', JSON.stringify(spent));
+  check('and the strategist counted it as an activation', p.activated === 1 && p.unarmedActivations === 0 && p.expiredUnused === 0,
+    JSON.stringify(p));
+}
+
 // 10. No capable motor, no strategist. aiLevel 0 is refused outright.
 {
   reseed(11); clock.t = 1_000_000;
