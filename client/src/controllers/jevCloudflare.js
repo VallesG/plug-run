@@ -11,8 +11,10 @@
 // `usage.input_tokens` is the real billing figure, so the driver reports spend
 // from the API rather than from a character-count guess.
 
+import { mapJevAnswer } from '../logic/jevAnswer.js';
+
 export const JEV_MODEL = 'typesafe/jev';
-export const JEV_INPUT_USD_PER_MTOK = 0.042;   // output tokens are not billed
+export { JEV_INPUT_USD_PER_MTOK, jevCostUsd } from '../logic/jevAnswer.js';
 
 /**
  * @param accountId  Cloudflare account id
@@ -54,23 +56,8 @@ export function cloudflareJev({ accountId, apiToken, gatewayId, fetchImpl, signa
     }
     if (!res?.ok) throw new Error('jev http ' + (res?.status ?? '?'));
 
-    const body = await res.json();
-    // The REST endpoint wraps results in { result, success, errors }; the
-    // Workers binding returns the payload bare. Accept either.
-    const out = body?.result ?? body;
-    const answers = out?.answers;
-    if (!answers?.move) throw new Error('jev returned no move answer');
-
-    return {
-      move: answers.move.choice,
-      power: answers.power?.choice ?? null,
-      confidence: answers.move.confidence ?? null,
-      usage: out.usage || null
-    };
+    const answer = mapJevAnswer(await res.json());
+    if (!answer.move) throw new Error('jev returned no move answer');
+    return answer;
   };
-}
-
-/** Dollars for a run, from the API's own token counts. */
-export function jevCostUsd(inputTokens) {
-  return (Number(inputTokens) || 0) / 1e6 * JEV_INPUT_USD_PER_MTOK;
 }
