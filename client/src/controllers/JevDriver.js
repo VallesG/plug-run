@@ -111,6 +111,20 @@ export default class JevDriver {
       .catch(finish(() => { this.stats.errors++; }));
   }
 
+  /**
+   * Forget the current round.
+   *
+   * A restart reuses the same Scene instance, so an answer about the last
+   * house would otherwise still be inside the staleness window when the next
+   * one starts. Stats survive on purpose: they are the spike's measurement.
+   */
+  reset() {
+    this.last = null;
+    // Dropping the handle is what discards the in-flight answer: _ask checks
+    // inFlight.startedAt before adopting, and it will no longer match.
+    this.inFlight = null;
+  }
+
   /** Cost and health, for deciding whether the spike was worth it. */
   report() {
     const { requests, answers, errors, timeouts, tokensBilled, tokensApprox } = this.stats;

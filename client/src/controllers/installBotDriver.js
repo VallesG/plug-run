@@ -11,6 +11,7 @@ import ProgressionManager from './ProgressionManager.js';
 import { getCurrentRouteID, getRouteSeed, createSeededRNG } from '../utils/seededRandom.js';
 import { applyRunnerProgression, updateRunnerBehavior, considerRunnerPowerUse } from './RunnerAI.js';
 import BotDriver, { DEFAULTS, botConfig } from './BotDriver.js';
+import { makeJevDriver } from './makeJevDriver.js';
 import { mapStats } from '../logic/runStats.js';
 import { advanceCursor, advanceSweep } from '../logic/seedCursor.js';
 import { MenuScene } from '../scenes/MenuScene.js';
@@ -206,6 +207,61 @@ function installGameOverBypass(cfg) {
   };
 }
 
+/* ---------------- unattended start ---------------- */
+
+/**
+ * Start a round straight from the menu.
+ *
+ *   ?bot=1&lockRound=16&autoStart=1          a runner batch
+ *   ?bot=1&lockRound=16&autoStart=1&role=plug   a plug batch
+ *
+ * WHY THIS EXISTS
+ * Everything else about the harness is unattended — modals dismiss
+ * themselves, deaths restart, the map cursor advances — except the very
+ * first tap, which meant a batch could only be started by a person sitting
+ * in front of it. That is fine for an afternoon of watching and impossible
+ * for a scripted comparison, where three arms have to start the same way
+ * every time.
+ *
+ * WHY IT IS OPT-IN
+ * The menu is where you choose what to measure. A harness that always
+ * skipped it would quietly make every ?bot=1 session a campaign session,
+ * and it is the one thing that would surprise someone who opened the
+ * harness to watch it rather than to script it.
+ *
+ * The launch data mirrors the menu's own runner card exactly — mode, role,
+ * runKind — so the round the bot plays is the round a tap would have
+ * started. Rivals has its own entrance (?rivalsRecord=1) and is not
+ * reachable from here.
+ */
+function installAutoStart(cfg) {
+  if (!cfg.autoStart) return;
+
+  let role = 'runner';
+  try {
+    role = new URLSearchParams(window.location.search).get('role') === 'plug' ? 'plug' : 'runner';
+  } catch {}
+  const target = role === 'plug' ? 'PLUG' : 'RUNNER';
+  // The menu's plug card passes mode only; the runner card adds role and
+  // runKind. Matching each one rather than inventing a third shape.
+  const data = role === 'plug'
+    ? { mode: 'pve' }
+    : { mode: 'pve', role: 'runner', runKind: 'journey' };
+
+  const origCreate = MenuScene.prototype.create;
+  MenuScene.prototype.create = function () {
+    const out = origCreate.call(this);
+    console.log('[BOT] auto-start —', target);
+    // Deferred by a frame: create() is still running, and the menu's own
+    // setup (camera fades, input wiring) has not finished behind us.
+    this.time?.delayedCall?.(0, () => {
+      try { this.scene.start(target, data); }
+      catch (e) { console.error('[BOT] auto-start failed:', e); }
+    });
+    return out;
+  };
+}
+
 /* ---------------- round locking ---------------- */
 
 // The knobs this session is actually running with. Recorded into every export
@@ -331,8 +387,15 @@ export function installBotDriver() {
 
   BaseGameScene.prototype.__botInstalled = true;
   activeConfig = { ...DEFAULTS, ...cfg };
+  // ONE driver for the whole session, not one per scene: a BotDriver is
+  // rebuilt on every restart (see below), and a per-scene Jev would reset the
+  // cost and answer-rate figures on each house — which is exactly the data
+  // the spike exists to collect. Null unless ?jev=1, so nothing changes for
+  // anyone else.
+  const jev = makeJevDriver();
   installModalAutoDismiss(cfg);
   installRoundLock(cfg);
+  installAutoStart(activeConfig);
   if (rec) installRivalsRecorder(rec, cfg);
   const origUpdate = BaseGameScene.prototype.update;
 
@@ -342,7 +405,7 @@ export function installBotDriver() {
       // Built lazily: no scene exists at install time, and each round's
       // scene.restart() must get a bot with fresh timers.
       if (!this._bot || this._bot.scene !== this) {
-        this._bot = new BotDriver(this, cfg, AI_HOOKS);
+        this._bot = new BotDriver(this, jev ? { ...cfg, jev } : cfg, AI_HOOKS);
       }
       window.__plugRunLiveScene = this; // harness-only handle for inspection
       this._bot.update(delta);
@@ -352,6 +415,7 @@ export function installBotDriver() {
   };
 
   installSummaryHelper();
+  if (jev) installJevHelper(jev);
 
   console.log('[BOT] installed', JSON.stringify({ ...DEFAULTS, ...cfg }));
   console.log('[BOT] console helpers: __plugRunSummary() | __plugRunDownload() | __plugRunReset()');
@@ -459,6 +523,26 @@ function installSummaryHelper() {
     seedCursor.attempts = seedCursor.repeats;
     console.log('[BOT] telemetry cleared');
   };
+}
+
+/**
+ * window.__plugRunJev() — what Jev answered, drove, and cost.
+ *
+ * Read alongside __plugRunSummary(): the summary says how the runs went,
+ * this says how much of that was Jev. A high answerRate with a low
+ * steerShare means the answers arrived and were rejected, which is a
+ * different diagnosis from the answers not arriving.
+ */
+function installJevHelper(jev) {
+  if (typeof window === 'undefined') return;
+  window.__plugRunJevDriver = jev;
+  window.__plugRunJev = function () {
+    const bot = window.__plugRunLiveScene?._bot;
+    const report = bot?.jevReport?.() || jev.report();
+    console.log('[JEV]', JSON.stringify(report, null, 2));
+    return report;
+  };
+  console.log('[JEV] console helper: __plugRunJev()');
 }
 
 /* ---------------- Block Rivals recording mode ---------------- */

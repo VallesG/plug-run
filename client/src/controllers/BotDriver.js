@@ -154,7 +154,18 @@ export const DEFAULTS = {
   //        maps rather than down one.
   // A clear always advances to the next map; there is nothing left to learn
   // from a map you just beat.
-  seedRepeats: 1
+  seedRepeats: 1,
+
+  // Start a round straight from the menu instead of waiting for a tap, so an
+  // unattended batch needs no human at all. 0 = off; see installAutoStart.
+  autoStart: 0,
+
+  // Reject a Jev answer the model itself is unsure of and let the tuned
+  // pathfinder take that step instead. Only consulted when a Jev driver is
+  // attached at all (?jev=1), so it is inert for every other session. 0
+  // means "take every answer", which is the honest default for a spike whose
+  // job is to measure Jev rather than a threshold picked in advance.
+  jevMinConfidence: 0
 };
 
 export default class BotDriver {
@@ -167,9 +178,18 @@ export default class BotDriver {
    *                 free of the Phaser dependency graph and testable in Node.
    */
   constructor(scene, opts = {}, aiHooks = null) {
+    // `jev` is an object, not a knob — keep it out of cfg so nothing can set
+    // a driver from a query string.
+    const { jev = null, ...cfg } = opts;
     this.scene = scene;
-    this.cfg = { ...DEFAULTS, ...opts };
+    this.cfg = { ...DEFAULTS, ...cfg };
     this.aiHooks = aiHooks;
+    this.jev = jev;
+    this._jevIntent = null;
+    this._jevPowerAt = null;
+    // Cumulative across rounds: the spike is asking what Jev did over a
+    // session, not over one house.
+    this._jevStats = { steps: 0, illegal: 0, lowConfidence: 0, fallbacks: 0, powers: 0 };
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._startedAt = performance.now();
@@ -200,6 +220,10 @@ export default class BotDriver {
    */
   _onNewRound() {
     this._startedAt = performance.now();
+    // An answer about the last house must not steer the next one.
+    this.jev?.reset();
+    this._jevIntent = null;
+    this._jevPowerAt = null;
     this._progressionApplied = false;
     this._borrowed = null;
     this._lastDir = null;
@@ -591,6 +615,101 @@ export default class BotDriver {
 
   /* ---------------- steering ---------------- */
 
+  /**
+   * Which way to go this replan, asking Jev first.
+   *
+   * WHAT JEV DECIDES, AND WHAT IT DOES NOT
+   * One cardinal step — route intent, nothing else. Evasion still outranks
+   * it (see update()), firing is still the tuned code's, and every answer
+   * that is late, missing, unusable or unsure falls straight through to
+   * plan(). A bad round of Jev therefore costs steps, never the run, and
+   * the pathfinder underneath is what makes that true.
+   */
+  _route(me, goal) {
+    const intent = this.jev ? this._jevIntent : null;
+    if (!intent) {
+      if (this.jev) this._jevStats.fallbacks++;
+      return this.plan(me, goal);
+    }
+
+    const min = this.cfg.jevMinConfidence ?? 0;
+    if (min > 0 && !(intent.confidence >= min)) {
+      this._jevStats.lowConfidence++;
+      return this.plan(me, goal);
+    }
+
+    // Jev is told which directions are open, but the board moves between the
+    // question and the answer landing up to half a second later. Walking the
+    // runner into a wall on a stale answer reads as the bot malfunctioning,
+    // so check the step is still legal before committing to it.
+    const s = this.scene;
+    const cell = s.toCell(me.x, me.y);
+    if (s.isWalkableCell?.(cell.x + intent.dir.x, cell.y + intent.dir.y) === false) {
+      this._jevStats.illegal++;
+      return this.plan(me, goal);
+    }
+
+    this._jevStats.steps++;
+    // driveMove normalises, so the unit cardinal is the whole vector.
+    return { x: intent.dir.x, y: intent.dir.y };
+  }
+
+  /**
+   * Spend a power because Jev asked for it.
+   *
+   * Through activateRunnerPowerByIndex — the slot a player's own tap reaches,
+   * and the one the opening Decoy and the borrowed AI already use. A power
+   * Jev names that is not in the loadout, or already spent, is ignored rather
+   * than conjured.
+   */
+  _maybeJevPower(intent) {
+    const name = intent?.power;
+    if (!name) return false;
+    // An answer is a decision, not a standing order. The same answer steers
+    // several frames (JevDriver.staleMs), and without this every one of them
+    // would burn another slot.
+    if (intent.at === this._jevPowerAt) return false;
+    this._jevPowerAt = intent.at;
+
+    const s = this.scene;
+    if (s.role !== 'runner') return false;
+    const sel = s.runnerPowersSelected || [];
+    const used = s.runnerPowersConsumed || [];
+    const slot = sel.findIndex((p, i) => p === name && !used[i]);
+    if (slot < 0) return false;
+
+    // Snapshot before activating: the scene mutates `used` in place.
+    const wasUsed = used[slot] === true;
+    s.activateRunnerPowerByIndex?.(slot);
+    if (s.runnerPowersConsumed?.[slot] && !wasUsed) {
+      // Mid-spoof the scene skips its own intent record, exactly as it does
+      // for the borrowed AI, so log it here for the trace.
+      s.intent?.recordPower?.(slot);
+      this._jevStats.powers++;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Jev's share of the driving, for the spike. Null when Jev is not wired.
+   *
+   * steerShare is the number that matters alongside answerRate: answers
+   * arriving and then being rejected is a different problem from answers not
+   * arriving, and one figure cannot tell them apart.
+   */
+  jevReport() {
+    if (!this.jev) return null;
+    const st = this._jevStats;
+    const decisions = st.steps + st.illegal + st.lowConfidence + st.fallbacks;
+    return {
+      ...this.jev.report(),
+      ...st,
+      decisions,
+      steerShare: decisions ? +(st.steps / decisions).toFixed(3) : 0
+    };
+  }
+
   plan(me, goal) {
     const s = this.scene;
 
@@ -709,6 +828,15 @@ export default class BotDriver {
       return;
     }
 
+    // Asked every frame, not every replan: the driver rate limits itself and
+    // never blocks, so ticking here only means the next request leaves as
+    // soon as the last one lands rather than waiting for the replan that will
+    // consume it. Fresher answers for the same money.
+    if (this.jev) {
+      this._jevIntent = this.jev.tick(s);
+      this._maybeJevPower(this._jevIntent);
+    }
+
     if (now < this._nextPlanAt) {
       this._maybeFire(me, now);
       return;
@@ -740,7 +868,7 @@ export default class BotDriver {
       }
     }
 
-    this._driveOrCoast(me, this.plan(me, goal));
+    this._driveOrCoast(me, this._route(me, goal));
     this._maybeFire(me, now);
   }
 
