@@ -76,6 +76,12 @@ function accept(candidate) {
   if (record.opponent?.kind !== 'bot' || !rivalPreset(record.opponent.skillPreset)) {
     rejected.push({ tag, reason: 'unknown driver style: ' + record.opponent?.skillPreset }); return null;
   }
+  // Jev-driven races (paid or mocked) belong in rivals/jev-v1, assembled by
+  // tools/rivals-assemble-jev.mjs — never in this bank. They look like an
+  // ordinary 'street' bot record otherwise, so they are refused by driver.
+  if (record.driverConfig?.driver === 'jev-strategist' || record.driverConfig?.jev) {
+    rejected.push({ tag, reason: 'Jev strategist race: belongs in rivals/jev-v1, not this bank' }); return null;
+  }
   const b = validateRivalReplayBundle(bundle, record, { validateSegment: validateReplaySegment });
   if (!b.ok) { rejected.push({ tag, reason: 'bundle: ' + b.errors[0] }); return null; }
   return { record, bundle, course };

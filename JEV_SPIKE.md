@@ -202,6 +202,8 @@ Jev steers); billed tokens, token source and cost; `budgetStopped`.
 | `src/controllers/RunnerAI.js` | the `objectiveProvider` seam |
 | `tools/rivals-record.mjs` | `--jev` / `--jevMock` / `--video` |
 | `tools/lib/jevMock.mjs` | deterministic local strategist for free integration runs |
+| `tools/rivals-assemble-jev.mjs` | builds `public/rivals/jev-v1` from paid strategist captures |
+| `tools/lib/jevBank.mjs` | what may enter the Jev bank, and the provenance each entry carries |
 | `tools/lib/video.mjs` | H.264 video with a diagnostic strip below the board |
 | `tools/jev-spike.mjs` | arms `ai`, `path`, `jev` on the same maps |
 
@@ -277,6 +279,56 @@ with `sessionStorage.jevKey` set before boot, then `__plugRunJev()`.
 
 The key is read at runtime from `sessionStorage` (or `window.__JEV_KEY`),
 never from a `VITE_*` env var — Vite inlines those into the bundle.
+
+## The Jev opponent bank (`public/rivals/jev-v1/`)
+
+A separate bank of races driven by the strategist, never mixed with the
+ordinary bot bank in `public/rivals/v2/`. **The game does not read it yet.**
+
+```
+public/rivals/jev-v1/
+  manifest.json                       bank, rules version, per-course recordingIDs, times, retries, cost
+  courses/<courseID>/opponents.json   { record, replay, provenance } per opponent
+  replays/<recordingID>.json          the replay bundle
+```
+
+Record paid races with circuit breakers high enough that Jev stays on for
+the whole race, then assemble:
+
+```sh
+node tools/rivals-record.mjs --slot 3 --style street --powers phase,dash --runs 1 \
+  --opponentIndex 9303 --jev --jevMaxRequests 500 --jevMaxInputTokens 2000000 \
+  --video --videoDir tools/recordings/jev/bank/video --url http://127.0.0.1:4173 \
+  --out tools/recordings/jev/bank
+node tools/rivals-assemble-jev.mjs --in tools/recordings --dry
+node tools/rivals-assemble-jev.mjs --in tools/recordings
+```
+
+`tools/rivals-assemble-jev.mjs` examines every capture under `--in`
+(recursively) and admits a race only if it is a paid TypeSafe-route
+strategist race over the runner AI, 7/7 with no abandoned attempt and no
+forfeit, with no Jev ceiling tripped before the finish and Jev asked in every
+house including the last, billed by the API (`tokenSource: 'api'`), and it
+passes every validator: record, course, attempts, replay bundle and every
+segment, the intent traces (one per attempt, on the house's own seed, power
+events equal to the strategist's activations), and the per-attempt stash
+assignment. Mocks, ordinary bots, baselines, failed or budget-stopped races
+and duplicates are rejected with a reason. It writes only `jev-v1`, refuses
+a `--root` overlapping `rivals/v2`, and checks v2's bytes are unchanged after
+writing. The rules live in `tools/lib/jevBank.mjs`, which
+`test/rivalJevBank.test.mjs` also uses.
+
+Records go into the bank byte-for-byte as recorded. Provenance travels
+beside each record: kind, driver, motor, route, preset and motor version,
+requested and returned model, logical requests with their triggers, HTTP
+attempts and statuses (page-side and relay-side), billed tokens and cost at
+the finish and for the whole session, ceilings, strategy metrics (adopted,
+rejected, held, invalidated, time with a strategy in force, per house),
+power arms and activations, watchdog recoveries, drive sources, recording
+time, and rules / record / replay / capture / bank versions.
+
+The ordinary assembler (`tools/rivals-assemble.mjs`) now refuses any Jev
+race, so a Jev capture cannot reach `rivals/v2` by accident.
 
 ## Budget
 

@@ -1,0 +1,45 @@
+{
+ "schemaVersion": 1,
+ "bank": "jev-v1",
+ "rulesVersion": "rivals-v1",
+ "generatedAt": "2026-09-21T18:24:59.907Z",
+ "note": "Opponents driven by the Jev strategist above the runner AI. Separate from rivals/v2; not read by the game.",
+ "courses": [
+  {
+   "slot": 3,
+   "name": "Freight Run",
+   "courseID": "rivals-v1-1245351574",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-freight-run-street-9303-1gqshvf"
+   ],
+   "elapsedMs": [
+    427094.2000000477
+   ],
+   "retries": [
+    44
+   ],
+   "costUsd": [
+    0.0044
+   ]
+  },
+  {
+   "slot": 6,
+   "name": "Lastlight Loop",
+   "courseID": "rivals-v1-2077357177",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-lastlight-loop-street-9306-183s3yf"
+   ],
+   "elapsedMs": [
+    120656.79999995232
+   ],
+   "retries": [
+    6
+   ],
+   "costUsd": [
+    0.0011
+   ]
+  }
+ ]
+}
