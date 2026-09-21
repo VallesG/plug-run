@@ -36,6 +36,18 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
   const line = (color,width,a,b,alpha=1) => {
     g.lineStyle(width,color,alpha); g.lineBetween(a.x,a.y,b.x,b.y);
   };
+  // Streets are one ordered route. Stroke each road layer as one path, then
+  // cap every interior turn with a matching circle so no seams can open at
+  // right-angle bends on small/mobile canvases.
+  const routePoints = [block.streets[0].a,...block.streets.map(street=>street.b)];
+  const strokeRoute = (color,width,alpha=1) => {
+    g.lineStyle(width,color,alpha);
+    g.beginPath();g.moveTo(routePoints[0].x,routePoints[0].y);
+    for(const point of routePoints.slice(1))g.lineTo(point.x,point.y);
+    g.strokePath();
+    g.fillStyle(color,alpha);
+    for(const point of routePoints.slice(1,-1))g.fillCircle(point.x,point.y,width/2);
+  };
 
   rect(BLACK,0,0,200,220);
   // Muted, deterministic ground variation; no texture downloads or world RNG.
@@ -59,10 +71,10 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
     // obscuring labels. This is decoration, not a server territory claim.
     drawCrewSigil(g,gangID,{x:31,y:41,size:138,alpha:0.19});
   }
+  strokeRoute(PALETTE.ink,11,0.55);
+  strokeRoute(0x797765,9);
+  strokeRoute(0x303638,6);
   for (const street of block.streets) {
-    line(PALETTE.ink,11,street.a,street.b,0.55);
-    line(0x797765,9,street.a,street.b);
-    line(0x303638,6,street.a,street.b);
     const length = Math.hypot(street.b.x-street.a.x,street.b.y-street.a.y);
     for (let d=3;d<length-2;d+=6) {
       const t=d/length, end=Math.min(1,(d+2)/length);
