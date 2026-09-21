@@ -3,6 +3,11 @@
 //
 //   node tools/rivals-assemble-jev.mjs --in tools/recordings --dry
 //   node tools/rivals-assemble-jev.mjs --in tools/recordings
+//   node tools/rivals-assemble-jev.mjs --in tools/recordings/jev/v3 --fresh
+//
+// By default a pass keeps everything already in the bank and adds to it.
+// --fresh builds the bank from the captures under --in alone, retiring the
+// entries already there (listed in the report as retired; git has them).
 //
 // Writes ONLY public/rivals/jev-v1/ (manifest.json, courses/<courseID>/
 // opponents.json, replays/<recordingID>.json). It never reads from, writes to
@@ -119,6 +124,7 @@ function main() {
   const IN = arg('in', 'tools/recordings');
   const ROOT = arg('root', JEV_BANK_ROOT);
   const DRY = !!arg('dry', false);
+  const FRESH = !!arg('fresh', false);
   const v2 = resolve(ORDINARY_BANK_ROOT);
   const root = resolve(ROOT);
   if (root === v2 || root.startsWith(v2 + sep) || v2.startsWith(root + sep)) {
@@ -126,12 +132,15 @@ function main() {
     process.exit(2);
   }
 
-  const existing = readJevBank(ROOT);
+  const banked = readJevBank(ROOT);
+  const existing = FRESH ? [] : banked;
   const captures = readCaptures(IN);
   const { accepted, rejected, reimported } = selectJevBank(existing, captures);
+  const kept = new Set(accepted.map((a) => a.record.recordingID));
   const report = {
-    bank: JEV_BANK_ID, root: ROOT, dry: DRY, capturesExamined: captures.length,
-    existing: existing.length, accepted: accepted.length, reimported, rejected: rejected.length,
+    bank: JEV_BANK_ID, root: ROOT, dry: DRY, fresh: FRESH, capturesExamined: captures.length,
+    existing: banked.length, accepted: accepted.length, reimported, rejected: rejected.length,
+    retired: banked.map((e) => e.record.recordingID).filter((id) => !kept.has(id)),
     entries: accepted.map((a) => ({
       recordingID: a.record.recordingID, slot: a.record.courseSlot, elapsedMs: a.record.elapsedMs,
       retries: a.record.retries, costUsd: a.provenance.costUsd, logicalRequests: a.provenance.requests.logical,
