@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Run map-art scale spike</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1117;color:#e8e5d9;font:14px system-ui,sans-serif}
+header{padding:16px 20px;border-bottom:1px solid #34506a}h1{font-size:18px;margin:0 0 6px}
+p{margin:4px 0;color:#aebbc5}.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px}button{background:#172b39;border:1px solid #52738a;border-radius:4px;color:#e8e5d9;padding:6px 10px;cursor:pointer}
+main{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;padding:20px}
+figure{margin:0;width:min(400px,100%)}figcaption{margin-bottom:8px;color:#b7dfff}
+canvas{display:block;width:100%;height:auto;border:1px solid #3a5265;background:#111a19}
+small{display:block;margin-top:8px;color:#aebbc5}
+</style>
+</head>
+<body>
+<header>
+<h1>BLOCK MAP / SOURCE-ART SCALE SPIKE</h1>
+<p>One continuous neighborhood road with the game's one-house-at-a-time reveal. Compare the baseline with the generated roofs and new transparent neighborhood props. This is not wired into the live game.</p>
+<div class="controls">
+<label>Houses cleared <input id="cleared" type="range" min="0" max="15" value="1"> <output id="cleared-value">1 / 15</output></label>
+<button id="next">Clear next house</button><button id="tour">Auto tour</button>
+<label><input id="props" type="checkbox" checked> Trees, cars &amp; lights</label>
+<label><input id="mirror" type="checkbox"> Mirrored route</label>
+<label>Preview width <input id="width" type="range" min="240" max="400" value="320"> <output id="width-value">320px</output></label>
+</div>
+</header>
+<main>
+<figure><figcaption>Procedural roof baseline</figcaption><canvas id="baseline" width="400" height="440"></canvas></figure>
+<figure><figcaption>Generated roofs + transparent PNG props</figcaption><canvas id="prototype" width="400" height="440"></canvas>
+<small>Check silhouettes, scale, road clearance, and whether the richer props still read at 240–400px width.</small></figure>
+</main>
+<script type="module">
+import { layoutBlock, blockNoise, buildFog, distanceToStreet } from './src/logic/blockMap.js';
+const source = new Image();
+source.src = './art-sources/maps/map-style-sheet.png';
+const crops = [
+  {x:101,y:501,w:148,h:242},
+  {x:391,y:501,w:161,h:242},
+  {x:684,y:501,w:148,h:242}
+];
+const colors=['#675e4e','#505e60','#736557','#5c6150','#685758'];
+// Preview-only PNG source art. These exports have real alpha; no sheet crop or mask.
+const propSources={
+  tree1:'./art-sources/maps/props/tree-canopy-01.png',
+  tree2:'./art-sources/maps/props/tree-canopy-02.png',
+  shrub:'./art-sources/maps/props/shrub-01.png',
+  car:'./art-sources/maps/props/parked-car-01.png'
+};
+const props=Object.fromEntries(Object.entries(propSources).map(([key,url])=>{
+  const image=new Image();image.onload=paint;image.onerror=paint;image.src=url;
+  return [key,image];
+}));
+function ready(image){return image.complete&&image.naturalWidth>0}
+function clearOfMap(x,y,block,streetMargin,houseMargin){
+  if(block.streets.some(s=>distanceToStreet(x,y,s.a,s.b)<streetMargin))return false;
+  return !block.houses.some(h=>Math.abs(x-h.x)<h.w/2+houseMargin
+    &&Math.abs(y-h.y)<h.h/2+houseMargin);
+}
+function drawTrees(ctx,block,seed){
+  for(let y=11;y<213;y+=9)for(let x=10;x<191;x+=9){
+    const n=blockNoise(x,y,seed^0x794d);
+    if(n<.88||!clearOfMap(x,y,block,10,7))continue;
+    const variant=blockNoise(x,y,seed^0x119a);
+    const image=props[variant<.43?'tree1':variant<.86?'tree2':'shrub'];
+    if(!ready(image))continue;
+    const shrub=image===props.shrub;
+    const size=(shrub?3.7:8.2)+blockNoise(x,y,seed^0x22b3)*(shrub?1.4:2.2);
+    ctx.drawImage(image,x-size/2,y-size/2,size,size);
+  }
+}
+function drawCars(ctx,block,seed){
+  if(!ready(props.car))return;
+  for(const street of block.streets){
+    const {a,b}=street,length=Math.hypot(b.x-a.x,b.y-a.y);
+    if(length<16||blockNoise(street.index,3,seed^0x7112)<.51)continue;
+    const vertical=a.x===b.x;
+    const t=.38+blockNoise(street.index,9,seed^0x3341)*.23;
+    const x=a.x+(b.x-a.x)*t+(vertical?2.3:0);
+    const y=a.y+(b.y-a.y)*t+(vertical?0:2.3);
+    if(block.houses.some(h=>Math.abs(x-h.x)<h.w/2+3&&Math.abs(y-h.y)<h.h/2+3))continue;
+    ctx.save();ctx.translate(x,y);
+    if(!vertical)ctx.rotate(Math.PI/2);
+    if(blockNoise(street.index,13,seed^0x4217)>.5)ctx.rotate(Math.PI);
+    ctx.drawImage(props.car,-2.1,-3.9,4.2,7.8);
+    ctx.restore();
+  }
+}
+function drawLightPools(ctx,block){
+  for(const house of block.houses){
+    const {x,y}=house.lamp;
+    const light=ctx.createRadialGradient(x,y,0,x,y,7);
+    light.addColorStop(0,'rgba(255,214,128,.24)');
+    light.addColorStop(1,'rgba(255,214,128,0)');
+    ctx.fillStyle=light;ctx.fillRect(x-7,y-7,14,14);
+  }
+}
+const canvases=[document.querySelector('#baseline'),document.querySelector('#prototype')];
+const widthSlider=document.querySelector('#width');
+const clearedSlider=document.querySelector('#cleared');
+const tourButton=document.querySelector('#tour');
+let tourTimer=null;
+function draw(canvas, useSource, block, seed) {
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(2,0,0,2,0,0);
+  ctx.clearRect(0,0,200,220);
+  ctx.fillStyle='#101713';ctx.fillRect(0,0,200,220);
+  for(let y=0;y<220;y+=2)for(let x=0;x<200;x+=2){
+    const n=blockNoise(x,y,seed);
+    ctx.fillStyle=['#303b30','#364032','#3a4435','#404839'][Math.floor(n*4)];
+    ctx.fillRect(x,y,2,2);
+  }
+  if(useSource && document.querySelector('#props').checked)drawTrees(ctx,block,seed);
+  // Stroke the entire connected route once per layer. Muted curbs and a
+  // continuous centerline make it read as a street, not joined track pieces.
+  const points=[block.streets[0].a,...block.streets.map(street=>street.b)];
+  const route=()=>{
+    ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+    for(const point of points.slice(1))ctx.lineTo(point.x,point.y);
+  };
+  ctx.lineJoin='round';ctx.lineCap='round';
+  for(const [lineWidth,color] of [[13,'#161e22'],[11,'#596169'],[8,'#25313b']]){
+    route();ctx.lineWidth=lineWidth;ctx.strokeStyle=color;ctx.stroke();
+  }
+  route();ctx.setLineDash([2,5]);ctx.lineWidth=.45;
+  ctx.strokeStyle='#a8abb0';ctx.stroke();ctx.setLineDash([]);
+  if(useSource && document.querySelector('#props').checked){
+    drawLightPools(ctx,block);drawCars(ctx,block,seed);
+  }
+  for(const house of block.houses){
+    const left=house.x-house.w/2,top=house.y-house.h/2;
+    ctx.fillStyle='#151b1a';ctx.fillRect(left-2,top-2,house.w+4,house.h+4);
+    if(useSource && source.complete && source.naturalWidth){
+      const crop=crops[(house.index-1)%crops.length];
+      ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(source,crop.x,crop.y,crop.w,crop.h,left,top,house.w,house.h);
+    }else{
+      ctx.fillStyle=colors[(house.index-1)%colors.length];
+      ctx.fillRect(left,top,house.w,house.h);
+      ctx.strokeStyle='#a09b84';ctx.lineWidth=.45;
+      ctx.beginPath();ctx.moveTo(left,top);ctx.lineTo(house.x,top+3);
+      ctx.lineTo(left+house.w,top);ctx.moveTo(house.x,top+3);
+      ctx.lineTo(house.x,top+house.h);ctx.stroke();
+    }
+    ctx.strokeStyle=house.finale?'#ffc19c':'#aaa38d';
+    ctx.lineWidth=.5;ctx.strokeRect(left,top,house.w,house.h);
+    ctx.fillStyle='#ffdc95';ctx.beginPath();
+    ctx.arc(house.lamp.x,house.lamp.y,1.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ece6d5';ctx.strokeStyle='#0c1012';
+    ctx.lineWidth=1.5;ctx.font='5px monospace';ctx.textAlign='center';
+    const label=String(house.index).padStart(2,'0');
+    ctx.strokeText(label,house.x,top-4);ctx.fillText(label,house.x,top-4);
+  }
+  // Identical reveal ownership to the live block renderer: each 2-unit cell
+  // belongs to the first house whose road or yard reaches it.
+  // The fifteenth clear is a celebration: uncover the entire block,
+  // including courtyards that no individual house's reveal radius owns.
+  if(block.visibleThrough<block.maps){
+    const fog=buildFog(block,seed);
+    ctx.fillStyle='#080d12';
+    for(let row=0;row<110;row++){
+      let col=0;
+      while(col<100){
+        const start=col;
+        const hidden=fog[row*100+col].unlock>block.visibleThrough;
+        while(col<100 && (fog[row*100+col].unlock>block.visibleThrough)===hidden)col++;
+        if(hidden)ctx.fillRect(start*2,row*2,(col-start)*2,2);
+      }
+    }
+  }
+  if(block.visibleThrough<block.maps){
+    const {x,y}=block.marker;
+    ctx.fillStyle='#ffda8e';ctx.strokeStyle='#0b1117';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+3,y-2);
+    ctx.lineTo(x,y+1);ctx.lineTo(x-3,y-2);ctx.closePath();
+    ctx.fill();ctx.stroke();
+  }
+}
+function paint(){
+  const seed=document.querySelector('#mirror').checked?1:0;
+  const cleared=Number(clearedSlider.value);
+  const block=layoutBlock({maps:15,cleared,layoutSeed:seed,width:400,height:440});
+  document.querySelector('#cleared-value').value=cleared+' / 15';
+  draw(canvases[0],false,block,seed);
+  draw(canvases[1],true,block,seed);
+  const w=Number(widthSlider.value);
+  for(const canvas of canvases)canvas.parentElement.style.width=w+'px';
+  document.querySelector('#width-value').value=w+'px';
+}
+source.onload=paint;
+source.onerror=()=>{document.querySelector('small').textContent='Style sheet failed to load. Run this page through the client Vite dev server.';paint();};
+document.querySelector('#mirror').addEventListener('change',paint);
+document.querySelector('#props').addEventListener('change',paint);
+clearedSlider.addEventListener('input',paint);
+document.querySelector('#next').addEventListener('click',()=>{
+  clearedSlider.value=String(Math.min(15,Number(clearedSlider.value)+1));paint();
+});
+tourButton.addEventListener('click',()=>{
+  if(tourTimer){clearInterval(tourTimer);tourTimer=null;tourButton.textContent='Auto tour';return;}
+  clearedSlider.value='0';paint();tourButton.textContent='Stop tour';
+  tourTimer=setInterval(()=>{
+    const next=Number(clearedSlider.value)+1;
+    clearedSlider.value=String(next);paint();
+    if(next>=15){clearInterval(tourTimer);tourTimer=null;tourButton.textContent='Auto tour';}
+  },950);
+});
+widthSlider.addEventListener('input',paint);
+paint();
+</script>
+</body></html>
