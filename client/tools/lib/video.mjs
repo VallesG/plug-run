@@ -8,10 +8,12 @@
 // ffmpeg. WebM (VP9/VP8) is the fallback only when a browser cannot do H.264.
 //
 // WHAT IS IN THE PICTURE
-// The game canvas, untouched, at the run's viewport size, and a strip
-// appended BELOW it — so the overlay can never cover gameplay. The strip is
-// redrawn twice a second from counters the page already has; it shows counts,
-// labels and money, never a key, header, request body or environment value.
+// The game canvas, untouched, at the run's viewport size — nothing else by
+// default. With stats on (--videoStats) a diagnostic strip is appended BELOW
+// the board, so it can never cover gameplay; it is redrawn twice a second
+// from counters the page already has and shows counts, labels and money,
+// never a key, header, request body or environment value. The timeline in
+// the adjacent .events.json is recorded either way.
 //
 // TIMING
 // The page runs at real speed; nothing here touches the simulation clock.
@@ -153,9 +155,11 @@ function pageSide({ strip, fps }) {
       g.fillStyle = '#000'; g.fillRect(0, 0, W, H + strip);
       const r = game.getBoundingClientRect();
       g.drawImage(game, r.left, r.top, r.width, r.height);
-      g.fillStyle = '#0b0f14'; g.fillRect(0, H, W, strip);
-      g.fillStyle = '#9fe870'; g.font = '11px ui-monospace, Consolas, monospace';
-      text.forEach((line, i) => g.fillText(line, 6, H + 16 + i * 16));
+      if (strip > 0) {
+        g.fillStyle = '#0b0f14'; g.fillRect(0, H, W, strip);
+        g.fillStyle = '#9fe870'; g.font = '11px ui-monospace, Consolas, monospace';
+        text.forEach((line, i) => g.fillText(line, 6, H + 16 + i * 16));
+      }
       state.frames++;
     };
     requestAnimationFrame(frame);
@@ -188,7 +192,7 @@ function pageSide({ strip, fps }) {
  * Arm video capture on a page. Call before page.goto().
  * Returns { stop() } — stop() finalizes the file and returns what was made.
  */
-export async function installVideo(page, { dir, tag, fps = 30 }) {
+export async function installVideo(page, { dir, tag, fps = 30, stats = false }) {
   mkdirSync(dir, { recursive: true });
   const base = join(dir, `${tag}-${Date.now()}`);
   let stream = null, path = null, bytes = 0;
@@ -206,7 +210,7 @@ export async function installVideo(page, { dir, tag, fps = 30 }) {
   await page.exposeFunction('__plugRunVideoEvent', (e) => {
     events.push(e);
   });
-  await page.addInitScript(pageSide, { strip: STRIP_PX, fps });
+  await page.addInitScript(pageSide, { strip: stats ? STRIP_PX : 0, fps });
 
   return {
     events,

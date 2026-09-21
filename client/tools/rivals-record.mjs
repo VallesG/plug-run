@@ -11,10 +11,15 @@
 // game exported, and never edits a time, a frame or a hash.
 //
 // RENDERER, DELIBERATELY
-// Chromium's Canvas renderer (--disable-gpu). WebGL through swiftshader ran
-// at 9-18fps in this container and changed what the bot could do; Canvas
-// holds ~60fps. The measured fps is written into every output file, so a
-// slow batch is visible afterwards instead of silently producing bad races.
+// --renderer gpu (default on Windows and macOS): hardware WebGL, what players
+// actually see. --renderer canvas (default on Linux): Chromium's Canvas
+// renderer (--disable-gpu), for GPU-less containers, where WebGL through
+// swiftshader ran at 9-18fps and changed what the bot could do.
+// Canvas cannot tint, so characters there render as bare coloured blobs —
+// fine for the data (records and replays store positions, and the game draws
+// them with the player's own renderer), wrong for a video anyone watches.
+// The renderer and measured fps are written into every output file, so a
+// slow or mis-rendered batch is visible afterwards.
 //
 // Requires: a served build or dev server (`npm run dev`, default :5173) and
 // playwright-core plus a Chromium binary. Install with:
@@ -62,7 +67,11 @@ const OPTIONS = {
   // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
   // which is git-ignored — keep --videoDir there.
   video: Boolean(arg('video', false)),
-  videoDir: arg('videoDir', 'tools/recordings/jev/video')
+  videoDir: arg('videoDir', 'tools/recordings/jev/video'),
+  // The diagnostic strip under the board is off unless asked for: a clean
+  // video is the board alone. The same telemetry is always in .events.json.
+  videoStats: Boolean(arg('videoStats', false)),
+  renderer: String(arg('renderer', process.platform === 'linux' ? 'canvas' : 'gpu'))
 };
 
 // The page is given this instead of a key. It exists only so
@@ -137,8 +146,11 @@ export async function recordJob(job, shared) {
   const { pw, executablePath } = shared;
   const browser = await pw.launch({
     executablePath, headless: true,
-    // Canvas, not swiftshader WebGL. See the note at the top of this file.
-    args: ['--no-sandbox', '--disable-gpu', '--disable-software-rasterizer', '--mute-audio',
+    // See RENDERER at the top of this file.
+    args: ['--no-sandbox', '--mute-audio',
+      ...(OPTIONS.renderer === 'canvas'
+        ? ['--disable-gpu', '--disable-software-rasterizer']
+        : ['--enable-gpu', '--ignore-gpu-blocklist', ...(process.platform === 'win32' ? ['--use-angle=d3d11'] : [])]),
       '--autoplay-policy=no-user-gesture-required',
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows']
@@ -190,7 +202,7 @@ export async function recordJob(job, shared) {
   }
 
   // Armed before goto so the file starts at boot and the countdown is in it.
-  const video = OPTIONS.video ? await installVideo(page, { dir: OPTIONS.videoDir, tag }) : null;
+  const video = OPTIONS.video ? await installVideo(page, { dir: OPTIONS.videoDir, tag, stats: OPTIONS.videoStats }) : null;
 
   const query = new URLSearchParams({
     rivalsRecord: '1', courseSlot: String(job.slot), skillPreset: job.style,
