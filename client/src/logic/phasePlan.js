@@ -1,4 +1,15 @@
 import { pathDistances, distTo } from './jevStrategy.js';
+import { isExposedAt, phaseEscapeDir } from './cover.js';
+
+// The strategist and motor must agree about what an intercept escape means:
+// a nearby threat, an exposed takeoff, and a wall with a reachable safe exit.
+export function phaseIntercept(world, from, goal, reach, range = 7, maxWall = 3) {
+  const threats = world.threats || world.plugs || [];
+  const board = { ...world, threats };
+  if (!from || reach < 2 || !isExposedAt(board, from) ||
+      !threats.some(p => Math.hypot(p.x-from.x, p.y-from.y) <= range)) return null;
+  return phaseEscapeDir({ ...board, from, goal, maxWall: Math.min(maxWall, Math.floor(reach)-1) });
+}
 
 // Phase is intangibility, NOT a dash. Reserve time to leave the wall fully.
 export function phaseReachCells(speed, cell, duration = 600) {

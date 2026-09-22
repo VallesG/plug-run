@@ -228,7 +228,7 @@ export default class JevStrategist {
 
     if (this.armed && now >= this.armed.until) {
       this.powers.expiredUnused++;
-      this._log(now, 'power-expired', { name: this.armed.name });
+      this._log(now, 'power-expired', { name: this.armed.name, plan: this.armed.plan });
       this.armed = null;
     }
     if (view.motorWaypoint && !sameCell(view.motorWaypoint, this._lastWaypoint)) this.motor.detours++;
@@ -356,7 +356,11 @@ export default class JevStrategist {
     this.attempt = retry ? (prev.attempt || 1) + 1 : 1;
     this.epoch++;
     this.strategy = null;
-    if (this.armed) { this.powers.expiredUnused++; this.armed = null; }
+    if (this.armed) {
+      this.powers.expiredUnused++;
+      this._log(now, 'power-discarded', { name: this.armed.name, plan: this.armed.plan, reason: retry ? 'retry' : 'house-change' });
+      this.armed = null;
+    }
     this.recovery = null;
     this.watchdogOwed = false;
     this.attemptSwitches = 0;
@@ -630,9 +634,12 @@ export default class JevStrategist {
       return;
     }
     this.powers.accepted++;
+    if (this.armed) this._log(now, 'power-replaced', {
+      name: this.armed.name, plan: this.armed.plan, nextName: name, nextPlan: plan
+    });
     this.armed = { name, plan, until: now + this.cfg.armMs };
     this.powers.last = { name, result: 'armed', at: now };
-    this._log(now, 'power-armed', { name });
+    this._log(now, 'power-armed', { name, plan });
   }
 
   /** A plan is armed immediately but only exposed to the motor in its window. */
@@ -660,7 +667,7 @@ export default class JevStrategist {
     if (this.armed && this.armed.name === name) {
       this.powers.activated++;
       this.powers.last = { name, result: 'activated', at: now };
-      this._log(now, 'power-activated', { name });
+      this._log(now, 'power-activated', { name, plan: this.armed.plan });
       this.armed = null;
     } else {
       this.powers.unarmedActivations++;

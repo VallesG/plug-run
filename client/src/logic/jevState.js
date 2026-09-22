@@ -39,7 +39,7 @@
 // a table to do it.
 
 import { distTo, legalObjectives, pathDistances, routeFacts } from './jevStrategy.js';
-import { phaseShortcut } from './phasePlan.js';
+import { phaseShortcut, phaseIntercept, dashPlan } from './phasePlan.js';
 
 const POSTURE_HINT = {
   safe: 'Keep out of firing lanes, longer routes',
@@ -238,22 +238,22 @@ export function jevState(view, ctx = {}) {
   const spendable = ready.filter((p, i, a) => a.indexOf(p) === i && !(p === 'decoy' && view.decoyActive));
   if (spendable.length) {
     const powerCriteria = {};
+    const goals = view.carrying ? [{ id: 'extract', cell: view.extract }] : view.candidates.filter(c => !learned || c.id === learned.id);
+    const board = { ...view, threats: view.plugs || [] };
     if (spendable.includes('phase')) {
-      const goals = view.carrying ? [{ id: 'extract', cell: view.extract }] : view.candidates.filter(c => !learned || c.id === learned.id);
       const shortcuts = goals.map(c => ({ id: c.id, plan: phaseShortcut(view, view.runner, c.cell, view.phaseReach ?? 0) })).filter(c => c.plan);
       if (shortcuts.length) powerCriteria.phase_shortcut = 'Use a wall shortcut to the chosen objective; approach the wall before firing. ' +
         shortcuts.map(c => `${c.id}: saves ${c.plan.saved} walking steps`).join('; ');
+      if (goals.some(c => phaseIntercept(board, view.runner, c.cell, view.phaseReach ?? 0, view.phaseEscapeCells ?? 7, view.phaseMaxWall ?? 3))) {
+        powerCriteria.phase_intercept = 'A reachable wall exit gets out of this firing lane; phase through it to escape the nearby plug';
+      }
     }
     if (!view.carrying) {
-      if (spendable.includes('phase') && (state.threat.inLane || (state.threat.nearest ?? 99) <= 6)) {
-        powerCriteria.phase_intercept = 'Arm phase only if the plug traps the approach; fire on the intercept';
-      }
       if (spendable.includes('decoy') && (state.threat.nearest ?? 99) <= 18) {
         powerCriteria.decoy_pressure = 'Deploy when the plug is in sight to pull fire off the approach';
       }
       powerCriteria.none = 'Save only if neither a useful shortcut nor a safe dash is available';
     } else {
-      if (spendable.includes('phase')) powerCriteria.phase_intercept = 'Phase on a predicted intercept or exposed crossing while carrying';
       if (spendable.includes('dash')) {
         powerCriteria.dash_escape = 'Dash when the plug closes on the escape route';
         powerCriteria.dash_finish = 'Dash on the final clear run to the car';
@@ -266,7 +266,17 @@ export function jevState(view, ctx = {}) {
     if (spendable.includes('dash')) {
       powerCriteria.dash_objective = 'Dash toward the chosen bag or car when it is within the actual clear dash range; do not waste a dash into a wall';
       powerCriteria.dash_escape = 'Dash away when a plug is close and the landing increases separation, even before a pickup';
+      const available = goals.map(c => ({ id: c.id, plan: dashPlan(board, view.runner, c.cell, view.dashTiles ?? 3) })).filter(c => c.plan);
+      for (const reason of ['objective', 'escape']) {
+        const targets = available.filter(c => c.plan.reason === reason).map(c => c.id);
+        if (targets.length) powerCriteria[`dash_${reason}`] += `. Validated opportunity NOW for ${targets.join(', ')}`;
+      }
     }
+    // Saving must remain legal when no power can execute. List it after the
+    // concrete plans, not before dash, so its position doesn't bias selection.
+    const save = powerCriteria.none;
+    delete powerCriteria.none;
+    powerCriteria.none = save || 'Save if no offered power can help this route now';
     // Do not spend a question merely to make Jev answer "none".
     if (Object.keys(powerCriteria).some((k) => k !== 'none')) {
       questions.power = {

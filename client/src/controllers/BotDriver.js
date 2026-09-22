@@ -38,7 +38,7 @@
 import { planDodge } from '../logic/evasion.js';
 import { coverAwareStep, isExposedAt, phaseEscapeDir } from '../logic/cover.js';
 import { orderCandidates, postureTactics, pathDistances, distTo } from '../logic/jevStrategy.js';
-import { phaseShortcut, phaseReachCells, phaseCanCross, dashPlan } from '../logic/phasePlan.js';
+import { phaseShortcut, phaseIntercept, phaseReachCells, phaseCanCross, dashPlan } from '../logic/phasePlan.js';
 
 export const DEFAULTS = {
   // How often the bot re-decides, in ms. Human reaction floor is ~200ms and
@@ -544,6 +544,9 @@ export default class BotDriver {
       carrying: !!s.hasStash,
       phasing: !!s.runnerIsPhasing?.(),
       phaseReach: this._phaseReach(),
+      phaseEscapeCells: this.cfg.phaseEscapeCells ?? DEFAULTS.phaseEscapeCells,
+      phaseMaxWall: this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall,
+      dashTiles: s.runnerPowerStats?.dash?.tiles ?? 3,
       decoyActive: !!(s.decoySprite && s.decoySprite.active !== false),
       candidates: orderCandidates(bags),
       revealedPocket: s.hasStash || (s.stash && (s.bunkStash?._fading || !s.bunkStash))
@@ -723,12 +726,13 @@ export default class BotDriver {
     // beyond it. Checking only "is a wall next to me" is what stranded the
     // runner inside thick geometry with the power already spent.
     const goal = this.currentGoal();
-    const exit = phaseEscapeDir({
+    const exit = this.hybrid ? phaseIntercept(world, from, goal ? s.toCell(goal.x, goal.y) : null,
+      this._phaseReach(), this.cfg.phaseEscapeCells ?? DEFAULTS.phaseEscapeCells,
+      this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall) : phaseEscapeDir({
       ...world,
       from,
       goal: goal ? s.toCell(goal.x, goal.y) : null,
-      maxWall: this.hybrid ? Math.min(this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall, Math.floor(this._phaseReach()) - 1)
-        : (this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall)
+      maxWall: this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall
     });
     if (!exit) return false;
 

@@ -396,6 +396,14 @@ console.log('\nJevStrategist\n');
   check('escape dash is authorized before pickup; motor validates the landing', beforePickup.at(-1).armedPower === 'dash');
   check('the same dash becomes available once carrying',
     conditional.s.tick(makeView({ carrying: true })).armedPower === 'dash');
+  check('armed timeline records the conditional plan',conditional.s.timeline.some(e=>e.kind==='power-armed'&&e.plan==='dash_escape'));
+  conditional.s._armPower('phase','phase_shortcut',makeView(),clock.t);
+  check('replacing an unused plan records both plans',conditional.s.timeline.some(e=>e.kind==='power-replaced'&&e.plan==='dash_escape'&&e.nextPlan==='phase_shortcut'));
+  conditional.s.onPowerActivated('phase');
+  check('activation timeline identifies the executed plan',conditional.s.timeline.some(e=>e.kind==='power-activated'&&e.plan==='phase_shortcut'));
+  conditional.s._armPower('dash','dash_escape',makeView(),clock.t);
+  conditional.s.tick(makeView({houseKey:'next-house',house:2}));
+  check('house transition explains an unused authorization',conditional.s.timeline.some(e=>e.kind==='power-discarded'&&e.plan==='dash_escape'&&e.reason==='house-change'));
 }
 
 // 14. Ceilings stop further calls: requests, tokens, and repeated failures.

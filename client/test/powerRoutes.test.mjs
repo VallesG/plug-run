@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { phaseShortcut, phaseReachCells, phaseCanCross, dashPlan } from '../src/logic/phasePlan.js';
+import { phaseShortcut, phaseIntercept, phaseReachCells, phaseCanCross, dashPlan } from '../src/logic/phasePlan.js';
 
 const world = { cols: 13, rows: 15, threats: [], isWalkable: (x,y) => x>0 && y>0 && x<12 && y<14 && !(y===7 && x>=3 && x<=9) };
 const goal={x:6,y:2}, from={x:6,y:10};
@@ -24,4 +24,9 @@ const escape=dashPlan(danger,{x:6,y:11},{x:6,y:2});
 assert.ok(escape && escape.reason==='escape','nearby plug allows defensive dash before pickup');
 assert.ok(Math.hypot(escape.landing.x-6,escape.landing.y-10)>1,'landing increases separation');
 assert.equal(dashPlan({...world,threats:[{x:6,y:12}]},{x:6,y:9},{x:6,y:12})?.reason==='objective',false,'do not dash onto the plug');
-console.log('power routes: 16 assertions passed');
+const pinned = {...world, threats:[{x:6,y:10}]};
+assert.ok(phaseIntercept(pinned,{x:6,y:8},goal,reach),'exposed runner can cross adjacent wall to cover');
+assert.equal(phaseIntercept(pinned,{x:6,y:9},goal,reach),null,'nearby plug alone does not make a wall escape executable');
+assert.equal(phaseIntercept(pinned,{x:6,y:8},goal,1.9),null,'cannot offer a crossing beyond phase duration');
+assert.equal(phaseIntercept(pinned,{x:6,y:8},goal,reach,0),null,'respect disabled escape range');
+console.log('power routes: 20 assertions passed');

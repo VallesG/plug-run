@@ -233,6 +233,23 @@ console.log('\njevState — strategic payload\n');
     JSON.stringify({ direct: df, covered: cf }));
 }
 
+// Power choices must describe executable geometry, not just proximity.
+{
+  const {view} = payloadFor(makeScene());
+  const open = {...view, runner:{x:4,y:4}, extract:{x:4,y:7}, carrying:true,
+    plugs:[{x:4,y:2}], inLane:true, phaseReach:3,
+    isWalkable:(x,y)=>x>0&&y>0&&x<view.cols-1&&y<view.rows-1};
+  const build = v => jevState(v,{dist:pathDistances(v,v.runner),plugDists:v.plugs.map(p=>pathDistances(v,p)),trigger:'damage',deaths:[]});
+  const q=build(open).questions.power;
+  check('open-floor threat does not advertise a nonexistent phase crossing',!q.criteria.phase_intercept&&!q.criteria.phase_shortcut);
+  check('nearby car has an explicitly validated dash opportunity',/Validated opportunity NOW for extract/.test(q.criteria.dash_objective));
+  check('save remains available and is listed after executable powers',Object.keys(q.criteria).at(-1)==='none');
+  const phaseOnly={...open,powers:{selected:['phase'],consumed:[false]}};
+  check('phase-only open-floor runner is not forced to authorize unusable phase',!build(phaseOnly).questions.power);
+  const before={...open,carrying:false,candidates:[{id:'target_a',cell:{x:4,y:7}}]};
+  check('pre-pickup dash opportunity is described for the bag too',/Validated opportunity NOW for target_a/.test(build(before).questions.power.criteria.dash_objective));
+}
+
 console.log('');
 if (failures.length) {
   console.log(`jevState: ${passed} passed, ${failures.length} FAILED`);
