@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {jevHealth} from '../tools/lib/jevHealth.mjs';
+import {installJevProxy} from '../tools/rivals-record.mjs';
+import {jevEligibilityError} from '../tools/lib/jevBank.mjs';
+assert.match(jevHealth({},null,1000,0).label,/WAITING/);
+assert.ok(jevHealth({},null,46000,0).fatal);
+assert.equal(jevHealth({ok:3,lastAnswerAt:44000},null,46000,0).fatal,null);
+assert.ok(jevHealth({lastAnswerAt:1000},null,47000,0).fatal);
+assert.ok(jevHealth({lastAnswerAt:44000},{budgetStopped:'errors'},46000,0).fatal);
+assert.equal(jevHealth({mock:true},null,90000,0).label,'MOCK');
+let handler, forwarded, returned;
+const page={route:async(pattern,fn)=>{if(pattern==='**/v1/systemone')handler=fn;}};
+const relay=await installJevProxy(page,'test-credential',{fetchImpl:async(url,options)=>{
+  forwarded={url,options};
+  return new Response(JSON.stringify({model:'jev-test',answers:{objective:{choice:'extract'}},usage:{input_tokens:123}}),{status:200,headers:{'x-request-id':'test-request'}});
+}});
+await handler({request:()=>({postData:()=>JSON.stringify({questions:{objective:{}}})}),fulfill:async r=>{returned=r;}});
+assert.equal(forwarded.url,'https://api.typesafe.ai/v1/systemone');
+assert.equal(forwarded.options.headers.Authorization,'Bearer test-credential');
+assert.equal(returned.status,200);
+assert.equal(relay.inputTokens,123);
+assert.equal(relay.receipts[0].requestId,'test-request');
+assert.ok(relay.lastAnswerAt);
+assert.equal(JSON.stringify(relay).includes('test-credential'),false);
+assert.match(jevEligibilityError({aborted:'closed'},{}),/aborted/);
+assert.match(jevEligibilityError({diagnosticOnly:true},{}),/diagnostic/);
+console.log('jevHealth: 15 assertions passed');

@@ -30,6 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { chromium } from './lib/browsers.mjs';
 import { installVideo, probeMp4 } from './lib/video.mjs';
 import { mockAnswer } from './lib/jevMock.mjs';
+import { jevHealth } from './lib/jevHealth.mjs';
 
 function arg(name, fallback = null) {
   const i = process.argv.indexOf('--' + name);
@@ -111,8 +112,9 @@ export const JEV_STRATEGIC_QUESTIONS = Object.freeze([
  * Returns a counter object so the tool can report what it actually relayed,
  * independently of what the page claims.
  */
-async function installJevProxy(page, apiKey, { mock = false } = {}) {
-  const relay = { requests: 0, ok: 0, failed: 0, statuses: {}, blocked: 0, mock, directBlocked: 0 };
+export async function installJevProxy(page, apiKey, { mock = false, fetchImpl = fetch } = {}) {
+  const relay = { requests: 0, ok: 0, failed: 0, statuses: {}, blocked: 0, mock, directBlocked: 0,
+    endpoint: TYPESAFE_URL, lastAnswerAt: null, inputTokens: 0, receipts: [] };
   // Belt and braces: the page has no reason to reach TypeSafe directly (it
   // posts same-origin), so anything that tries is stopped and counted. In a
   // mock run this is what proves nothing left the machine.
@@ -137,14 +139,29 @@ async function installJevProxy(page, apiKey, { mock = false } = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAnswer(parsed)) });
     }
     try {
-      const res = await fetch(TYPESAFE_URL, {
+      const res = await fetchImpl(TYPESAFE_URL, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: route.request().postData() || '{}'
+        body: route.request().postData() || '{}',
+        signal: AbortSignal.timeout(OPTIONS.jevTimeoutMs)
       });
       const body = await res.text();
       relay.statuses[res.status] = (relay.statuses[res.status] || 0) + 1;
       if (res.ok) relay.ok++; else relay.failed++;
+      if (res.ok) {
+        let answer;
+        try { answer = JSON.parse(body); } catch {}
+        const out = answer?.result || answer;
+        const tokens = out?.usage?.input_tokens;
+        if (out?.answers && typeof out.answers === 'object') {
+          relay.lastAnswerAt = Date.now();
+          if (Number.isFinite(tokens)) relay.inputTokens += tokens;
+          relay.receipts.push({ at: new Date().toISOString(), status: res.status,
+            model: typeof out.model === 'string' ? out.model : null,
+            inputTokens: Number.isFinite(tokens) ? tokens : null,
+            requestId: res.headers.get('x-request-id') || res.headers.get('request-id') || null });
+        }
+      }
       await route.fulfill({ status: res.status, contentType: 'application/json', body });
     } catch (e) {
       relay.failed++;
@@ -247,34 +264,50 @@ export async function recordJob(job, shared) {
   // so it belongs in the output next to the races it produced.
   const fps = [];
   const deadline = Date.now() + job.runs * (job.hardLimitMs ?? OPTIONS.hardLimitMs) + 180_000;
-  let done = false, renderer = null;
+  let done = false, renderer = null, lastStore = null, lastReport = null, aborted = null;
   while (Date.now() < deadline) {
-    await page.waitForTimeout(5000);
+    try { await page.waitForTimeout(5000); }
+    catch { aborted = 'browser closed'; break; }
     const probe = await page.evaluate(() => {
       const s = window.__plugRunLiveScene;
       return {
         done: !!window.__plugRunRivals?.done,
         races: window.__plugRunRivals?.races?.length ?? -1,
         fps: s ? Math.round(s.game.loop.actualFps) : null,
-        renderer: s ? (s.renderer?.type === 2 ? 'WEBGL' : 'CANVAS') : null
+        renderer: s ? (s.renderer?.type === 2 ? 'WEBGL' : 'CANVAS') : null,
+        report: window.__plugRunJevStrategist?.report?.() ?? null,
+        capture: window.__plugRunRivals ? JSON.parse(JSON.stringify(window.__plugRunRivals)) : null
       };
     }).catch(() => null);
-    if (!probe) { problem('page went away'); break; }
+    if (!probe) { aborted = 'page went away'; problem(aborted); break; }
+    lastStore = probe.capture || lastStore;
+    lastReport = probe.report || lastReport;
+    if (OPTIONS.jev) {
+      const health = jevHealth(relay, lastReport, Date.now(), started);
+      log(`[JEV LIVE] ${health.label}; adopted=${lastReport?.strategies?.adopted ?? 0}; fallback=${Math.round((lastReport?.time?.fallbackShare ?? 0)*100)}%`);
+      await page.evaluate(label => { document.title = label; }, health.label).catch(() => {});
+      mkdirSync(OPTIONS.out, { recursive: true });
+      writeFileSync(join(OPTIONS.out, `${tag}-${started}.live.json`), JSON.stringify({
+        diagnosticOnly: true, bankable: false, recordedAt: new Date().toISOString(), health,
+        relay, report: lastReport, capture: lastStore
+      }));
+      if (health.fatal) { aborted = health.fatal; break; }
+    }
     if (probe.fps) fps.push(probe.fps);
     if (probe.renderer) renderer = probe.renderer;
     if (probe.done) { done = true; break; }
   }
   const store = await page.evaluate(() =>
-    window.__plugRunRivals ? JSON.parse(JSON.stringify(window.__plugRunRivals)) : null).catch(() => null);
+    window.__plugRunRivals ? JSON.parse(JSON.stringify(window.__plugRunRivals)) : null).catch(() => null) || lastStore || { races: [] };
   const jevReport = OPTIONS.jev
-    ? await page.evaluate(() => window.__plugRunJev?.() ?? null).catch(() => null)
+    ? await page.evaluate(() => window.__plugRunJev?.() ?? null).catch(() => null) || lastReport
     : null;
   let videoOut = null;
   if (video) {
     // A few seconds of the result screen, then finalize BEFORE closing: an
     // unstopped MediaRecorder leaves a truncated file behind.
     if (done) await page.waitForTimeout(3000);
-    videoOut = await video.stop();
+    videoOut = await video.stop().catch(() => ({ok:false,reason:'browser closed before video finalization'}));
     videoOut.events = video.events;
     if (videoOut.ok && videoOut.path.endsWith('.mp4')) {
       try { videoOut.container = probeMp4(videoOut.path); } catch (e) { videoOut.container = { error: e.message }; }
@@ -287,8 +320,9 @@ export async function recordJob(job, shared) {
           `${videoOut.container.durationS}s, ${videoOut.container.frames} frames, ${videoOut.container.fps} fps` : ''));
     } else log(`video FAILED: ${videoOut.reason}`);
   }
-  await page.context().close();
-  await browser.close();
+  await page.context().close().catch(() => {});
+  await browser.close().catch(() => {});
+  if (aborted) { problem('ABORTED: ' + aborted); log(`ABORTED: ${aborted}. This is not a completed Jev recording.`); }
   const problems = [...problemCounts.values()];
   for (const p of problems) log(`problem x${p.count} (first at ${p.firstAtS}s): ${p.message.slice(0, 160)}`);
 
@@ -296,7 +330,7 @@ export async function recordJob(job, shared) {
   const median = fps.length ? fps.slice().sort((a, b) => a - b)[fps.length >> 1] : null;
   const payload = {
     tool: 'rivals-record/1', recordedAt: new Date().toISOString(),
-    job, done, problems,
+    job, done, aborted, problems,
     environment: { url: OPTIONS.url, viewport: { width: OPTIONS.width, height: OPTIONS.height }, renderer, fpsMedian: median, fpsSamples: fps.length },
     config: store.config, course: store.course, races: store.races,
     video: videoOut ? { path: videoOut.path ?? null, mime: videoOut.mime ?? null, bytes: videoOut.bytes ?? null,
@@ -414,4 +448,3 @@ async function main() {
 // pathToFileURL, not `file://${argv[1]}`: on Windows argv[1] is `C:\...`, the
 // template never matches, and the tool exits 0 having done nothing.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
-

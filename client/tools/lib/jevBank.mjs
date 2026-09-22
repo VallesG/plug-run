@@ -89,6 +89,7 @@ export function assignmentErrors(bundle) {
 
 /** Why this race may not enter the Jev bank, or null if it may. */
 export function jevEligibilityError(payload, race) {
+  if (payload?.aborted || payload?.diagnosticOnly) return 'aborted or diagnostic-only recording';
   const jev = payload?.jev;
   const cfg = race?.record?.driverConfig;
   if (!jev) return 'not a Jev capture (ordinary bot or baseline)';
