@@ -20,7 +20,7 @@
 // credit fee; Cloudflare is there for an account whose credit already sits
 // with Cloudflare.
 
-import JevStrategist from './JevStrategist.js';
+import JevStrategist, { DEFAULTS } from './JevStrategist.js';
 import { typesafeJev } from './jevTypesafe.js';
 import { cloudflareJev } from './jevCloudflare.js';
 
@@ -92,7 +92,7 @@ export function makeJevStrategist(cfg = jevConfig()) {
   // Total budget across HTTP retries: a little under the strategist's own
   // timeout, so a retry has somewhere to happen but cannot outlive the
   // decision it answers.
-  const signalMs = Math.max(600, (opts.timeoutMs || 2500) - 200);
+  const signalMs = Math.max(600, (opts.timeoutMs || DEFAULTS.timeoutMs) - 200);
 
   let decide;
   if (cfg.route === 'cloudflare') {
@@ -124,3 +124,4 @@ export function makeJevStrategist(cfg = jevConfig()) {
 }
 
 export default makeJevStrategist;
+

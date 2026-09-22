@@ -89,7 +89,10 @@ export const DEFAULTS = Object.freeze({
   minRequestGapMs: 1500,
   // A strategic answer is not urgent; past this the request is abandoned and
   // any late answer is discarded.
-  timeoutMs: 2500,
+  // Route + power-plan answers contain more context than the original
+  // three-choice spike. Real Jev calls can legitimately take several seconds;
+  // 2.5s discarded healthy answers and tripped the error ceiling in 11s.
+  timeoutMs: 15000,
   // A bag choice stands at least this long before Jev may switch to the
   // other bag, unless the bag is gone or the plan stalled.
   commitMs: 4000,
@@ -506,6 +509,7 @@ export default class JevStrategist {
   _failure(now, why) {
     this.stats.errors += why === 'timeout' ? 0 : 1;
     this.consecutiveErrors++;
+    console.warn(`[JEV] strategic request failed (${this.consecutiveErrors}/${this.cfg.maxConsecutiveErrors}): ${why}`);
     this._log(now, 'failure', { why });
   }
 
@@ -739,3 +743,4 @@ export default class JevStrategist {
     };
   }
 }
+

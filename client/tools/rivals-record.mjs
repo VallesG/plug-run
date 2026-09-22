@@ -68,6 +68,9 @@ const OPTIONS = {
   // need tens of these; see JevStrategist for what triggers one.
   jevMaxRequests: Number(arg('jevMaxRequests', 100)),
   jevMaxInputTokens: Number(arg('jevMaxInputTokens', 500_000)),
+  // Real multi-question strategy calls are allowed time to finish. This is
+  // passed explicitly into the page so a recording states its decision SLA.
+  jevTimeoutMs: Number(arg('jevTimeoutMs', 15_000)),
   // --video: an MP4 of each job, start to finish, with a diagnostic strip
   // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
   // which is git-ignored — keep --videoDir there.
@@ -76,6 +79,9 @@ const OPTIONS = {
   // The diagnostic strip under the board is off unless asked for: a clean
   // video is the board alone. The same telemetry is always in .events.json.
   videoStats: Boolean(arg('videoStats', false)),
+  // Open a real visible Chrome window so the attempt can be watched live.
+  // Video capture remains the same clean board-only file unless --videoStats.
+  headed: Boolean(arg('headed', false)),
   renderer: String(arg('renderer', process.platform === 'linux' ? 'canvas' : 'gpu'))
 };
 
@@ -150,7 +156,7 @@ async function installJevProxy(page, apiKey, { mock = false } = {}) {
 export async function recordJob(job, shared) {
   const { pw, executablePath } = shared;
   const browser = await pw.launch({
-    executablePath, headless: true,
+    executablePath, headless: !OPTIONS.headed,
     // See RENDERER at the top of this file.
     args: ['--no-sandbox', '--mute-audio',
       ...(OPTIONS.renderer === 'canvas'
@@ -225,7 +231,8 @@ export async function recordJob(job, shared) {
       jev: '1', jevProxy: '1',
       ...(OPTIONS.jevMock ? { jevMock: '1' } : {}),
       jevMaxRequests: String(OPTIONS.jevMaxRequests),
-      jevMaxInputTokens: String(OPTIONS.jevMaxInputTokens)
+      jevMaxInputTokens: String(OPTIONS.jevMaxInputTokens),
+      jevTimeoutMs: String(OPTIONS.jevTimeoutMs)
     } : {})
   });
   await page.goto(`${OPTIONS.url}/?${query}`, { waitUntil: 'load' });
@@ -295,7 +302,8 @@ export async function recordJob(job, shared) {
     jev: OPTIONS.jev ? {
       driver: 'jev-strategist', motor: 'runner-ai',
       route: OPTIONS.jevMock ? 'mock' : 'typesafe-direct',
-      ceilings: { maxRequests: OPTIONS.jevMaxRequests, maxInputTokens: OPTIONS.jevMaxInputTokens },
+      ceilings: { maxRequests: OPTIONS.jevMaxRequests, maxInputTokens: OPTIONS.jevMaxInputTokens,
+        timeoutMs: OPTIONS.jevTimeoutMs },
       relay, report: jevReport
     } : null
   };
@@ -349,7 +357,8 @@ async function main() {
     }
     console.log(`jev: ON — strategist above the runner AI, sequential, ceilings ${OPTIONS.jevMaxRequests} ` +
       `logical requests / ${OPTIONS.jevMaxInputTokens.toLocaleString('en-US')} input tokens ` +
-      `(~$${(OPTIONS.jevMaxInputTokens / 1e6 * 0.042).toFixed(2)} worst case). ` +
+      `(~$${(OPTIONS.jevMaxInputTokens / 1e6 * 0.042).toFixed(2)} worst case), ` +
+      `${OPTIONS.jevTimeoutMs}ms answer timeout, browser ${OPTIONS.headed ? 'visible' : 'headless'}. ` +
       'The key stays in Node; the page gets a sentinel.');
   } else if (OPTIONS.jevMock) {
     console.log('jev: MOCK strategist (tools/lib/jevMock.mjs) above the runner AI — offline, nothing billed, ' +
@@ -399,3 +408,4 @@ async function main() {
 // pathToFileURL, not `file://${argv[1]}`: on Windows argv[1] is `C:\...`, the
 // template never matches, and the tool exits 0 having done nothing.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+

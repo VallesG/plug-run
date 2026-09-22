@@ -282,7 +282,8 @@ Captures are tagged `-jevmock` and their provenance says `route: 'mock'`.
 $env:TYPESAFE_API_KEY = Read-Host -Prompt "key"     # PowerShell; never paste it into a chat
 node tools/rivals-record.mjs --slot 1 --powers phase,dash \
   --runs 1 --opponentIndex 9201 --jev --jevMaxRequests 100 --jevMaxInputTokens 500000 \
-  --video --videoDir tools/recordings/jev/video --url http://127.0.0.1:4173 \
+  --jevTimeoutMs 15000 --headed --video \
+  --videoDir tools/recordings/jev/video --url http://127.0.0.1:4173 \
   --out tools/recordings/jev
 ```
 
@@ -307,6 +308,12 @@ powers left and the last power call, billed tokens, cost and budget status).
 Either way a `.events.json` next to it has every strategist event (request,
 adopted, rejected, held, stall, recovery-end, restored, power-armed /
 activated / rejected, budget-stopped) in video time and race time.
+
+`--headed` opens the recording browser so the race can be watched live; it
+does not change the saved replay or add the diagnostic strip. Paid strategy
+answers get 15 seconds by default (`--jevTimeoutMs`) before they count as a
+timeout. The recorder prints the exact failure reason before the three-error
+circuit breaker falls back to the runner AI.
 
 `--renderer gpu` (the default on Windows and macOS) records with hardware
 WebGL — what players see. `--renderer canvas` (the default on Linux, for
@@ -520,3 +527,4 @@ attempt in (`test/rivalStashReroll.test.mjs`).
 - The runner AI's own objective code targets `scene.stash` (the real bag).
   Every existing borrowed-AI bank recording was driven that way. The hybrid
   cannot, because of the objective seam; the plain bot still does.
+
