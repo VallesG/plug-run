@@ -363,6 +363,36 @@ for (const name of ['phase', 'dash', 'decoy']) {
   check('dash is recorded and credited once',scene._driven.filter(d=>d.kind==='recordPower').length===1&&bot.jevReport().powers.activated===1);
 }
 
+// Recovery owns its route despite a continuously tempting dodge direction.
+{
+  reseed(31);clock.t=1_500_000;
+  const scene=makeScene({runner:{x:6,y:9},plug:{x:6,y:12}});
+  let reached=0,motorCalls=0,dodgeCalls=0;
+  const goal={x:4,y:6};
+  const strategist={tick:()=>({objective:{source:'recovery',objective:'recover',cell:goal},recovering:true,posture:'balanced'}),
+    report:()=>({}),onRecoveryReached:()=>reached++};
+  const hooks={...AI_HOOKS,updateRunnerBehavior:()=>motorCalls++};
+  const bot=new BotDriver(scene,{...CFG,strategist},hooks);
+  bot.firingLaneRisk=()=> 'row';bot.dodge=()=>{dodgeCalls++;return {x:1,y:0};};
+  await frames(bot,160,()=>Math.hypot(scene.attacker.x-scene.toWorldX(goal.x),scene.attacker.y-scene.toWorldY(goal.y))>scene.cell*.15);
+  check('recovery follows walkable centers around a wall to its endpoint',Math.hypot(scene.attacker.x-scene.toWorldX(goal.x),scene.attacker.y-scene.toWorldY(goal.y))<=scene.cell*.15);
+  check('dodge and borrowed AI cannot reverse the recovery route',dodgeCalls===0&&motorCalls===0);
+  check('recovery movement is separately visible in telemetry',strategist.driveSources.recoveryRoute>0);
+  bot._driveRecovery(scene.attacker,goal);
+  check('reaching the waypoint ends recovery early',reached===1);
+}
+
+// Random juking is suppressed only inside the hybrid's borrowed motor call.
+{
+  reseed(32);clock.t=1_600_000;
+  const scene=makeScene();let observed=null;
+  const hooks={...AI_HOOKS,updateRunnerBehavior:(s)=>{observed=s.aiRunner.jukeDist;}};
+  const {bot}=hybrid(scene,()=>strategy('target_a'),{},hooks);
+  await frames(bot,3);
+  check('the Jev motor cannot randomly juke away from its objective',observed===0);
+  check('ordinary AI juke settings are restored after borrowing',scene.aiRunner.jukeDist>0);
+}
+
 console.log('');
 if (failures.length) {
   console.log(`botDriverJev: ${passed} passed, ${failures.length} FAILED`);

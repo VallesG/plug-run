@@ -14,6 +14,7 @@ import { typesafeJev } from '../src/controllers/jevTypesafe.js';
 import { mapJevAnswer } from '../src/logic/jevAnswer.js';
 import { orderCandidates, MOVEMENT_KEYS } from '../src/logic/jevStrategy.js';
 import { readFileSync } from 'node:fs';
+import { createWatchdog, watchdogStep } from '../src/logic/jevWatchdog.js';
 
 let passed = 0;
 const failures = [];
@@ -36,6 +37,7 @@ function makeView(over = {}) {
     house: over.house ?? 1, houseKey: over.houseKey ?? '1:0', live: over.live ?? true, isRunner: true,
     matchKey: over.matchKey, revealedPocket: over.revealedPocket ?? null,
     hp: over.hp ?? 3, carrying: !!over.carrying, phasing: !!over.phasing, decoyActive: !!over.decoyActive,
+    evading: !!over.evading,
     candidates: over.carrying ? [] : orderCandidates(bags),
     extract: over.extract ?? { x: 18, y: 10 },
     plugs: over.plugs ?? [],
@@ -309,7 +311,31 @@ console.log('\nJevStrategist\n');
   check('recovery time and share reported', r.watchdog.recoveryMs > 10_000 && r.watchdog.recoveryShare > 0.2);
 }
 
+// Continuous dodging and two-cell reversals are not forward progress.
+{
+  clock.t = 390_000;
+  const { s } = make(() => strategy('target_a'));
+  const view = () => makeView({ runner: { x:10, y:10 + (Math.floor(clock.t/300)%2) }, evading:true });
+  await run(s,view,6000,50);
+  check('a repeated dodge loop is detected within seconds',s.report().watchdog.stalls>=1);
+  await run(s,view,114000,50);
+  check('two minutes of reversals cannot keep the watchdog exempt',s.report().watchdog.stalls>=20);
+  check('dodge loop recovery remains request-rate limited',s.report().watchdog.watchdogRequests<=24);
+  check('loop stalls identify evasion in the timeline',s.timeline.some(e=>e.kind==='stall'&&e.evading));
+}
+
 // 13. Powers: Jev decides WHETHER (arm / save), the motor decides WHEN.
+{
+  const w=createWatchdog({stallMs:100,recoveryMs:100,verifyMs:1000});
+  watchdogStep(w,{now:0,dist:5});
+  watchdogStep(w,{now:101,dist:5});
+  watchdogStep(w,{now:201,dist:8});
+  watchdogStep(w,{now:202,dist:7});
+  check('returning from a sidestep is not restored progress',w.stats.restored===0&&w.best===5);
+  watchdogStep(w,{now:203,dist:4});
+  check('beating the original distance restores progress',w.stats.restored===1);
+}
+
 //     A legal power is armed and handed to the plan; an illegal one is
 //     refused with a reason and never armed; the motor's activation is
 //     credited to the arm; 'none' disarms; an unused arm expires.

@@ -33,3 +33,13 @@ Dash mirrors the game's fixed tile count and wall stopping. It aligns through
 normal input before activation; the landing must approach the objective or
 increase separation from a nearby plug. Neither phase duration nor dash range
 is increased. These are hybrid-only changes; ordinary bot power rules remain.
+
+## Breaking movement loops
+
+Dodging no longer resets the progress watchdog. Repeated back-and-forth movement
+without a new best distance triggers bounded recovery, even when every frame is
+marked as evasion. Recovery follows a fixed path through floor centers and cannot
+be overridden by dodge, cover routing or the borrowed AI's direction lock. It
+ends early at its waypoint. Jev's borrowed motor also suppresses random close-plug
+jukes; ordinary bot settings are restored after the call. Recovery is counted as
+restored only after beating the previous best, not merely returning from a sidestep.

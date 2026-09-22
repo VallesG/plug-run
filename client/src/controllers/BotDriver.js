@@ -37,7 +37,7 @@
 
 import { planDodge } from '../logic/evasion.js';
 import { coverAwareStep, isExposedAt, phaseEscapeDir } from '../logic/cover.js';
-import { orderCandidates, postureTactics } from '../logic/jevStrategy.js';
+import { orderCandidates, postureTactics, pathDistances, distTo } from '../logic/jevStrategy.js';
 import { phaseShortcut, phaseReachCells, phaseCanCross, dashPlan } from '../logic/phasePlan.js';
 
 export const DEFAULTS = {
@@ -217,6 +217,7 @@ export default class BotDriver {
    * defender sprites that create() has just replaced with new objects.
    */
   _onNewRound() {
+    this._recoveryRoute = null;
     this._phaseApproach = null;
     this._phasePlanAt = 0;
     this._phaseGoal = null;
@@ -304,13 +305,24 @@ export default class BotDriver {
       this._plan = this.strategist.tick(this._jevView(me), {
         // Recovery hands the AI a fresh waypoint; clear its direction
         // commitment so it can actually turn toward it.
-        onRecovery: () => { if (this._borrowed) this._borrowed._aiFlipGuardUntil = 0; }
+        onRecovery: () => {
+          this._recoveryRoute = null;
+          this._phaseApproach = null;
+          this._coverDir = null;
+          this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
+          if (this._borrowed) { this._borrowed._aiFlipGuardUntil = 0; this._borrowed._aiPlanAt = 0; }
+        }
       });
       // Never null in the hybrid: with no objective at all (a transient,
       // e.g. both bags mid-change) the AI holds where it is rather than
       // falling through to its own objective code, which targets the real bag.
       const cell = this._plan.objective?.cell ?? s.toCell(me.x, me.y);
       this._borrowed.objectiveProvider = () => cell;
+      // Recovery must actually control movement, not merely change a target
+      // that the dodge/juke layers immediately override. Follow fixed floor
+      // centers for this short window, then give normal defenses control back.
+      if (this._plan.recovering && this._driveRecovery(me, cell)) return true;
+      if (!this._plan.recovering) this._recoveryRoute = null;
       // No random map-wide waypoint in the hybrid. Jev chooses the objective;
       // the motor takes the shortest path and only deviates for a live lane,
       // a wall or the watchdog's short recovery step.
@@ -373,11 +385,13 @@ export default class BotDriver {
         motorMistakes = {
           wanderChance: s.aiRunner.wanderChance,
           hesitationChance: s.aiRunner.hesitationChance,
-          overcommitChance: s.aiRunner.overcommitChance
+          overcommitChance: s.aiRunner.overcommitChance,
+          jukeDist: s.aiRunner.jukeDist
         };
         s.aiRunner.wanderChance = 0;
         s.aiRunner.hesitationChance = 0;
         s.aiRunner.overcommitChance = 0;
+        s.aiRunner.jukeDist = 0;
       }
 
       h.updateRunnerBehavior(s, this._borrowed, delta);
@@ -617,6 +631,36 @@ export default class BotDriver {
   _phaseReach() {
     const s = this.scene;
     return phaseReachCells(s.runnerSpeed * (s.hasStash ? (s.carrySlow ?? 1) : 1), s.cell, s.runnerPowerStats?.phase?.duration ?? 600);
+  }
+
+  _driveRecovery(me, goal) {
+    const s = this.scene, from = s.toCell(me.x, me.y), key = `${goal.x},${goal.y}`;
+    if (!this._recoveryRoute || this._recoveryRoute.key !== key) {
+      const distance = pathDistances(this._world(), goal);
+      let c = from, d = distTo(distance, from);
+      const cells = [{ ...from }];
+      while (d != null && d > 0) {
+        const next = [{ x:c.x+1,y:c.y },{ x:c.x-1,y:c.y },{ x:c.x,y:c.y+1 },{ x:c.x,y:c.y-1 }]
+          .find(n => distTo(distance, n) === d-1);
+        if (!next) break;
+        cells.push(next); c=next; d--;
+      }
+      if (d !== 0) return false;
+      this._recoveryRoute = { key, cells, index: 0 };
+    }
+    const route = this._recoveryRoute;
+    let point = route.cells[route.index];
+    while (point && Math.hypot(s.toWorldX(point.x)-me.x,s.toWorldY(point.y)-me.y) <= s.cell*0.15) {
+      point = route.cells[++route.index];
+    }
+    this._evading = false;
+    if (!point) {
+      this.strategist.onRecoveryReached?.();
+      this._recoveryRoute = null;
+      return false;
+    }
+    this._countDrive('recoveryRoute');
+    return this._driveOrCoast(me,{x:s.toWorldX(point.x)-me.x,y:s.toWorldY(point.y)-me.y});
   }
 
   _tryDash(me, goal) {

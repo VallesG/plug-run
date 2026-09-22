@@ -70,8 +70,11 @@ export function watchdogStep(w, { now, dist, exempt = false }) {
   if (w.recoveringUntil && now >= w.recoveringUntil) {
     w.stats.recoveryMs += w.recoveringUntil - w.recoveryStartedAt;
     w.recoveringUntil = 0;
-    w.best = dist; w.bestAt = now;
-    w.verify = { from: dist, until: now + cfg.verifyMs };
+    // Returning from a sidestep to the same old position is not restored
+    // progress. Preserve the pre-recovery best instead of lowering the bar.
+    w.best = w.best == null ? dist : dist == null ? w.best : Math.min(w.best, dist);
+    w.bestAt = now;
+    w.verify = { from: w.best, until: now + cfg.verifyMs };
     return { event: 'recovery-end', recovering: false };
   }
   if (isRecovering(w, now)) return { event: null, recovering: true };

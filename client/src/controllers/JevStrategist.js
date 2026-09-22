@@ -252,17 +252,17 @@ export default class JevStrategist {
 
     // Progress is measured toward what the motor is actually walking to:
     // its own detour waypoint when it has one, the objective otherwise.
-    // Exempt while holding, phasing, evading (the dodge layer is working, not
-    // stuck) and in the first moments of an attempt (still respawning).
-    const aim = view.motorWaypoint || target?.cell || null;
+    // Evasion is NOT exempt: bouncing out of a lane and back must eventually
+    // yield to recovery. Pauses/holds, active phase and spawn grace are exempt.
+    const aim = this.recovery?.goal || view.motorWaypoint || target?.cell || null;
     const wd = watchdogStep(this.watchdog, {
       now,
       dist: aim ? distTo(dist, aim) : null,
-      exempt: !target || target.objective === 'hold' || !!view.phasing || !!view.evading ||
+      exempt: !target || target.objective === 'hold' || !!view.phasing ||
         now - this._attemptStartedAt < this.cfg.attemptGraceMs
     });
     if (wd.event === 'stall') {
-      this._log(now, 'stall', { objective: target?.objective ?? null, source: target?.source ?? null });
+      this._log(now, 'stall', { objective: target?.objective ?? null, source: target?.source ?? null, evading: !!view.evading });
       if (this.strategy && !this.strategy.stalled) {
         this.strategy.stalled = true;
         this.strategies.invalidated++;
@@ -278,7 +278,7 @@ export default class JevStrategist {
         goal: aim && !this.exploring ? pathDistances(view, aim) : null,
         nearPlug: (c) => plugMaps.some((m) => distTo(m, c) != null)
       });
-      this.recovery = { cell, startedAt: now };
+      this.recovery = { cell, goal: aim, startedAt: now };
       this.watchdogOwed = true;
       hooks.onRecovery?.(cell);
     } else if (wd.event === 'recovery-end') {
@@ -307,6 +307,12 @@ export default class JevStrategist {
     const h = this.houses[this.houses.length - 1];
     if (h) h[mode + 'Ms'] = (h[mode + 'Ms'] || 0) + dt;
     return this._plan(target, recovering, mode);
+  }
+
+  /** Stop the bounded recovery early once its floor waypoint is reached. */
+  onRecoveryReached() {
+    const now = this.now();
+    if (isRecovering(this.watchdog, now)) this.watchdog.recoveringUntil = now;
   }
 
   /** The direct way has failed often enough in this house to try others. */
