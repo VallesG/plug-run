@@ -163,6 +163,9 @@ export function jevProvenance(payload, race, sourceFile = null, bankId = JEV_BAN
   const final = jev.report;                 // the session's, after the finish
   return {
     kind: record.opponent.kind,
+    // Which Jev: apex, rival-hard (legacy 'rival'), or null for a race
+    // recorded before profiles existed.
+    profile: cfg.jev?.profile || r.profile || final?.profile || null,
     driver: 'jev-strategist',
     motor: 'runner-ai',
     route: jev.route,
@@ -271,6 +274,11 @@ export function selectJevBank(existing, captures, bankId = JEV_BANK_ID) {
       }
       if (bankId === JEV_APEX_BANK_ID && capturedProfile && capturedProfile !== 'apex') {
         rejected.push({ tag, file, reason: 'not a Jev Apex capture' }); continue;
+      }
+      // The normal bank is reserved for the future softer profile: the two
+      // challenge profiles never enter it.
+      if (bankId === JEV_BANK_ID && ['apex', 'rival', 'rival-hard'].includes(capturedProfile)) {
+        rejected.push({ tag, file, reason: 'a ' + capturedProfile + ' capture never enters the normal Jev bank' }); continue;
       }
       const why = jevEligibilityError(payload, race) || validateJevRace(payload, race);
       if (why) { rejected.push({ tag, file, reason: why }); continue; }
