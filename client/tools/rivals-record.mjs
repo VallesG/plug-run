@@ -72,6 +72,8 @@ const OPTIONS = {
   // Real multi-question strategy calls are allowed time to finish. This is
   // passed explicitly into the page so a recording states its decision SLA.
   jevTimeoutMs: Number(arg('jevTimeoutMs', 15_000)),
+  // apex preserves the unrestricted driver; rival adds human opening latency.
+  jevProfile: arg('jevProfile', 'apex') === 'rival' ? 'rival' : 'apex',
   // --video: an MP4 of each job, start to finish, with a diagnostic strip
   // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
   // which is git-ignored — keep --videoDir there.
@@ -255,7 +257,8 @@ export async function recordJob(job, shared) {
       ...(OPTIONS.jevMock ? { jevMock: '1' } : {}),
       jevMaxRequests: String(OPTIONS.jevMaxRequests),
       jevMaxInputTokens: String(OPTIONS.jevMaxInputTokens),
-      jevTimeoutMs: String(OPTIONS.jevTimeoutMs)
+      jevTimeoutMs: String(OPTIONS.jevTimeoutMs),
+      jevProfile: OPTIONS.jevProfile
     } : {})
   });
   await page.goto(`${OPTIONS.url}/?${query}`, { waitUntil: 'load' });
@@ -398,7 +401,7 @@ async function main() {
     console.log(`jev: ON — strategist above the runner AI, sequential, ceilings ${OPTIONS.jevMaxRequests} ` +
       `logical requests / ${OPTIONS.jevMaxInputTokens.toLocaleString('en-US')} input tokens ` +
       `(~$${(OPTIONS.jevMaxInputTokens / 1e6 * 0.042).toFixed(2)} worst case), ` +
-      `${OPTIONS.jevTimeoutMs}ms answer timeout, browser ${OPTIONS.headed ? 'visible' : 'headless'}. ` +
+      `${OPTIONS.jevTimeoutMs}ms answer timeout, ${OPTIONS.jevProfile} profile, browser ${OPTIONS.headed ? 'visible' : 'headless'}. ` +
       'The key stays in Node; the page gets a sentinel.');
   } else if (OPTIONS.jevMock) {
     console.log('jev: MOCK strategist (tools/lib/jevMock.mjs) above the runner AI — offline, nothing billed, ' +

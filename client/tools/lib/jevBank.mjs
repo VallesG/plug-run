@@ -26,8 +26,10 @@ import { RIVAL_RULES_VERSION, RIVAL_HOUSES, rivalPoolCourse, rivalGenuinePocket,
 import { rivalPreset, RIVAL_BOT_DRIVER_VERSION } from '../../src/logic/rivalPresets.js';
 
 export const JEV_BANK_ID = 'jev-v1';
+export const JEV_APEX_BANK_ID = 'jev-apex-v1';
 export const JEV_BANK_SCHEMA = 1;
 export const JEV_BANK_ROOT = 'public/rivals/jev-v1';
+export const JEV_APEX_BANK_ROOT = 'public/rivals/jev-apex-v1';
 export const ORDINARY_BANK_ROOT = 'public/rivals/v2';
 const INTENT_KINDS = new Set(['m', 'g', 'p', 'f']);
 
@@ -153,7 +155,7 @@ export function validateJevRace(payload, race) {
  * What every bank entry says about how it was made. Counts, rates, labels,
  * versions and model strings only — nothing here can carry a credential.
  */
-export function jevProvenance(payload, race, sourceFile = null) {
+export function jevProvenance(payload, race, sourceFile = null, bankId = JEV_BANK_ID) {
   const record = race.record, cfg = record.driverConfig, jev = payload.jev;
   const r = race.jev.report;               // snapshotted at the finish
   const final = jev.report;                 // the session's, after the finish
@@ -216,7 +218,7 @@ export function jevProvenance(payload, race, sourceFile = null) {
       replaySchema: race.bundle.schemaVersion,
       capture: payload.tool,
       motor: record.opponent.driverVersion,
-      bank: JEV_BANK_ID
+      bank: bankId
     },
     environment: { renderer: payload.environment?.renderer ?? null, fpsMedian: payload.environment?.fpsMedian ?? null,
       viewport: payload.environment?.viewport ?? null },
@@ -230,7 +232,7 @@ export function jevProvenance(payload, race, sourceFile = null) {
  * @param existing  [{ record, bundle, provenance }] already in the bank
  * @param captures  [{ file, payload }] raw recorder output
  */
-export function selectJevBank(existing, captures) {
+export function selectJevBank(existing, captures, bankId = JEV_BANK_ID) {
   const accepted = [], rejected = [];
   const byId = new Map(), byHash = new Map();
   let reimported = 0;
@@ -263,7 +265,7 @@ export function selectJevBank(existing, captures) {
       const tag = race?.record?.recordingID || file;
       const why = jevEligibilityError(payload, race) || validateJevRace(payload, race);
       if (why) { rejected.push({ tag, file, reason: why }); continue; }
-      admit({ record: race.record, bundle: race.bundle, provenance: jevProvenance(payload, race, file) }, tag);
+      admit({ record: race.record, bundle: race.bundle, provenance: jevProvenance(payload, race, file, bankId) }, tag);
     }
   }
   return { accepted, rejected, reimported };

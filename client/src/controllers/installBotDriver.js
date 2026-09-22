@@ -613,6 +613,7 @@ function jevProvenance(jev) {
     driver: 'jev-strategist',
     motor: 'runner-ai',
     route: jev.route || 'typesafe-direct',
+    profile: jev.profile || 'apex',
     modelRequested: jevConfig()?.mock ? 'mock-strategist' : (jevConfig()?.model || 'jev-latest'),
     modelReturned: r.model || null,
     ceilings: { maxRequests: r.requestLimit, maxInputTokens: r.tokenLimit },

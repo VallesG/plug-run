@@ -334,6 +334,17 @@ never from a `VITE_*` env var — Vite inlines those into the bundle.
 
 ## The Jev opponent bank (`public/rivals/jev-v1/`)
 
+Two versioned profiles now preserve different promises:
+
+- `jev-apex-v1` / **Jev Apex** is the unrestricted challenge driver and its
+  seven-course ghost bank. It is not loaded into ordinary random matchmaking.
+- `jev-v1` / **Jev Rival** keeps the same routing, retry learning, dodging and
+  power logic, but waits a randomized 250–450 ms at each attempt opening.
+  Record it with `--jevProfile rival`; omitting the flag records Apex.
+
+The profiles are separate so later balance work cannot silently weaken the
+archived Apex driver used to generate future challenge maps.
+
 A separate bank of races driven by the strategist. Its files are never mixed
 into the ordinary bot bank in `public/rivals/v2/`; **the game reads both
 into one opponent pool per course** (`utils/rivalSession.js`) and the same

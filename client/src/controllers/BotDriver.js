@@ -316,6 +316,10 @@ export default class BotDriver {
           if (this._borrowed) { this._borrowed._aiFlipGuardUntil = 0; this._borrowed._aiPlanAt = 0; }
         }
       });
+      if (this._plan.openingWaiting) {
+        this._countDrive('openingDelay');
+        return this._driveOrCoast(me, null);
+      }
       // Never null in the hybrid: with no objective at all (a transient,
       // e.g. both bags mid-change) the AI holds where it is rather than
       // falling through to its own objective code, which targets the real bag.

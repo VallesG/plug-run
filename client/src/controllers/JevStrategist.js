@@ -104,6 +104,10 @@ export const DEFAULTS = Object.freeze({
   attemptGraceMs: 1500,
   // Deaths in one house before the plan turns exploratory (see the header).
   exploreAfterDeaths: 2,
+  // Apex remains frame-perfect. The Rival profile overrides these with a
+  // small per-attempt human reaction delay before the motor may move.
+  openingDelayMinMs: 0,
+  openingDelayMaxMs: 0,
 
   // SAFETY CEILINGS. Past either the strategist stops asking for the rest of
   // the session; the runner AI keeps playing on the fallback objective, so a
@@ -174,6 +178,7 @@ export default class JevStrategist {
     this._dist = null;
     this._distKey = null;
     this._attemptStartedAt = -Infinity;
+    this._openingReadyAt = -Infinity;
     this._lastWaypoint = null;
     this.houseDeaths = [];
     this.knownPocket = null;
@@ -342,6 +347,7 @@ export default class JevStrategist {
       // bag was genuine. The motor uses repeated points to stop brute-forcing
       // the same corridor on later attempts.
       deathCells: this.houseDeaths.map((d) => ({ cell: { ...d.cell }, carrying: !!d.carrying })),
+      openingWaiting: this.now() < this._openingReadyAt,
       explore: this.exploring && !recovering };
   }
 
@@ -369,6 +375,9 @@ export default class JevStrategist {
     this.watchdogOwed = false;
     this.attemptSwitches = 0;
     this._attemptStartedAt = now;
+    const lo = Math.max(0, Number(this.cfg.openingDelayMinMs) || 0);
+    const hi = Math.max(lo, Number(this.cfg.openingDelayMaxMs) || lo);
+    this._openingReadyAt = now + lo + this.rng() * (hi - lo);
     this._distKey = null;
     if (isRecovering(this.watchdog, now)) this.watchdog.stats.recoveryMs += now - this.watchdog.recoveryStartedAt;
     this.watchdog.recoveringUntil = 0;
@@ -709,6 +718,7 @@ export default class JevStrategist {
     const http = this.decide?.http ? { ...this.decide.http, statuses: { ...this.decide.http.statuses } } : null;
     return {
       driver: 'jev-strategist',
+      profile: this.profile ?? 'apex',
       route: this.route ?? null,
       motor: 'runner-ai',
       rawMovementActions: 0,

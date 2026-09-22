@@ -1,0 +1,135 @@
+{
+ "schemaVersion": 1,
+ "bank": "jev-apex-v1",
+ "rulesVersion": "rivals-v1",
+ "generatedAt": "2026-09-22T07:24:14.289Z",
+ "note": "Jev Apex: unrestricted challenge ghosts, kept outside ordinary matchmaking.",
+ "courses": [
+  {
+   "slot": 1,
+   "name": "Low End Rush",
+   "courseID": "rivals-v1-2722422571",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-low-end-rush-ace-9601-hefoyc"
+   ],
+   "elapsedMs": [
+    47166.60000002384
+   ],
+   "retries": [
+    0
+   ],
+   "costUsd": [
+    0.0008
+   ]
+  },
+  {
+   "slot": 2,
+   "name": "Copper Climb",
+   "courseID": "rivals-v1-2917822448",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-copper-climb-ace-9602-11ne5hw"
+   ],
+   "elapsedMs": [
+    157691.80000007153
+   ],
+   "retries": [
+    22
+   ],
+   "costUsd": [
+    0.0034
+   ]
+  },
+  {
+   "slot": 3,
+   "name": "Freight Run",
+   "courseID": "rivals-v1-1245351574",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-freight-run-ace-9603-19ih3nl"
+   ],
+   "elapsedMs": [
+    43939.09999996424
+   ],
+   "retries": [
+    0
+   ],
+   "costUsd": [
+    0.0008
+   ]
+  },
+  {
+   "slot": 4,
+   "name": "Afterglow Mile",
+   "courseID": "rivals-v1-2476136539",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-afterglow-mile-ace-9604-ak0bm"
+   ],
+   "elapsedMs": [
+    61934.80000001192
+   ],
+   "retries": [
+    3
+   ],
+   "costUsd": [
+    0.0012
+   ]
+  },
+  {
+   "slot": 5,
+   "name": "Switchyard Seven",
+   "courseID": "rivals-v1-2143714553",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-switchyard-seven-ace-9605-1ya2otf"
+   ],
+   "elapsedMs": [
+    42409.500000059605
+   ],
+   "retries": [
+    1
+   ],
+   "costUsd": [
+    0.0009
+   ]
+  },
+  {
+   "slot": 6,
+   "name": "Lastlight Loop",
+   "courseID": "rivals-v1-2077357177",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-lastlight-loop-ace-9606-o1qi5m"
+   ],
+   "elapsedMs": [
+    38075.299999952316
+   ],
+   "retries": [
+    0
+   ],
+   "costUsd": [
+    0.0007
+   ]
+  },
+  {
+   "slot": 7,
+   "name": "Blacktop Crown",
+   "courseID": "rivals-v1-2334749748",
+   "opponents": 1,
+   "recordingIDs": [
+    "rec-blacktop-crown-ace-9607-16184bf"
+   ],
+   "elapsedMs": [
+    35270.5
+   ],
+   "retries": [
+    0
+   ],
+   "costUsd": [
+    0.0006
+   ]
+  }
+ ]
+}

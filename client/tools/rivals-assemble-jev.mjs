@@ -24,7 +24,7 @@ import { join, resolve, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { RIVAL_RULES_VERSION, RIVAL_COURSE_POOL } from '../src/logic/rivals.js';
-import { selectJevBank, JEV_BANK_ID, JEV_BANK_SCHEMA, JEV_BANK_ROOT, ORDINARY_BANK_ROOT } from './lib/jevBank.mjs';
+import { selectJevBank, JEV_BANK_ID, JEV_APEX_BANK_ID, JEV_BANK_SCHEMA, JEV_BANK_ROOT, JEV_APEX_BANK_ROOT, ORDINARY_BANK_ROOT } from './lib/jevBank.mjs';
 
 const arg = (name, fallback = null) => {
   const i = process.argv.indexOf('--' + name);
@@ -82,13 +82,15 @@ function treeHash(dir) {
   return h.digest('hex').slice(0, 16);
 }
 
-export function writeJevBank(root, accepted) {
+export function writeJevBank(root, accepted, bankId = JEV_BANK_ID) {
   if (existsSync(root)) rmSync(root, { recursive: true, force: true });
   mkdirSync(join(root, 'replays'), { recursive: true });
   const manifest = {
-    schemaVersion: JEV_BANK_SCHEMA, bank: JEV_BANK_ID, rulesVersion: RIVAL_RULES_VERSION,
+    schemaVersion: JEV_BANK_SCHEMA, bank: bankId, rulesVersion: RIVAL_RULES_VERSION,
     generatedAt: new Date().toISOString(),
-    note: 'Opponents driven by the Jev strategist above the runner AI. Kept apart from rivals/v2; the game pools both per course.',
+    note: bankId === JEV_APEX_BANK_ID
+      ? 'Jev Apex: unrestricted challenge ghosts, kept outside ordinary matchmaking.'
+      : 'Jev Rival: humanized Jev opponents pooled into ordinary Block Rivals matchmaking.',
     courses: []
   };
   for (const course of RIVAL_COURSE_POOL) {
@@ -105,7 +107,7 @@ export function writeJevBank(root, accepted) {
     });
     mkdirSync(join(root, 'courses', course.courseID), { recursive: true });
     writeFileSync(join(root, 'courses', course.courseID, 'opponents.json'), JSON.stringify({
-      schemaVersion: JEV_BANK_SCHEMA, bank: JEV_BANK_ID, rulesVersion: RIVAL_RULES_VERSION,
+      schemaVersion: JEV_BANK_SCHEMA, bank: bankId, rulesVersion: RIVAL_RULES_VERSION,
       courseID: course.courseID, courseSlot: course.slot, name: course.name, opponents
     }));
     manifest.courses.push({
@@ -122,7 +124,9 @@ export function writeJevBank(root, accepted) {
 
 function main() {
   const IN = arg('in', 'tools/recordings');
-  const ROOT = arg('root', JEV_BANK_ROOT);
+  const PROFILE = arg('profile', 'rival') === 'apex' ? 'apex' : 'rival';
+  const BANK_ID = PROFILE === 'apex' ? JEV_APEX_BANK_ID : JEV_BANK_ID;
+  const ROOT = arg('root', PROFILE === 'apex' ? JEV_APEX_BANK_ROOT : JEV_BANK_ROOT);
   const DRY = !!arg('dry', false);
   const FRESH = !!arg('fresh', false);
   const v2 = resolve(ORDINARY_BANK_ROOT);
@@ -137,10 +141,10 @@ function main() {
   // Provenance names each capture relative to tools/recordings, whatever
   // --in was, so a bank built from a subfolder still points at its files.
   const captures = readCaptures(IN).map((c) => ({ ...c, file: relative('tools/recordings', join(IN, c.file)).split(sep).join('/') }));
-  const { accepted, rejected, reimported } = selectJevBank(existing, captures);
+  const { accepted, rejected, reimported } = selectJevBank(existing, captures, BANK_ID);
   const kept = new Set(accepted.map((a) => a.record.recordingID));
   const report = {
-    bank: JEV_BANK_ID, root: ROOT, dry: DRY, fresh: FRESH, capturesExamined: captures.length,
+    bank: BANK_ID, profile: PROFILE, root: ROOT, dry: DRY, fresh: FRESH, capturesExamined: captures.length,
     existing: banked.length, accepted: accepted.length, reimported, rejected: rejected.length,
     retired: banked.map((e) => e.record.recordingID).filter((id) => !kept.has(id)),
     entries: accepted.map((a) => ({
@@ -152,7 +156,7 @@ function main() {
 
   if (!DRY) {
     const before = treeHash(v2);
-    writeJevBank(ROOT, accepted);
+    writeJevBank(ROOT, accepted, BANK_ID);
     const after = treeHash(v2);
     report.v2Unchanged = before === after;
     if (!report.v2Unchanged) { console.error('rivals/v2 changed during a Jev bank write — this must never happen'); process.exit(1); }

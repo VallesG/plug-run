@@ -67,7 +67,8 @@ export function jevConfig() {
       apiKey: window.__JEV_KEY || fromSession('key'),
       accountId: window.__JEV_ACCOUNT || fromSession('account'),
       gatewayId: window.__JEV_GATEWAY || fromSession('gateway'),
-      timeoutMs: num('jevTimeoutMs', undefined)
+      timeoutMs: num('jevTimeoutMs', undefined),
+      profile: p.get('jevProfile') === 'rival' ? 'rival' : 'apex'
     };
   } catch { return null; }
 }
@@ -89,6 +90,10 @@ export function makeJevStrategist(cfg = jevConfig()) {
   if (cfg.timeoutMs) opts.timeoutMs = cfg.timeoutMs;
   if (cfg.maxRequests) opts.maxRequests = cfg.maxRequests;
   if (cfg.maxInputTokens) opts.maxInputTokens = cfg.maxInputTokens;
+  if (cfg.profile === 'rival') {
+    opts.openingDelayMinMs = 250;
+    opts.openingDelayMaxMs = 450;
+  }
   // Total budget across HTTP retries: a little under the strategist's own
   // timeout, so a retry has somewhere to happen but cannot outlive the
   // decision it answers.
@@ -117,8 +122,10 @@ export function makeJevStrategist(cfg = jevConfig()) {
   }
 
   console.log('[JEV] strategist on —', JSON.stringify({
-    route: cfg.mock ? 'mock' : cfg.route, proxied: !!cfg.proxy, model: cfg.model || 'default', ...opts }));
+    route: cfg.mock ? 'mock' : cfg.route, profile: cfg.profile || 'apex',
+    proxied: !!cfg.proxy, model: cfg.model || 'default', ...opts }));
   const strategist = new JevStrategist(decide, opts);
+  strategist.profile = cfg.profile || 'apex';
   strategist.route = cfg.mock ? 'mock' : (cfg.route === 'cloudflare' ? 'cloudflare' : 'typesafe-direct');
   return strategist;
 }
