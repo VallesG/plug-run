@@ -66,4 +66,32 @@ for(const [width,height] of [[280,480],[390,844],[1440,900]]){
  check('replay leaves no live display objects '+width,f.nodes.filter(n=>n._isReplayGhost).every(n=>!n.active));
  check('replay returns once '+width,done===(width===390?0:1)&&!f.handlers.update&&!f.handlers.shutdown);
 }
+
+// Power events: a watcher hears the live cue at the live settings and sees
+// the power named, with a burst, where the rival used it. No audio travels
+// in the replay; the event is enough.
+{
+ const f=fixture(390,844);
+ const played=[];f.scene.audio={play:(key,opts)=>played.push({key,...opts})};
+ const makeRunnerSprite=(_,x,y)=>sprite(f,'runner',x,y),makePlugSprite=(_,x,y)=>sprite(f,'plug',x,y);
+ const bindings={...rules,...replay,drawRivalReplayArena:arena,Phaser:{},T:{WALL:1},THEMES:[theme],PALETTE,
+ createSeededRNG:()=>()=>.2,generateSquareMaze:()=>({grid,egress}),makeRunnerSprite,makePlugSprite};
+ const play=new Function(...Object.keys(bindings),playerSource+';return playRivalReplay;')(...Object.values(bindings));
+ const rep=replay.newReplaySegment({house:1,attempt:1,houseSeed:123,cols:16,rows:35,scale:.6,
+ stashes:[{x:3.5,y:4.5},{x:12.5,y:30.5}],car:{x:15.5,y:20.5,side:'E'},runnerSpawn:{x:2.5,y:20.5},plugSpawn:{x:13.5,y:10.5}});
+ replay.pushReplayFrame(rep,0,{runner:{x:2.5,y:20.5,flags:0},plugs:[{x:13.5,y:10.5,flags:0}],bullets:[]});
+ replay.pushReplayFrame(rep,1000,{runner:{x:6.5,y:20.5,flags:0},plugs:[{x:13.5,y:10.5,flags:0}],bullets:[]});
+ replay.pushReplayEvent(rep,300,'power',{slot:1,power:'dash'});
+ replay.pushReplayEvent(rep,600,'power',{slot:0,power:'phase'});
+ rep.durationMs=1000;
+ const api=play(f.scene,{bundle:{segments:[{house:1,attempt:1,startedMs:0,durationMs:1000,outcome:'extracted',replay:rep}]},onDone:()=>{}});
+ for(let k=0;k<60&&f.handlers.update;k++)f.handlers.update(0,100);
+ const dash=played.find(p=>p.key==='dash'),phase=played.find(p=>p.key==='phase');
+ check('a replayed dash plays the live dash cue at the live settings',dash&&dash.volume===0.2&&dash.rate===2.5);
+ check('a replayed phase plays the live phase cue',phase&&phase.volume===0.7);
+ const labels=f.nodes.filter(n=>n.kind==='text').map(n=>n.args[2]);
+ check('the watcher sees DASH and PHASE named',labels.includes('DASH')&&labels.includes('PHASE'));
+ check('and a burst where each was used',f.nodes.filter(n=>n.kind==='circle'&&n.args[3]===0x9ad1ff).length>=2);
+ api.end();
+}
 console.log('Rival replay view: '+passed+' assertions passed');

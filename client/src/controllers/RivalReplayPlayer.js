@@ -176,7 +176,10 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     const t = mk(scene.add.text(x, y - house.cell * 0.65, text, { fontSize: Math.max(14, Math.floor(house.cell * 0.6)) + 'px', color, fontStyle: 'bold' }).setOrigin(0.5).setDepth(DEPTH + 13));
     scene.tweens.add({ targets: t, y: t.y - house.cell * 0.55, alpha: 0, duration: 950, onComplete: () => t.destroy() });
   };
-  const sfx = (key, volume = 0.7) => { try { scene.audio?.play?.(key, { volume }); } catch {} };
+  const sfx = (key, volume = 0.7, extra = {}) => { try { scene.audio?.play?.(key, { volume, ...extra }); } catch {} };
+  // The same cues, at the same settings, as the live game's power activation
+  // (BaseGameScene): a watcher hears exactly what the rival heard.
+  const POWER_SFX = { phase: [0.7, {}], dash: [0.2, { rate: 2.5 }], decoy: [0.4, {}] };
   const applyEvent = (e) => {
     const { rep, wx, wy } = house;
     if (e.k === 'shot') sfx('gun_fire', 0.6);
@@ -184,7 +187,16 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     else if (e.k === 'death') { sfx('ouch', 0.7); puff(house.runner.x, house.runner.y, PALETTE.dust, 10); ring(house.runner.x, house.runner.y, PALETTE.runner); house.hidden = true; }
     else if (e.k === 'pickup') { sfx('pickup', 0.8); sfx('spickup', 0.7); house.carry.setVisible(true); }
     else if (e.k === 'bunk') { sfx('pickup', 0.8); sfx('bpickup', 0.7); const d = house.duffels[e.i]; if (d) { toast(d.x, d.y, 'BUNK!', '#f87171'); scene.tweens.add({ targets: d, alpha: 0, scale: 0.82, duration: 680 }); } }
-    else if (e.k === 'power') { sfx(e.power || 'phase', 0.5); if (e.power) toast(house.runner.x, house.runner.y, e.power.toUpperCase(), '#9ad1ff'); }
+    else if (e.k === 'power') {
+      // A dash or a phase moves the rival through space or a wall in an
+      // instant; the cue, the burst and the label say it was a power.
+      const [vol, extra] = POWER_SFX[e.power] || POWER_SFX.phase;
+      sfx(e.power || 'phase', vol, extra);
+      if (e.power) {
+        toast(house.runner.x, house.runner.y, e.power.toUpperCase(), '#9ad1ff');
+        if (e.power !== 'decoy') ring(house.runner.x, house.runner.y, 0x9ad1ff);
+      }
+    }
     else if (e.k === 'extract') { ring(wx(rep.car.x), wy(rep.car.y), 0x86efac); }
   };
   const drawSegment = (local, dt) => {
