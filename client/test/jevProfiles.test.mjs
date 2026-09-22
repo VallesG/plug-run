@@ -13,16 +13,16 @@ assert.equal(apex._plan(null, false, 'fallback').openingWaiting, false,
   'Apex must preserve the unrestricted zero-delay driver');
 
 const rival = new JevStrategist(async () => null, {
-  now: () => now, rng: () => 0.5, openingDelayMinMs: 250, openingDelayMaxMs: 450
+  now: () => now, rng: () => 0.5, openingDelayMinMs: 400, openingDelayMaxMs: 650
 });
 rival.profile = 'rival';
 rival._newHouse(view, now);
 assert.equal(rival._plan(null, false, 'fallback').openingWaiting, true,
   'Rival waits at the opening');
-now = 1349;
+now = 1524;
 assert.equal(rival._plan(null, false, 'fallback').openingWaiting, true,
   'Rival uses the configured randomized delay');
-now = 1351;
+now = 1526;
 assert.equal(rival._plan(null, false, 'fallback').openingWaiting, false,
   'Rival releases the unchanged motor after its opening delay');
 assert.equal(rival.report().profile, 'rival');

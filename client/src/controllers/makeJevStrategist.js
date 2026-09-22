@@ -91,8 +91,8 @@ export function makeJevStrategist(cfg = jevConfig()) {
   if (cfg.maxRequests) opts.maxRequests = cfg.maxRequests;
   if (cfg.maxInputTokens) opts.maxInputTokens = cfg.maxInputTokens;
   if (cfg.profile === 'rival') {
-    opts.openingDelayMinMs = 250;
-    opts.openingDelayMaxMs = 450;
+    opts.openingDelayMinMs = 400;
+    opts.openingDelayMaxMs = 650;
   }
   // Total budget across HTTP retries: a little under the strategist's own
   // timeout, so a retry has somewhere to happen but cannot outlive the

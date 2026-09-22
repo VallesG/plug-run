@@ -419,6 +419,20 @@ for (const name of ['phase', 'dash', 'decoy']) {
   bot._onNewRound();check('retry clears committed route',bot._committedRoute===null);
 }
 
+// A repeatedly failed extraction route is remembered across retries as a
+// route, not merely as its final death cell. That makes the next plan choose
+// the alternate corridor while leaving the route fixed inside an attempt.
+{
+  const scene=makeScene();
+  const {bot,strategist}=hybrid(scene,()=>strategy('extract'));
+  bot._committedRoute={key:'6,12',cells:[{x:6,y:5},{x:5,y:5},{x:5,y:6},{x:5,y:7}],index:2,carrying:true};
+  bot._onNewRound();
+  check('a failed committed route is handed to match-local retry memory',strategist.failedRoutes.length===1);
+  bot._committedRoute={key:'6,12',cells:[{x:6,y:5},{x:5,y:5},{x:5,y:6},{x:5,y:7}],index:2,carrying:true};
+  bot._onNewRound();
+  check('the second failure establishes a repeated corridor',strategist.failedRoutes.length===2);
+}
+
 // Captured house 3, attempt 2 pickup position. Geometry only: this is not a
 // simulated win against a live plug, but it locks down the corridor traversal.
 {

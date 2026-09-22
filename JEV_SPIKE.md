@@ -339,7 +339,8 @@ Two versioned profiles now preserve different promises:
 - `jev-apex-v1` / **Jev Apex** is the unrestricted challenge driver and its
   seven-course ghost bank. It is not loaded into ordinary random matchmaking.
 - `jev-v1` / **Jev Rival** keeps the same routing, retry learning, dodging and
-  power logic, but waits a randomized 250–450 ms at each attempt opening.
+  power logic, but begins with a randomized 400–650 ms legal reflex swipe
+  away from the already-perfect route, then corrects toward its objective.
   Record it with `--jevProfile rival`; omitting the flag records Apex.
 
 The profiles are separate so later balance work cannot silently weaken the

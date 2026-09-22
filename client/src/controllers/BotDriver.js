@@ -189,6 +189,7 @@ export default class BotDriver {
     this.strategist = strategist;
     this._plan = null;
     this._committedRoute = null;
+    this._openingReflex = null;
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._startedAt = performance.now();
@@ -218,6 +219,9 @@ export default class BotDriver {
    * defender sprites that create() has just replaced with new objects.
    */
   _onNewRound() {
+    if (this._committedRoute?.cells) {
+      this.strategist?.rememberFailedRoute?.(this._committedRoute.cells, this._committedRoute.carrying);
+    }
     this._recoveryRoute = null;
     this._phaseApproach = null;
     this._phasePlanAt = 0;
@@ -228,6 +232,7 @@ export default class BotDriver {
     this._plan = null;
     this._roundSeq = (this._roundSeq || 0) + 1;
     this._committedRoute = null;
+    this._openingReflex = null;
     this._progressionApplied = false;
     this._borrowed = null;
     this._lastDir = null;
@@ -318,7 +323,7 @@ export default class BotDriver {
       });
       if (this._plan.openingWaiting) {
         this._countDrive('openingDelay');
-        return this._driveOrCoast(me, null);
+        return this._driveOpeningReflex(me, this._plan.objective?.cell);
       }
       // Never null in the hybrid: with no objective at all (a transient,
       // e.g. both bags mid-change) the AI holds where it is rather than
@@ -696,24 +701,33 @@ export default class BotDriver {
       const exposed = exposedCells(world);
       const carrying = !!s.hasStash;
       const deaths = (this._plan?.deathCells || []).filter(d=>d.carrying===carrying && d.cell);
+      const failedRoutes = (this._plan?.failedRoutes || []).filter(r=>r.carrying===carrying);
+      const routeCounts = new Map();
+      for (const route of failedRoutes) {
+        const unique = new Set((route.cells || []).map(c=>`${c.x},${c.y}`));
+        for (const id of unique) routeCounts.set(id,(routeCounts.get(id)||0)+1);
+      }
       // One unlucky death should not change a good route. Two deaths in the
       // same small area establish a failed corridor; make it expensive, not
       // forbidden, so an unavoidable choke point remains traversable.
       const repeated = deaths.filter((d,i,a)=>a.some((o,j)=>j!==i &&
         Math.abs(o.cell.x-d.cell.x)+Math.abs(o.cell.y-d.cell.y)<=2));
-      const penaltyAt = repeated.length ? (cell) => {
+      const hasRepeatedRoute = [...routeCounts.values()].some(n=>n>=2);
+      const penaltyAt = (repeated.length || hasRepeatedRoute) ? (cell) => {
         let penalty=0;
         for(const d of repeated){
           const md=Math.abs(cell.x-d.cell.x)+Math.abs(cell.y-d.cell.y);
           if(md<=3) penalty += [24,16,9,4][md];
         }
+        const routeFailures=routeCounts.get(`${cell.x},${cell.y}`)||0;
+        if(routeFailures>=2) penalty += Math.min(48,routeFailures*12);
         return Math.min(60,penalty);
       } : null;
       const cells = plannedRoute({...world,exposedAt:c=>exposed.has(`${c.x},${c.y}`)},from,goal,
         this._plan?.posture==='aggressive'?'direct':'covered', world.threats.map(p=>pathDistances(world,p)),
         {penaltyAt});
       if (!cells.length) { this._committedRoute=null; return null; }
-      r = this._committedRoute = {key,cells,index:0,plannedAt:now,avoidingDeaths:!!penaltyAt};
+      r = this._committedRoute = {key,cells,index:0,plannedAt:now,carrying,avoidingDeaths:!!penaltyAt};
     }
     let point=r.cells[r.index];
     while(point && Math.hypot(s.toWorldX(point.x)-me.x,s.toWorldY(point.y)-me.y)<=s.cell*.15)
@@ -737,6 +751,24 @@ export default class BotDriver {
     this.strategist.onPowerActivated?.('dash');
     this._lastDir=plan.dir;
     return true;
+  }
+
+  // Rival-only opening reflex: commit one legal swipe that is not already
+  // the perfect line to the objective, then let the normal planner correct.
+  // Jev never chooses this direction; it is humanization inside the motor.
+  _driveOpeningReflex(me, goal) {
+    const s=this.scene;
+    if(!this._openingReflex){
+      const from=s.toCell(me.x,me.y);
+      const legal=(s.neighbors4?.(from)||[]).map(n=>({
+        x:s.toWorldX(n.x)-me.x,y:s.toWorldY(n.y)-me.y,
+        score:goal ? (n.x-from.x)*(goal.x-from.x)+(n.y-from.y)*(goal.y-from.y) : 0
+      }));
+      const imperfect=legal.filter(d=>d.score<=0);
+      const pool=imperfect.length?imperfect:legal;
+      this._openingReflex=pool.length?pool[(Math.random()*pool.length)|0]:{x:1,y:0};
+    }
+    return s.intent.driveMove(this._openingReflex.x,this._openingReflex.y);
   }
 
   _startPhaseCrossing(me, crossing, now) {

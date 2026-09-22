@@ -181,6 +181,7 @@ export default class JevStrategist {
     this._openingReadyAt = -Infinity;
     this._lastWaypoint = null;
     this.houseDeaths = [];
+    this.failedRoutes = [];
     this.knownPocket = null;
     this._lastLive = null;
   }
@@ -347,6 +348,8 @@ export default class JevStrategist {
       // bag was genuine. The motor uses repeated points to stop brute-forcing
       // the same corridor on later attempts.
       deathCells: this.houseDeaths.map((d) => ({ cell: { ...d.cell }, carrying: !!d.carrying })),
+      // Internal motor-only reference; do not clone whole routes every frame.
+      failedRoutes: this.failedRoutes,
       openingWaiting: this.now() < this._openingReadyAt,
       explore: this.exploring && !recovering };
   }
@@ -358,7 +361,7 @@ export default class JevStrategist {
     const retry = !!prev && prev.house === view.house && this.matchKey === view.matchKey;
     this.matchKey = view.matchKey;
     if (prev) prev.endedAt = now;
-    if (!retry) { this.houseDeaths = []; this.knownPocket = null; }
+    if (!retry) { this.houseDeaths = []; this.failedRoutes = []; this.knownPocket = null; }
     else if (this._lastLive) this.houseDeaths.push(this._lastLive);
     this._lastLive = null;
     if (this.exploring) this.motor.exploringAttempts++;
@@ -530,6 +533,13 @@ export default class JevStrategist {
     this.consecutiveErrors++;
     console.warn(`[JEV] strategic request failed (${this.consecutiveErrors}/${this.cfg.maxConsecutiveErrors}): ${why}`);
     this._log(now, 'failure', { why });
+  }
+
+  /** Remember a route that ended in a catch; visible match-local experience. */
+  rememberFailedRoute(cells, carrying) {
+    if (!Array.isArray(cells) || cells.length < 2) return;
+    this.failedRoutes.push({ carrying: !!carrying, cells: cells.map(c => ({ x: c.x, y: c.y })) });
+    if (this.failedRoutes.length > 24) this.failedRoutes.shift();
   }
 
   _onError(token, err) {
