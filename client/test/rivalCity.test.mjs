@@ -66,12 +66,12 @@ const args={...rules,rivalDistrict,getRivalTerritory:()=>territory,getWindowStat
  createSeededRNG:()=>()=>.25};
 const create=new Function(...Object.keys(args),session+';return createRivalSession;')(...Object.values(args));
 const normal=create();
-check('menu enters current unlocked district',normal.course.slot===4&&normal.territoryIndex===4&&normal.rivalCityIndex===4);
+check('random arena advances the current unlocked district',normal.course.slot>=1&&normal.course.slot<=7&&normal.territoryIndex===4&&normal.rivalCityIndex===4&&normal.territorySlot===4);
 check('gang and account frozen at race creation',normal.territoryGang==='crossline'&&normal.territoryUser==='runner');
 const rematch=create({seed:rules.rivalPoolCourse(3).seed});
-check('old course rematch cannot advance current district',rematch.course.slot===3&&rematch.territoryIndex===null&&rematch.rivalCityIndex===3);
+check('explicit course rematch cannot advance current district',rematch.course.slot===3&&rematch.territoryIndex===null);
 check('recording harness skips map and territory',create({recording:true}).rivalCityIndex===undefined);
 check('fixed-power harness retains old course policy',create({powers:['phase','dash']}).rivalCityIndex===undefined);
 territory={completed:7};
-check('seven wins open next circuit city',create().territoryIndex===8&&create().course.slot===1);
+check('seven wins open next circuit city regardless of arena',create().territoryIndex===8&&create().territorySlot===1);
 console.log('Rivals selection: '+passed+' total assertions passed');

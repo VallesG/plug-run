@@ -296,14 +296,10 @@ export default class BotDriver {
       // falling through to its own objective code, which targets the real bag.
       const cell = this._plan.objective?.cell ?? s.toCell(me.x, me.y);
       this._borrowed.objectiveProvider = () => cell;
-      // The AI's own random detour — half of all attempts, a walk to a
-      // random cell anywhere on the board before the objective — is off
-      // until the strategist says the house calls for exploring (repeated
-      // deaths; see JevStrategist). In the first Jev bank it fired on 84 of
-      // 167 attempts, clean houses included, and was most of what looked
-      // like Jev "not taking the best path"; in a guarded house it is the
-      // long way round that gets out.
-      this._borrowed.allowDetour = !!this._plan.explore;
+      // No random map-wide waypoint in the hybrid. Jev chooses the objective;
+      // the motor takes the shortest path and only deviates for a live lane,
+      // a wall or the watchdog's short recovery step.
+      this._borrowed.allowDetour = false;
       armed = this._plan.armedPower || null;
     } else if (this._borrowed.objectiveProvider) {
       this._borrowed.objectiveProvider = null;
@@ -323,6 +319,7 @@ export default class BotDriver {
     // Snapshot power consumption so newly-spent slots can be recorded after.
     const before = [...(s.runnerPowersConsumed || [])];
 
+    let motorMistakes = null;
     try {
       s.role = 'plug';
       s.pveRound = this.cfg.aiLevel;
@@ -332,6 +329,17 @@ export default class BotDriver {
       if (!this._progressionApplied) {
         h.applyRunnerProgression(s);
         this._progressionApplied = true;
+      }
+
+      if (hybrid && s.aiRunner) {
+        motorMistakes = {
+          wanderChance: s.aiRunner.wanderChance,
+          hesitationChance: s.aiRunner.hesitationChance,
+          overcommitChance: s.aiRunner.overcommitChance
+        };
+        s.aiRunner.wanderChance = 0;
+        s.aiRunner.hesitationChance = 0;
+        s.aiRunner.overcommitChance = 0;
       }
 
       h.updateRunnerBehavior(s, this._borrowed, delta);
@@ -354,6 +362,7 @@ export default class BotDriver {
       console.error('[BOT] borrowed AI failed, falling back:', e);
       this.aiHooks = null; // one failure is enough; use the simple bot
     } finally {
+      if (motorMistakes && s.aiRunner) Object.assign(s.aiRunner, motorMistakes);
       s.attacker.x = saved.x;
       s.attacker.y = saved.y;
       s.role = saved.role;
@@ -456,15 +465,19 @@ export default class BotDriver {
     const s = this.scene;
     const cellOf = (o) => (o && Number.isFinite(o.x) && Number.isFinite(o.y)) ? s.toCell(o.x, o.y) : null;
     const liveBag = (d) => d && d.active !== false && d.visible !== false && !d._fading;
-    const bags = s.hasStash ? [] : [s.stash, s.bunkStash].filter(liveBag).map(cellOf).filter(Boolean);
+    const bags = s.hasStash ? [] : [s.stash, s.bunkStash].filter(liveBag).map((d) => {
+      const c = cellOf(d);
+      return c ? { ...c, pocket: Number.isInteger(d._rivalPocket) ? d._rivalPocket : null } : null;
+    }).filter(Boolean);
     const world = this._world();
-    const race = s.rivals?.race;
+    const race = s.rivalRace || s.rivals?.race;
     const house = race ? Math.min(7, (race.clearTimes?.length ?? 0) + 1) : 1;
     const retries = race ? (race.retries ?? 0) : (this._roundSeq || 0);
     return {
       cols: s.cols, rows: s.rows, isWalkable: world.isWalkable,
       runner: cellOf(me),
-      house, houseKey: house + ':' + retries,
+      house, houseKey: (race?.stashSeed ?? 'legacy') + ':' + house + ':' + retries,
+      matchKey: race?.stashSeed ?? null,
       live: !s.roundOver && !s.roundPausedForMenu && (!race || race.status === 'racing'),
       isRunner: s.role === 'runner',
       hp: me?.hp ?? null,
@@ -472,6 +485,8 @@ export default class BotDriver {
       phasing: !!s.runnerIsPhasing?.(),
       decoyActive: !!(s.decoySprite && s.decoySprite.active !== false),
       candidates: orderCandidates(bags),
+      revealedPocket: s.hasStash || (s.stash && (s.bunkStash?._fading || !s.bunkStash))
+        ? (Number.isInteger(s.rivalRealPocket) ? s.rivalRealPocket : null) : null,
       extract: cellOf(s.extract),
       plugs: world.threats,
       inLane: !!this.firingLaneRisk(me),

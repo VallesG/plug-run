@@ -1,7 +1,7 @@
 import { getRivalTerritory } from './rivalCityProgress.js';
 import { rivalDistrict } from '../logic/rivalCity.js';
 import { getWindowState } from './windowProgress.js';
-import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, nextRivalSlot, validRivalPowers, rivalGenuinePocket } from '../logic/rivals.js';
+import { RIVAL_RULES_VERSION, rivalPathSteps, simulatedRivalTimes, newRivalRace, rivalPoolCourse, rivalPoolEntryBySeed, randomRivalSlot, validRivalPowers, rivalSessionPocket, newRivalStashSeed, rivalRecordMatchesStashes } from '../logic/rivals.js';
 import { validateRivalRunRecord, rivalRecordMatchesCourse, validateRivalReplayBundle, RIVAL_MAX_BUNDLE_BYTES } from '../logic/rivalRecords.js';
 import { validateReplaySegment } from '../logic/rivalReplay.js';
 import { chooseRivalOpponent, rivalTierForHistory } from '../logic/rivalPresets.js';
@@ -13,14 +13,14 @@ import { getUserID } from './userManager.js';
 
 // Course selection is the fixed pool only. A random seed here would race the
 // player on a course no opponent was ever recorded on. Rematch passes the seed
-// it just raced (kept if it is a pool course); New Race passes the next slot;
-// the menu passes nothing and the rotation continues from the last local result.
+// it just raced (kept if it is a pool course). Ordinary New Race/menu starts
+// choose randomly from the enabled pool, independently of territory progress.
 export function selectRivalCourse({ seed, slot } = {}) {
   const bySeed = Number.isFinite(seed) ? rivalPoolEntryBySeed(seed) : null;
   if (bySeed) return rivalPoolCourse(bySeed.slot);
   const wanted = rivalPoolCourse(slot);
   if (wanted) return wanted;
-  return rivalPoolCourse(nextRivalSlot(lastRivalSlot()));
+  return rivalPoolCourse(randomRivalSlot());
 }
 export function lastRivalSlot() {
   try {
@@ -33,8 +33,10 @@ const historyKey = () => 'pr_rivals_results_v1_' + getUserID();
 export function createRivalSession(selection = {}) {
   const district=rivalDistrict(getRivalTerritory().completed+1);
   const territoryMode=!selection.recording && !selection.powers;
-  const course = selectRivalCourse(territoryMode && selection.seed==null && selection.slot==null ? {slot:district.slot}:selection);
+  const course = selectRivalCourse(selection);
   if (!course) throw new Error('No enabled Rival course');
+  const stashSeed = Number.isInteger(selection.stashSeed)
+    ? selection.stashSeed >>> 0 : newRivalStashSeed();
   const metrics = course.seeds.map((houseSeed,i) => {
     const arena = generateSquareMaze(course.cols,course.rows,{
       rng:createSeededRNG(houseSeed),role:'runner',clusterScale:course.scales[i]
@@ -43,7 +45,7 @@ export function createRivalSession(selection = {}) {
     // Match BaseGameScene's real/bunk assignment for a first attempt (a
     // simulated pace never retries). Simulate searching the primary pocket
     // first; the pace includes a detour if that pocket is bunk.
-    const realAtPrimary = rivalGenuinePocket(houseSeed, 1) === 0;
+    const realAtPrimary = rivalSessionPocket(houseSeed, stashSeed) === 0;
     const real = realAtPrimary ? primary : secondary;
     const searchSteps = rivalPathSteps(arena.grid,arena.spawns.runner,primary) +
       (realAtPrimary ? 0 : rivalPathSteps(arena.grid,primary,secondary));
@@ -56,7 +58,7 @@ export function createRivalSession(selection = {}) {
   const times = selection.recording
     ? Array.from({ length: 7 }, (_, i) => (hardLimitMs || 3_600_000) + 1000 * (i + 1))
     : simulatedRivalTimes(metrics,course.seed);
-  const race = newRivalRace(course,times);
+  const race = newRivalRace(course,times,{ stashSeed });
   // Explicit harness options only. fixedPowers replaces the picker with
   // the given ordered pair; hardLimitMs ends a race that will never finish.
   race.fixedPowers = validRivalPowers(selection.powers) ? selection.powers.slice() : null;
@@ -64,7 +66,8 @@ export function createRivalSession(selection = {}) {
   race.recording = !!selection.recording;
   race.wantRecordingID = typeof selection.recordingID === 'string' ? selection.recordingID : null;
   race.opponentResolved = race.recording;
-  if(territoryMode){race.rivalCityIndex=(district.city-1)*7+course.slot;race.territoryIndex=course.slot===district.slot?district.index:null;
+  if(territoryMode){race.rivalCityIndex=district.index;race.territoryIndex=selection.seed==null&&selection.slot==null?district.index:null;
+    race.territorySlot=district.slot;
     race.territoryGang=getWindowState().gangID||null;race.territoryUser=getUserID();}
   return race;
 }
@@ -185,7 +188,9 @@ export function resolveRivalOpponent(race) {
   if(race?.opponentPending)return race.opponentPending;
   if (!race || race.opponentResolved || race.status !== 'ready') return null;
   race.opponentResolved = true;
-  const pending=loadRivalOpponents(race.course).then(entries => {
+  const pending=loadRivalOpponents(race.course).then(allEntries => {
+    const entries = Number.isInteger(race.stashSeed)
+      ? allEntries.filter(e => rivalRecordMatchesStashes(e.record, race)) : allEntries;
     if (!entries.length || race.status !== 'ready') return false;
     race.searchNames=[...new Set(entries.map(e=>rivalOpponentName(e.record)))];
     const history = rivalHistory();

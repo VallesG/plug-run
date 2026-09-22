@@ -573,7 +573,7 @@ export default class RivalsRace {
           rivalOpponentID:this.race.opponent?.recordingID ?? undefined,...this.harnessRestartData()
         })},
         {label:this.race.rivalCityIndex?(this.race.result==='win'?'ENTER NEXT BLOCK':'TRY AGAIN'):'NEW RACE',variant:'secondary',onClick:()=>this.scene.scene.restart({
-          mode:'pve',role:'runner',runKind:'rivals',...(this.race.rivalCityIndex?{}:{rivalSlot:nextRivalSlot(this.race.course.slot)}),...this.harnessRestartData()
+          mode:'pve',role:'runner',runKind:'rivals',...this.harnessRestartData()
         })},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]

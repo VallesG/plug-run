@@ -5,7 +5,6 @@
 //
 //   { objective: 'target_a' | 'target_b' | 'extract' | 'hold',
 //     posture:   'safe' | 'balanced' | 'aggressive',
-//     route:     'direct' | 'covered' | 'evasive',
 //     powerPlan: a conditional phase/dash/decoy plan or 'none',
 //     confidence: number | null }
 //
@@ -38,22 +37,15 @@
 //   - nothing is asked while the watchdog has recovery control.
 //
 // WHAT IT REMEMBERS
-// Where the runner died in this house, and on which posture — a cell, a flag
-// for whether it was carrying, a posture name. Nothing about bags: which one
-// paid out or was bunk is never recorded, because it rerolls every attempt.
-// Cleared when the house changes. jevState turns it into "deaths on this
-// route" per choice, by position.
+// Where the runner died in this house, and on which posture. If a bunk visibly
+// dissolves, the surviving pocket is remembered through retries of this house
+// and cleared when the match advances to the next house. That is information
+// a human player learned in the same match, never hidden scene identity.
 //
-// EXPLOIT, THEN EXPLORE
-// Until a house has cost exploreAfterDeaths deaths the motor walks the direct
-// route and a stall is broken by a sidestep toward the objective. From then
-// on the plan says `explore`: BotDriver lets the runner AI take its own
-// random detour on the way to a bag, and a stall is broken by a random
-// sidestep out of the firing lanes. A guarded house (a plug sitting between
-// every bag and the car) is only ever cleared by going the long way round;
-// with the detour off in every house the second Jev bank looped 61 times on
-// Switchyard Seven house 3 and forfeited, where the first, detour always on,
-// got out in 14.
+// RECOVERY
+// The motor receives the final objective, never a stale chain of waypoints.
+// Repeated deaths permit varied local watchdog sidesteps, not random trips
+// across the map. Live threat avoidance remains the motor's responsibility.
 //
 // WHAT IT TRUSTS
 // An answer is adopted only if it arrives for the state it was asked about
@@ -78,8 +70,7 @@
 
 import { jevState } from '../logic/jevState.js';
 import {
-  pathDistances, distTo, resolveObjective, fallbackObjective, stillCandidate, recoveryCell,
-  plannedRoute, routeWaypoints
+  pathDistances, distTo, resolveObjective, fallbackObjective, stillCandidate, recoveryCell
 } from '../logic/jevStrategy.js';
 import { createWatchdog, resetWatchdog, watchdogStep, isRecovering } from '../logic/jevWatchdog.js';
 import { JEV_INPUT_USD_PER_MTOK } from '../logic/jevAnswer.js';
@@ -187,6 +178,7 @@ export default class JevStrategist {
     this._attemptStartedAt = -Infinity;
     this._lastWaypoint = null;
     this.houseDeaths = [];
+    this.knownPocket = null;
     this._lastLive = null;
   }
 
@@ -312,7 +304,7 @@ export default class JevStrategist {
     } else if (!target || target.source !== 'jev') {
       target = this._target(view, dist, now);
     }
-    const mode = recovering ? 'recovery' : target?.source === 'jev' ? 'jev' : 'fallback';
+    const mode = recovering ? 'recovery' : ['jev', 'learned'].includes(target?.source) ? 'jev' : 'fallback';
     this.time[mode + 'Ms'] += dt;
     const h = this.houses[this.houses.length - 1];
     if (h) h[mode + 'Ms'] = (h[mode + 'Ms'] || 0) + dt;
@@ -349,9 +341,10 @@ export default class JevStrategist {
 
   _newHouse(view, now) {
     const prev = this.houses[this.houses.length - 1];
-    const retry = !!prev && prev.house === view.house;
+    const retry = !!prev && prev.house === view.house && this.matchKey === view.matchKey;
+    this.matchKey = view.matchKey;
     if (prev) prev.endedAt = now;
-    if (!retry) this.houseDeaths = [];
+    if (!retry) { this.houseDeaths = []; this.knownPocket = null; }
     else if (this._lastLive) this.houseDeaths.push(this._lastLive);
     this._lastLive = null;
     if (this.exploring) this.motor.exploringAttempts++;
@@ -378,6 +371,7 @@ export default class JevStrategist {
 
   /** Compare with the last frame and queue whatever changed. */
   _detect(view, now) {
+    if (Number.isInteger(view.revealedPocket)) this.knownPocket = view.revealedPocket;
     const snap = {
       carrying: !!view.carrying,
       bags: view.candidates.map((c) => c.cell.x + ',' + c.cell.y).join('|'),
@@ -403,6 +397,15 @@ export default class JevStrategist {
 
   /** The active strategy's target, re-validated; else the fair fallback. */
   _target(view, dist, now) {
+    // Once this match has visibly revealed the bunk, retries of this house
+    // keep the answer. The match-scoped stash seed guarantees that pocket is
+    // still genuine; a new house or new match clears the knowledge.
+    if (!view.carrying && Number.isInteger(this.knownPocket)) {
+      const learned = view.candidates.find((c) => c.pocket === this.knownPocket);
+      if (learned && distTo(dist, learned.cell) != null) {
+        return { source: 'learned', objective: learned.id, cell: { ...learned.cell }, route: 'shortest-safe' };
+      }
+    }
     const s = this.strategy;
     if (s && !s.stalled) {
       let ok = false, cell = null, objective = s.objective;
@@ -416,12 +419,7 @@ export default class JevStrategist {
         objective = view.candidates.find((c) => sameCell(c.cell, s.cell))?.id ?? s.objective;
       }
       if (ok) {
-        // Walk the concrete profile Jev chose one turn at a time. The motor
-        // still owns every movement decision between these strategic points.
-        while (s.routeIndex < (s.waypoints?.length || 0) &&
-          sameCell(view.runner, s.waypoints[s.routeIndex])) s.routeIndex++;
-        const waypoint = s.waypoints?.[s.routeIndex] || cell;
-        return { source: 'jev', objective, cell: { ...waypoint }, finalCell: { ...cell }, route: s.route };
+        return { source: 'jev', objective, cell: { ...cell }, finalCell: { ...cell }, route: 'shortest-safe' };
       }
       this._invalidate(view.carrying ? 'carrying' : 'target-gone', now, 'target_invalid');
     }
@@ -463,15 +461,15 @@ export default class JevStrategist {
     this.pending.clear();
 
     const s = this.strategy;
-    const payload = jevState({ ...view, attempt: this.attempt }, {
+    const payload = jevState({ ...view, attempt: this.attempt, knownPocket: this.knownPocket }, {
       dist,
       plugDists: (view.plugs || []).map((p) => pathDistances(view, p, 60)),
       trigger: primary,
       deaths: this.houseDeaths,
       plan: s ? {
-        objective: s.objective, posture: s.posture, route: s.route, ageMs: now - s.adoptedAt,
+        objective: s.objective, posture: s.posture, route: 'shortest-safe', ageMs: now - s.adoptedAt,
         progress: s.stalled ? 'stalled' : 'advancing'
-      } : { objective: 'none', posture: 'balanced', route: 'covered', ageMs: 0, progress: 'none' }
+      } : { objective: 'none', posture: 'balanced', route: 'shortest-safe', ageMs: 0, progress: 'none' }
     });
     if (!payload) return;
 
@@ -545,8 +543,9 @@ export default class JevStrategist {
     const view = this._view, dist = this._dist;
     if (!view || !dist) { bump(this.strategies.rejected, 'no-view'); return; }
     const lowConfidence = Number.isFinite(answer.confidence) && answer.confidence < this.cfg.minConfidence;
-    const chosenObjective = lowConfidence ? token.objectives?.[0] : answer.objective;
-    const chosenRoute = lowConfidence ? 'covered' : (answer.route || 'covered');
+    const learned = !view.carrying && Number.isInteger(this.knownPocket)
+      ? view.candidates.find(c => c.pocket === this.knownPocket) : null;
+    const chosenObjective = learned?.id ?? (lowConfidence ? token.objectives?.[0] : answer.objective);
     if (lowConfidence) this._log(now, 'low-confidence-fallback', {
       wanted: answer.objective, confidence: answer.confidence, chosen: chosenObjective
     });
@@ -565,7 +564,7 @@ export default class JevStrategist {
     if (switching) {
       const young = now - cur.targetSince < this.cfg.commitMs;
       const capped = this.attemptSwitches >= this.cfg.maxSwitchesPerAttempt;
-      if ((young || capped) && stillCandidate(view, cur.cell)) {
+      if (!learned && (young || capped) && stillCandidate(view, cur.cell)) {
         this.strategies.objectiveHeld++;
         this._log(now, 'held', { wanted: objective, kept: cur.objective, why: young ? 'commitment' : 'switch-cap' });
         objective = cur.objective; cell = cur.cell; targetSince = cur.targetSince;
@@ -581,19 +580,18 @@ export default class JevStrategist {
     // Only a posture that was on offer: the answer mapper turns a missing one
     // into 'balanced', which may be the one being rested.
     const posture = !token.postures?.length || token.postures.includes(answer.posture) ? answer.posture : token.postures[0];
-    const plugDists = (view.plugs || []).map((p) => pathDistances(view, p, 60));
-    const route = plannedRoute(view, view.runner, cell, chosenRoute, plugDists);
+    const power = answer.power;
+    const powerPlan = answer.powerPlan || answer.power;
     this.strategy = {
-      objective, posture, route: chosenRoute, power: answer.power, powerPlan: answer.powerPlan || answer.power,
+      objective, posture, route: 'shortest-safe', power, powerPlan,
       confidence: answer.confidence, cell: { ...cell },
-      waypoints: routeWaypoints(route), routeIndex: 0,
       adoptedAt: now, targetSince, stalled: false, trigger: token.trigger
     };
     this.strategies.adopted++;
-    this._log(now, 'adopted', { objective, posture, route: chosenRoute, power: answer.power,
+    this._log(now, 'adopted', { objective, posture, route: 'shortest-safe', power,
       confidence: answer.confidence, trigger: token.trigger });
 
-    this._armPower(answer.power, answer.powerPlan || answer.power, view, now);
+    this._armPower(power, powerPlan, view, now);
   }
 
   /* ---------------- powers ---------------- */
@@ -743,4 +741,3 @@ export default class JevStrategist {
     };
   }
 }
-

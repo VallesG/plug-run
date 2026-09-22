@@ -89,7 +89,7 @@ export function rivalClearTimesFromAttempts(attempts) {
 }
 
 /** Assemble a record from the race facts. Throws on malformed input. */
-export function buildRivalRunRecord({ rulesVersion, course, opponent, orderedPowers, attempts, recordingID, recordedAt = null, driverConfig = null }) {
+export function buildRivalRunRecord({ rulesVersion, course, opponent, orderedPowers, attempts, recordingID, recordedAt = null, driverConfig = null, stashSeed = null }) {
   const errors = rivalAttemptErrors(attempts);
   if (errors.length) throw new Error('Rival attempts invalid: ' + errors[0]);
   const clearTimes = rivalClearTimesFromAttempts(attempts);
@@ -97,6 +97,7 @@ export function buildRivalRunRecord({ rulesVersion, course, opponent, orderedPow
     schemaVersion: RIVAL_RECORD_SCHEMA,
     rulesVersion,
     courseID: course.id, courseSlot: course.slot ?? null, courseSeeds: course.seeds.slice(),
+    ...(Number.isInteger(stashSeed) ? { stashSeed: stashSeed >>> 0, stashRules: 'match-v1' } : {}),
     opponent: { ...opponent },
     orderedPowers: orderedPowers.slice(),
     attempts: attempts.map(a => ({ house: a.house, attempt: a.attempt, startedMs: a.startedMs, endedMs: a.endedMs,
@@ -122,6 +123,7 @@ export function validateRivalRunRecord(record) {
   if (record.schemaVersion !== RIVAL_RECORD_SCHEMA) errors.push('unsupported schemaVersion');
   if (!nonEmpty(record.rulesVersion)) errors.push('rulesVersion missing');
   if (!nonEmpty(record.courseID)) errors.push('courseID missing');
+  if (('stashSeed' in record || 'stashRules' in record) && (!isUint32(record.stashSeed) || record.stashRules !== 'match-v1')) errors.push('bad match stash rules');
   if (!(record.courseSlot === null || (isInt(record.courseSlot) && record.courseSlot >= 1))) errors.push('bad courseSlot');
   if (!Array.isArray(record.courseSeeds) || record.courseSeeds.length !== RIVAL_RECORD_HOUSES || !record.courseSeeds.every(isUint32)) errors.push('courseSeeds must be seven uint32');
   const o = record.opponent;
@@ -185,6 +187,7 @@ export function validateRivalReplayBundle(bundle, record, { validateSegment = nu
     const a = record.attempts[i], at = 'segment[' + i + '] ';
     if (!s || typeof s !== 'object') { errors.push(at + 'not an object'); return; }
     if (s.house !== a.house || s.attempt !== a.attempt) errors.push(at + 'house/attempt differ from record');
+    if (record.stashRules === 'match-v1' && s.replay?.stashSeed !== record.stashSeed) errors.push(at + 'stash seed differs from match');
     if (s.startedMs !== a.startedMs || s.outcome !== a.outcome) errors.push(at + 'timing/outcome differ from record');
     if (!isMs(s.durationMs) || Math.abs(s.durationMs - (a.endedMs - a.startedMs)) > 1500) errors.push(at + 'duration differs from record');
     if (a.orderedPowers !== undefined && JSON.stringify(s.orderedPowers) !== JSON.stringify(a.orderedPowers))

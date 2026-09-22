@@ -10,7 +10,7 @@
 // replays reproduce from the (houseSeed, attempt) every segment carries.
 
 import { readFileSync } from 'node:fs';
-import { rivalGenuinePocket, rivalUpcomingAttempt, rivalPoolCourse, RIVAL_COURSE_POOL, RIVAL_HOUSES } from '../src/logic/rivals.js';
+import { rivalGenuinePocket, rivalSessionPocket, newRivalStashSeed, newRivalRace, rivalRecordMatchesStashes, randomRivalSlot, rivalUpcomingAttempt, rivalPoolCourse, RIVAL_COURSE_POOL, RIVAL_HOUSES } from '../src/logic/rivals.js';
 import { createSeededRNG } from '../src/utils/seededRandom.js';
 import { generateSquareMaze } from '../src/utils/mazeGenerator.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture } from '../src/controllers/RivalReplayCapture.js';
@@ -72,8 +72,8 @@ check('another house is counted separately', rivalUpcomingAttempt({ capture: { h
 {
   const src = readFileSync(new URL('../src/scenes/BaseGameScene.js', import.meta.url), 'utf8');
   const body = src.slice(src.indexOf('  makeObjectives(stashCell, extractCell){'), src.indexOf('    // Spawn visually identical packages'));
-  check('makeObjectives uses rivalGenuinePocket for Rivals',
-    /this\.runKind === 'rivals'\s*\?\s*rivalGenuinePocket\(this\.seed, \(this\.rivalAttempt = rivalUpcomingAttempt\(this\.rivalRace, this\.pveRound\)\)\) === 0/.test(body));
+  check('makeObjectives uses the match stash seed for Rivals',
+    /rivalSessionPocket\(this\.seed,\s*this\.rivalRace\?\.stashSeed/.test(body));
   check('and the legacy draw otherwise', body.includes("makeRng((this.seed ^ 0xC0FFEE) | 0)() < 0.5"));
 }
 
@@ -197,6 +197,62 @@ check('another house is counted separately', rivalUpcomingAttempt({ capture: { h
   check('on house 4, both pockets were genuine across the 24 retries', genuines.includes(0) && genuines.includes(1),
     genuines.join(''));
   check('the old behaviour is gone: not every attempt has the same genuine pocket', new Set(genuines).size === 2);
+}
+
+// Legacy tests above preserve old replay decoding. Live matches now keep
+// their answer through retries and roll only when a fresh match is created.
+{
+  const course = rivalPoolCourse(5);
+  const times = Array.from({ length: 7 }, (_, i) => (i + 1) * 10000);
+  const race = newRivalRace(course, times, { stashSeed: newRivalStashSeed(() => 0.25) });
+  const before = course.seeds.map(s => rivalSessionPocket(s, race.stashSeed));
+  for (let retry = 0; retry < 30; retry++) {
+    race.retries++;
+    check('retry keeps every house assignment ' + retry,
+      JSON.stringify(before) === JSON.stringify(course.seeds.map(s => rivalSessionPocket(s, race.stashSeed))));
+  }
+  const patterns = new Set(Array.from({ length: 64 }, (_, seed) => course.seeds.map(s => rivalSessionPocket(s, seed)).join('')));
+  check('new matches on the same course produce varied assignments', patterns.size > 20);
+  const record = { stashRules: 'match-v1', stashSeed: race.stashSeed };
+  check('recorded opponent with matching assignment is eligible', rivalRecordMatchesStashes(record, race));
+  let other = 0;
+  while (rivalRecordMatchesStashes({ ...record, stashSeed: other }, race)) other++;
+  check('different assignment is not a fair opponent', !rivalRecordMatchesStashes({ ...record, stashSeed: other }, race));
+  check('legacy per-retry bank cannot impersonate a match recording', !rivalRecordMatchesStashes({}, race));
+  check('random course selection can reach all seven slots', new Set(Array.from({ length: 7 }, (_, i) => randomRivalSlot(() => (i + 0.5) / 7))).size === 7);
+
+  // Exercise capture on a real generated house with several deaths. Every
+  // segment carries the same session seed and agrees on pickup identity.
+  const houseSeed = course.seeds[0];
+  const arena = generateSquareMaze(course.cols, course.rows, {
+    rng: createSeededRNG(houseSeed), role: 'runner', clusterScale: course.scales[0]
+  });
+  const pockets = [arena.objectives.stash, arena.objectives.extract];
+  const genuine = rivalSessionPocket(houseSeed, race.stashSeed);
+  const world = c => ({ x: c.x * 20 + 10, y: c.y * 20 + 10 });
+  race.startedAt = 0; race.status = 'racing'; race.powers = ['phase', 'dash'];
+  beginRaceCapture(race);
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    const scene = {
+      pveRound: 1, seed: houseSeed, cols: 16, rows: 35, cell: 20, pad: { x: 0, y: 0 },
+      stashCell: pockets[0], extractCell: pockets[1], egress: arena.egress,
+      attacker: { ...world(arena.spawns.runner), active: true, visible: true, hp: 1 },
+      defender: { ...world(arena.spawns.plug), active: true, visible: true },
+      stash: { ...world(pockets[genuine]), active: true, visible: true },
+      bunkStash: { ...world(pockets[1 - genuine]), active: true, visible: true },
+      runnerPowersSelected: ['phase', 'dash'], runnerPowersConsumed: [false, false], hasStash: false
+    };
+    const t = attempt * 3000;
+    beginAttemptCapture(scene, race, t);
+    scene.bunkStash._fading = true; tickAttemptCapture(scene, race, t + 500);
+    scene.hasStash = true; tickAttemptCapture(scene, race, t + 1000);
+    endAttemptCapture(scene, race, 'caught', t + 1500);
+    const seg = race.capture.segments.at(-1);
+    check('new capture preserves match seed through retry ' + attempt, seg.stashSeed === race.stashSeed);
+    check('same pickup pocket through retry ' + attempt, seg.events.find(e => e.k === 'pickup')?.i === genuine);
+    check('same bunk pocket through retry ' + attempt, seg.events.find(e => e.k === 'bunk')?.i === 1 - genuine);
+    check('match capture validates ' + attempt, validateReplaySegment(seg).ok);
+  }
 }
 
 console.log('');

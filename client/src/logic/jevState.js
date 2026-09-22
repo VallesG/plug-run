@@ -23,10 +23,9 @@
 //
 // WHAT JEV REMEMBERS
 // Only fair tactical history, and only for the house it is on: where it died
-// and on which posture (ctx.deaths). Never which bag paid out or turned out
-// bunk — the real bag rerolls every attempt, so that would be worthless as
-// well as unfair — and the death record holds a cell and a posture, nothing
-// about bags. What reaches the payload is counted per route: "3 deaths on the
+// and on which posture (ctx.deaths). A publicly revealed bag identity is also
+// remembered across retries in this match, but reset for each new match/house.
+// Hidden bag truth never reaches the payload. Death history is counted per route: "3 deaths on the
 // way to this bag", computed from positions the same way for both bags.
 //
 // WHAT JEV IS TOLD PER CHOICE
@@ -47,12 +46,6 @@ const POSTURE_HINT = {
   aggressive: 'Shortest route, accept exposure'
 };
 const POSTURES = ['safe', 'balanced', 'aggressive'];
-const ROUTE_HINT = {
-  direct: 'Shortest route; accepts exposure',
-  covered: 'Small detour to reduce firing-lane exposure',
-  evasive: 'Widest escape route; strongly avoids the plug and firing lanes'
-};
-
 // A plug is offered as a reason to wait only this close (walking steps).
 export const HOLD_PLUG_STEPS = 6;
 // A posture that has died this many more times in the house than the
@@ -161,6 +154,10 @@ export function jevState(view, ctx = {}) {
     }
   };
 
+  const learned = Number.isInteger(view.knownPocket)
+    ? view.candidates.find((c) => c.pocket === view.knownPocket) : null;
+  if (learned) state.knownTarget = learned.id;
+
   const toBag = deaths.filter((d) => !d.carrying);
   const toCar = deaths.filter((d) => d.carrying);
   if (!view.carrying) {
@@ -206,7 +203,7 @@ export function jevState(view, ctx = {}) {
     ? (state.extract ? [{ id: 'extract', what: 'Car', ...state.extract }] : [])
     : state.targets.map((t) => ({ ...t, what: 'Bag' }));
   routes.sort((a, b) => routeRisk(a) - routeRisk(b));
-  const legal = legalObjectives(view);
+  const legal = learned && !view.carrying ? [learned.id] : legalObjectives(view);
   const criteria = {};
   for (const r of routes) if (legal.includes(r.id)) criteria[r.id] = routeLine(r.what, r);
   // Waiting only makes sense with a plug close enough to wait out.
@@ -223,8 +220,9 @@ export function jevState(view, ctx = {}) {
       type: 'choice',
       instructions: view.carrying
         ? 'The runner has the bag. Head for the car now, or wait for the plug?'
-        : 'Two identical bags; only one pays out, chosen at random each attempt. ' +
-          'Short routes away from the plug survive. Which bag first?',
+        : learned
+          ? 'A pickup revealed this pocket earlier in this match. The assignment stays fixed through retries.'
+          : 'Two identical bags; one pays out for this match. Short routes away from the plug survive. Which bag first?',
       criteria
     },
     posture: {
@@ -233,11 +231,6 @@ export function jevState(view, ctx = {}) {
       criteria: postures.reduce((acc, p) => (acc[p] = POSTURE_HINT[p] +
         (state.deaths[p] ? `; ${plural(state.deaths[p], 'death')} with it this house` : ''), acc), {})
     },
-    route: {
-      type: 'choice',
-      instructions: 'Choose the path profile for the objective you selected. Compare its exact facts in state.routes.',
-      criteria: Object.fromEntries(Object.entries(ROUTE_HINT))
-    }
   };
   // Only ask about a power when one could actually be spent. A decoy while a
   // decoy is out does nothing, so it is not offered.

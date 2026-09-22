@@ -166,9 +166,9 @@ export function routeFacts(view, from, to, style, plugDists = []) {
 export function orderCandidates(bags) {
   return (bags || [])
     .filter((c) => c && Number.isFinite(c.x) && Number.isFinite(c.y))
-    .map((c) => ({ x: c.x, y: c.y }))
+    .map((c) => ({ x: c.x, y: c.y, ...(Number.isInteger(c.pocket) ? { pocket: c.pocket } : {}) }))
     .sort((a, b) => (a.y - b.y) || (a.x - b.x))
-    .map((c, i) => ({ id: i === 0 ? 'target_a' : 'target_b', cell: c }))
+    .map((c, i) => ({ id: i === 0 ? 'target_a' : 'target_b', cell: c, pocket: c.pocket ?? null }))
     .slice(0, 2);
 }
 

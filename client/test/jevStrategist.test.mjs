@@ -34,6 +34,7 @@ function makeView(over = {}) {
     cols, rows, isWalkable,
     runner: over.runner ?? { x: 10, y: 10 },
     house: over.house ?? 1, houseKey: over.houseKey ?? '1:0', live: over.live ?? true, isRunner: true,
+    matchKey: over.matchKey, revealedPocket: over.revealedPocket ?? null,
     hp: over.hp ?? 3, carrying: !!over.carrying, phasing: !!over.phasing, decoyActive: !!over.decoyActive,
     candidates: over.carrying ? [] : orderCandidates(bags),
     extract: over.extract ?? { x: 18, y: 10 },
@@ -75,8 +76,8 @@ console.log('\nJevStrategist\n');
   const plan = s.tick(v);
   check('adopts the answer', s.report().strategies.adopted === 1);
   check('plan objective is bag B, from Jev', plan.objective.source === 'jev' && plan.objective.objective === 'target_b');
-  check('plan keeps bag B as the final objective while exposing a route waypoint',
-    plan.objective.finalCell.x === 10 && plan.objective.finalCell.y === 16 && plan.objective.route === 'covered');
+  check('the motor receives the final bag, never an old waypoint',
+    plan.objective.cell.x === 10 && plan.objective.cell.y === 16 && plan.objective.route === 'shortest-safe');
   const bad = keyPaths(plan).find((p) => MOVEMENT_KEYS.includes(p.key));
   check('plan carries no movement field', !bad, bad?.path);
 }
@@ -420,34 +421,36 @@ console.log('\nJevStrategist\n');
   check('report names the motor and strategist', r.driver === 'jev-strategist' && r.motor === 'runner-ai');
 }
 
-// 15b. NO HISTORICAL LABEL. The genuine bag rerolls on every attempt, so
-//      which bag turned out bunk last attempt says nothing about this one —
-//      and must not reach Jev. Two races identical except for which bag was
-//      revealed bunk on attempt 1 must send byte-identical payloads on every
-//      request of attempt 2.
+// Visible pickup knowledge survives a death in the same match. It must reset
+// for a new match, including another match at the same house number.
 {
   const retryPayloads = async (bunkOnFirstAttempt) => {
     clock.t = 4_000_000;
     const { s, decide } = make(() => strategy('target_a'), { watchdog: { stallMs: 1e9 } });
-    const both = [{ x: 10, y: 3 }, { x: 10, y: 16 }];
-    const survivor = bunkOnFirstAttempt === 'target_a' ? [{ x: 10, y: 16 }] : [{ x: 10, y: 3 }];
+    const both = [{ x: 10, y: 3, pocket: 0 }, { x: 10, y: 16, pocket: 1 }];
+    const pocket = bunkOnFirstAttempt === 'target_a' ? 1 : 0;
+    const survivor = [both[pocket]];
     // Attempt 1: both bags, then one fades as bunk, then the runner dies.
-    await run(s, makeView({ houseKey: '4:0', house: 4 }), 1600);
-    await run(s, makeView({ houseKey: '4:0', house: 4, bags: survivor }), 1600);
+    await run(s, makeView({ houseKey: '4:0', house: 4, bags: both, matchKey: 42 }), 1600);
+    await run(s, makeView({ houseKey: '4:0', house: 4, bags: survivor, revealedPocket: pocket, matchKey: 42 }), 1600);
     const before = decide.calls.length;
     // Attempt 2 (retry): the same two bags again, fresh.
-    await run(s, makeView({ houseKey: '4:1', house: 4, runner: { x: 10, y: 11 } }), 6000);
-    return decide.calls.slice(before).map((p) => JSON.stringify(p));
+    const plans = await run(s, makeView({ houseKey: '4:1', house: 4, bags: both, matchKey: 42, runner: { x: 10, y: 11 } }), 1600);
+    check('retry immediately uses the pocket learned by pickup', plans[0].objective.cell.y === both[pocket].y);
+    const payloads = decide.calls.slice(before).map((p) => JSON.stringify(p));
+    await run(s, makeView({ houseKey: 'new:4:0', house: 4, bags: both, matchKey: 43 }), 1600);
+    check('a new match forgets the prior match bag truth', s.knownPocket === null && !decide.calls.at(-1).state.knownTarget);
+    return payloads;
   };
   const afterA = await retryPayloads('target_a');
   const afterB = await retryPayloads('target_b');
   check('the retry asked at least once', afterA.length >= 1 && afterA[0].includes('"event":"retry"'));
-  check('which bag was bunk last attempt changes nothing Jev is sent on the retry',
-    afterA.length === afterB.length && afterA.every((p, i) => p === afterB[i]));
+  check('the retry payload carries only the pocket actually learned',
+    JSON.parse(afterA[0]).state.knownTarget === 'target_b' && JSON.parse(afterB[0]).state.knownTarget === 'target_a');
   check('the retry payload restarts the plan from nothing',
     JSON.parse(afterA[0]).state.plan.objective === 'none' && JSON.parse(afterA[0]).state.attempt === 2);
-  check('both bags are offered again on the retry',
-    Object.keys(JSON.parse(afterA[0]).questions.objective.criteria).sort().join() === 'target_a,target_b');
+  check('the known bunk is excluded on a retry',
+    Object.keys(JSON.parse(afterA[0]).questions.objective.criteria).join() === 'target_b');
 }
 
 // 15b. Fair tactical memory: a death is remembered as a cell and a posture for

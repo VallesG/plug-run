@@ -1,6 +1,7 @@
 // Exercise the scene adapter without loading Phaser or the browser dependency graph.
 import { readFileSync } from 'node:fs';
-import * as rules from '../src/logic/rivals.js';
+import * as baseRules from '../src/logic/rivals.js';
+const rules = { ...baseRules, newRivalRace: (course, times) => baseRules.newRivalRace(course, times, { stashSeed: 42 }) };
 import * as presets from '../src/logic/rivalPresets.js';
 import * as skill from '../src/logic/rivalSkill.js';
 import * as capture from '../src/controllers/RivalReplayCapture.js';
@@ -118,7 +119,7 @@ run.modals.at(-1).buttons[0].onClick();
 check('rematch keeps seed, drops old clock',run.restarts.at(-1).rivalSeed===77 && !run.restarts.at(-1).rivalRace);
 run.modals.at(-1).buttons[1].onClick();
 check('new race has no pinned seed',run.restarts.at(-1).rivalSeed===undefined);
-check('new race asks for the next pool slot',run.restarts.at(-1).rivalSlot===rules.nextRivalSlot(course.slot));
+check('new race lets matchmaking choose a random course',run.restarts.at(-1).rivalSlot===undefined);
 
 now=1000;state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['phase','phase'],clearTimes:[1,2,3,4,5,6]};
 run=setup(state,7);now=70000;run.controller.clearHouse();
@@ -137,7 +138,7 @@ now=5001;run.controller.update();
 check('hard limit forfeits an endless race',state.status==='finished' && state.result==='forfeit');
 
 // --- recorded opponent: async lookup, independent loadout, replay, watch button ---
-const opponentRecord={recordingID:'rec-x',clearTimes:[9000,18000,27000,36000,45000,54000,63000],retries:1,elapsedMs:63000,
+const opponentRecord={stashSeed:42,stashRules:'match-v1',recordingID:'rec-x',clearTimes:[9000,18000,27000,36000,45000,54000,63000],retries:1,elapsedMs:63000,
   opponent:{kind:'bot',displayName:'BOT \u00b7 Street',skillPreset:'street'},orderedPowers:['dash','phase']};
 resolver=(race)=>Promise.resolve().then(()=>{
   race.rivalTimes=opponentRecord.clearTimes.slice();race.opponentKind='recorded-bot';race.opponentRecord=opponentRecord;
@@ -294,6 +295,7 @@ const attemptsFor = perHouseMs => Array.from({ length: 7 }, (_, i) => ({
   house: i + 1, outcome: 'extracted', startedMs: i * 100000, endedMs: i * 100000 + perHouseMs
 }));
 const bankRecord = (id, perHouseMs) => ({
+  stashSeed: 42, stashRules: 'match-v1',
   recordingID: id, clearTimes: [1, 2, 3, 4, 5, 6, 7].map(n => n * perHouseMs),
   retries: 1, elapsedMs: perHouseMs * 7, attempts: attemptsFor(perHouseMs),
   opponent: { kind: 'bot', displayName: 'BOT · ' + id, skillPreset: 'street' },

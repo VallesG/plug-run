@@ -20,7 +20,7 @@ export function rivalCityView(index=getRivalTerritory().completed+1){
 export function completeRivalDistrict(race){
   if(!race?.territoryIndex||race.territoryUser!==getUserID())return {applied:false,state:getRivalTerritory(),saved:true};
   const result=claimRivalDistrict(getRivalTerritory(),{index:race.territoryIndex,
-    courseSlot:race.course.slot,result:race.result,houses:race.clearTimes.length,
+    courseSlot:race.territorySlot ?? race.course.slot,result:race.result,houses:race.clearTimes.length,
     gangID:race.territoryGang,recording:race.recording});
   result.saved=true;
   if(result.applied)try{localStorage.setItem(key(),JSON.stringify(result.state));volatile.delete(key());}

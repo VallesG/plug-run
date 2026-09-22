@@ -22,7 +22,7 @@ import {
   validateRivalRunRecord, validateRivalReplayBundle, rivalRecordMatchesCourse, rivalAttemptErrors, rivalBytes
 } from '../../src/logic/rivalRecords.js';
 import { validateReplaySegment } from '../../src/logic/rivalReplay.js';
-import { RIVAL_RULES_VERSION, RIVAL_HOUSES, rivalPoolCourse, rivalGenuinePocket } from '../../src/logic/rivals.js';
+import { RIVAL_RULES_VERSION, RIVAL_HOUSES, rivalPoolCourse, rivalGenuinePocket, rivalSessionPocket } from '../../src/logic/rivals.js';
 import { rivalPreset, RIVAL_BOT_DRIVER_VERSION } from '../../src/logic/rivalPresets.js';
 
 export const JEV_BANK_ID = 'jev-v1';
@@ -76,7 +76,9 @@ export function assignmentErrors(bundle) {
   const errors = [];
   for (const s of bundle?.segments || []) {
     const seg = s.replay || s;
-    const genuine = rivalGenuinePocket(seg.houseSeed, s.attempt ?? seg.attempt);
+    const genuine = Number.isInteger(seg.stashSeed)
+      ? rivalSessionPocket(seg.houseSeed, seg.stashSeed)
+      : rivalGenuinePocket(seg.houseSeed, s.attempt ?? seg.attempt);
     for (const e of seg.events || []) {
       if (e.k === 'pickup' && e.i !== genuine) errors.push(`house ${s.house} attempt ${s.attempt}: pickup in pocket ${e.i}, genuine is ${genuine}`);
       if (e.k === 'bunk' && e.i !== 1 - genuine) errors.push(`house ${s.house} attempt ${s.attempt}: bunk in the genuine pocket`);

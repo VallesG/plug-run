@@ -39,9 +39,10 @@ const finite = n => typeof n === 'number' && Number.isFinite(n);
  * (primary, secondary); which one is real is NOT stored — the player, the
  * bot and the spectator all learn it at pickup, from the event.
  */
-export function newReplaySegment({ house, attempt, houseSeed, cols, rows, scale, stashes, car, runnerSpawn, plugSpawn, weapon = null }) {
+export function newReplaySegment({ house, attempt, houseSeed, stashSeed = null, cols, rows, scale, stashes, car, runnerSpawn, plugSpawn, weapon = null }) {
   return {
     v: RIVAL_REPLAY_SCHEMA, house, attempt, houseSeed, cols, rows, scale,
+    ...(Number.isInteger(stashSeed) ? { stashSeed: stashSeed >>> 0 } : {}),
     stashes: stashes.map(s => ({ x: q(s.x), y: q(s.y) })),
     car: { x: q(car.x), y: q(car.y), side: car.side ?? null },
     spawn: { r: { x: q(runnerSpawn.x), y: q(runnerSpawn.y) }, p: { x: q(plugSpawn.x), y: q(plugSpawn.y) } },
@@ -123,6 +124,7 @@ export function validateReplaySegment(seg) {
   if (seg.v !== RIVAL_REPLAY_SCHEMA) errors.push('unsupported replay schema');
   if (!Number.isInteger(seg.cols) || !Number.isInteger(seg.rows) || seg.cols < 4 || seg.rows < 4) errors.push('bad grid size');
   if (!Number.isInteger(seg.houseSeed) || seg.houseSeed < 0) errors.push('bad house seed');
+  if ('stashSeed' in seg && (!Number.isInteger(seg.stashSeed) || seg.stashSeed < 0 || seg.stashSeed > 0xffffffff)) errors.push('bad stash seed');
   if (!finite(seg.scale)) errors.push('bad cluster scale');
   const pt = p => p && cellIn(p.x, seg.cols) && cellIn(p.y, seg.rows);
   if (!Array.isArray(seg.stashes) || seg.stashes.length !== 2 || !seg.stashes.every(pt)) errors.push('bad stash cells');

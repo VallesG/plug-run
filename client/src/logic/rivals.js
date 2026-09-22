@@ -23,7 +23,7 @@ export function rivalHudLayout(width, height) {
 // scale with the arena so a narrower viewport does not make bullets faster.
 export function rivalPixels(value, cell) { return value * cell / 24; }
 
-// WHICH POCKET HOLDS THE GENUINE STASH, PER ATTEMPT.
+// LEGACY CAPTURE ASSIGNMENT, PER ATTEMPT.
 //
 // A retry replays the same house — same seed, same layout — but must NOT
 // replay which bag is genuine: a player (or a bot, or Jev) that died once
@@ -53,6 +53,34 @@ export function rivalGenuinePocket(houseSeed, attempt = 1) {
     v = ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   }
   return v < 0.5 ? 0 : 1;
+}
+
+// WHICH POCKET HOLDS THE GENUINE STASH IN A LIVE RIVALS MATCH.
+//
+// The course seed owns geometry. `stashSeed` owns this particular match's
+// seven answers. A death reuses the same race object and therefore the same
+// answer; starting a new Rivals match creates a fresh stashSeed, so seeing the
+// same course later does not reveal its bags. This is the PvP rule: learnable
+// inside one match, unknowable before the next one.
+export function rivalSessionPocket(houseSeed, stashSeed) {
+  return (rivalHash('stash/' + (stashSeed >>> 0) + '/' + (houseSeed >>> 0)) & 1) ? 1 : 0;
+}
+
+export function newRivalStashSeed(random = Math.random) {
+  const n = Math.floor(Number(random()) * 0x100000000);
+  return Number.isFinite(n) ? n >>> 0 : 1;
+}
+
+// Recordings can race only the same seven answers. Different session seeds
+// may generate the same pattern; old per-retry recordings are ineligible.
+export function rivalRecordMatchesStashes(record, race) {
+  return record?.stashRules === 'match-v1' && Number.isInteger(record.stashSeed) &&
+    race.course.seeds.every(seed => rivalSessionPocket(seed, record.stashSeed) === rivalSessionPocket(seed, race.stashSeed));
+}
+
+export function randomRivalSlot(random = Math.random) {
+  const pool = enabledRivalCourses();
+  return pool[Math.min(pool.length - 1, Math.max(0, Math.floor(random() * pool.length)))]?.slot ?? null;
 }
 
 // The attempt a house is about to start: one more than the attempts the
@@ -174,10 +202,10 @@ export function simulatedRivalTimes(metrics, seed) {
     return elapsed;
   });
 }
-export function newRivalRace(course, rivalTimes) {
+export function newRivalRace(course, rivalTimes, { stashSeed = newRivalStashSeed() } = {}) {
   if (!Array.isArray(rivalTimes) || rivalTimes.length !== RIVAL_HOUSES ||
       rivalTimes.some((t,i)=>!Number.isFinite(t) || t <= (rivalTimes[i-1] ?? 0))) throw new Error('Invalid opponent splits');
-  return { course, rivalTimes: rivalTimes.slice(), opponentKind: 'simulated-ai',
+  return { course, rivalTimes: rivalTimes.slice(), stashSeed: stashSeed >>> 0, opponentKind: 'simulated-ai',
     status:'ready', startedAt:null, countdownEndsAt:null, clearTimes:[],
     powers:[], retries:0, result:null };
 }

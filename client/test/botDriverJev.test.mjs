@@ -162,7 +162,7 @@ for (const [objective, realTop, cell] of [['target_a', false, { x: 6, y: 2 }], [
   bot.strategist.houseDeaths.push({ cell: { x: 6, y: 5 }, carrying: false, posture: 'balanced' },
     { cell: { x: 6, y: 5 }, carrying: false, posture: 'balanced' });
   await frames(bot, 2);
-  check('the detour is allowed once the plan explores', bot._plan.explore === true && bot._borrowed.allowDetour === true);
+  check('deaths never enable map-wide random wandering', bot._plan.explore === true && bot._borrowed.allowDetour === false);
 }
 
 // 6. The watchdog takes control. The runner is wedged (moves are swallowed):
@@ -299,6 +299,20 @@ for (const name of ['phase', 'dash', 'decoy']) {
   await frames(bot, 900, () => !at(scene, { x: 6, y: 12 }));
   check('no strategist: the runner AI walks to scene.stash as before', at(scene, { x: 6, y: 12 }));
   check('no strategist: nothing to report', bot.jevReport() === null);
+}
+
+{
+  const scene = makeScene();
+  scene.rivalRace = { stashSeed: 123, clearTimes: [], retries: 0, status: 'racing' };
+  scene.stash._rivalPocket = 1;
+  scene.bunkStash._rivalPocket = 0;
+  scene.rivalRealPocket = 1;
+  const bot = new BotDriver(scene, { ...CFG }, AI_HOOKS);
+  const actor = scene.runner;
+  check('unrevealed scene truth does not reach Jev', bot._jevView(actor).revealedPocket === null);
+  scene.bunkStash._fading = true;
+  check('visible bunk reveal reaches Jev', bot._jevView(actor).revealedPocket === 1);
+  check('view identifies the match independently of retry', bot._jevView(actor).matchKey === 123);
 }
 
 console.log('');

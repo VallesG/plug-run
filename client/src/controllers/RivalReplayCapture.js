@@ -17,7 +17,7 @@
 // The race-level capture lives on the race object (race.capture) because that
 // is the one thing RivalsRace carries across scene.restart(); the scene and
 // every display object are rebuilt per house.
-import { RIVAL_RULES_VERSION, rivalElapsed, rivalGenuinePocket, rivalUpcomingAttempt } from '../logic/rivals.js';
+import { RIVAL_RULES_VERSION, rivalElapsed, rivalGenuinePocket, rivalSessionPocket, rivalUpcomingAttempt } from '../logic/rivals.js';
 import {
   RIVAL_REPLAY_STEP_MS, newReplaySegment, packFlags, pushReplayFrame, pushReplayEvent, sealReplaySegment
 } from '../logic/rivalReplay.js';
@@ -46,7 +46,7 @@ export function beginAttemptCapture(scene, race, now) {
   const carSide = scene.egress?.side ?? null;
   const seg = newReplaySegment({
     house, attempt: cap.houseAttempts[house],
-    houseSeed: scene.seed >>> 0, cols: scene.cols, rows: scene.rows,
+    houseSeed: scene.seed >>> 0, stashSeed: race.stashSeed, cols: scene.cols, rows: scene.rows,
     scale: race.course?.scales?.[house - 1] ?? 1,
     stashes: [centerOf(scene.stashCell), centerOf(scene.extractCell)],
     car: { ...(scene.car ? cellOf(scene, scene.car.x, scene.car.y) : centerOf(scene.egress?.entry)), side: carSide },
@@ -58,7 +58,9 @@ export function beginAttemptCapture(scene, race, now) {
   let realPocket = null;
   if (scene.stash && scene.stashCell) {
     const onBoard = realPocket = nearestStash(seg.stashes, cellOf(scene, scene.stash.x, scene.stash.y));
-    const derived = rivalGenuinePocket(seg.houseSeed, seg.attempt);
+    const derived = Number.isInteger(seg.stashSeed)
+      ? rivalSessionPocket(seg.houseSeed, seg.stashSeed)
+      : rivalGenuinePocket(seg.houseSeed, seg.attempt);
     if (onBoard !== derived) {
       console.error('[RIVALS] stash assignment mismatch: house ' + house + ' attempt ' + seg.attempt +
         ' has the genuine stash in pocket ' + onBoard + ', expected ' + derived);
@@ -198,7 +200,8 @@ export function exportRaceCapture(race, { opponent, recordingID, recordedAt = nu
   try {
     const record = buildRivalRunRecord({
       rulesVersion: RIVAL_RULES_VERSION, course: race.course, opponent, orderedPowers: cap.initialPowers,
-      attempts: cap.attempts, recordingID: recordingID ?? cap.recordingID, recordedAt, driverConfig
+      attempts: cap.attempts, recordingID: recordingID ?? cap.recordingID, recordedAt, driverConfig,
+      stashSeed: race.stashSeed
     });
     return { ok: true, record, bundle: buildRivalReplayBundle(record, cap.segments) };
   } catch (e) {

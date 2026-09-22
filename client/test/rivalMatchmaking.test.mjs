@@ -73,6 +73,7 @@ const sessionSource = readFileSync(new URL('../src/utils/rivalSession.js', impor
 const course = rules.rivalPoolCourse(3);
 const attempts = Array.from({ length: 7 }, (_, i) => ({ house: i + 1, outcome: 'extracted', startedMs: i * 30000, endedMs: i * 30000 + 25000 }));
 const rec = (id, jev, perHouse = 30000) => ({
+  stashSeed: 42, stashRules: 'match-v1',
   recordingID: id, courseID: course.id, clearTimes: [1, 2, 3, 4, 5, 6, 7].map((n) => n * perHouse),
   retries: 2, elapsedMs: perHouse * 7, attempts, orderedPowers: ['phase', 'dash'],
   opponent: { kind: 'bot', displayName: 'BOT · Street', skillPreset: 'street', driverVersion: 'botdriver-v2' },
@@ -115,12 +116,16 @@ const load = (bankFiles) => new Function(...Object.keys(bindingsFor(bankFiles)),
 
   // Resolve against the Jev race by id: the race is set up with its record,
   // the name Jev, and the replay from the Jev bank.
-  const race = { ...rules.newRivalRace(course, [1, 2, 3, 4, 5, 6, 7].map((n) => n * 40000)), powers: ['dash', 'phase'], wantRecordingID: 'rec-jev-1' };
+  const race = { ...rules.newRivalRace(course, [1, 2, 3, 4, 5, 6, 7].map((n) => n * 40000), { stashSeed: 42 }), powers: ['dash', 'phase'], wantRecordingID: 'rec-jev-1' };
   check('the Jev race can be picked', await s.resolveRivalOpponent(race) === true);
   check('picked: name, replay path and record', race.opponent.displayName === 'Jev' &&
     race.opponent.replayURL === '/rivals/jev-v1/replays/rec-jev-1.json' && race.opponentRecord.recordingID === 'rec-jev-1');
   check('the search shows Jev among the candidates', race.searchNames.includes('Jev') && race.searchNames.includes('BOT · Street'));
   check('the pace comes from the Jev race', race.rivalTimes.join() === rec('rec-jev-1', true, 29000).clearTimes.join());
+  let incompatibleSeed = 0;
+  while (rules.rivalRecordMatchesStashes(rec('x', true), { course, stashSeed: incompatibleSeed })) incompatibleSeed++;
+  const mismatch = rules.newRivalRace(course, [1,2,3,4,5,6,7], { stashSeed: incompatibleSeed });
+  check('different stash assignments cannot match even on the same course', await s.resolveRivalOpponent(mismatch) === false && !mismatch.opponentRecord);
 
   // A course with no Jev race yet: the style pool, no noise.
   fetched.length = 0;
