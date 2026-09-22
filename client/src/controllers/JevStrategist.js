@@ -5,7 +5,8 @@
 //
 //   { objective: 'target_a' | 'target_b' | 'extract' | 'hold',
 //     posture:   'safe' | 'balanced' | 'aggressive',
-//     power:     'phase' | 'dash' | 'decoy' | 'none',
+//     route:     'direct' | 'covered' | 'evasive',
+//     powerPlan: a conditional phase/dash/decoy plan or 'none',
 //     confidence: number | null }
 //
 // and tick() hands BotDriver a Plan:
@@ -60,8 +61,11 @@
 // objective, and does not flip A/B inside the commitment window. Anything
 // else is counted and the plan carries on.
 //
-// POWERS: JEV DECIDES WHETHER, THE MOTOR DECIDES WHEN
-// A power in a strategy ARMS it: "you may spend this now". The runner AI's
+// POWERS: JEV DECIDES THE CONDITION, THE MOTOR DECIDES THE FRAME
+// A power plan arms a named condition (intercept, escape, final run or plug
+// pressure). Until that condition opens the power is hidden from the motor.
+// Dash is never offered before a pickup succeeds, so it cannot be burned on a
+// bag that vanishes. Once the window opens, the runner AI's
 // own reflex rules (RunnerAI.considerRunnerPowerUse — phase when a plug is
 // on top of you or a thin wall cuts the route, dash to open separation or
 // close on the objective, decoy when a plug is in sight) then pick the
@@ -74,7 +78,8 @@
 
 import { jevState } from '../logic/jevState.js';
 import {
-  pathDistances, distTo, resolveObjective, fallbackObjective, stillCandidate, recoveryCell
+  pathDistances, distTo, resolveObjective, fallbackObjective, stillCandidate, recoveryCell,
+  plannedRoute, routeWaypoints
 } from '../logic/jevStrategy.js';
 import { createWatchdog, resetWatchdog, watchdogStep, isRecovering } from '../logic/jevWatchdog.js';
 import { JEV_INPUT_USD_PER_MTOK } from '../logic/jevAnswer.js';
@@ -99,7 +104,10 @@ export const DEFAULTS = Object.freeze({
   // At most one watchdog-caused request per this long.
   watchdogRequestGapMs: 5000,
   // How long an armed power stays available to the motor's reflexes.
-  armMs: 6000,
+  armMs: 15000,
+  // A 2% answer should not override the safe ordering already computed from
+  // the board. Below this, take the safest offered objective and route.
+  minConfidence: 0.35,
   // A fresh attempt: the runner is still respawning, so no stall is counted.
   attemptGraceMs: 1500,
   // Deaths in one house before the plan turns exploratory (see the header).
@@ -158,7 +166,7 @@ export default class JevStrategist {
     this.inFlight = null;
     this.lastDispatchAt = -Infinity;
     this.strategy = null;
-    this.armed = null;               // { name, until } while a power is armed
+    this.armed = null;               // { name, plan, until } while a power is armed
     this.recovery = null;
     this.watchdogOwed = false;
     this.lastWatchdogRequestAt = -Infinity;
@@ -324,9 +332,13 @@ export default class JevStrategist {
       confidence: s?.confidence ?? null,
       ageMs: s ? Math.round(this.now() - s.adoptedAt) : null,
       stalled: !!s?.stalled,
-      armedPower: this.armed?.name ?? null
+      route: s?.route ?? null,
+      armedPower: this._powerReady(this._view) ? this.armed?.name ?? null : null,
+      powerPlan: this.armed?.plan ?? null
     };
-    return { objective: target, posture, recovering, mode, armedPower: this.armed?.name ?? null,
+    return { objective: target, posture, recovering, mode,
+      armedPower: this._powerReady(this._view) ? this.armed?.name ?? null : null,
+      powerPlan: this.armed?.plan ?? null,
       explore: this.exploring && !recovering };
   }
 
@@ -400,7 +412,14 @@ export default class JevStrategist {
         // A bag keeps its cell; its label can change once the other bag goes.
         objective = view.candidates.find((c) => sameCell(c.cell, s.cell))?.id ?? s.objective;
       }
-      if (ok) return { source: 'jev', objective, cell: { ...cell } };
+      if (ok) {
+        // Walk the concrete profile Jev chose one turn at a time. The motor
+        // still owns every movement decision between these strategic points.
+        while (s.routeIndex < (s.waypoints?.length || 0) &&
+          sameCell(view.runner, s.waypoints[s.routeIndex])) s.routeIndex++;
+        const waypoint = s.waypoints?.[s.routeIndex] || cell;
+        return { source: 'jev', objective, cell: { ...waypoint }, finalCell: { ...cell }, route: s.route };
+      }
       this._invalidate(view.carrying ? 'carrying' : 'target-gone', now, 'target_invalid');
     }
     const fb = fallbackObjective(view, dist);
@@ -447,9 +466,9 @@ export default class JevStrategist {
       trigger: primary,
       deaths: this.houseDeaths,
       plan: s ? {
-        objective: s.objective, posture: s.posture, ageMs: now - s.adoptedAt,
+        objective: s.objective, posture: s.posture, route: s.route, ageMs: now - s.adoptedAt,
         progress: s.stalled ? 'stalled' : 'advancing'
-      } : { objective: 'none', posture: 'balanced', ageMs: 0, progress: 'none' }
+      } : { objective: 'none', posture: 'balanced', route: 'covered', ageMs: 0, progress: 'none' }
     });
     if (!payload) return;
 
@@ -467,6 +486,7 @@ export default class JevStrategist {
     this.stats.tokensApprox += Math.ceil(JSON.stringify(payload).length / 4);
 
     const token = { id: ++this._seq, epoch: this.epoch, startedAt: now, trigger: primary,
+      objectives: Object.keys(payload.questions.objective?.criteria || {}),
       postures: Object.keys(payload.questions.posture?.criteria || {}) };
     this.inFlight = token;
     this._log(now, 'request', { trigger: primary, merged: triggers.length });
@@ -520,10 +540,16 @@ export default class JevStrategist {
   _adopt(answer, token, now) {
     const view = this._view, dist = this._dist;
     if (!view || !dist) { bump(this.strategies.rejected, 'no-view'); return; }
-    const res = resolveObjective(answer.objective, view, dist);
+    const lowConfidence = Number.isFinite(answer.confidence) && answer.confidence < this.cfg.minConfidence;
+    const chosenObjective = lowConfidence ? token.objectives?.[0] : answer.objective;
+    const chosenRoute = lowConfidence ? 'covered' : (answer.route || 'covered');
+    if (lowConfidence) this._log(now, 'low-confidence-fallback', {
+      wanted: answer.objective, confidence: answer.confidence, chosen: chosenObjective
+    });
+    const res = resolveObjective(chosenObjective, view, dist);
     if (!res.ok) {
       bump(this.strategies.rejected, res.reason);
-      this._log(now, 'rejected', { objective: answer.objective, reason: res.reason });
+      this._log(now, 'rejected', { objective: chosenObjective, reason: res.reason });
       if (answer.power !== 'none') { this.powers.requested++; bump(this.powers.byName, answer.power); bump(this.powers.rejected, 'strategy-rejected'); }
       return;
     }
@@ -551,15 +577,19 @@ export default class JevStrategist {
     // Only a posture that was on offer: the answer mapper turns a missing one
     // into 'balanced', which may be the one being rested.
     const posture = !token.postures?.length || token.postures.includes(answer.posture) ? answer.posture : token.postures[0];
+    const plugDists = (view.plugs || []).map((p) => pathDistances(view, p, 60));
+    const route = plannedRoute(view, view.runner, cell, chosenRoute, plugDists);
     this.strategy = {
-      objective, posture, power: answer.power, confidence: answer.confidence,
-      cell: { ...cell }, adoptedAt: now, targetSince, stalled: false, trigger: token.trigger
+      objective, posture, route: chosenRoute, power: answer.power, powerPlan: answer.powerPlan || answer.power,
+      confidence: answer.confidence, cell: { ...cell },
+      waypoints: routeWaypoints(route), routeIndex: 0,
+      adoptedAt: now, targetSince, stalled: false, trigger: token.trigger
     };
     this.strategies.adopted++;
-    this._log(now, 'adopted', { objective, posture, power: answer.power,
+    this._log(now, 'adopted', { objective, posture, route: chosenRoute, power: answer.power,
       confidence: answer.confidence, trigger: token.trigger });
 
-    this._armPower(answer.power, view, now);
+    this._armPower(answer.power, answer.powerPlan || answer.power, view, now);
   }
 
   /* ---------------- powers ---------------- */
@@ -568,7 +598,7 @@ export default class JevStrategist {
    * Arm (or, for 'none', disarm) a power. Validated against the live board;
    * an invalid one is rejected with a reason and never reaches the motor.
    */
-  _armPower(name, view, now) {
+  _armPower(name, plan, view, now) {
     if (name === 'none') {
       if (this.armed) {
         this.powers.saved++;
@@ -594,9 +624,22 @@ export default class JevStrategist {
       return;
     }
     this.powers.accepted++;
-    this.armed = { name, until: now + this.cfg.armMs };
+    this.armed = { name, plan, until: now + this.cfg.armMs };
     this.powers.last = { name, result: 'armed', at: now };
     this._log(now, 'power-armed', { name });
+  }
+
+  /** A plan is armed immediately but only exposed to the motor in its window. */
+  _powerReady(view) {
+    if (!this.armed || !view?.runner) return false;
+    const plan = this.armed.plan || this.armed.name;
+    if (plan === this.armed.name) return true; // legacy answer
+    let nearest = Infinity;
+    for (const p of view.plugs || []) nearest = Math.min(nearest, Math.abs(p.x - view.runner.x) + Math.abs(p.y - view.runner.y));
+    if (plan === 'dash_escape' || plan === 'dash_finish') return !!view.carrying;
+    if (plan === 'phase_intercept') return !!view.inLane || nearest <= 7;
+    if (plan === 'decoy_pressure') return nearest <= 18;
+    return false;
   }
 
   /**

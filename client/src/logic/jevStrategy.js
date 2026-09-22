@@ -18,6 +18,18 @@
 export const OBJECTIVES = Object.freeze(['target_a', 'target_b', 'extract', 'hold']);
 export const POSTURES = Object.freeze(['safe', 'balanced', 'aggressive']);
 export const POWERS = Object.freeze(['phase', 'dash', 'decoy']);
+export const ROUTES = Object.freeze(['direct', 'covered', 'evasive']);
+export const POWER_PLANS = Object.freeze([
+  'none', 'phase_intercept', 'dash_escape', 'dash_finish', 'decoy_pressure'
+]);
+
+export const powerForPlan = (plan) => {
+  if (POWERS.includes(plan)) return plan; // backward-compatible recordings/tests
+  if (plan?.startsWith('phase_')) return 'phase';
+  if (plan?.startsWith('dash_')) return 'dash';
+  if (plan?.startsWith('decoy_')) return 'decoy';
+  return 'none';
+};
 
 // Keys a strategy must never carry. Checked by the answer mapper and by the
 // tests, so a future edit that "just adds a direction hint" fails loudly.
@@ -63,6 +75,85 @@ export const distTo = (dist, cell) => {
   const v = dist.d[cell.y * dist.cols + cell.x];
   return v < 0 ? null : v;
 };
+
+/**
+ * Build one concrete route for the capable motor to follow. Jev chooses the
+ * profile, not directions: the adapter deterministically turns that profile
+ * into a path over the live board.
+ *
+ * direct  = shortest walk
+ * covered = modest detour to reduce firing-lane exposure
+ * evasive = strongly avoids exposure and cells close to a plug
+ */
+export function plannedRoute(view, from, to, style = 'covered', plugDists = []) {
+  const { cols, rows, isWalkable } = view;
+  if (!from || !to || !isWalkable(from.x, from.y) || !isWalkable(to.x, to.y)) return [];
+  const n = cols * rows, start = from.y * cols + from.x, goal = to.y * cols + to.x;
+  const cost = new Float64Array(n); cost.fill(Infinity); cost[start] = 0;
+  const prev = new Int32Array(n); prev.fill(-1);
+  const seen = new Uint8Array(n);
+  const exposureWeight = style === 'evasive' ? 8 : style === 'covered' ? 4 : 0;
+  const plugWeight = style === 'evasive' ? 3 : style === 'covered' ? 1 : 0;
+
+  for (let count = 0; count < n; count++) {
+    let i = -1, best = Infinity;
+    for (let j = 0; j < n; j++) if (!seen[j] && cost[j] < best) { best = cost[j]; i = j; }
+    if (i < 0 || i === goal) break;
+    seen[i] = 1;
+    const x = i % cols, y = (i - x) / cols;
+    for (let k = 0; k < 4; k++) {
+      const nx = k === 0 ? x + 1 : k === 1 ? x - 1 : x;
+      const ny = k === 2 ? y + 1 : k === 3 ? y - 1 : y;
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows || !isWalkable(nx, ny)) continue;
+      const j = ny * cols + nx;
+      const cell = { x: nx, y: ny };
+      let nearest = Infinity;
+      for (const pd of plugDists) {
+        const d = distTo(pd, cell);
+        if (d != null && d < nearest) nearest = d;
+      }
+      const plugPenalty = nearest < 7 ? (7 - nearest) * plugWeight : 0;
+      const step = 1 + (view.exposedAt?.(cell) ? exposureWeight : 0) + plugPenalty;
+      if (cost[i] + step < cost[j]) { cost[j] = cost[i] + step; prev[j] = i; }
+    }
+  }
+  if (start !== goal && prev[goal] < 0) return [];
+  const path = [];
+  for (let i = goal; i >= 0; i = i === start ? -1 : prev[i]) {
+    path.push({ x: i % cols, y: (i - (i % cols)) / cols });
+    if (i === start) break;
+  }
+  path.reverse();
+  return path;
+}
+
+/** Keep only turns and the destination; the motor handles each segment. */
+export function routeWaypoints(path) {
+  if (!path?.length) return [];
+  if (path.length < 3) return path.slice(1).map((c) => ({ ...c }));
+  const out = [];
+  let dx = path[1].x - path[0].x, dy = path[1].y - path[0].y;
+  for (let i = 2; i < path.length; i++) {
+    const nx = path[i].x - path[i - 1].x, ny = path[i].y - path[i - 1].y;
+    if (nx !== dx || ny !== dy) out.push({ ...path[i - 1] });
+    dx = nx; dy = ny;
+  }
+  out.push({ ...path[path.length - 1] });
+  return out;
+}
+
+export function routeFacts(view, from, to, style, plugDists = []) {
+  const path = plannedRoute(view, from, to, style, plugDists);
+  let exposed = 0, closestPlug = null;
+  for (const cell of path.slice(1)) {
+    if (view.exposedAt?.(cell)) exposed++;
+    for (const pd of plugDists) {
+      const d = distTo(pd, cell);
+      if (d != null && (closestPlug == null || d < closestPlug)) closestPlug = d;
+    }
+  }
+  return { steps: path.length ? path.length - 1 : null, exposed, closestPlug };
+}
 
 /**
  * The live bags as unlabelled candidates, in a fixed spatial order.

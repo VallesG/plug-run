@@ -279,10 +279,10 @@ export default class BotDriver {
 
     if (!this._borrowed) this._borrowed = h.makeController(s);
 
-    // THE HYBRID. The strategist decides WHERE (an objective cell), HOW
-    // CAUTIOUSLY (a posture) and WHETHER A POWER MAY BE SPENT; the runner AI
-    // below decides every step and the instant any armed power fires. The
-    // objective reaches the AI through its objectiveProvider seam.
+    // THE HYBRID. The strategist decides WHERE, selects a concrete path
+    // profile and conditionally authorizes a power; the runner AI below still
+    // decides every step between route waypoints and the exact firing frame.
+    // Each waypoint reaches the AI through its objectiveProvider seam.
     const hybrid = this.hybrid;
     let armed = null;
     if (hybrid) {

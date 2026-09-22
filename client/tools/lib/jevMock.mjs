@@ -19,11 +19,11 @@
 //              followed, and a retry does not replay the same choice
 //   posture    safe when carrying with a plug within 6; aggressive when no
 //              plug is within 10 and the runner is empty-handed; else balanced
-//   power      ARMS a power (the motor picks the instant): the first ready
-//              power on house 2's opening request, scripted; otherwise phase
-//              when a plug is within 6 or the runner was just hit, dash when
-//              a plug is within 10, decoy when one is within 14; 'none'
-//              (save) when nothing is close
+//   route      evasive while carrying near a plug, direct on a clear approach,
+//              covered otherwise
+//   power      chooses the matching conditional plan: phase on an intercept,
+//              dash on a pressured or final escape, decoy under pressure;
+//              never dash before the bag is proven real
 // It answers only the questions it was asked, with only legal choices, and
 // never anything that could be read as a direction.
 
@@ -63,13 +63,19 @@ export function mockAnswer({ state = {}, questions = {} } = {}) {
     answers.posture = { type: 'choice', choice: pick(questions.posture.criteria, [posture]), confidence: 0.8 };
   }
 
+  if (questions.route) {
+    const route = carrying && near != null && near <= 8 ? 'evasive'
+      : !carrying && (near == null || near > 10) ? 'direct' : 'covered';
+    answers.route = { type: 'choice', choice: pick(questions.route.criteria, [route, 'covered']), confidence: 0.8 };
+  }
+
   if (questions.power) {
     const ready = Object.keys(questions.power.criteria).filter((k) => k !== 'none');
     let power = 'none';
-    if (house === 2 && state.event === 'house_start' && ready.length) power = ready[0];
-    else if ((state.event === 'damage' || (near != null && near <= 6)) && ready.includes('phase')) power = 'phase';
-    else if (near != null && near <= 10 && ready.includes('dash')) power = 'dash';
-    else if (near != null && near <= 14 && ready.includes('decoy')) power = 'decoy';
+    if ((state.event === 'damage' || (near != null && near <= 6)) && ready.includes('phase_intercept')) power = 'phase_intercept';
+    else if (carrying && near != null && near <= 10 && ready.includes('dash_escape')) power = 'dash_escape';
+    else if (carrying && ready.includes('dash_finish')) power = 'dash_finish';
+    else if (near != null && near <= 14 && ready.includes('decoy_pressure')) power = 'decoy_pressure';
     answers.power = { type: 'choice', choice: pick(questions.power.criteria, [power, 'none']), confidence: 0.7 };
   }
 

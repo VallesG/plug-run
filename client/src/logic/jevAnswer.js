@@ -9,7 +9,8 @@
 // route cannot quietly miss the other.
 //
 // A STRATEGY, NEVER A MOVE
-// The output has exactly these fields: objective, posture, power, confidence,
+// The output has exactly these decision fields: objective, posture, route,
+// powerPlan, power and confidence,
 // confidences, model, usage, valid, reason. A response that also carries a
 // movement answer (an old prompt, a model improvising) has it DROPPED here —
 // it is not copied, not mapped, not looked at again — and `strayMovement`
@@ -17,7 +18,7 @@
 //
 // Pure and dependency-free: it is the part worth testing without a network.
 
-import { OBJECTIVES, POSTURES, POWERS, MOVEMENT_KEYS } from './jevStrategy.js';
+import { OBJECTIVES, POSTURES, ROUTES, POWER_PLANS, powerForPlan, MOVEMENT_KEYS } from './jevStrategy.js';
 
 const choiceOf = (a) => (a && typeof a.choice === 'string' ? a.choice : null);
 const confOf = (a) => (a && Number.isFinite(a.confidence) ? a.confidence : null);
@@ -39,14 +40,19 @@ export function mapJevAnswer(body) {
 
   const objective = choiceOf(answers.objective);
   const rawPosture = choiceOf(answers.posture);
+  const rawRoute = choiceOf(answers.route);
   const rawPower = choiceOf(answers.power);
   const posture = POSTURES.includes(rawPosture) ? rawPosture : 'balanced';
+  const route = ROUTES.includes(rawRoute) ? rawRoute : 'covered';
   // 'none' is a real answer meaning "save it", not an absent one; anything
   // unrecognised is treated the same way rather than guessed at.
-  const power = POWERS.includes(rawPower) ? rawPower : 'none';
+  const powerPlan = POWER_PLANS.includes(rawPower) || ['phase', 'dash', 'decoy'].includes(rawPower)
+    ? rawPower : 'none';
+  const power = powerForPlan(powerPlan);
   const confidences = {
     objective: confOf(answers.objective),
     posture: confOf(answers.posture),
+    route: confOf(answers.route),
     power: confOf(answers.power)
   };
 
@@ -57,7 +63,9 @@ export function mapJevAnswer(body) {
   return {
     objective: reason ? null : objective,
     posture,
+    route,
     power,
+    powerPlan,
     confidence: confidences.objective,
     confidences,
     model,

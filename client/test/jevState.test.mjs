@@ -11,7 +11,7 @@
 import { makeScene, keyPaths, AI_HOOKS } from './_jevWorld.mjs';
 import BotDriver from '../src/controllers/BotDriver.js';
 import { jevState } from '../src/logic/jevState.js';
-import { pathDistances, MOVEMENT_KEYS, MOVEMENT_WORDS } from '../src/logic/jevStrategy.js';
+import { pathDistances, plannedRoute, routeFacts, MOVEMENT_KEYS, MOVEMENT_WORDS } from '../src/logic/jevStrategy.js';
 
 let passed = 0;
 const failures = [];
@@ -36,7 +36,8 @@ console.log('\njevState — strategic payload\n');
 {
   const { payload } = payloadFor(makeScene());
   const q = payload.questions;
-  check('asks exactly objective, posture and power', JSON.stringify(Object.keys(q).sort()) === '["objective","posture","power"]',
+  check('asks objective, posture and a concrete route profile',
+    JSON.stringify(Object.keys(q).sort()) === '["objective","posture","route"]',
     Object.keys(q).join(','));
   check('objective choices are the two bags, safest first; no plug near, so no hold',
     JSON.stringify(Object.keys(q.objective.criteria)) === '["target_b","target_a"]', Object.keys(q.objective.criteria).join());
@@ -46,7 +47,9 @@ console.log('\njevState — strategic payload\n');
     JSON.stringify(q.objective.criteria));
   check('extract is not offered before pickup', !('extract' in q.objective.criteria));
   check('posture choices', JSON.stringify(Object.keys(q.posture.criteria)) === '["safe","balanced","aggressive"]');
-  check('power choices are the ready powers plus none', JSON.stringify(Object.keys(q.power.criteria)) === '["none","phase","dash"]');
+  check('dash is not offered before a bag is proven real', !q.power);
+  check('route choices are direct, covered and evasive',
+    Object.keys(q.route.criteria).join() === 'direct,covered,evasive');
   check('every question is a choice with object criteria',
     Object.values(q).every((x) => x.type === 'choice' && x.criteria && !Array.isArray(x.criteria)));
 }
@@ -133,7 +136,7 @@ console.log('\njevState — strategic payload\n');
   const { payload } = payloadFor(scene);
   // deaths: this house's deaths as counts (where they lay, which posture) —
   // the fair tactical history. Never a bag outcome.
-  const allowed = ['house', 'attempt', 'runner', 'threat', 'decoyOut', 'powers', 'plan', 'event', 'targets', 'extract', 'deaths'];
+  const allowed = ['house', 'attempt', 'runner', 'threat', 'decoyOut', 'powers', 'plan', 'event', 'targets', 'extract', 'deaths', 'routes'];
   const extra = Object.keys(payload.state).filter((k) => !allowed.includes(k));
   check('state carries only allow-listed fields', extra.length === 0, extra.join(','));
   check('targets carry only id, distance, distance on to the car, plug distance, exposure and route deaths',
@@ -142,7 +145,7 @@ console.log('\njevState — strategic payload\n');
     Object.keys(payload.state.deaths).join() === 'here,carrying,safe,balanced,aggressive' &&
     Object.values(payload.state.deaths).every((v) => Number.isInteger(v)));
   check('plan carries only the current strategy, no history',
-    Object.keys(payload.state.plan).join() === 'objective,posture,ageS,progress');
+    Object.keys(payload.state.plan).join() === 'objective,posture,route,ageS,progress');
   const text = JSON.stringify(payload).toLowerCase();
   const leak = ['previous', 'last', 'history', 'revealed', 'was', 'bunk', 'genuine', 'real'].find((w) => new RegExp('\\b' + w + '\\b').test(text));
   check('no word about past bag outcomes anywhere in the payload', !leak, leak);
@@ -206,7 +209,28 @@ console.log('\njevState — strategic payload\n');
   const deaths = [{ cell: { x: 6, y: 11 }, carrying: false, posture: 'balanced' }, { cell: { x: 3, y: 3 }, carrying: false, posture: 'safe' }];
   const { payload } = payloadFor(makeScene({ plug: { x: 2, y: 3 } }), 'retry', deaths);
   const approx = Math.ceil(JSON.stringify(payload).length / 4);
-  check('payload stays compact (<450 estimated tokens)', approx < 450, `${approx}`);
+  check('payload stays compact (<800 estimated tokens)', approx < 800, `${approx}`);
+}
+
+// 8. Route profiles are real paths, not renamed postures. The safer route
+//    avoids an exposed short corridor when a covered alternative exists.
+{
+  const cols = 7, rows = 5;
+  const blocked = new Set(['3,2']);
+  const view = {
+    cols, rows,
+    isWalkable: (x, y) => x >= 0 && y >= 0 && x < cols && y < rows && !blocked.has(`${x},${y}`),
+    exposedAt: (c) => c.y === 1 && c.x >= 2 && c.x <= 4
+  };
+  const from = { x: 1, y: 2 }, to = { x: 5, y: 2 };
+  const direct = plannedRoute(view, from, to, 'direct');
+  const covered = plannedRoute(view, from, to, 'covered');
+  const df = routeFacts(view, from, to, 'direct');
+  const cf = routeFacts(view, from, to, 'covered');
+  check('direct and covered profiles both reach the objective',
+    direct.at(-1).x === to.x && covered.at(-1).x === to.x);
+  check('covered profile reduces exposure when a safe detour exists', cf.exposed < df.exposed,
+    JSON.stringify({ direct: df, covered: cf }));
 }
 
 console.log('');

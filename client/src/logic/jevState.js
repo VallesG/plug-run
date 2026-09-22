@@ -39,15 +39,7 @@
 // still decides; it no longer has to cross-reference a bare "bag A" against
 // a table to do it.
 
-import { distTo, legalObjectives, pathDistances } from './jevStrategy.js';
-
-// The game's own wording for each power, so the model is told what a player
-// is told.
-const POWER_HINT = {
-  phase: 'Through walls & bullets',
-  dash: 'Burst out of danger',
-  decoy: 'Double draws their fire'
-};
+import { distTo, legalObjectives, pathDistances, routeFacts } from './jevStrategy.js';
 
 const POSTURE_HINT = {
   safe: 'Keep out of firing lanes, longer routes',
@@ -55,6 +47,11 @@ const POSTURE_HINT = {
   aggressive: 'Shortest route, accept exposure'
 };
 const POSTURES = ['safe', 'balanced', 'aggressive'];
+const ROUTE_HINT = {
+  direct: 'Shortest route; accepts exposure',
+  covered: 'Small detour to reduce firing-lane exposure',
+  evasive: 'Widest escape route; strongly avoids the plug and firing lanes'
+};
 
 // A plug is offered as a reason to wait only this close (walking steps).
 export const HOLD_PLUG_STEPS = 6;
@@ -117,7 +114,7 @@ function plugNear(view, distFromPlugs, cell) {
 
 /**
  * @param view  BotDriver._jevView(): cells and flags, no bag identities
- * @param ctx   { dist, plugDists, trigger, plan: { objective, posture, ageMs,
+ * @param ctx   { dist, plugDists, trigger, plan: { objective, posture, route, ageMs,
  *                progress }, deaths } — `dist` is walking distance from the
  *                runner, `plugDists` one map per live plug, `deaths` this
  *                house's earlier deaths as [{ cell, carrying, posture }]
@@ -152,6 +149,7 @@ export function jevState(view, ctx = {}) {
     plan: {
       objective: plan.objective ?? 'none',
       posture: plan.posture ?? 'balanced',
+      route: plan.route ?? 'covered',
       ageS: round1((plan.ageMs ?? 0) / 1000),
       progress: plan.progress ?? 'none'
     },
@@ -188,6 +186,19 @@ export function jevState(view, ctx = {}) {
     };
   }
 
+  // Aggregate route facts, never directions or coordinates. Jev selects a
+  // route profile; jevStrategy deterministically creates the actual path.
+  state.routes = {};
+  const destinations = view.carrying
+    ? (view.extract ? [{ id: 'extract', cell: view.extract }] : [])
+    : view.candidates;
+  for (const destination of destinations) {
+    state.routes[destination.id] = {};
+    for (const style of ['direct', 'covered', 'evasive']) {
+      state.routes[destination.id][style] = routeFacts(view, view.runner, destination.cell, style, plugDists);
+    }
+  }
+
   // `choice` criteria is an OBJECT of key -> description. (Arrays are the
   // `score` primitive's shape; passing one here is silently the wrong type.)
   // Destinations, safest first; the stable sort keeps A before B on a tie.
@@ -221,18 +232,48 @@ export function jevState(view, ctx = {}) {
       instructions: 'How cautiously should the route treat exposure to the plugs?',
       criteria: postures.reduce((acc, p) => (acc[p] = POSTURE_HINT[p] +
         (state.deaths[p] ? `; ${plural(state.deaths[p], 'death')} with it this house` : ''), acc), {})
+    },
+    route: {
+      type: 'choice',
+      instructions: 'Choose the path profile for the objective you selected. Compare its exact facts in state.routes.',
+      criteria: Object.fromEntries(Object.entries(ROUTE_HINT))
     }
   };
   // Only ask about a power when one could actually be spent. A decoy while a
   // decoy is out does nothing, so it is not offered.
   const spendable = ready.filter((p, i, a) => a.indexOf(p) === i && !(p === 'decoy' && view.decoyActive));
   if (spendable.length) {
-    questions.power = {
-      type: 'choice',
-      instructions: 'Spend a power now, or save it? Each is single use.',
-      criteria: spendable.reduce((acc, p) => (acc[p] = POWER_HINT[p] || p, acc),
-        { none: 'Save them for later' })
-    };
+    const powerCriteria = {};
+    if (!view.carrying) {
+      if (spendable.includes('phase') && (state.threat.inLane || (state.threat.nearest ?? 99) <= 6)) {
+        powerCriteria.phase_intercept = 'Arm phase only if the plug traps the approach; fire on the intercept';
+      }
+      if (spendable.includes('decoy') && (state.threat.nearest ?? 99) <= 18) {
+        powerCriteria.decoy_pressure = 'Deploy when the plug is in sight to pull fire off the approach';
+      }
+      powerCriteria.none = 'Preserve dash and other escape powers until a pickup succeeds';
+    } else {
+      if (spendable.includes('phase')) powerCriteria.phase_intercept = 'Phase on a predicted intercept or exposed crossing while carrying';
+      if (spendable.includes('dash')) {
+        powerCriteria.dash_escape = 'Dash when the plug closes on the escape route';
+        powerCriteria.dash_finish = 'Dash on the final clear run to the car';
+      }
+      if (spendable.includes('decoy')) powerCriteria.decoy_pressure = 'Deploy when the plug can pressure the escape route';
+      const risky = state.threat.inLane || (state.threat.nearest ?? 99) <= 10 ||
+        state.deaths.carrying > 0 || state.extract?.exposed || (state.extract?.plug ?? 99) <= 6;
+      if (!risky) powerCriteria.none = 'Save only because this escape is presently low risk';
+    }
+    // Do not spend a question merely to make Jev answer "none". In
+    // particular, dash is never offered before the bag proves real.
+    if (Object.keys(powerCriteria).some((k) => k !== 'none')) {
+      questions.power = {
+        type: 'choice',
+        instructions: view.carrying
+          ? 'Choose a conditional power plan for the escape. Getting caught with powers unused is worse than spending one.'
+          : 'Choose a conditional approach power. Do not spend dash before a pickup succeeds.',
+        criteria: powerCriteria
+      };
+    }
   }
 
   return { state, questions };

@@ -178,8 +178,9 @@ export function scriptedDecide(answers) {
 }
 
 /** The shape mapJevAnswer produces. */
-export function strategy(objective, { posture = 'balanced', power = 'none', confidence = 0.9, tokens = 400 } = {}) {
-  return { objective, posture, power, confidence, confidences: { objective: confidence },
+export function strategy(objective, { posture = 'balanced', route = 'covered', power = 'none', powerPlan = power,
+  confidence = 0.9, tokens = 400 } = {}) {
+  return { objective, posture, route, power, powerPlan, confidence, confidences: { objective: confidence },
     model: 'jev-test', usage: { input_tokens: tokens }, valid: true, reason: null, strayMovement: false };
 }
 

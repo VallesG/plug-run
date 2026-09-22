@@ -75,7 +75,8 @@ console.log('\nJevStrategist\n');
   const plan = s.tick(v);
   check('adopts the answer', s.report().strategies.adopted === 1);
   check('plan objective is bag B, from Jev', plan.objective.source === 'jev' && plan.objective.objective === 'target_b');
-  check('plan cell is bag B\'s cell', plan.objective.cell.x === 10 && plan.objective.cell.y === 16);
+  check('plan keeps bag B as the final objective while exposing a route waypoint',
+    plan.objective.finalCell.x === 10 && plan.objective.finalCell.y === 16 && plan.objective.route === 'covered');
   const bad = keyPaths(plan).find((p) => MOVEMENT_KEYS.includes(p.key));
   check('plan carries no movement field', !bad, bad?.path);
 }
@@ -90,6 +91,11 @@ console.log('\nJevStrategist\n');
   check('mapper drops the move answer', !keyPaths(mapped).some((p) => MOVEMENT_KEYS.includes(p.key)));
   check('and flags that it happened', mapped.strayMovement === true);
   check('but the strategy itself survives', mapped.valid && mapped.objective === 'target_a' && mapped.posture === 'safe');
+  const planned = mapJevAnswer({ answers: {
+    objective: { choice: 'extract', confidence: 0.8 }, route: { choice: 'evasive', confidence: 0.7 },
+    power: { choice: 'dash_escape', confidence: 0.9 } } });
+  check('mapper preserves route and conditional power plan',
+    planned.route === 'evasive' && planned.powerPlan === 'dash_escape' && planned.power === 'dash');
   const onlyMove = mapJevAnswer({ answers: { move: { type: 'choice', choice: 'left' } } });
   check('a move with no objective is not a strategy', onlyMove.valid === false && onlyMove.reason === 'no-objective');
   check('an unknown objective is rejected', mapJevAnswer({ answers: { objective: { choice: 'up' } } }).reason === 'bad-objective');
@@ -353,6 +359,16 @@ console.log('\nJevStrategist\n');
   rogue.s.onPowerActivated('dash');
   check('an activation nothing armed is counted as unarmed (should never happen)',
     rogue.s.report().powers.unarmedActivations === 1 && rogue.s.report().powers.activated === 0);
+
+  // A conditional dash may be selected on pickup, but the motor cannot see
+  // it before the runner is carrying. This blocks the observed pre-bunk burn.
+  clock.t += 50_000;
+  const conditional = make([strategy('target_a', { power: 'dash', powerPlan: 'dash_escape' })],
+    { watchdog: { stallMs: 1e9 } });
+  const beforePickup = await run(conditional.s, makeView(), 200);
+  check('escape dash stays hidden before the real stash is known', beforePickup.at(-1).armedPower === null);
+  check('the same dash becomes available once carrying',
+    conditional.s.tick(makeView({ carrying: true })).armedPower === 'dash');
 }
 
 // 14. Ceilings stop further calls: requests, tokens, and repeated failures.
