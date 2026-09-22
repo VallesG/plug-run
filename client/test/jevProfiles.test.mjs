@@ -29,7 +29,7 @@ assert.equal(rival.report().profile, 'rival-hard');
 assert.equal(JEV_RIVAL_HARD_BANK_ID, 'jev-rival-hard-v1');
 assert.equal(JEV_RIVAL_HARD_BANK_ROOT, 'public/rivals/jev-rival-hard-v1');
 
-const manifest = JSON.parse(readFileSync(`${JEV_APEX_BANK_ROOT}/manifest.json`, 'utf8'));
+const manifest = JSON.parse(readFileSync(new URL('../public/rivals/jev-apex-v1/manifest.json', import.meta.url), 'utf8'));
 assert.equal(manifest.bank, JEV_APEX_BANK_ID);
 assert.equal(manifest.courses.length, 7);
 assert.ok(manifest.courses.every(c => c.opponents === 1), 'Apex has one challenge ghost on every course');
