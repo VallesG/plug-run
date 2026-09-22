@@ -662,14 +662,15 @@ function installRivalsRecorder(rec, cfg, jev = null) {
     this.armCountdown();
   };
 
-  // Export after every finish. The auto-clicker then presses REMATCH (the
+  // Export after every finish. The auto-clicker then presses NEW RACE (the
   // first actionable button; WATCH buttons are keepOpen and skipped), which
-  // carries the recording options through harnessRestartData().
+  // carries the recording options — same course, fresh match stash seed —
+  // through harnessRestartData().
   const origFinish = RivalsRace.prototype.finish;
   RivalsRace.prototype.finish = function (result, now) {
     const already = this.race.status === 'finished';
     // Decide "done" before the result modal is built inside origFinish, or
-    // the auto-clicker presses REMATCH on the final race and records one more.
+    // the auto-clicker presses NEW RACE on the final race and records one more.
     if (!already && store.races.length + 1 >= rec.runs) store.done = true;
     origFinish.call(this, result, now);
     if (already) return;

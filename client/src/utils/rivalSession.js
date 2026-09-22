@@ -64,6 +64,9 @@ export function createRivalSession(selection = {}) {
   race.fixedPowers = validRivalPowers(selection.powers) ? selection.powers.slice() : null;
   race.hardLimitMs = hardLimitMs;
   race.recording = !!selection.recording;
+  // An explicit stash seed (a test or a harness) is kept; otherwise the
+  // match takes its rival's seed once one is chosen (resolveRivalOpponent).
+  race.stashSeedFixed = Number.isInteger(selection.stashSeed);
   race.wantRecordingID = typeof selection.recordingID === 'string' ? selection.recordingID : null;
   race.opponentResolved = race.recording;
   if(territoryMode){race.rivalCityIndex=district.index;race.territoryIndex=selection.seed==null&&selection.slot==null?district.index:null;
@@ -189,8 +192,15 @@ export function resolveRivalOpponent(race) {
   if (!race || race.opponentResolved || race.status !== 'ready') return null;
   race.opponentResolved = true;
   const pending=loadRivalOpponents(race.course).then(allEntries => {
-    const entries = Number.isInteger(race.stashSeed)
-      ? allEntries.filter(e => rivalRecordMatchesStashes(e.record, race)) : allEntries;
+    // A recorded rival races the same seven answers as the player. A match
+    // whose seed was chosen explicitly can only meet rivals recorded on those
+    // answers; any other match adopts the chosen rival's seed before its
+    // first house starts (BaseGameScene.realignRivalStash), so the whole
+    // bank is eligible and which bag is real still changes from match to
+    // match. Legacy records without match stash rules never qualify.
+    const matchRecords = allEntries.filter(e => e.record?.stashRules === 'match-v1' && Number.isInteger(e.record.stashSeed));
+    const entries = !Number.isInteger(race.stashSeed) ? allEntries
+      : race.stashSeedFixed ? matchRecords.filter(e => rivalRecordMatchesStashes(e.record, race)) : matchRecords;
     if (!entries.length || race.status !== 'ready') return false;
     race.searchNames=[...new Set(entries.map(e=>rivalOpponentName(e.record)))];
     const history = rivalHistory();
@@ -229,6 +239,10 @@ export function resolveRivalOpponent(race) {
     if (!pick) return false;
     const chosen = entries.find(e => e.record === pick);
     const replay = chosen?.replay ?? null;
+    if (!race.stashSeedFixed && Number.isInteger(race.stashSeed) && Number.isInteger(pick.stashSeed) &&
+        pick.stashRules === 'match-v1' && race.status === 'ready') {
+      race.stashSeed = pick.stashSeed >>> 0;
+    }
     race.rivalTimes = pick.clearTimes.slice();
     race.opponentKind = 'recorded-bot';
     race.opponentRecord = pick;

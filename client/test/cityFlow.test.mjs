@@ -194,7 +194,7 @@ for(const [width,height] of [[280,480],[390,844],[1440,900]]){
  const modal=f.s.gameUI.showModal({fullScreen:true,completion:true,title:'YOU WIN',subtitle:'Recorded rival run · not live',
  lines:['YOU 7/7 · 0:55.0 / RIVAL 1:02.0','BLOCK CLAIMED · NEXT BLOCK OPEN'],
  buttons:[{label:'ENTER NEXT BLOCK',variant:'primary'},{label:'WATCH RIVAL REPLAY',variant:'secondary'},
- {pair:[{label:'REMATCH',variant:'secondary'},{label:'MAIN MENU',variant:'secondary'}]}]});
+ {label:'MAIN MENU',variant:'secondary'}]});
  check('rival result retains map area '+width,modal.contentBounds.height>50);
  districtRenderer(f.s,modal,{course:{seed:2722422571,id:'rivals-v1-2722422571'},territoryGang:'iron-row'},{won:true});
  check('rival result map fully revealed '+width,!f.objects.some(o=>o.kind==='graphics'&&o.depth===20003));

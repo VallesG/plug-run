@@ -124,8 +124,16 @@ const load = (bankFiles) => new Function(...Object.keys(bindingsFor(bankFiles)),
   check('the pace comes from the Jev race', race.rivalTimes.join() === rec('rec-jev-1', true, 29000).clearTimes.join());
   let incompatibleSeed = 0;
   while (rules.rivalRecordMatchesStashes(rec('x', true), { course, stashSeed: incompatibleSeed })) incompatibleSeed++;
-  const mismatch = rules.newRivalRace(course, [1,2,3,4,5,6,7], { stashSeed: incompatibleSeed });
-  check('different stash assignments cannot match even on the same course', await s.resolveRivalOpponent(mismatch) === false && !mismatch.opponentRecord);
+  // A match whose seed was chosen explicitly (a rematch) keeps it, so it can
+  // only meet a rival recorded on the same seven answers.
+  const fixed = { ...rules.newRivalRace(course, [1,2,3,4,5,6,7], { stashSeed: incompatibleSeed }), stashSeedFixed: true };
+  check('an explicitly seeded match cannot meet a rival with different answers', await s.resolveRivalOpponent(fixed) === false && !fixed.opponentRecord);
+  // Any other match adopts the chosen rival's seed before its first house
+  // starts: the whole bank is eligible, and both race the same answers.
+  const open = { ...rules.newRivalRace(course, [1,2,3,4,5,6,7], { stashSeed: incompatibleSeed }), powers: ['dash', 'phase'] };
+  check('an open match meets a rival with different answers', await s.resolveRivalOpponent(open) === true && !!open.opponentRecord);
+  check('and takes that rival\'s stash seed', open.stashSeed === open.opponentRecord.stashSeed &&
+    rules.rivalRecordMatchesStashes(open.opponentRecord, open));
 
   // A course with no Jev race yet: the style pool, no noise.
   fetched.length = 0;

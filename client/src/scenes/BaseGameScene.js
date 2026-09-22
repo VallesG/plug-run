@@ -1506,6 +1506,21 @@ export class BaseGameScene extends Phaser.Scene {
 
 
   // stash & extract
+  // A Rivals match can take its stash seed from the recorded rival it is
+  // paired with (utils/rivalSession.resolveRivalOpponent), after the first
+  // house was built on the provisional seed. The two bags are identical
+  // sprites; only which one `this.stash` points at differs, so re-pointing
+  // before the house clock starts changes nothing a player can see. Retries
+  // and later houses are built on the adopted seed and never move.
+  realignRivalStash(){
+    if (this.runKind !== 'rivals' || this.hasStash || !this.stash || !this.bunkStash) return false;
+    const want = rivalSessionPocket(this.seed, this.rivalRace?.stashSeed ?? 0);
+    if (want === this.rivalRealPocket) return false;
+    [this.stash, this.bunkStash] = [this.bunkStash, this.stash];
+    this.rivalRealPocket = want;
+    return true;
+  }
+
   makeObjectives(stashCell, extractCell){
     // REAL / BUNK STASH PATCH: helper to create duffel/package visual
     const makeDuffel = (x, y, baseScale = 1) => {

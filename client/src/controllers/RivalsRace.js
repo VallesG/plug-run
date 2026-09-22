@@ -266,6 +266,9 @@ export default class RivalsRace {
   resumeHouse() {
     if (this.update()) return;
     const scene = this.scene;
+    // The match may have adopted its rival's stash seed after this house was
+    // built; point `stash` at the right bag before the clock starts.
+    scene.realignRivalStash?.();
     scene.runnerPowersSelected = this.race.powers.slice();
     scene.runnerPowersConsumed = [false,false];
     scene.roundOver = false;
@@ -568,11 +571,10 @@ export default class RivalsRace {
         ...(recorded && (this.race.opponent?.replayURL || this.race.opponentBundle) ? [{
           label:'\u25B6 WATCH RIVAL',variant:'secondary',keepOpen:true,onClick:(m)=>this.watchRival(m)
         }] : []),
-        {label:'REMATCH',variant:'primary',onClick:()=>this.scene.scene.restart({
-          mode:'pve',role:'runner',runKind:'rivals',rivalSeed:this.race.course.seed,
-          rivalOpponentID:this.race.opponent?.recordingID ?? undefined,...this.harnessRestartData()
-        })},
-        {label:this.race.rivalCityIndex?(this.race.result==='win'?'ENTER NEXT BLOCK':'TRY AGAIN'):'NEW RACE',variant:'secondary',onClick:()=>this.scene.scene.restart({
+        // No rematch: racing the same recorded rival again would replay its
+        // route and stash answers, which a player could learn. Every new race
+        // meets a freshly chosen rival on a fresh match.
+        {label:this.race.rivalCityIndex?(this.race.result==='win'?'ENTER NEXT BLOCK':'TRY AGAIN'):'NEW RACE',variant:'primary',onClick:()=>this.scene.scene.restart({
           mode:'pve',role:'runner',runKind:'rivals',...this.harnessRestartData()
         })},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
@@ -585,19 +587,23 @@ export default class RivalsRace {
         ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED · NEXT BLOCK OPEN']:[]),
         ...(this.saved===false||this.race.territoryClaim?.saved===false?['Local save unavailable. Map progress may be temporary.']:[])
       ];
-      const rematch=config.buttons.find(b=>b.label==='REMATCH'),menu=config.buttons.find(b=>b.label==='MAIN MENU');
+      const menu=config.buttons.find(b=>b.label==='MAIN MENU');
       const next=config.buttons.find(b=>['ENTER NEXT BLOCK','TRY AGAIN'].includes(b.label));
-      rematch.variant='secondary';next.variant='primary';
       const watch=config.buttons.find(b=>b.label.includes('WATCH RIVAL'));
-      config.buttons=[next,...(watch?[watch]:[]),{pair:[rematch,menu]}];
+      config.buttons=[next,...(watch?[watch]:[]),menu];
     }
     const modal=this.scene.gameUI.showModal(config);
     if(this.race.rivalCityIndex)drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
   }
-  /** Recording-mode options survive Rematch/New Race; a normal race carries none. */
+  /**
+   * Recording-mode options survive New Race; a normal race carries none. A
+   * recording batch stays on its course (its seed), but each race is a new
+   * match with a fresh stash seed, so every recorded variant has its own
+   * answers.
+   */
   harnessRestartData() {
     if (!this.race.recording) return {};
-    return { rivalRecording:true, rivalPowers:this.race.fixedPowers ?? undefined, rivalHardLimitMs:this.race.hardLimitMs || undefined };
+    return { rivalRecording:true, rivalSeed:this.race.course.seed, rivalPowers:this.race.fixedPowers ?? undefined, rivalHardLimitMs:this.race.hardLimitMs || undefined };
   }
   /** Watch the rival's whole race on top of the intact result modal. */
   watchRival(modal) {

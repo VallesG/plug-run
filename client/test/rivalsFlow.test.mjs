@@ -115,9 +115,9 @@ check('own race exported in the shared record format',saved.at(-1).runRecord && 
 check('own record clears equal race clock',JSON.stringify(saved.at(-1).runRecord.clearTimes)===JSON.stringify(state.clearTimes) && saved.at(-1).runRecord.retries===0);
 check('capture holds one segment per attempt',state.capture.segments.length===7 && state.capture.attempts.every(a=>a.outcome==='extracted'));
 check('result names the rival',run.modals.at(-1).title==='YOU WIN' && run.modals.at(-1).lines.some(l=>l.startsWith('Rival:')));
+check('no rematch is offered',!run.modals.at(-1).buttons.some(b=>/rematch/i.test(b.label||'')));
 run.modals.at(-1).buttons[0].onClick();
-check('rematch keeps seed, drops old clock',run.restarts.at(-1).rivalSeed===77 && !run.restarts.at(-1).rivalRace);
-run.modals.at(-1).buttons[1].onClick();
+check('new race is the primary choice and drops the old clock',run.modals.at(-1).buttons[0].label==='NEW RACE' && !run.restarts.at(-1).rivalRace);
 check('new race has no pinned seed',run.restarts.at(-1).rivalSeed===undefined);
 check('new race lets matchmaking choose a random course',run.restarts.at(-1).rivalSlot===undefined);
 
@@ -177,8 +177,15 @@ result.buttons[0].onClick(fakeModal);
 check('second tap while watching ignored',played.length===1);
 played[0].onDone();
 check('leaving the replay restores the modal and the result',vis.join()==='false,true' && state.result==='loss' && state.status==='finished');
-check('rematch carries the opponent id',(result.buttons[1].onClick(),run.restarts.at(-1).rivalOpponentID==='rec-x' && run.restarts.at(-1).rivalSeed===77));
-check('new race drops the opponent id',(result.buttons[2].onClick(),run.restarts.at(-1).rivalOpponentID===undefined && run.restarts.at(-1).rivalRecording===undefined));
+check('no rematch next to the replay either',!result.buttons.some(b=>/rematch/i.test(b.label||'')));
+check('new race drops the opponent id',(result.buttons[1].onClick(),run.restarts.at(-1).rivalOpponentID===undefined && run.restarts.at(-1).rivalRecording===undefined));
+// A recording batch stays on its course but starts every race as a new
+// match: no stash seed is carried, so each variant draws its own answers.
+state.recording=true;state.fixedPowers=['phase','dash'];state.hardLimitMs=60000;
+const again=run.controller.harnessRestartData();
+check('a recording restart keeps its course and options',again.rivalRecording===true&&again.rivalSeed===state.course.seed&&again.rivalPowers.join()==='phase,dash');
+check('and carries no stash seed or rival id',!('stashSeed' in again)&&!('rivalStashSeed' in again)&&again.rivalOpponentID===undefined);
+state.recording=false;
 // resize while the lookup is pending does not double-open
 state=rules.newRivalRace(course,splits);state.opponentResolved=true;run=setup(state);
 check('already-resolved race opens the picker at once',loadouts>0 && run.modals.length===0);
@@ -334,11 +341,11 @@ check('the player estimate is reported, not the opponent pace',
 check('calibration does not decorate the bank', JSON.stringify(bank) === bankSnapshot2);
 check('calibration never locks the human pair', paired.fixedPowers == null);
 
-// A rematch is the same race, every time.
-const again = { ...rules.newRivalRace(course, splits), wantRecordingID: paired.opponent.recordingID };
-await calibrated(again);
-check('a rematch returns the same recording', again.opponent.recordingID === paired.opponent.recordingID);
-check('a rematch keeps the same recorded times', again.rivalTimes.join() === paired.rivalTimes.join());
+// A named recording (tools and tests; players have no rematch) is the same race, every time.
+const named = { ...rules.newRivalRace(course, splits), wantRecordingID: paired.opponent.recordingID };
+await calibrated(named);
+check('a named recording is returned', named.opponent.recordingID === paired.opponent.recordingID);
+check('with its recorded times', named.rivalTimes.join() === paired.rivalTimes.join());
 
 // Repeated searches rotate rather than serving one opponent forever.
 const seen = new Set();
