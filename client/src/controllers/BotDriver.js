@@ -36,8 +36,8 @@
 // BaseGameScene lives in installBotDriver.js.
 
 import { planDodge } from '../logic/evasion.js';
-import { coverAwareStep, isExposedAt, phaseEscapeDir } from '../logic/cover.js';
-import { orderCandidates, postureTactics, pathDistances, distTo } from '../logic/jevStrategy.js';
+import { coverAwareStep, isExposedAt, phaseEscapeDir, exposedCells } from '../logic/cover.js';
+import { orderCandidates, postureTactics, pathDistances, distTo, plannedRoute } from '../logic/jevStrategy.js';
 import { phaseShortcut, phaseIntercept, phaseReachCells, phaseCanCross, dashPlan } from '../logic/phasePlan.js';
 
 export const DEFAULTS = {
@@ -188,6 +188,7 @@ export default class BotDriver {
     // motor to direct, so it is refused rather than driving anything itself.
     this.strategist = strategist;
     this._plan = null;
+    this._committedRoute = null;
     this._nextPlanAt = 0;
     this._nextFireAt = 0;
     this._startedAt = performance.now();
@@ -226,6 +227,7 @@ export default class BotDriver {
     // discards the last one's plan; only this object's copy goes here.
     this._plan = null;
     this._roundSeq = (this._roundSeq || 0) + 1;
+    this._committedRoute = null;
     this._progressionApplied = false;
     this._borrowed = null;
     this._lastDir = null;
@@ -306,6 +308,7 @@ export default class BotDriver {
         // Recovery hands the AI a fresh waypoint; clear its direction
         // commitment so it can actually turn toward it.
         onRecovery: () => {
+          this._committedRoute = null;
           this._recoveryRoute = null;
           this._phaseApproach = null;
           this._coverDir = null;
@@ -465,11 +468,11 @@ export default class BotDriver {
     const plan = planDodge(this._dodge, now, risk, candidate, {
       commitMs: this.cfg.dodgeCommitMs ?? DEFAULTS.dodgeCommitMs,
       maxMs: this.cfg.dodgeMaxMs ?? DEFAULTS.dodgeMaxMs,
-      restMs: this.cfg.dodgeRestMs ?? DEFAULTS.dodgeRestMs
+      restMs: this.cfg.dodgeRestMs ?? DEFAULTS.dodgeRestMs,
+      clearGraceMs: hybrid ? 600 : 0
     });
     this._dodge = plan.state;
-    // Read by next frame's _jevView: the watchdog does not count a dodge as
-    // a stall — the evasion layer is working, not stuck.
+    // Read by the watchdog: dodging still has to produce real progress.
     this._evading = !!plan.dir;
     if (plan.dir) { this._countDrive('dodge'); return this._driveOrCoast(me, plan.dir); }
 
@@ -480,6 +483,14 @@ export default class BotDriver {
       if (next) {
         this._countDrive('motor');
         return this._driveOrCoast(me,{x:s.toWorldX(next.x)-me.x,y:s.toWorldY(next.y)-me.y});
+      }
+    }
+
+    if (hybrid) {
+      const goal = this.currentGoal();
+      if (goal) {
+        const dir = this._committedRouteDir(me, s.toCell(goal.x, goal.y), now);
+        if (dir) { this._countDrive('committedRoute'); return this._driveOrCoast(me, dir); }
       }
     }
 
@@ -664,6 +675,31 @@ export default class BotDriver {
     }
     this._countDrive('recoveryRoute');
     return this._driveOrCoast(me,{x:s.toWorldX(point.x)-me.x,y:s.toWorldY(point.y)-me.y});
+  }
+
+  // Keep each turn's center until reached. Recomputing a cardinal direction
+  // after crossing a cell boundary can reverse before reaching its center.
+  _committedRouteDir(me, goal, now) {
+    const s = this.scene, from = s.toCell(me.x, me.y), key = `${goal.x},${goal.y}`;
+    const same = (a,b) => a && b && a.x===b.x && a.y===b.y;
+    let r = this._committedRoute;
+    const next = r?.cells[r.index], previous = r?.cells[r.index-1];
+    const offRoute = r && !same(from,next) && !same(from,previous);
+    const world = this._world();
+    const blockedByPlug = next && world.threats.some(p=>same(p,next));
+    if (!r || r.key!==key || offRoute || (next && !world.isWalkable(next.x,next.y)) ||
+        (blockedByPlug && now-r.plannedAt>1000)) {
+      const exposed = exposedCells(world);
+      const cells = plannedRoute({...world,exposedAt:c=>exposed.has(`${c.x},${c.y}`)},from,goal,
+        this._plan?.posture==='aggressive'?'direct':'covered', world.threats.map(p=>pathDistances(world,p)));
+      if (!cells.length) { this._committedRoute=null; return null; }
+      r = this._committedRoute = {key,cells,index:0,plannedAt:now};
+    }
+    let point=r.cells[r.index];
+    while(point && Math.hypot(s.toWorldX(point.x)-me.x,s.toWorldY(point.y)-me.y)<=s.cell*.15)
+      point=r.cells[++r.index];
+    if(!point) return {x:0,y:0};
+    return {x:s.toWorldX(point.x)-me.x,y:s.toWorldY(point.y)-me.y};
   }
 
   _tryDash(me, goal) {
@@ -851,6 +887,15 @@ export default class BotDriver {
 
       const axis = (Math.abs(dy) < tol) ? 'row' : (Math.abs(dx) < tol) ? 'col' : null;
       if (!axis) continue;
+      // A plug aligned behind a wall is not an immediate shooting lane.
+      if (this.hybrid) {
+        const a=s.toCell(me.x,me.y), b=s.toCell(plug.x,plug.y);
+        let blocked=false;
+        const dx=Math.sign(b.x-a.x),dy=Math.sign(b.y-a.y);
+        const steps=axis==='row'?Math.abs(b.x-a.x):Math.abs(b.y-a.y);
+        for(let i=1;i<steps;i++) if(!s.isWalkableCell(axis==='row'?a.x+dx*i:a.x,axis==='col'?a.y+dy*i:a.y)){blocked=true;break;}
+        if(blocked) continue;
+      }
       best = axis;
       bestDist = dist;
     }
@@ -874,6 +919,13 @@ export default class BotDriver {
 
     const legal = options.filter((d) => s.isWalkableCell?.(cell.x + d.x, cell.y + d.y));
     if (!legal.length) return null;
+
+    if (this.hybrid) {
+      const distances=pathDistances(this._world(),s.toCell(goal.x,goal.y));
+      legal.sort((a,b)=>(distTo(distances,{x:cell.x+a.x,y:cell.y+a.y})??Infinity)-
+        (distTo(distances,{x:cell.x+b.x,y:cell.y+b.y})??Infinity));
+      return legal[0];
+    }
 
     // Break the tie toward the goal rather than at random.
     legal.sort((a, b) => {

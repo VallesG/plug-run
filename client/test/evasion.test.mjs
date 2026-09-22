@@ -110,6 +110,19 @@ console.log('\nEvasion commitment\n');
     st.dir === null && st.until === 0 && st.since === 0);
 }
 
+{
+  let st=fresh(),rested=false;
+  for(let t=1000;t<2600;t+=50){
+    const risk=t%100===0?'row':null;
+    const out=planDodge(st,t,risk,UP,{...CFG,clearGraceMs:600});st=out.state;
+    if(st.suppressUntil>t)rested=true;
+  }
+  check('brief lane gaps cannot reset the dodge budget forever',rested);
+  let st2=planDodge(fresh(),1000,'row',UP,{...CFG,clearGraceMs:600}).state;
+  st2=planDodge(st2,1100,null,null,{...CFG,clearGraceMs:600}).state;
+  st2=planDodge(st2,1750,null,null,{...CFG,clearGraceMs:600}).state;
+  check('sustained clear movement resets the hybrid dodge budget',st2.since===0);
+}
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 if (failures.length) {
   for (const f of failures) console.log(`  - ${f}`);

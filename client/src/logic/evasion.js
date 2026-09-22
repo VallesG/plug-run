@@ -36,7 +36,12 @@ export function planDodge(state, now, risk, candidate, cfg) {
   if (now < (state.suppressUntil || 0)) return { dir: null, state: rest };
 
   // Clear of any lane — forget the dodge so the next one starts fresh.
-  if (!risk) return { dir: null, state: { ...rest, suppressUntil: 0 } };
+  if (!risk) {
+    const clearSince = state.clearSince ?? now;
+    if (cfg.clearGraceMs && state.since && now-clearSince < cfg.clearGraceMs)
+      return {dir:null,state:{...rest,since:state.since,clearSince}};
+    return { dir: null, state: { ...rest, suppressUntil: 0 } };
+  }
 
   const since = state.since || now;
 
@@ -47,11 +52,11 @@ export function planDodge(state, now, risk, candidate, cfg) {
 
   // Mid-commitment: hold the direction already chosen.
   if (state.dir && now < (state.until || 0)) {
-    return { dir: state.dir, state: { ...state, since } };
+    return { dir: state.dir, state: { ...state, since, clearSince:null } };
   }
 
   // Free to choose.
-  if (!candidate) return { dir: null, state: { ...state, dir: null, until: 0, since } };
+  if (!candidate) return { dir: null, state: { ...state, dir: null, until: 0, since, clearSince:null } };
 
   return {
     dir: candidate,

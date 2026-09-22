@@ -13,6 +13,8 @@ import { clock, flush, makeScene, cellOf, scriptedDecide, strategy, AI_HOOKS, Ru
 import BotDriver from '../src/controllers/BotDriver.js';
 import JevStrategist from '../src/controllers/JevStrategist.js';
 import './powerRoutes.test.mjs';
+import {generateSquareMaze} from '../src/utils/mazeGenerator.js';
+import {createSeededRNG} from '../src/utils/seededRandom.js';
 
 let passed = 0;
 const failures = [];
@@ -87,7 +89,7 @@ for (const [objective, realTop, cell] of [['target_a', false, { x: 6, y: 2 }], [
   check(`${objective}: every steer came from the motor path (_driveOrCoast)`,
     moves(scene).length > 0 && moves(scene).every((m) => m.via.includes('_driveOrCoast') && !/JevStrategist|jevState|jevStrategy/.test(m.via)));
   check(`${objective}: drive sources are motor layers only`,
-    r.driveSources.motor > 0 && Object.keys(r.driveSources).every((k) => ['motor', 'dodge', 'cover', 'phaseWindow'].includes(k)));
+    r.driveSources.committedRoute > 0 && Object.keys(r.driveSources).every((k) => ['motor', 'dodge', 'cover', 'phaseWindow','committedRoute'].includes(k)));
   check(`${objective}: strategy was active, not fallback`, r.time.strategyActiveShare > 0.9, `${r.time.strategyActiveShare}`);
   check(`${objective}: the runner AI's own power logic never ran`, !scene._driven.some((d) => d.kind === 'power'));
   void strategist;
@@ -130,10 +132,10 @@ for (const [objective, realTop, cell] of [['target_a', false, { x: 6, y: 2 }], [
   check('a plug in the lane: the dodge layer steers', r1.driveSources.dodge > 0);
   check('sideways, out of the column', !!firstDodge);
   scene.defender.active = false; scene.defender.visible = false;
-  const before = r1.driveSources.motor || 0;
+  const before = r1.driveSources.committedRoute || 0;
   const reached = await frames(bot, 900, () => !at(scene, { x: 6, y: 2 }));
   const r2 = bot.jevReport();
-  check('lane clear: the motor steers again', (r2.driveSources.motor || 0) > before);
+  check('lane clear: the motor steers again', (r2.driveSources.committedRoute || 0) > before);
   check('and the runner AI completes the objective', reached < 900 && at(scene, { x: 6, y: 2 }));
 }
 
@@ -142,7 +144,7 @@ for (const [objective, realTop, cell] of [['target_a', false, { x: 6, y: 2 }], [
 {
   for (const posture of ['balanced', 'safe']) {
     reseed(6); clock.t = 500_000 + (posture === 'safe' ? 50_000 : 0);
-    const scene = makeScene({ realTop: true, runner: { x: 6, y: 5 }, plug: { x: 6, y: 11 } });
+    const scene = makeScene({ realTop: true, runner: { x: 2, y: 5 }, plug: { x: 2, y: 11 } });
     const { bot } = hybrid(scene, () => strategy('target_a', { posture }));
     await frames(bot, 20);
     const r = bot.jevReport();
@@ -391,6 +393,52 @@ for (const name of ['phase', 'dash', 'decoy']) {
   await frames(bot,3);
   check('the Jev motor cannot randomly juke away from its objective',observed===0);
   check('ordinary AI juke settings are restored after borrowing',scene.aiRunner.jukeDist>0);
+}
+
+{
+  const scene=makeScene({runner:{x:6,y:5},plug:{x:6,y:9}});
+  const {bot}=hybrid(scene,()=>strategy('target_a'));
+  check('wall between aligned runner and plug blocks false dodge',bot.firingLaneRisk(scene.attacker)===null);
+  scene.defender.x=scene.toWorldX(6);scene.defender.y=scene.toWorldY(3);
+  check('unobstructed nearby plug remains a dodge threat',bot.firingLaneRisk(scene.attacker)==='col');
+  const goal={x:6,y:12};let previous=null,reversals=0;
+  scene.defender.active=false; scene.defender.visible=false;
+  for(let i=0;i<500;i++){
+    const dir=bot._committedRouteDir(scene.attacker,goal,i*16);
+    if(!dir||Math.hypot(dir.x,dir.y)<.01)break;
+    const len=Math.hypot(dir.x,dir.y),a=scene.attacker,step=2.688;
+    const next={x:Math.sign(dir.x),y:Math.sign(dir.y)};
+    if(previous&&next.x===-previous.x&&next.y===-previous.y)reversals++;
+    previous=next;
+    const nx=a.x+dir.x/len*step,ny=a.y+dir.y/len*step;
+    if(scene.canMoveTo(a,nx,a.y))a.x=nx;
+    if(scene.canMoveTo(a,a.x,ny))a.y=ny;
+  }
+  check('committed centers reach an objective around a wall',at(scene,goal));
+  check('cell boundaries do not cause backtracking',reversals===0,`${reversals}`);
+  bot._onNewRound();check('retry clears committed route',bot._committedRoute===null);
+}
+
+// Captured house 3, attempt 2 pickup position. Geometry only: this is not a
+// simulated win against a live plug, but it locks down the corridor traversal.
+{
+  const arena=generateSquareMaze(16,35,{rng:createSeededRNG(2511379438),role:'runner',clusterScale:.9});
+  const scene=makeScene();scene.cols=16;scene.rows=35;
+  scene.isWalkableCell=(x,y)=>x>=0&&y>=0&&x<16&&y<35&&arena.grid[y][x]!==1;
+  scene.attacker.x=7.5*scene.cell;scene.attacker.y=13.2*scene.cell;
+  const {bot}=hybrid(scene,()=>strategy('extract'));const goal=arena.egress.entry;
+  let collisions=0,steps=0;
+  for(;steps<600;steps++){
+    const dir=bot._committedRouteDir(scene.attacker,goal,steps*16.67);
+    if(!dir||Math.hypot(dir.x,dir.y)<.01)break;
+    const len=Math.hypot(dir.x,dir.y),a=scene.attacker,step=2.28;
+    const nx=a.x+dir.x/len*step,ny=a.y+dir.y/len*step;
+    const c=scene.toCell(nx,ny);
+    if(!scene.isWalkableCell(c.x,c.y)){collisions++;break;}
+    a.x=nx;a.y=ny;
+  }
+  check('captured house-3 geometry reaches extraction without corridor deadlock',at(scene,goal)&&steps<600);
+  check('captured house-3 route never cuts through walls',collisions===0);
 }
 
 console.log('');
