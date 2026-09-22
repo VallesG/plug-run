@@ -14,6 +14,9 @@ let passed=0;
 function check(name,ok){if(!ok)throw Error(name);passed++;}
 const source=path=>readFileSync(new URL(path,import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'');
 const blockSource=source('../src/controllers/BlockMap.js').replace('export function','function');
+check('block streets render as one joined route',blockSource.includes('g.strokePath()')
+  && blockSource.includes('strokeRoute(PALETTE.ink,11,0.55)')
+  && blockSource.includes('fillCircle(point.x,point.y,width/2)'));
 const drawBlockMap=new Function('layoutBlock','buildFog','blockNoise','distanceToStreet','PALETTE','getCurrentRouteID','fullBlockReveal','drawCrewSigil',
  blockSource+'\nreturn drawBlockMap;')(layoutBlock,buildFog,blockNoise,distanceToStreet,PALETTE,()=>1,fullBlockReveal,drawCrewSigil);
 const mapSource=source('../src/controllers/CityMap.js').replace('export function','function');
@@ -44,6 +47,7 @@ function scene(width=390,height=844,props={}){
    setVisible(n){this.visible=n;return this;},setFillStyle(){return this;},on(name,fn){this.handlers[name]=fn;return this;},
    add(child){this.children.push(child);child.parentContainer=this;return this;},destroy(){if(!this.active)return;this.active=false;this.children.forEach(child=>child.destroy());},
    fillStyle(){return this;},fillRect(){return this;},lineStyle(){return this;},lineBetween(){return this;},
+   beginPath(){return this;},moveTo(){return this;},lineTo(){return this;},strokePath(){return this;},
    fillPoints(){return this;},fillTriangle(){return this;},strokeCircle(){return this;},fillCircle(){return this;},strokeRect(){return this;}};
   objects.push(o);return o;
  };

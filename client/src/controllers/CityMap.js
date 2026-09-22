@@ -28,26 +28,43 @@ export function drawCityMap(scene, { view, checkpoint, onDone, autoZoom=true } =
   const g = scene.add.graphics(); root.add(g);
   const rect = (c,x,y,w,h,alpha=1) => { g.fillStyle(c,alpha).fillRect(x,y,w,h); };
   const road = (x1,y1,x2,y2) => {
-    g.lineStyle(22,0x555b49,.65).lineBetween(x1,y1,x2,y2);
-    g.lineStyle(16,0x293235,1).lineBetween(x1,y1,x2,y2);
+    g.lineStyle(24,0x0b1418,.9).lineBetween(x1,y1,x2,y2);
+    g.lineStyle(21,0x606657,.8).lineBetween(x1,y1,x2,y2);
+    g.lineStyle(17,0x23313b,1).lineBetween(x1,y1,x2,y2);
     const length=Math.hypot(x2-x1,y2-y1);
     for(let d=8;d<length-4;d+=18) {
-      const t=d/length;
-      rect(0xaaa081,x1+(x2-x1)*t-1,y1+(y2-y1)*t-1,2,3,.5);
+      const t=d/length,u=Math.min(1,(d+5)/length);
+      g.lineStyle(.75,0xa6a58d,.55).lineBetween(
+        x1+(x2-x1)*t,y1+(y2-y1)*t,
+        x1+(x2-x1)*u,y1+(y2-y1)*u);
     }
   };
   for(let y=0;y<920;y+=8) for(let x=0;x<760;x+=8) {
     const n=blockNoise(x,y,view.city.number);
-    rect(n>.7?0x1d2820:n>.3?0x18221d:0x141c19,x,y,8,8);
+    rect(n>.73?0x26332b:n>.38?0x202e29:0x182622,x,y,8,8);
   }
   // Waterfront, parks and rail spine; roads form a network, never a level chain.
   g.fillStyle(0x0b2027,1).fillPoints(cityShoreline(variant).map(([x,y])=>({x,y})),true);
-  const shore=cityShoreline().slice(1,-1);
-  for(let i=1;i<shore.length;i++)g.lineStyle(5,0x26413e,.65).lineBetween(...shore[i-1],...shore[i]);
+  const shoreline=cityShoreline(variant), bankLength=shoreline.length/2;
+  for(let edge=0;edge<2;edge++)for(let i=1;i<bankLength;i++){
+    const a=shoreline[edge*bankLength+i-1],b=shoreline[edge*bankLength+i];
+    g.lineStyle(9,0x132b2d,.85).lineBetween(...a,...b);
+    g.lineStyle(2,0x647164,.45).lineBetween(...a,...b);
+  }
   // Park, rail yard and dense downtown are scenery, not additional missions.
   g.fillStyle(0x203222,.8).fillPoints([{x:70,y:35},{x:240,y:24},{x:246,y:110},{x:72,y:90}],true);
   g.lineStyle(4,0x48503c,.45).lineBetween(85,60,228,75);
   for(const route of cityStreets(variant)) for(let i=1;i<route.length;i++)road(...route[i-1],...route[i]);
+  // Small warm pools make the street grid read at overview scale.
+  for(const route of cityStreets(variant))for(let i=1;i<route.length;i++){
+    const [x1,y1]=route[i-1],[x2,y2]=route[i],length=Math.hypot(x2-x1,y2-y1);
+    for(let d=34;d<length-12;d+=72){
+      const t=d/length,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+      g.fillStyle(0xffc96f,.035).fillCircle(x,y,18);
+      g.fillStyle(0xffd38a,.075).fillCircle(x,y,10);
+      g.fillStyle(0xffdf9b,.72).fillCircle(x,y,1.4);
+    }
+  }
   // Bridge parapets pick out the river crossings without changing street paths.
   for(const y of variant==='rivals'?[270,510,669,892]:[280,548,790,904]){
     g.lineStyle(2,0x8b8568,.65).lineBetween(453,y-12,555,y-12);
@@ -64,6 +81,12 @@ export function drawCityMap(scene, { view, checkpoint, onDone, autoZoom=true } =
       if((ay>y)!==(by>y)&&x<(bx-ax)*(y-ay)/(by-ay)+ax)inside=!inside;
     }return inside;
   };
+  for(let y=18;y<910;y+=23){
+    const x=485+(blockNoise(y,view.city.number,0x43b)-.5)*38;
+    if(inWater(x,y)&&cityStreetDistance(x,y,variant)>16){
+      g.lineStyle(1,0x517276,.20).lineBetween(x,y,x+8,y-2);
+    }
+  }
   // Jittered buildings of mixed sizes; no repeated neighborhood-sized boxes.
   for(let gy=20;gy<902;gy+=15)for(let gx=52;gx<728;gx+=17){
     const n=blockNoise(gx,gy,view.city.number^0x817);
@@ -73,12 +96,28 @@ export function drawCityMap(scene, { view, checkpoint, onDone, autoZoom=true } =
     if(a.nodes.some(p=>Math.abs(p.x-(x+w/2))<p.w/2+w/2+8&&Math.abs(p.y-(y+h/2))<p.h/2+h/2+8))continue;
     const downtown=x>285&&x<435&&y<570;
     if(n>(downtown?.20:.48)){
-      rect(0x070d0d,x+3,y+4,w,h,.75);
-      rect(downtown?0x445052:n>.8?0x4b5145:0x35433d,x,y,w,h,.85);
-      rect(0x81836b,x+1,y,w-2,1,.4);
-      if(downtown&&w>10)rect(0x1d2e31,x+3,y+3,w-6,h-6,.7);
-      if(n>.78)rect(0xffd78a,x+2,y+h-2,2,1,.55);
-    }else if(n>.3){rect(0x102217,x,y,6,7);rect(0x29442c,x-1,y-1,5,5,.75);}
+      const roof=downtown?0x3e4c51:n>.83?0x635b55:n>.67?0x40575c:0x4d5754;
+      rect(0x071113,x+3,y+4,w,h,.8);
+      rect(0x19262b,x-1,y-1,w+2,h+2);
+      rect(roof,x,y,w,h,.98);
+      g.lineStyle(1,0x91a09a,.28).lineBetween(x+1,y+1,x+w-1,y+1);
+      g.lineStyle(1,0x0f2026,.55).lineBetween(x+w/2,y+2,x+w/2,y+h-2);
+      if(w>11&&h>12){
+        rect(0x26363b,x+3,y+4,Math.min(4,w-6),3,.85);
+        rect(0x8c9690,x+4,y+4,2,1,.45);
+      }
+      if(downtown&&w>10)rect(0x1a292f,x+3,y+6,w-6,h-12,.35);
+      if(n>.69){
+        rect(0xffcc78,x+1,y+h-2,3,1,.85);
+        g.fillStyle(0xffcc78,.035).fillCircle(x+2,y+h,7);
+      }
+    }else if(n>.21){
+      const r=3+blockNoise(x,y,view.city.number^0x88)*4;
+      g.fillStyle(0x071618,.8).fillCircle(x+2,y+3,r+1);
+      g.fillStyle(n>.36?0x244842:0x294435,1).fillCircle(x,y,r);
+      g.fillStyle(0x527168,.43).fillCircle(x-r*.3,y-r*.35,r*.48);
+      g.fillStyle(0x122d30,.6).fillCircle(x+r*.4,y+r*.2,r*.5);
+    }
   }
   // Each local street opens onto the city's shared arterial network.
   for(const [i,node] of a.nodes.entries()) {
