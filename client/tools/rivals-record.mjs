@@ -92,6 +92,12 @@ const OPTIONS = {
 // or any file this tool writes.
 const BROWSER_SENTINEL = 'browser-sentinel-not-a-key';
 const TYPESAFE_URL = 'https://api.typesafe.ai/v1/systemone';
+// Every entry is a high-level decision. Movement/direction questions stay
+// forbidden here so stale code cannot turn Jev back into the motor. Keep this
+// list in sync with makeJevPayload; route is the path style, not a raw move.
+export const JEV_STRATEGIC_QUESTIONS = Object.freeze([
+  'objective', 'posture', 'route', 'power'
+]);
 
 /**
  * Forward the page's Jev calls from Node, with the real key.
@@ -119,7 +125,7 @@ async function installJevProxy(page, apiKey, { mock = false } = {}) {
     let parsed = null;
     try { parsed = JSON.parse(route.request().postData() || '{}'); } catch {}
     const asked = Object.keys(parsed?.questions || {});
-    if (!asked.length || asked.some((q) => !['objective', 'posture', 'power'].includes(q))) {
+    if (!asked.length || asked.some((q) => !JEV_STRATEGIC_QUESTIONS.includes(q))) {
       relay.blocked++;
       relay.statuses.blocked = (relay.statuses.blocked || 0) + 1;
       return route.fulfill({ status: 422, contentType: 'application/json',

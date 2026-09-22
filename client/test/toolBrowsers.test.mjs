@@ -18,6 +18,12 @@ const restoreEnv = () => {
 };
 
 const { chromiumCandidates } = await import('../tools/lib/browsers.mjs');
+const { JEV_STRATEGIC_QUESTIONS } = await import('../tools/rivals-record.mjs');
+
+check('the recorder permits strategic route plans',
+  JEV_STRATEGIC_QUESTIONS.includes('route'));
+check('the recorder still refuses raw movement questions',
+  !JEV_STRATEGIC_QUESTIONS.includes('move') && !JEV_STRATEGIC_QUESTIONS.includes('direction'));
 
 /* --- the override always wins ------------------------------------------- */
 {
@@ -83,3 +89,4 @@ if (failures.length) {
   process.exit(1);
 }
 console.log('toolBrowsers: ' + passed + ' assertions passed');
+
