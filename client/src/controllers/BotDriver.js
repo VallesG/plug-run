@@ -690,10 +690,26 @@ export default class BotDriver {
     if (!r || r.key!==key || offRoute || (next && !world.isWalkable(next.x,next.y)) ||
         (blockedByPlug && now-r.plannedAt>1000)) {
       const exposed = exposedCells(world);
+      const carrying = !!s.hasStash;
+      const deaths = (this._plan?.deathCells || []).filter(d=>d.carrying===carrying && d.cell);
+      // One unlucky death should not change a good route. Two deaths in the
+      // same small area establish a failed corridor; make it expensive, not
+      // forbidden, so an unavoidable choke point remains traversable.
+      const repeated = deaths.filter((d,i,a)=>a.some((o,j)=>j!==i &&
+        Math.abs(o.cell.x-d.cell.x)+Math.abs(o.cell.y-d.cell.y)<=2));
+      const penaltyAt = repeated.length ? (cell) => {
+        let penalty=0;
+        for(const d of repeated){
+          const md=Math.abs(cell.x-d.cell.x)+Math.abs(cell.y-d.cell.y);
+          if(md<=3) penalty += [24,16,9,4][md];
+        }
+        return Math.min(60,penalty);
+      } : null;
       const cells = plannedRoute({...world,exposedAt:c=>exposed.has(`${c.x},${c.y}`)},from,goal,
-        this._plan?.posture==='aggressive'?'direct':'covered', world.threats.map(p=>pathDistances(world,p)));
+        this._plan?.posture==='aggressive'?'direct':'covered', world.threats.map(p=>pathDistances(world,p)),
+        {penaltyAt});
       if (!cells.length) { this._committedRoute=null; return null; }
-      r = this._committedRoute = {key,cells,index:0,plannedAt:now};
+      r = this._committedRoute = {key,cells,index:0,plannedAt:now,avoidingDeaths:!!penaltyAt};
     }
     let point=r.cells[r.index];
     while(point && Math.hypot(s.toWorldX(point.x)-me.x,s.toWorldY(point.y)-me.y)<=s.cell*.15)

@@ -85,7 +85,7 @@ export const distTo = (dist, cell) => {
  * covered = modest detour to reduce firing-lane exposure
  * evasive = strongly avoids exposure and cells close to a plug
  */
-export function plannedRoute(view, from, to, style = 'covered', plugDists = []) {
+export function plannedRoute(view, from, to, style = 'covered', plugDists = [], options = {}) {
   const { cols, rows, isWalkable } = view;
   if (!from || !to || !isWalkable(from.x, from.y) || !isWalkable(to.x, to.y)) return [];
   const n = cols * rows, start = from.y * cols + from.x, goal = to.y * cols + to.x;
@@ -113,7 +113,8 @@ export function plannedRoute(view, from, to, style = 'covered', plugDists = []) 
         if (d != null && d < nearest) nearest = d;
       }
       const plugPenalty = nearest < 7 ? (7 - nearest) * plugWeight : 0;
-      const step = 1 + (view.exposedAt?.(cell) ? exposureWeight : 0) + plugPenalty;
+      const learnedPenalty = Math.max(0, Number(options.penaltyAt?.(cell)) || 0);
+      const step = 1 + (view.exposedAt?.(cell) ? exposureWeight : 0) + plugPenalty + learnedPenalty;
       if (cost[i] + step < cost[j]) { cost[j] = cost[i] + step; prev[j] = i; }
     }
   }

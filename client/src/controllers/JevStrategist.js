@@ -338,6 +338,10 @@ export default class JevStrategist {
     return { objective: target, posture, recovering, mode,
       armedPower: this._powerReady(this._view) ? this.armed?.name ?? null : null,
       powerPlan: this.armed?.plan ?? null,
+      // Fair, match-local memory: where this runner was caught, never which
+      // bag was genuine. The motor uses repeated points to stop brute-forcing
+      // the same corridor on later attempts.
+      deathCells: this.houseDeaths.map((d) => ({ cell: { ...d.cell }, carrying: !!d.carrying })),
       explore: this.exploring && !recovering };
   }
 

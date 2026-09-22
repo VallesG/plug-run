@@ -231,6 +231,15 @@ console.log('\njevState — strategic payload\n');
     direct.at(-1).x === to.x && covered.at(-1).x === to.x);
   check('covered profile reduces exposure when a safe detour exists', cf.exposed < df.exposed,
     JSON.stringify({ direct: df, covered: cf }));
+
+  const failedCorridor = new Set(direct.slice(1, -1).map(c => `${c.x},${c.y}`));
+  const adapted = plannedRoute(view, from, to, 'direct', [], {
+    penaltyAt: c => failedCorridor.has(`${c.x},${c.y}`) ? 30 : 0
+  });
+  check('a repeatedly failed corridor makes the next route use a viable alternative',
+    adapted.some(c => !direct.some(d => d.x === c.x && d.y === c.y)) &&
+    adapted.at(-1).x === to.x && adapted.at(-1).y === to.y,
+    JSON.stringify({ direct, adapted }));
 }
 
 // Power choices must describe executable geometry, not just proximity.
