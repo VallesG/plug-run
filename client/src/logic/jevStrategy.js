@@ -20,7 +20,7 @@ export const POSTURES = Object.freeze(['safe', 'balanced', 'aggressive']);
 export const POWERS = Object.freeze(['phase', 'dash', 'decoy']);
 export const ROUTES = Object.freeze(['direct', 'covered', 'evasive']);
 export const POWER_PLANS = Object.freeze([
-  'none', 'phase_intercept', 'dash_escape', 'dash_finish', 'decoy_pressure'
+  'none', 'phase_intercept', 'phase_shortcut', 'dash_escape', 'dash_finish', 'dash_objective', 'decoy_pressure'
 ]);
 
 export const powerForPlan = (plan) => {

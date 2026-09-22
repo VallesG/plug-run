@@ -56,12 +56,10 @@
 // POWERS: JEV DECIDES THE CONDITION, THE MOTOR DECIDES THE FRAME
 // A power plan arms a named condition (intercept, escape, final run or plug
 // pressure). Until that condition opens the power is hidden from the motor.
-// Dash is never offered before a pickup succeeds, so it cannot be burned on a
-// bag that vanishes. Once the window opens, the runner AI's
-// own reflex rules (RunnerAI.considerRunnerPowerUse — phase when a plug is
-// on top of you or a thin wall cuts the route, dash to open separation or
-// close on the objective, decoy when a plug is in sight) then pick the
-// instant, but only for the armed power. 'none' disarms: save them. Combat
+// The motor validates a phase crossing's actual travel budget, and a dash's
+// actual wall-clipped landing. Both may shorten the approach before pickup.
+// Decoy retains the runner AI's reflex rule. Only the armed power can fire;
+// 'none' disarms: save them. Combat
 // timing stays with the motor, which reacts in frames; the decision to spend
 // stays with Jev, which is asked on events a second or more apart. An armed
 // power the motor never finds a moment for expires unused after armMs, and
@@ -636,9 +634,10 @@ export default class JevStrategist {
     if (!this.armed || !view?.runner) return false;
     const plan = this.armed.plan || this.armed.name;
     if (plan === this.armed.name) return true; // legacy answer
+    if (plan === 'phase_shortcut') return true; // motor approaches first, then validates travel time
     let nearest = Infinity;
     for (const p of view.plugs || []) nearest = Math.min(nearest, Math.abs(p.x - view.runner.x) + Math.abs(p.y - view.runner.y));
-    if (plan === 'dash_escape' || plan === 'dash_finish') return !!view.carrying;
+    if (plan === 'dash_escape' || plan === 'dash_finish' || plan === 'dash_objective') return true; // motor validates proximity and landing
     if (plan === 'phase_intercept') return !!view.inLane || nearest <= 7;
     if (plan === 'decoy_pressure') return nearest <= 18;
     return false;

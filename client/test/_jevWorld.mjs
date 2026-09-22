@@ -135,6 +135,7 @@ export function makeScene({ realTop = true, runner = { x: 6, y: 9 }, plug = null
       driveMove(x, y) {
         const len = Math.hypot(x, y);
         if (len < 1e-6) return false;
+        scene._runnerInputDir = { x: x / len, y: y / len };
         // Who called: the test asserts every steer comes from BotDriver's
         // motor output path, never from anything Jev-shaped.
         const stack = new Error().stack || '';

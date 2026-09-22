@@ -367,7 +367,7 @@ console.log('\nJevStrategist\n');
   const conditional = make([strategy('target_a', { power: 'dash', powerPlan: 'dash_escape' })],
     { watchdog: { stallMs: 1e9 } });
   const beforePickup = await run(conditional.s, makeView(), 200);
-  check('escape dash stays hidden before the real stash is known', beforePickup.at(-1).armedPower === null);
+  check('escape dash is authorized before pickup; motor validates the landing', beforePickup.at(-1).armedPower === 'dash');
   check('the same dash becomes available once carrying',
     conditional.s.tick(makeView({ carrying: true })).armedPower === 'dash');
 }

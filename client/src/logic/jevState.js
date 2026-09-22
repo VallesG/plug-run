@@ -39,6 +39,7 @@
 // a table to do it.
 
 import { distTo, legalObjectives, pathDistances, routeFacts } from './jevStrategy.js';
+import { phaseShortcut } from './phasePlan.js';
 
 const POSTURE_HINT = {
   safe: 'Keep out of firing lanes, longer routes',
@@ -237,6 +238,12 @@ export function jevState(view, ctx = {}) {
   const spendable = ready.filter((p, i, a) => a.indexOf(p) === i && !(p === 'decoy' && view.decoyActive));
   if (spendable.length) {
     const powerCriteria = {};
+    if (spendable.includes('phase')) {
+      const goals = view.carrying ? [{ id: 'extract', cell: view.extract }] : view.candidates.filter(c => !learned || c.id === learned.id);
+      const shortcuts = goals.map(c => ({ id: c.id, plan: phaseShortcut(view, view.runner, c.cell, view.phaseReach ?? 0) })).filter(c => c.plan);
+      if (shortcuts.length) powerCriteria.phase_shortcut = 'Use a wall shortcut to the chosen objective; approach the wall before firing. ' +
+        shortcuts.map(c => `${c.id}: saves ${c.plan.saved} walking steps`).join('; ');
+    }
     if (!view.carrying) {
       if (spendable.includes('phase') && (state.threat.inLane || (state.threat.nearest ?? 99) <= 6)) {
         powerCriteria.phase_intercept = 'Arm phase only if the plug traps the approach; fire on the intercept';
@@ -244,7 +251,7 @@ export function jevState(view, ctx = {}) {
       if (spendable.includes('decoy') && (state.threat.nearest ?? 99) <= 18) {
         powerCriteria.decoy_pressure = 'Deploy when the plug is in sight to pull fire off the approach';
       }
-      powerCriteria.none = 'Preserve dash and other escape powers until a pickup succeeds';
+      powerCriteria.none = 'Save only if neither a useful shortcut nor a safe dash is available';
     } else {
       if (spendable.includes('phase')) powerCriteria.phase_intercept = 'Phase on a predicted intercept or exposed crossing while carrying';
       if (spendable.includes('dash')) {
@@ -256,14 +263,17 @@ export function jevState(view, ctx = {}) {
         state.deaths.carrying > 0 || state.extract?.exposed || (state.extract?.plug ?? 99) <= 6;
       if (!risky) powerCriteria.none = 'Save only because this escape is presently low risk';
     }
-    // Do not spend a question merely to make Jev answer "none". In
-    // particular, dash is never offered before the bag proves real.
+    if (spendable.includes('dash')) {
+      powerCriteria.dash_objective = 'Dash toward the chosen bag or car when it is within the actual clear dash range; do not waste a dash into a wall';
+      powerCriteria.dash_escape = 'Dash away when a plug is close and the landing increases separation, even before a pickup';
+    }
+    // Do not spend a question merely to make Jev answer "none".
     if (Object.keys(powerCriteria).some((k) => k !== 'none')) {
       questions.power = {
         type: 'choice',
         instructions: view.carrying
           ? 'Choose a conditional power plan for the escape. Getting caught with powers unused is worse than spending one.'
-          : 'Choose a conditional approach power. Do not spend dash before a pickup succeeds.',
+          : 'Use powers proactively: phase through a useful wall shortcut, dash to a nearby bag, or dash away from a close plug. The motor checks the landing before firing.',
         criteria: powerCriteria
       };
     }

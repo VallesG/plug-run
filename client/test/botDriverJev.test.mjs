@@ -12,6 +12,7 @@
 import { clock, flush, makeScene, cellOf, scriptedDecide, strategy, AI_HOOKS, RunnerAI, reseed } from './_jevWorld.mjs';
 import BotDriver from '../src/controllers/BotDriver.js';
 import JevStrategist from '../src/controllers/JevStrategist.js';
+import './powerRoutes.test.mjs';
 
 let passed = 0;
 const failures = [];
@@ -199,7 +200,7 @@ for (const name of ['phase', 'dash', 'decoy']) {
   const scene = makeScene({ plug: { x: 6, y: 5 },
     over: { runnerPowersSelected: [name, name === 'dash' ? 'phase' : 'dash'], runnerPowersConsumed: [false, false] } });
   const { bot } = hybrid(scene, [strategy('target_a', { power: name })]);
-  await frames(bot, 40);
+  await frames(bot, name === 'phase' ? 160 : 40);
   const spent = scene._driven.filter((d) => d.kind === 'power');
   const recorded = scene._driven.filter((d) => d.kind === 'recordPower');
   check(`${name}: armed by Jev, fired by the runner AI's own rule through activateRunnerPowerByIndex`,
@@ -253,7 +254,7 @@ for (const name of ['phase', 'dash', 'decoy']) {
   const h2 = { ...AI_HOOKS, considerRunnerPowerUse: (sc, ...a) => { visible = [...(sc.aiRunnerPowersSelected || [])]; return AI_HOOKS.considerRunnerPowerUse(sc, ...a); } };
   const { bot: b2 } = hybrid(s2, () => strategy('target_a', { power: 'dash' }), {}, h2);
   await frames(b2, 30);
-  check('dash armed: the AI\'s rules see only the dash slot', JSON.stringify(visible) === JSON.stringify([null, 'dash']), JSON.stringify(visible));
+  check('dash waits for a useful landing, never the old distance-only rule', visible.length === 0 && !s2._driven.some(d => d.kind === 'power' && d.power === 'dash'), JSON.stringify(visible));
   check('the player\'s own selection is never touched, and the spoof is undone',
     JSON.stringify(s2.runnerPowersSelected) === JSON.stringify(['phase', 'dash']) && s2.aiRunnerPowersSelected === undefined);
 }
@@ -313,6 +314,53 @@ for (const name of ['phase', 'dash', 'decoy']) {
   scene.bunkStash._fading = true;
   check('visible bunk reveal reaches Jev', bot._jevView(actor).revealedPocket === 1);
   check('view identifies the match independently of retry', bot._jevView(actor).matchKey === 123);
+}
+
+// Real-speed integration: approach first, spend at the wall, finish on floor.
+{
+  reseed(21); clock.t=1_200_000;
+  const scene=makeScene({runner:{x:6,y:10}});
+  let firedAt=null, landedAt=null;
+  const activate=scene.activateRunnerPowerByIndex.bind(scene);
+  scene.activateRunnerPowerByIndex=(i)=>{firedAt={x:scene.attacker.x,y:scene.attacker.y,t:clock.t};activate(i);};
+  scene.intent.driveMove=(x,y)=>{
+    const len=Math.hypot(x,y);if(!len)return false;
+    scene._runnerInputDir={x:x/len,y:y/len};
+    const a=scene.attacker,step=scene.runnerSpeed*.016;
+    const nx=a.x+x/len*step,ny=a.y+y/len*step;
+    if(scene.canMoveTo(a,nx,a.y))a.x=nx;
+    if(scene.canMoveTo(a,a.x,ny))a.y=ny;
+    if(firedAt&&!landedAt&&a.y<=scene.toWorldY(6)+scene.cell*.15)landedAt=clock.t;
+    return true;
+  };
+  const {bot}=hybrid(scene,()=>strategy('target_a',{power:'phase',powerPlan:'phase_shortcut'}));
+  await frames(bot,160,()=>!landedAt);
+  check('phase approaches the wall before spending',firedAt&&Math.abs(firedAt.y-scene.toWorldY(8))<=scene.cell*.11,JSON.stringify(firedAt));
+  check('phase reaches clear floor before expiry at real runner speed',landedAt&&landedAt-firedAt.t<500,JSON.stringify({landedAt,firedAt}));
+  check('phase crossing owns steering through the wall',bot.jevReport().driveSources.phaseWindow>0);
+  check('one phase spend, one intent record',scene._driven.filter(d=>d.kind==='recordPower').length===1&&bot.jevReport().powers.activated===1);
+  bot._onNewRound();
+  check('retry clears all phase crossing state',!bot._phaseDrive&&!bot._phaseApproach);
+}
+
+// No threat and no wall crossing: do not burn phase just because it is armed.
+{
+  reseed(22);clock.t=1_300_000;
+  const scene=makeScene({runner:{x:6,y:10}});
+  const {bot}=hybrid(scene,()=>strategy('target_b',{power:'phase',powerPlan:'phase_shortcut'}));
+  await frames(bot,60);
+  check('phase stays unused on a clear approach',!scene.runnerPowersConsumed[0]);
+}
+
+// Dash aligns via normal input, then uses the ordinary power activation path.
+{
+  reseed(23);clock.t=1_400_000;
+  const scene=makeScene({runner:{x:6,y:9}});
+  const {bot}=hybrid(scene,()=>strategy('target_b',{power:'dash',powerPlan:'dash_objective'}));
+  await frames(bot,5);
+  check('dash can fire toward a nearby bag before pickup',!scene.hasStash&&scene.runnerPowersConsumed[1]);
+  check('dash points toward the bag before activation',scene._runnerInputDir.y>0&&scene._runnerInputDir.x===0);
+  check('dash is recorded and credited once',scene._driven.filter(d=>d.kind==='recordPower').length===1&&bot.jevReport().powers.activated===1);
 }
 
 console.log('');

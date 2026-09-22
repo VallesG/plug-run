@@ -38,6 +38,7 @@
 import { planDodge } from '../logic/evasion.js';
 import { coverAwareStep, isExposedAt, phaseEscapeDir } from '../logic/cover.js';
 import { orderCandidates, postureTactics } from '../logic/jevStrategy.js';
+import { phaseShortcut, phaseReachCells, phaseCanCross, dashPlan } from '../logic/phasePlan.js';
 
 export const DEFAULTS = {
   // How often the bot re-decides, in ms. Human reaction floor is ~200ms and
@@ -216,6 +217,9 @@ export default class BotDriver {
    * defender sprites that create() has just replaced with new objects.
    */
   _onNewRound() {
+    this._phaseApproach = null;
+    this._phasePlanAt = 0;
+    this._phaseGoal = null;
     this._startedAt = performance.now();
     // The strategist notices the new house itself (houseKey in _jevView) and
     // discards the last one's plan; only this object's copy goes here.
@@ -277,6 +281,17 @@ export default class BotDriver {
     const s = this.scene;
     const h = this.aiHooks;
 
+    // A purchased wall crossing cannot be redirected by pathing or dodging.
+    if (this._phaseDrive && now < this._phaseDrive.until && s.runnerIsPhasing?.()) {
+      const p = this._phaseDrive;
+      const target = p.landing && { x: s.toWorldX(p.landing.x), y: s.toWorldY(p.landing.y) };
+      if (!target || Math.hypot(target.x - me.x, target.y - me.y) > s.cell * 0.15) {
+        this._countDrive('phaseWindow');
+        return this._driveOrCoast(me, target ? { x: target.x - me.x, y: target.y - me.y } : p.dir);
+      }
+    }
+    this._phaseDrive = null;
+
     if (!this._borrowed) this._borrowed = h.makeController(s);
 
     // THE HYBRID. The strategist decides WHERE, selects a concrete path
@@ -301,6 +316,29 @@ export default class BotDriver {
       // a wall or the watchdog's short recovery step.
       this._borrowed.allowDetour = false;
       armed = this._plan.armedPower || null;
+      const goalKey = `${cell.x},${cell.y}`;
+      if (armed === 'phase' && !s.runnerIsPhasing?.()) {
+        if (now >= (this._phasePlanAt || 0) || this._phaseGoal !== goalKey) {
+          this._phasePlanAt = now + 200;
+          this._phaseGoal = goalKey;
+          this._phaseApproach = phaseShortcut(this._world(), s.toCell(me.x, me.y), cell, this._phaseReach());
+        }
+        const crossing = this._phaseApproach;
+        if (crossing) {
+          this._borrowed.objectiveProvider = () => crossing.takeoff;
+          const tx = s.toWorldX(crossing.takeoff.x), ty = s.toWorldY(crossing.takeoff.y);
+          const from = s.toCell(me.x, me.y);
+          if (from.x === crossing.takeoff.x && from.y === crossing.takeoff.y) {
+            if (Math.hypot(tx - me.x, ty - me.y) > s.cell * 0.10)
+              return this._driveOrCoast(me, { x: tx - me.x, y: ty - me.y });
+            if (this._startPhaseCrossing(me, crossing, now)) {
+              this._countDrive('phaseWindow');
+              return this._driveOrCoast(me, crossing.dir);
+            }
+          }
+        }
+      } else this._phaseApproach = null;
+      if (armed === 'dash' && this._tryDash(me, cell)) return true;
     } else if (this._borrowed.objectiveProvider) {
       this._borrowed.objectiveProvider = null;
       this._borrowed.allowDetour = false;
@@ -352,7 +390,7 @@ export default class BotDriver {
       // armed power is visible to the AI's rules — every other slot is
       // masked out, so "save it" is honoured by construction. Its offensive
       // rules reason about the provided objective, not scene.stash.
-      if ((!hybrid || armed) && now >= (this._nextPowerCheckAt || 0)) {
+      if ((!hybrid || (armed && armed !== 'phase' && armed !== 'dash')) && now >= (this._nextPowerCheckAt || 0)) {
         this._nextPowerCheckAt = now + 250;
         if (hybrid) s.aiRunnerPowersSelected = (s.runnerPowersSelected || []).map((p) => (p === armed ? p : null));
         h.considerRunnerPowerUse(s, this._borrowed, now);
@@ -387,18 +425,16 @@ export default class BotDriver {
     // A committed phase window outranks routing and reflexes: it is short, it
     // is already paid for, and spending it drifting toward the objective
     // instead of through the wall wastes it entirely.
-    if (this._phaseDrive && now < this._phaseDrive.until && s.runnerIsPhasing?.()) {
-      this._countDrive('phaseWindow');
-      return this._driveOrCoast(me, this._phaseDrive.dir);
-    }
-
     // Phase out of a lane before reaching for footwork: if the run is pinned
     // in the open, the wall is the way out. Throttled — activateRunnerPower
     // is a one-shot, so this only needs to be asked occasionally.
     // In the hybrid only when Jev armed phase, as with considerRunnerPowerUse.
     if ((!hybrid || armed === 'phase') && now >= (this._nextPhaseAt || 0)) {
       this._nextPhaseAt = now + 250;
-      this._phaseEscape(me);
+      if (this._phaseEscape(me) && this._phaseDrive) {
+        this._countDrive('phaseWindow');
+        return this._driveOrCoast(me, this._phaseDrive.dir);
+      }
     }
 
     // Evasion overrides the AI's chosen direction when it has walked us into
@@ -422,6 +458,16 @@ export default class BotDriver {
     // a stall — the evasion layer is working, not stuck.
     this._evading = !!plan.dir;
     if (plan.dir) { this._countDrive('dodge'); return this._driveOrCoast(me, plan.dir); }
+
+    // Approach a planned crossing deliberately. The borrowed motor's long
+    // direction commitment must not carry us past this short takeoff route.
+    if (hybrid && this._phaseApproach) {
+      const next = s.findNextStepTowards?.(s.toCell(me.x,me.y),this._phaseApproach.takeoff);
+      if (next) {
+        this._countDrive('motor');
+        return this._driveOrCoast(me,{x:s.toWorldX(next.x)-me.x,y:s.toWorldY(next.y)-me.y});
+      }
+    }
 
     // Routing: prefer a covered approach over a short exposed one. This runs
     // on the replan tick rather than every frame — it is a route decision, not
@@ -483,6 +529,7 @@ export default class BotDriver {
       hp: me?.hp ?? null,
       carrying: !!s.hasStash,
       phasing: !!s.runnerIsPhasing?.(),
+      phaseReach: this._phaseReach(),
       decoyActive: !!(s.decoySprite && s.decoySprite.active !== false),
       candidates: orderCandidates(bags),
       revealedPocket: s.hasStash || (s.stash && (s.bunkStash?._fading || !s.bunkStash))
@@ -493,7 +540,7 @@ export default class BotDriver {
       evading: !!this._evading,
       // The motor's own detour waypoint, when it is walking one: the
       // watchdog measures progress toward what the motor is actually doing.
-      motorWaypoint: (!s.hasStash && this._borrowed?.allowDetour && s._aiDetourCell) ? { x: s._aiDetourCell.x, y: s._aiDetourCell.y } : null,
+      motorWaypoint: this._phaseApproach?.takeoff ?? ((!s.hasStash && this._borrowed?.allowDetour && s._aiDetourCell) ? { x: s._aiDetourCell.x, y: s._aiDetourCell.y } : null),
       exposedAt: (c) => isExposedAt(world, c),
       powers: { selected: [...(s.runnerPowersSelected || [])], consumed: [...(s.runnerPowersConsumed || [])] }
     };
@@ -567,6 +614,45 @@ export default class BotDriver {
    * which is the situation that actually kills runs. Burning the power to end
    * up behind a wall is worth more than saving it for a shortcut.
    */
+  _phaseReach() {
+    const s = this.scene;
+    return phaseReachCells(s.runnerSpeed * (s.hasStash ? (s.carrySlow ?? 1) : 1), s.cell, s.runnerPowerStats?.phase?.duration ?? 600);
+  }
+
+  _tryDash(me, goal) {
+    const s=this.scene;
+    const slot=(s.runnerPowersSelected||[]).findIndex((p,i)=>p==='dash'&&!s.runnerPowersConsumed?.[i]);
+    if (slot<0 || s.runnerIsPhasing?.()) return false;
+    const plan=dashPlan(this._world(),s.toCell(me.x,me.y),goal,s.runnerPowerStats?.dash?.tiles??3);
+    if (!plan) return false;
+    // Use the human input path to face the selected corridor before activation.
+    if (!s.intent.driveMove(plan.dir.x,plan.dir.y)) return false;
+    const facing=s._runnerInputDir || s.playerController?._runnerInputDir;
+    if (!facing || Math.sign(facing.x)!==plan.dir.x || Math.sign(facing.y)!==plan.dir.y) return false;
+    s.activateRunnerPowerByIndex?.(slot);
+    if (!s.runnerPowersConsumed?.[slot]) return false;
+    this.strategist.onPowerActivated?.('dash');
+    this._lastDir=plan.dir;
+    return true;
+  }
+
+  _startPhaseCrossing(me, crossing, now) {
+    const s = this.scene;
+    if (s.runnerIsPhasing?.()) return false;
+    const used = s.runnerPowersConsumed || [];
+    const slot = (s.runnerPowersSelected || []).findIndex((p, i) => p === 'phase' && !used[i]);
+    const landing = { x: s.toWorldX(crossing.landing.x), y: s.toWorldY(crossing.landing.y) };
+    const ms = s.runnerPowerStats?.phase?.duration ?? 600;
+    const speed = s.runnerSpeed * (s.hasStash ? (s.carrySlow ?? 1) : 1);
+    if (slot < 0 || !phaseCanCross(me, landing, speed, s.cell, ms)) return false;
+    s.activateRunnerPowerByIndex?.(slot);
+    if (!s.runnerPowersConsumed?.[slot] || !s.runnerIsPhasing?.()) return false;
+    if (this.hybrid) this.strategist.onPowerActivated?.('phase');
+    this._phaseDrive = { dir: crossing.dir, landing: crossing.landing, until: now + ms };
+    this._phaseApproach = null;
+    return true;
+  }
+
   _phaseEscape(me) {
     const s = this.scene;
     if (s.role !== 'runner' || s.runnerIsPhasing?.()) return false;
@@ -597,9 +683,16 @@ export default class BotDriver {
       ...world,
       from,
       goal: goal ? s.toCell(goal.x, goal.y) : null,
-      maxWall: this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall
+      maxWall: this.hybrid ? Math.min(this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall, Math.floor(this._phaseReach()) - 1)
+        : (this.cfg.phaseMaxWall ?? DEFAULTS.phaseMaxWall)
     });
     if (!exit) return false;
+
+    if (this.hybrid) {
+      const aligned = exit.dir.x ? Math.abs(me.y - s.toWorldY(from.y)) : Math.abs(me.x - s.toWorldX(from.x));
+      if (aligned > s.cell * 0.10) return false;
+      return this._startPhaseCrossing(me, exit, this._now || 0);
+    }
 
     console.log('[BOT] phasing out of a lane through', exit.dir, '-> landing', exit.landing);
     s.activateRunnerPowerByIndex?.(slot);
@@ -633,7 +726,7 @@ export default class BotDriver {
 
     // In the hybrid the goal is the strategist's objective, so dodges and
     // cover steps break ties toward the place Jev chose.
-    const planned = this.hybrid ? this._plan?.objective?.cell : null;
+    const planned = this.hybrid ? (this._phaseApproach?.takeoff ?? this._plan?.objective?.cell) : null;
     if (planned) return { x: s.toWorldX(planned.x), y: s.toWorldY(planned.y) };
 
     if (s.role === 'plug') {

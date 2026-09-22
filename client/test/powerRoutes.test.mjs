@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { phaseShortcut, phaseReachCells, phaseCanCross, dashPlan } from '../src/logic/phasePlan.js';
+
+const world = { cols: 13, rows: 15, threats: [], isWalkable: (x,y) => x>0 && y>0 && x<12 && y<14 && !(y===7 && x>=3 && x<=9) };
+const goal={x:6,y:2}, from={x:6,y:10};
+const reach=phaseReachCells(168,24,600);
+assert.equal(reach,3.5);
+const shortcut=phaseShortcut(world,from,goal,reach);
+assert.ok(shortcut && shortcut.saved>=3);
+assert.deepEqual(shortcut.takeoff,{x:6,y:8});
+assert.deepEqual(shortcut.landing,{x:6,y:6});
+assert.equal(phaseCanCross({x:156,y:252},{x:156,y:156},168,24,600),false,'do not fire four cells before the landing');
+assert.equal(phaseCanCross({x:156,y:204},{x:156,y:156},168,24,600),true,'fire adjacent to the one-cell wall');
+const thick={...world,isWalkable:(x,y)=>x>0&&y>0&&x<12&&y<14&&!(y>=6&&y<=8&&x>=3&&x<=9)};
+assert.equal(phaseShortcut(thick,from,goal,reach),null,'three wall cells plus landing exceed the real window');
+assert.equal(phaseShortcut(world,from,goal,phaseReachCells(60,24,600)),null,'slow runner cannot clear the wall');
+assert.equal(phaseShortcut(world,from,{x:6,y:12},reach),null,'no useful wall shortcut for a clear route');
+assert.ok(phaseReachCells(168*.85,24,600)<3,'carrying reduces crossing budget');
+assert.deepEqual(dashPlan(world,{x:6,y:9},{x:6,y:12})?.landing,{x:6,y:12},'dash to bag three clear tiles away');
+assert.equal(dashPlan(world,{x:6,y:8},{x:6,y:5}),null,'never dash through a wall');
+assert.equal(dashPlan(world,{x:6,y:10},{x:6,y:11}),null,'do not overshoot a one-cell objective');
+const danger={...world,threats:[{x:6,y:10}]};
+const escape=dashPlan(danger,{x:6,y:11},{x:6,y:2});
+assert.ok(escape && escape.reason==='escape','nearby plug allows defensive dash before pickup');
+assert.ok(Math.hypot(escape.landing.x-6,escape.landing.y-10)>1,'landing increases separation');
+assert.equal(dashPlan({...world,threats:[{x:6,y:12}]},{x:6,y:9},{x:6,y:12})?.reason==='objective',false,'do not dash onto the plug');
+console.log('power routes: 16 assertions passed');

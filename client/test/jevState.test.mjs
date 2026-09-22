@@ -37,7 +37,7 @@ console.log('\njevState — strategic payload\n');
   const { payload } = payloadFor(makeScene());
   const q = payload.questions;
   check('asks objective and posture with routing owned by the motor',
-    JSON.stringify(Object.keys(q).sort()) === '["objective","posture"]',
+    JSON.stringify(Object.keys(q).sort()) === '["objective","posture","power"]',
     Object.keys(q).join(','));
   check('objective choices are the two bags, safest first; no plug near, so no hold',
     JSON.stringify(Object.keys(q.objective.criteria)) === '["target_b","target_a"]', Object.keys(q.objective.criteria).join());
@@ -47,7 +47,8 @@ console.log('\njevState — strategic payload\n');
     JSON.stringify(q.objective.criteria));
   check('extract is not offered before pickup', !('extract' in q.objective.criteria));
   check('posture choices', JSON.stringify(Object.keys(q.posture.criteria)) === '["safe","balanced","aggressive"]');
-  check('dash is not offered before a bag is proven real', !q.power);
+  check('dash is offered for a bag approach and close-plug escape', !!q.power?.criteria.dash_objective && !!q.power?.criteria.dash_escape);
+  check('phase wall shortcut is offered before pickup', !!q.power?.criteria.phase_shortcut);
   check('Jev cannot prescribe intermediate route waypoints', !q.route);
   check('every question is a choice with object criteria',
     Object.values(q).every((x) => x.type === 'choice' && x.criteria && !Array.isArray(x.criteria)));
