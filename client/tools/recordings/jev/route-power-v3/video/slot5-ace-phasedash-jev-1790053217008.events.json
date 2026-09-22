@@ -1,0 +1,2680 @@
+{
+ "ok": true,
+ "path": "tools\\recordings\\jev\\route-power-v3\\video\\slot5-ace-phasedash-jev-1790053217008.mp4",
+ "bytes": 22048879,
+ "mime": "video/mp4;codecs=avc1.42E01E",
+ "frames": 6871,
+ "durationMs": 230156,
+ "compositeFps": 29.9,
+ "events": [
+  {
+   "kind": "video-start",
+   "videoMs": 4,
+   "raceMs": null,
+   "width": 390,
+   "height": 844,
+   "mime": "video/mp4;codecs=avc1.42E01E"
+  },
+  {
+   "kind": "status",
+   "videoMs": 2512,
+   "raceMs": null,
+   "status": "countdown",
+   "result": null
+  },
+  {
+   "kind": "status",
+   "videoMs": 5536,
+   "raceMs": 149,
+   "status": "racing",
+   "result": null
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 5432,
+   "raceMs": 45,
+   "house": 1,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 5432,
+   "raceMs": 45,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 6070,
+   "raceMs": 683,
+   "objective": "target_b",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.64,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "jev-bags-changed",
+   "videoMs": 6594,
+   "raceMs": 1207
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 6938,
+   "raceMs": 1551,
+   "trigger": "stash_change",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 7115,
+   "raceMs": 1728,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "stash_change"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 9123,
+   "raceMs": 3736,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": false
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 10125,
+   "raceMs": 4738
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 10125,
+   "raceMs": 4738,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 10300,
+   "raceMs": 4913,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 10346,
+   "raceMs": 4959,
+   "hp": 1
+  },
+  {
+   "kind": "retry",
+   "videoMs": 11519,
+   "raceMs": 6132,
+   "retries": 1,
+   "house": 1
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 12250,
+   "raceMs": 6863,
+   "house": 1,
+   "attempt": 2
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 12250,
+   "raceMs": 6863,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 12434,
+   "raceMs": 7047,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 14506,
+   "raceMs": 9119,
+   "house": 1
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 14232,
+   "raceMs": 8845
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 14232,
+   "raceMs": 8845,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 14232,
+   "raceMs": 8845,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 14404,
+   "raceMs": 9017,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "dash",
+   "confidence": 0.85,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 14404,
+   "raceMs": 9017,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-power-activated",
+   "videoMs": 14430,
+   "raceMs": 9043,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 17130,
+   "raceMs": 11743,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 17130,
+   "raceMs": 11743,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 17309,
+   "raceMs": 11922,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.44,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 17309,
+   "raceMs": 11922,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 17328,
+   "raceMs": 11941,
+   "objective": "extract",
+   "source": "jev",
+   "evading": true
+  },
+  {
+   "kind": "retry",
+   "videoMs": 19007,
+   "raceMs": 13620,
+   "retries": 2,
+   "house": 1
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 18702,
+   "raceMs": 13315
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 18702,
+   "raceMs": 13315,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 18779,
+   "raceMs": 13392
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 18845,
+   "raceMs": 13458,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 18845,
+   "raceMs": 13458,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 19577,
+   "raceMs": 14190,
+   "house": 1,
+   "attempt": 3
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 20213,
+   "raceMs": 14826,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 20344,
+   "raceMs": 14957,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 22006,
+   "raceMs": 16619,
+   "house": 1
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 21573,
+   "raceMs": 16186
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 21573,
+   "raceMs": 16186,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 21716,
+   "raceMs": 16329,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 21845,
+   "raceMs": 16458,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.78,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 21845,
+   "raceMs": 16458,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 22618,
+   "raceMs": 17231,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 23237,
+   "raceMs": 17850,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 23513,
+   "raceMs": 18126,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "dash",
+   "confidence": 0.81,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 23513,
+   "raceMs": 18126,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-power-activated",
+   "videoMs": 23518,
+   "raceMs": 18131,
+   "name": "dash"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 24507,
+   "raceMs": 19120,
+   "retries": 3,
+   "house": 1
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 24838,
+   "raceMs": 19451,
+   "house": 1,
+   "attempt": 4
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 24838,
+   "raceMs": 19451,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 25026,
+   "raceMs": 19639,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 27010,
+   "raceMs": 21623,
+   "house": 1
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 26806,
+   "raceMs": 21419
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 26806,
+   "raceMs": 21419,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 26806,
+   "raceMs": 21419,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 27078,
+   "raceMs": 21691,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.68,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 27078,
+   "raceMs": 21691,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 27859,
+   "raceMs": 22472,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 28323,
+   "raceMs": 22936,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 28482,
+   "raceMs": 23095,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.68,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 28482,
+   "raceMs": 23095,
+   "name": "phase"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 29512,
+   "raceMs": 24125,
+   "retries": 4,
+   "house": 1
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 30123,
+   "raceMs": 24736,
+   "house": 1,
+   "attempt": 5
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 30123,
+   "raceMs": 24736,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 30296,
+   "raceMs": 24909,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 32515,
+   "raceMs": 27128,
+   "house": 1
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 32177,
+   "raceMs": 26790
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 32177,
+   "raceMs": 26790,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 32177,
+   "raceMs": 26790,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 32350,
+   "raceMs": 26963,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.63,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 32350,
+   "raceMs": 26963,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 33174,
+   "raceMs": 27787,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 33689,
+   "raceMs": 28302,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 33871,
+   "raceMs": 28484,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "dash",
+   "confidence": 0.74,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 33871,
+   "raceMs": 28484,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-power-activated",
+   "videoMs": 33874,
+   "raceMs": 28487,
+   "name": "dash"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 37006,
+   "raceMs": 31619,
+   "house": 1,
+   "strategistActive": true
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 38035,
+   "raceMs": 31634,
+   "house": 2,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 38035,
+   "raceMs": 31634,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 38351,
+   "raceMs": 31950,
+   "objective": "target_b",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.94,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "jev-bags-changed",
+   "videoMs": 39228,
+   "raceMs": 32827
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 39544,
+   "raceMs": 33143,
+   "trigger": "stash_change",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 39790,
+   "raceMs": 33389,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "stash_change"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 41064,
+   "raceMs": 34663,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 41064,
+   "raceMs": 34663,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 41258,
+   "raceMs": 34857,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 43020,
+   "raceMs": 36618,
+   "retries": 5,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 43272,
+   "raceMs": 36871,
+   "house": 2,
+   "attempt": 2
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 43272,
+   "raceMs": 36871,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 43438,
+   "raceMs": 37037,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 49157,
+   "raceMs": 42756,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 49157,
+   "raceMs": 42756,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 49268,
+   "raceMs": 42867,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": true
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 49447,
+   "raceMs": 43046,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 50451,
+   "raceMs": 44050
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 50574,
+   "raceMs": 44173
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 50669,
+   "raceMs": 44268,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 50814,
+   "raceMs": 44413,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 51514,
+   "raceMs": 45113,
+   "house": 2
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 51391,
+   "raceMs": 44990
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 51391,
+   "raceMs": 44990,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 52174,
+   "raceMs": 45773,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 52365,
+   "raceMs": 45964,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 52365,
+   "raceMs": 45964,
+   "name": "phase"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 55512,
+   "raceMs": 49111,
+   "retries": 6,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 56024,
+   "raceMs": 49623,
+   "house": 2,
+   "attempt": 3
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 56024,
+   "raceMs": 49623,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 56215,
+   "raceMs": 49814,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 58877,
+   "raceMs": 52476,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 58877,
+   "raceMs": 52476,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 59018,
+   "raceMs": 52617,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 62507,
+   "raceMs": 56105,
+   "retries": 7,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 62773,
+   "raceMs": 56372,
+   "house": 2,
+   "attempt": 4
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 62773,
+   "raceMs": 56372,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 62941,
+   "raceMs": 56540,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 67398,
+   "raceMs": 60997,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 67398,
+   "raceMs": 60997,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 67840,
+   "raceMs": 61439,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 69009,
+   "raceMs": 62608,
+   "retries": 8,
+   "house": 2
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 68548,
+   "raceMs": 62147,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": true
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 69304,
+   "raceMs": 62903,
+   "house": 2,
+   "attempt": 5
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 69304,
+   "raceMs": 62903,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 69490,
+   "raceMs": 63089,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 75974,
+   "raceMs": 69573,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": false
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 77287,
+   "raceMs": 70886
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 77287,
+   "raceMs": 70886,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 77651,
+   "raceMs": 71250,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 78755,
+   "raceMs": 72354
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 81014,
+   "raceMs": 74613,
+   "house": 2
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 80727,
+   "raceMs": 74326
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 80727,
+   "raceMs": 74326,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 80727,
+   "raceMs": 74326,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 80937,
+   "raceMs": 74536,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 80937,
+   "raceMs": 74536,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 84544,
+   "raceMs": 78143,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 84544,
+   "raceMs": 78143,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 84724,
+   "raceMs": 78323,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 84724,
+   "raceMs": 78323,
+   "name": "phase"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 86019,
+   "raceMs": 79618,
+   "retries": 9,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 86537,
+   "raceMs": 80136,
+   "house": 2,
+   "attempt": 6
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 86537,
+   "raceMs": 80136,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 86793,
+   "raceMs": 80392,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 89431,
+   "raceMs": 83030,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 89431,
+   "raceMs": 83030,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 89574,
+   "raceMs": 83173,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 94507,
+   "raceMs": 88106,
+   "retries": 10,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 94789,
+   "raceMs": 88388,
+   "house": 2,
+   "attempt": 7
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 94789,
+   "raceMs": 88388,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 95175,
+   "raceMs": 88774,
+   "objective": "target_a",
+   "posture": "aggressive",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 97737,
+   "raceMs": 91336,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 97737,
+   "raceMs": 91336,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 97984,
+   "raceMs": 91583,
+   "objective": "target_a",
+   "posture": "aggressive",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 99510,
+   "raceMs": 93109,
+   "retries": 11,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 99947,
+   "raceMs": 93546,
+   "house": 2,
+   "attempt": 8
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 99947,
+   "raceMs": 93546,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 100265,
+   "raceMs": 93864,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 105842,
+   "raceMs": 99441,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 105842,
+   "raceMs": 99441,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 106317,
+   "raceMs": 99916,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 107517,
+   "raceMs": 101116,
+   "retries": 12,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 108085,
+   "raceMs": 101684,
+   "house": 2,
+   "attempt": 9
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 108085,
+   "raceMs": 101684,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 108251,
+   "raceMs": 101850,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 114264,
+   "raceMs": 107863,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 114264,
+   "raceMs": 107863,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 114539,
+   "raceMs": 108138,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 116007,
+   "raceMs": 109605,
+   "retries": 13,
+   "house": 2
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 116254,
+   "raceMs": 109853,
+   "house": 2,
+   "attempt": 10
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 116254,
+   "raceMs": 109853,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 116473,
+   "raceMs": 110072,
+   "objective": "target_a",
+   "posture": "aggressive",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 122511,
+   "raceMs": 116110,
+   "house": 2
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 122340,
+   "raceMs": 115939
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 122340,
+   "raceMs": 115939,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 122340,
+   "raceMs": 115939,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 122598,
+   "raceMs": 116197,
+   "objective": "extract",
+   "posture": "aggressive",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 122598,
+   "raceMs": 116197,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 126757,
+   "raceMs": 120356,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 126757,
+   "raceMs": 120356,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 127114,
+   "raceMs": 120713,
+   "objective": "extract",
+   "posture": "aggressive",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.83,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 127114,
+   "raceMs": 120713,
+   "name": "phase"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 128513,
+   "raceMs": 122112,
+   "house": 2,
+   "strategistActive": true
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 129602,
+   "raceMs": 122185,
+   "house": 3,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 129602,
+   "raceMs": 122185,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 129873,
+   "raceMs": 122456,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.85,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "jev-bags-changed",
+   "videoMs": 130793,
+   "raceMs": 123376
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 131109,
+   "raceMs": 123692,
+   "trigger": "stash_change",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 131273,
+   "raceMs": 123856,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "stash_change"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 133281,
+   "raceMs": 125864,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": false
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 134283,
+   "raceMs": 126866
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 134283,
+   "raceMs": 126866,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 134438,
+   "raceMs": 127021,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 134494,
+   "raceMs": 127077
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 134597,
+   "raceMs": 127180,
+   "hp": 1
+  },
+  {
+   "kind": "retry",
+   "videoMs": 136006,
+   "raceMs": 128589,
+   "retries": 14,
+   "house": 3
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 136347,
+   "raceMs": 128930,
+   "house": 3,
+   "attempt": 2
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 136347,
+   "raceMs": 128930,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 136523,
+   "raceMs": 129106,
+   "objective": "target_b",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 139007,
+   "raceMs": 131590,
+   "house": 3
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 138640,
+   "raceMs": 131223
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 138640,
+   "raceMs": 131223,
+   "reason": "carrying",
+   "objective": "target_b"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 138640,
+   "raceMs": 131223,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 138910,
+   "raceMs": 131493,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.52,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 138910,
+   "raceMs": 131493,
+   "name": "phase"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 139510,
+   "raceMs": 132093,
+   "house": 3,
+   "strategistActive": true
+  },
+  {
+   "kind": "jev-power-activated",
+   "videoMs": 139085,
+   "raceMs": 131668,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 140753,
+   "raceMs": 132320,
+   "house": 4,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 140753,
+   "raceMs": 132320,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 141047,
+   "raceMs": 132614,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.77,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 142007,
+   "raceMs": 133575,
+   "house": 4
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 141955,
+   "raceMs": 133522
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 141955,
+   "raceMs": 133522,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 142254,
+   "raceMs": 133821,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 142481,
+   "raceMs": 134048,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 145514,
+   "raceMs": 137081,
+   "house": 4,
+   "strategistActive": true
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 145123,
+   "raceMs": 136690,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 145123,
+   "raceMs": 136690,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 145313,
+   "raceMs": 136880,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "dash",
+   "confidence": 0.93,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 145313,
+   "raceMs": 136880,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 146487,
+   "raceMs": 137026,
+   "house": 5,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 146636,
+   "raceMs": 137175,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 146851,
+   "raceMs": 137390,
+   "objective": "target_b",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.87,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "jev-bags-changed",
+   "videoMs": 147676,
+   "raceMs": 138215
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 148141,
+   "raceMs": 138680,
+   "trigger": "stash_change",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 148283,
+   "raceMs": 138822,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "stash_change"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 150288,
+   "raceMs": 140827,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": false
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 150623,
+   "raceMs": 141162,
+   "hp": 1
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 150972,
+   "raceMs": 141511
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 150972,
+   "raceMs": 141511,
+   "trigger": "damage",
+   "merged": 2
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 151022,
+   "raceMs": 141561
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 151300,
+   "raceMs": 141839,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 152019,
+   "raceMs": 142559,
+   "retries": 15,
+   "house": 5
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 152458,
+   "raceMs": 142997,
+   "house": 5,
+   "attempt": 2
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 152481,
+   "raceMs": 143020,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 152666,
+   "raceMs": 143205,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 156022,
+   "raceMs": 146561,
+   "house": 5
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 155814,
+   "raceMs": 146353
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 155814,
+   "raceMs": 146353,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 155814,
+   "raceMs": 146353,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 156004,
+   "raceMs": 146543,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 156004,
+   "raceMs": 146543,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 157784,
+   "raceMs": 148323,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 157784,
+   "raceMs": 148323,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-low-confidence-fallback",
+   "videoMs": 157992,
+   "raceMs": 148531,
+   "wanted": "hold",
+   "confidence": 0.01,
+   "chosen": "extract"
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 157992,
+   "raceMs": 148531,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.01,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 157992,
+   "raceMs": 148531,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 159412,
+   "raceMs": 149951,
+   "objective": "extract",
+   "source": "jev",
+   "evading": false
+  },
+  {
+   "kind": "retry",
+   "videoMs": 160006,
+   "raceMs": 150546,
+   "retries": 16,
+   "house": 5
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 160252,
+   "raceMs": 150791,
+   "house": 5,
+   "attempt": 3
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 160252,
+   "raceMs": 150791,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 160442,
+   "raceMs": 150981,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 164012,
+   "raceMs": 154551,
+   "house": 5
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 163670,
+   "raceMs": 154209
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 163670,
+   "raceMs": 154209,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 163670,
+   "raceMs": 154209,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 163881,
+   "raceMs": 154420,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 163881,
+   "raceMs": 154420,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 165884,
+   "raceMs": 156423,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 165884,
+   "raceMs": 156423,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 166081,
+   "raceMs": 156620,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 166081,
+   "raceMs": 156620,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 168438,
+   "raceMs": 158977,
+   "objective": "extract",
+   "source": "jev",
+   "evading": false
+  },
+  {
+   "kind": "retry",
+   "videoMs": 169017,
+   "raceMs": 159556,
+   "retries": 17,
+   "house": 5
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 169732,
+   "raceMs": 160271,
+   "house": 5,
+   "attempt": 4
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 169732,
+   "raceMs": 160271,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 169916,
+   "raceMs": 160455,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 173518,
+   "raceMs": 164057,
+   "house": 5
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 173109,
+   "raceMs": 163648
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 173109,
+   "raceMs": 163648,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 173109,
+   "raceMs": 163648,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 173334,
+   "raceMs": 163873,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 173334,
+   "raceMs": 163873,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 174978,
+   "raceMs": 165517,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 174978,
+   "raceMs": 165517,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 175132,
+   "raceMs": 165671,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.72,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 175132,
+   "raceMs": 165671,
+   "name": "phase"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 176516,
+   "raceMs": 167055,
+   "retries": 18,
+   "house": 5
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 177108,
+   "raceMs": 167647,
+   "house": 5,
+   "attempt": 5
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 177108,
+   "raceMs": 167647,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 177302,
+   "raceMs": 167841,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 181011,
+   "raceMs": 171550,
+   "house": 5
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 180881,
+   "raceMs": 171420
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 180881,
+   "raceMs": 171420,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 180881,
+   "raceMs": 171420,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 181040,
+   "raceMs": 171579,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 181040,
+   "raceMs": 171579,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 183045,
+   "raceMs": 173584,
+   "objective": "extract",
+   "source": "jev",
+   "evading": false
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 184245,
+   "raceMs": 174784
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 184245,
+   "raceMs": 174784,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 184479,
+   "raceMs": 175018
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 184543,
+   "raceMs": 175082,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 184543,
+   "raceMs": 175082,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 187953,
+   "raceMs": 178492,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 187953,
+   "raceMs": 178492,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 188108,
+   "raceMs": 178647,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.83,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 188108,
+   "raceMs": 178647,
+   "name": "phase"
+  },
+  {
+   "kind": "retry",
+   "videoMs": 189512,
+   "raceMs": 180052,
+   "retries": 19,
+   "house": 5
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 190013,
+   "raceMs": 180552,
+   "house": 5,
+   "attempt": 6
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 190013,
+   "raceMs": 180552,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 190332,
+   "raceMs": 180871,
+   "objective": "target_a",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 193516,
+   "raceMs": 184056,
+   "house": 5
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 193323,
+   "raceMs": 183862
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 193323,
+   "raceMs": 183862,
+   "reason": "carrying",
+   "objective": "target_a"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 193323,
+   "raceMs": 183862,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 193464,
+   "raceMs": 184003,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 193464,
+   "raceMs": 184003,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 195244,
+   "raceMs": 185783,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 195244,
+   "raceMs": 185783,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 195418,
+   "raceMs": 185957,
+   "objective": "extract",
+   "posture": "safe",
+   "route": "shortest-safe",
+   "power": "dash",
+   "confidence": 0.87,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 195418,
+   "raceMs": 185957,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-power-activated",
+   "videoMs": 195472,
+   "raceMs": 186011,
+   "name": "dash"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 196518,
+   "raceMs": 187057,
+   "house": 5,
+   "strategistActive": true
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 197339,
+   "raceMs": 186862,
+   "house": 6,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 197339,
+   "raceMs": 186862,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 197697,
+   "raceMs": 187220,
+   "objective": "target_b",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.81,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 199516,
+   "raceMs": 189040,
+   "house": 6
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 199416,
+   "raceMs": 188939
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 199416,
+   "raceMs": 188939,
+   "reason": "carrying",
+   "objective": "target_b"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 199416,
+   "raceMs": 188939,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 199538,
+   "raceMs": 189061,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 201515,
+   "raceMs": 191038,
+   "house": 6,
+   "strategistActive": true
+  },
+  {
+   "kind": "jev-house",
+   "videoMs": 202423,
+   "raceMs": 190935,
+   "house": 7,
+   "attempt": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 202423,
+   "raceMs": 190935,
+   "trigger": "house_start",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 202602,
+   "raceMs": 191114,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 0.95,
+   "trigger": "house_start"
+  },
+  {
+   "kind": "jev-bags-changed",
+   "videoMs": 207566,
+   "raceMs": 196078
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 207566,
+   "raceMs": 196078,
+   "trigger": "stash_change",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 208028,
+   "raceMs": 196540,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "stash_change"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 208583,
+   "raceMs": 197095,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 209079,
+   "raceMs": 197591,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 209258,
+   "raceMs": 197770,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-stall",
+   "videoMs": 211748,
+   "raceMs": 200260,
+   "objective": "target_a",
+   "source": "learned",
+   "evading": false
+  },
+  {
+   "kind": "jev-recovery-end",
+   "videoMs": 212769,
+   "raceMs": 201281
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 212769,
+   "raceMs": 201281,
+   "trigger": "watchdog",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 212929,
+   "raceMs": 201441,
+   "objective": "target_a",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "watchdog"
+  },
+  {
+   "kind": "jev-restored",
+   "videoMs": 213282,
+   "raceMs": 201794
+  },
+  {
+   "kind": "retry",
+   "videoMs": 214010,
+   "raceMs": 202522,
+   "retries": 20,
+   "house": 7
+  },
+  {
+   "kind": "jev-retry",
+   "videoMs": 214398,
+   "raceMs": 202910,
+   "house": 7,
+   "attempt": 2
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 214398,
+   "raceMs": 202910,
+   "trigger": "retry",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 214628,
+   "raceMs": 203140,
+   "objective": "target_b",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "none",
+   "confidence": 1,
+   "trigger": "retry"
+  },
+  {
+   "kind": "pickup",
+   "videoMs": 218018,
+   "raceMs": 206530,
+   "house": 7
+  },
+  {
+   "kind": "jev-pickup",
+   "videoMs": 217841,
+   "raceMs": 206353
+  },
+  {
+   "kind": "jev-invalidated",
+   "videoMs": 217841,
+   "raceMs": 206353,
+   "reason": "carrying",
+   "objective": "target_b"
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 217841,
+   "raceMs": 206353,
+   "trigger": "extract_available",
+   "merged": 2
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 217963,
+   "raceMs": 206475,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "phase",
+   "confidence": 0.39,
+   "trigger": "extract_available"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 217963,
+   "raceMs": 206475,
+   "name": "phase"
+  },
+  {
+   "kind": "jev-damage",
+   "videoMs": 220723,
+   "raceMs": 209235,
+   "hp": 1
+  },
+  {
+   "kind": "jev-request",
+   "videoMs": 220723,
+   "raceMs": 209235,
+   "trigger": "damage",
+   "merged": 1
+  },
+  {
+   "kind": "jev-adopted",
+   "videoMs": 220900,
+   "raceMs": 209412,
+   "objective": "extract",
+   "posture": "balanced",
+   "route": "shortest-safe",
+   "power": "dash",
+   "confidence": 0.83,
+   "trigger": "damage"
+  },
+  {
+   "kind": "jev-power-armed",
+   "videoMs": 220900,
+   "raceMs": 209412,
+   "name": "dash"
+  },
+  {
+   "kind": "jev-power-activated",
+   "videoMs": 221277,
+   "raceMs": 209789,
+   "name": "dash"
+  },
+  {
+   "kind": "status",
+   "videoMs": 223019,
+   "raceMs": 211531,
+   "status": "finished",
+   "result": "win"
+  },
+  {
+   "kind": "house-clear",
+   "videoMs": 223019,
+   "raceMs": 211531,
+   "house": 7,
+   "strategistActive": true
+  },
+  {
+   "kind": "video-stop",
+   "videoMs": 230139,
+   "raceMs": 218651
+  }
+ ],
+ "container": {
+  "codec": "avc1",
+  "width": 390,
+  "height": 844,
+  "frames": 6601,
+  "durationS": 229.86,
+  "fps": 28.72,
+  "bytes": 22048879
+ }
+}
