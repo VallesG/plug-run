@@ -68,7 +68,8 @@ export function jevConfig() {
       accountId: window.__JEV_ACCOUNT || fromSession('account'),
       gatewayId: window.__JEV_GATEWAY || fromSession('gateway'),
       timeoutMs: num('jevTimeoutMs', undefined),
-      profile: p.get('jevProfile') === 'rival' ? 'rival' : 'apex'
+      // `rival` is the legacy name used by the first completed Hard batch.
+      profile: ['rival', 'rival-hard'].includes(p.get('jevProfile')) ? 'rival-hard' : 'apex'
     };
   } catch { return null; }
 }
@@ -90,7 +91,7 @@ export function makeJevStrategist(cfg = jevConfig()) {
   if (cfg.timeoutMs) opts.timeoutMs = cfg.timeoutMs;
   if (cfg.maxRequests) opts.maxRequests = cfg.maxRequests;
   if (cfg.maxInputTokens) opts.maxInputTokens = cfg.maxInputTokens;
-  if (cfg.profile === 'rival') {
+  if (cfg.profile === 'rival-hard') {
     opts.openingDelayMinMs = 400;
     opts.openingDelayMaxMs = 650;
   }

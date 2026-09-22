@@ -27,9 +27,11 @@ import { rivalPreset, RIVAL_BOT_DRIVER_VERSION } from '../../src/logic/rivalPres
 
 export const JEV_BANK_ID = 'jev-v1';
 export const JEV_APEX_BANK_ID = 'jev-apex-v1';
+export const JEV_RIVAL_HARD_BANK_ID = 'jev-rival-hard-v1';
 export const JEV_BANK_SCHEMA = 1;
 export const JEV_BANK_ROOT = 'public/rivals/jev-v1';
 export const JEV_APEX_BANK_ROOT = 'public/rivals/jev-apex-v1';
+export const JEV_RIVAL_HARD_BANK_ROOT = 'public/rivals/jev-rival-hard-v1';
 export const ORDINARY_BANK_ROOT = 'public/rivals/v2';
 const INTENT_KINDS = new Set(['m', 'g', 'p', 'f']);
 
@@ -263,6 +265,13 @@ export function selectJevBank(existing, captures, bankId = JEV_BANK_ID) {
   for (const { file, payload } of captures) {
     for (const race of payload?.races || []) {
       const tag = race?.record?.recordingID || file;
+      const capturedProfile = race?.record?.driverConfig?.jev?.profile || race?.jev?.report?.profile || payload?.jev?.report?.profile || null;
+      if (bankId === JEV_RIVAL_HARD_BANK_ID && !['rival', 'rival-hard'].includes(capturedProfile)) {
+        rejected.push({ tag, file, reason: 'not a Jev Rival Hard capture' }); continue;
+      }
+      if (bankId === JEV_APEX_BANK_ID && capturedProfile && capturedProfile !== 'apex') {
+        rejected.push({ tag, file, reason: 'not a Jev Apex capture' }); continue;
+      }
       const why = jevEligibilityError(payload, race) || validateJevRace(payload, race);
       if (why) { rejected.push({ tag, file, reason: why }); continue; }
       admit({ record: race.record, bundle: race.bundle, provenance: jevProvenance(payload, race, file, bankId) }, tag);

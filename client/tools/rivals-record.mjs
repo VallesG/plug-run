@@ -72,8 +72,9 @@ const OPTIONS = {
   // Real multi-question strategy calls are allowed time to finish. This is
   // passed explicitly into the page so a recording states its decision SLA.
   jevTimeoutMs: Number(arg('jevTimeoutMs', 15_000)),
-  // apex preserves the unrestricted driver; rival adds human opening latency.
-  jevProfile: arg('jevProfile', 'apex') === 'rival' ? 'rival' : 'apex',
+  // apex preserves the unrestricted driver; rival-hard adds human opening latency.
+  // `rival` remains an alias so the first completed Hard batch keeps working.
+  jevProfile: ['rival', 'rival-hard'].includes(arg('jevProfile', 'apex')) ? 'rival-hard' : 'apex',
   // --video: an MP4 of each job, start to finish, with a diagnostic strip
   // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
   // which is git-ignored — keep --videoDir there.

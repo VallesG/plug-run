@@ -24,7 +24,8 @@ import { join, resolve, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { RIVAL_RULES_VERSION, RIVAL_COURSE_POOL } from '../src/logic/rivals.js';
-import { selectJevBank, JEV_BANK_ID, JEV_APEX_BANK_ID, JEV_BANK_SCHEMA, JEV_BANK_ROOT, JEV_APEX_BANK_ROOT, ORDINARY_BANK_ROOT } from './lib/jevBank.mjs';
+import { selectJevBank, JEV_BANK_ID, JEV_APEX_BANK_ID, JEV_RIVAL_HARD_BANK_ID, JEV_BANK_SCHEMA,
+  JEV_BANK_ROOT, JEV_APEX_BANK_ROOT, JEV_RIVAL_HARD_BANK_ROOT, ORDINARY_BANK_ROOT } from './lib/jevBank.mjs';
 
 const arg = (name, fallback = null) => {
   const i = process.argv.indexOf('--' + name);
@@ -90,7 +91,9 @@ export function writeJevBank(root, accepted, bankId = JEV_BANK_ID) {
     generatedAt: new Date().toISOString(),
     note: bankId === JEV_APEX_BANK_ID
       ? 'Jev Apex: unrestricted challenge ghosts, kept outside ordinary matchmaking.'
-      : 'Jev Rival: humanized Jev opponents pooled into ordinary Block Rivals matchmaking.',
+      : bankId === JEV_RIVAL_HARD_BANK_ID
+        ? 'Jev Rival Hard: humanized high-skill challenge ghosts, kept outside ordinary matchmaking.'
+        : 'Jev Rival: reserved for beatable opponents pooled into ordinary Block Rivals matchmaking.',
     courses: []
   };
   for (const course of RIVAL_COURSE_POOL) {
@@ -124,9 +127,12 @@ export function writeJevBank(root, accepted, bankId = JEV_BANK_ID) {
 
 function main() {
   const IN = arg('in', 'tools/recordings');
-  const PROFILE = arg('profile', 'rival') === 'apex' ? 'apex' : 'rival';
-  const BANK_ID = PROFILE === 'apex' ? JEV_APEX_BANK_ID : JEV_BANK_ID;
-  const ROOT = arg('root', PROFILE === 'apex' ? JEV_APEX_BANK_ROOT : JEV_BANK_ROOT);
+  const wanted = arg('profile', 'rival');
+  const PROFILE = wanted === 'apex' ? 'apex' : ['hard', 'rival-hard'].includes(wanted) ? 'rival-hard' : 'rival';
+  const BANK_ID = PROFILE === 'apex' ? JEV_APEX_BANK_ID
+    : PROFILE === 'rival-hard' ? JEV_RIVAL_HARD_BANK_ID : JEV_BANK_ID;
+  const ROOT = arg('root', PROFILE === 'apex' ? JEV_APEX_BANK_ROOT
+    : PROFILE === 'rival-hard' ? JEV_RIVAL_HARD_BANK_ROOT : JEV_BANK_ROOT);
   const DRY = !!arg('dry', false);
   const FRESH = !!arg('fresh', false);
   const v2 = resolve(ORDINARY_BANK_ROOT);

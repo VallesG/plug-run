@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import JevStrategist from '../src/controllers/JevStrategist.js';
-import { JEV_APEX_BANK_ID, JEV_APEX_BANK_ROOT } from '../tools/lib/jevBank.mjs';
+import { JEV_APEX_BANK_ID, JEV_APEX_BANK_ROOT, JEV_RIVAL_HARD_BANK_ID, JEV_RIVAL_HARD_BANK_ROOT } from '../tools/lib/jevBank.mjs';
 
 let now = 1000;
 const view = { house: 1, houseKey: '1:0', matchKey: 'match' };
@@ -15,7 +15,7 @@ assert.equal(apex._plan(null, false, 'fallback').openingWaiting, false,
 const rival = new JevStrategist(async () => null, {
   now: () => now, rng: () => 0.5, openingDelayMinMs: 400, openingDelayMaxMs: 650
 });
-rival.profile = 'rival';
+rival.profile = 'rival-hard';
 rival._newHouse(view, now);
 assert.equal(rival._plan(null, false, 'fallback').openingWaiting, true,
   'Rival waits at the opening');
@@ -25,11 +25,13 @@ assert.equal(rival._plan(null, false, 'fallback').openingWaiting, true,
 now = 1526;
 assert.equal(rival._plan(null, false, 'fallback').openingWaiting, false,
   'Rival releases the unchanged motor after its opening delay');
-assert.equal(rival.report().profile, 'rival');
+assert.equal(rival.report().profile, 'rival-hard');
+assert.equal(JEV_RIVAL_HARD_BANK_ID, 'jev-rival-hard-v1');
+assert.equal(JEV_RIVAL_HARD_BANK_ROOT, 'public/rivals/jev-rival-hard-v1');
 
 const manifest = JSON.parse(readFileSync(`${JEV_APEX_BANK_ROOT}/manifest.json`, 'utf8'));
 assert.equal(manifest.bank, JEV_APEX_BANK_ID);
 assert.equal(manifest.courses.length, 7);
 assert.ok(manifest.courses.every(c => c.opponents === 1), 'Apex has one challenge ghost on every course');
 
-console.log('jev profiles: 8 assertions passed');
+console.log('jev profiles: 10 assertions passed');
