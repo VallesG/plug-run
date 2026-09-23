@@ -2,7 +2,7 @@ import { carParkCenter, carExtractionOverlap } from '../logic/getawayCar.js';
 import { seasonJob } from '../logic/crewSeason.js';
 import { getContactProgress } from '../utils/contactProgress.js';
 import { crewStoryProgress } from '../logic/contactProgress.js';
-import { shouldShowCity } from '../logic/city.js';
+import { shouldShowCity, storySeasonComplete } from '../logic/city.js';
 import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
 import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout, rivalSessionPocket, rivalUpcomingAttempt, rivalHouseMazeOptions } from '../logic/rivals.js';
@@ -203,9 +203,12 @@ export class BaseGameScene extends Phaser.Scene {
         ? (this.runKind === 'journey' ? getJourneyProgress() : getSessionState(entryRole)) : null);
       if (this.runKind === 'daily' && sess?.pveRound > 15) sess = null;
       this.blockIndex = initData?.blockIndex ?? sess?.blockIndex ?? 1;
+      this._storyUnavailable = this.runKind === 'journey' && entryRole === 'runner'
+        && storySeasonComplete({ blockIndex:this.blockIndex }, getCityProgress(sess || {}));
       if (this.runKind === 'journey') {
         this.worldBlock = worldBlock(this.blockIndex);
-        if (entryRole === 'runner') this.blockGangID = startCityBlock({ blockIndex: this.blockIndex }, getWindowState().gangID);
+        if (entryRole === 'runner' && !this._storyUnavailable)
+          this.blockGangID = startCityBlock({ blockIndex: this.blockIndex }, getWindowState().gangID);
       }
       this.savedSession = sess;
 
@@ -217,7 +220,7 @@ export class BaseGameScene extends Phaser.Scene {
       this.eliminationTipTurn = Math.max(0,Math.floor(initData?.eliminationTipTurn || 0));
       this.retryAfterElimination = initData?.retryAfterElimination ?? false;
       this.retryAfterDeath = initData?.retryAfterDeath ?? sess?.retryAfterDeath ?? false;
-      this._showCityOnEntry = shouldShowCity({ mode:this.mode, runKind:this.runKind,
+      this._showCityOnEntry = !this._storyUnavailable && shouldShowCity({ mode:this.mode, runKind:this.runKind,
         role:entryRole, pveRound:this.pveRound, retryAfterDeath:this.retryAfterDeath });
       // One id per run, minted fresh when no restart data carries one —
       // the leaderboard uses it to scope write semantics to the run.
@@ -540,6 +543,10 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   create(){
+    if (this._storyUnavailable) {
+      this.scene.start('WINDOW', {seasonComplete:true});
+      return;
+    }
     this._touchSceneClosing=false;
     // Interior furniture is drawn in code; no asynchronous texture-loading restart.
     // Characters are the td_* top-down set, animated by texture swap in
@@ -2579,8 +2586,8 @@ export class BaseGameScene extends Phaser.Scene {
         this._drawStashHalo = null;
         // Add carry sprite and light up the car instead of an off-center halo
         this.showCarBeacon?.();
-        // Start engine sounds (start plays once, idle loops until extraction)
-        try { this.audio?.startEngineLoop(); } catch {}
+        // The beacon starts the engine when extraction is actually available.
+        // A mission house still needs the violet case before that happens.
         this.addCarryPackage();
 
         // Restore original attacker reference ONLY if it's still alive

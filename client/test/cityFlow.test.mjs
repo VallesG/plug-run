@@ -1,7 +1,7 @@
 // Actual city, block, GameUI and progression renderers against display-list stubs.
 // Geometry/lifecycle proof only: this does not verify Phaser pixels or font metrics.
 import { readFileSync } from 'node:fs';
-import { CITY_BLOCKS, cityForBlock, cityView, cityMapLayout, cityZoomFrames, cityStreets, cityShoreline, cityStreetDistance, cityBlockConnector, cityClearedOwner, createCityState, claimCityBlock, claimCityIntro } from '../src/logic/city.js';
+import { CITY_BLOCKS, STORY_FINAL_BLOCK, cityForBlock, cityView, cityMapLayout, cityZoomFrames, cityStreets, cityShoreline, cityStreetDistance, cityBlockConnector, cityClearedOwner, createCityState, claimCityBlock, claimCityIntro } from '../src/logic/city.js';
 import { advanceJourney, worldBlock } from '../src/logic/worldBlocks.js';
 import { windowGang } from '../src/logic/window.js';
 import { layoutBlock, buildFog, blockNoise, distanceToStreet } from '../src/logic/blockMap.js';
@@ -28,7 +28,7 @@ const uiSource=source('../src/controllers/GameUI.js').replace('export default cl
 const managerSource=source('../src/controllers/ProgressionManager.js').replace('export default class','class');
 const UI=new Function(uiSource+'\nreturn GameUI;')();
 let atlas=createCityState(),claims=0,saved=[],hasReplay=false,replayDone,introCalls=0;
-const bindings={console, CITY_BLOCKS,cityForBlock,cityView,drawCityMap,advanceJourney,
+const bindings={console, CITY_BLOCKS,STORY_FINAL_BLOCK,cityForBlock,cityView,drawCityMap,advanceJourney,
  getCityProgress:checkpoint=>createCityState(atlas,checkpoint),
  startCityIntro:checkpoint=>{introCalls++;const r=claimCityIntro(atlas,checkpoint);atlas=r.state;return r.applied;},
  completeCityBlock:event=>{claims++;const result=claimCityBlock(atlas,event);atlas=result.state;return result;},
@@ -146,6 +146,12 @@ replayDone();
 check('replay restores all celebration objects',completionObjects.every(o=>o.visible===true));
 f.configs.at(-1).buttons[0].onClick();
 check('next block enters same seeded flow',f.restarts.at(-1).blockIndex===2&&f.restarts.at(-1).pveRound===1);
+const finale=scene(390,844,{blockIndex:10}),fm=new Manager(finale.s);
+fm.showBlockCompleteResult();
+check('city 1 finale sends player to Ro',finale.configs.at(-1).buttons[0].label==='SEE AUNTIE RO'
+  && finale.configs.at(-1).lines[0].includes('SEASON 2'));
+finale.configs.at(-1).buttons[0].onClick();
+check('city 2 cannot launch from finale',finale.events.at(-1)==='WINDOW'&&!finale.restarts.length);
 f.s.gameUI.currentModal.destroy();
 check('completion teardown destroys every registered object',completionObjects.every(o=>!o.active));
 const daily=scene(320,568,{runKind:'daily'}),dm=new Manager(daily.s);dm.showBlockCompleteResult();

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { firstPlayDestination } from '../src/logic/firstPlay.js';
+import { storySeasonComplete } from '../src/logic/city.js';
 let passed=0;
 const check=(name,ok)=>{if(!ok)throw Error(name);passed++;};
 check('fresh player learns before joining',firstPlayDestination()==='TUTORIAL_MINI');
@@ -28,13 +29,23 @@ values.set('pr_tutorial_v1_b','broken');check('corrupt save absent',!functions.h
 values.set('pr_tutorial_v1_b','{"version":1,"complete":false}');check('false completion absent',!functions.hasCompletedTutorial());
 // Exercise actual scene methods, not only source-text presence.
 const launchSource=menu.slice(menu.indexOf('  launchCard(card){'),menu.indexOf('  fadeOutStreetSounds(){'));
-const launch=new Function('Phaser','trackNavigation','return function'+launchSource.slice(launchSource.indexOf('(')))({Cameras:{Scene2D:{Events:{FADE_OUT_COMPLETE:'done'}}}},()=>{});
+let journey={blockIndex:1,pveRound:1};
+const launch=new Function('Phaser','trackNavigation','getJourneyProgress','getCityProgress','storySeasonComplete',
+  'return function'+launchSource.slice(launchSource.indexOf('(')))(
+    {Cameras:{Scene2D:{Events:{FADE_OUT_COMPLETE:'done'}}}},()=>{},()=>journey,
+    checkpoint=>({completedThrough:checkpoint.blockIndex-1}),storySeasonComplete);
 for(const destination of ['TUTORIAL_MINI','WINDOW','RUNNER']){
  let reached=null;const scene={cameras:{main:{fadeEffect:{isRunning:false},fadeOut(){},once(event,fn){fn();}}},
  firstPlayDestination:()=>destination,fadeOutStreetSounds(){},scene:{start:key=>reached=key,transition:opts=>reached=opts.target}};
  launch.call(scene,{modeKey:'runner',runKind:'journey'});
  check('actual Play reaches '+destination,reached===destination);
 }
+journey={blockIndex:11,pveRound:1};
+let afterSeason=null;
+launch.call({cameras:{main:{fadeEffect:{isRunning:false}}},firstPlayDestination:()=> 'RUNNER',
+  fadeOutStreetSounds(){},scene:{start:(key,data)=>afterSeason={key,data}}},
+  {modeKey:'runner',runKind:'journey'});
+check('completed City 1 Play leads to Ro',afterSeason?.key==='WINDOW'&&afterSeason.data.seasonComplete);
 let marked=null,completion=null;const goSource=tutorial.slice(tutorial.indexOf('  goNext(){'),tutorial.indexOf('  queueDash('));
 const go=new Function('nextTutorialStage','markTutorialComplete','Phaser','const trackTutorial=()=>{},trackEvent=()=>{};return function'+goSource.slice(goSource.indexOf('(')))(()=>null,id=>marked=id,{});
 const training={stageIdx:4,_trainingUserID:'a',clearTutorialStats(){},showModal:(title,copy,label,callback)=>completion=callback,scene:{transition:opts=>marked+=':'+opts.target}};

@@ -8,6 +8,9 @@ import {
   getWindowState, selectWindowGang, recordWindowVisit
 } from '../utils/windowProgress.js';
 import { switchCrewStory } from '../utils/crewProgress.js';
+import { getJourneyProgress } from '../utils/journeyProgress.js';
+import { getCityProgress } from '../utils/cityProgress.js';
+import { storySeasonComplete } from '../logic/city.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 
@@ -395,6 +398,8 @@ export class WindowScene extends Phaser.Scene {
   }
 
   renderCounter(a,gang) {
+    const checkpoint=getJourneyProgress();
+    const finished=storySeasonComplete(checkpoint,getCityProgress(checkpoint));
     const roScale=a.panelW/a.panelH<0.92
       ? Math.min(1.08,Math.max(0.88,a.panelW/300))
       : Math.min(0.92,a.portrait/155);
@@ -407,20 +412,29 @@ export class WindowScene extends Phaser.Scene {
     }else{
       this.drawRo(a.cx,portraitY,roScale,2);
     }
-    const panelH=Math.min(126,Math.max(100,a.panelH*0.18));
-    const y=Math.min(a.panelBottom-a.pad-150,portraitY+104);
+    const panelH=finished ? Math.min(190,Math.max(160,a.panelH*0.26))
+      : Math.min(126,Math.max(100,a.panelH*0.18));
+    const y=Math.min(a.panelBottom-a.pad-(finished?250:150),portraitY+104);
     this.addPanel(a.cx,y,a.contentW,panelH,COLORS.gold);
-    const text='You’re with '+gang.name+'. '+gang.primary+
-      ' keeps you in the loop; '+gang.jobs+
-      ' handles the jobs. The board and Shelf are opening soon.';
-    const copy=this.add.text(a.cx,y-panelH/2+14,text,{
+    const text=finished
+      ? "City One's yours. City Two and Season Two aren't open yet. Try another gang's story while you wait. Your progress with "+gang.name+" is saved, and you can switch back anytime. Streets don't judge how you make your money."
+      : 'You’re with '+gang.name+'. '+gang.primary+
+        ' keeps you in the loop; '+gang.jobs+
+        ' handles the jobs. The board and Shelf are opening soon.';
+    if(finished) this.keep(this.add.text(a.cx,y-panelH/2+13,'AUNTIE RO',{
+      fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#e2b45f',letterSpacing:2
+    }).setOrigin(0.5,0).setDepth(9));
+    const copy=this.add.text(a.cx,y-panelH/2+(finished?36:14),text,{
       fontFamily:'Georgia, serif',fontSize:'13px',color:'#e9dfc7',
       align:'center',lineSpacing:4,wordWrap:{width:a.contentW-30}
     }).setOrigin(0.5,0).setDepth(9);
-    const note=this.add.text(a.cx,y+panelH/2-13,'No credit is claimed just for opening this screen.',{
-      fontFamily:'monospace',fontSize:'8px',color:'#92a0a2'
-    }).setOrigin(0.5).setDepth(9);
-    this.keep(copy,note);
+    this.keep(copy);
+    if(finished) this.addButton(a.cx,y+panelH/2+30,Math.min(190,a.contentW),
+      'SWITCH GANGS',()=>this.showGangChoice(true),COLORS.gold);
+    else this.keep(this.add.text(a.cx,y+panelH/2-13,
+      'No credit is claimed just for opening this screen.',{
+        fontFamily:'monospace',fontSize:'8px',color:'#92a0a2'
+      }).setOrigin(0.5).setDepth(9));
   }
 
   renderSection(a,gang,section) {

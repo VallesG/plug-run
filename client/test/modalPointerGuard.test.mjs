@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { consumeModalPointer, guardModalDismissal } from '../src/utils/modalPointerGuard.js';
+import { consumeModalPointer, guardModalDismissal, guardSceneEntryFromHeldPointer } from '../src/utils/modalPointerGuard.js';
 let passed=0;const check=(name,ok)=>{if(!ok)throw Error(name);passed++;};
 function fixture(){
  const objects=[],timers=[],shutdown=new Set();let now=0;
@@ -83,6 +83,22 @@ for(const outside of [false,true]){
  const f=fixture();f.scene._touchSceneClosing=true;check('closing scene never creates shield',guardModalDismissal(f.scene,f.pointer)===null);
  f.scene._touchSceneClosing=false;f.scene.cameras.main=null;check('camera gone never creates shield',guardModalDismissal(f.scene,f.pointer)===null);
 }
+{
+ const f=fixture();f.scene.input.enabled=true;f.pointer.isDown=true;
+ check('held entry disables new menu input',guardSceneEntryFromHeldPointer(f.scene)&&!f.scene.input.enabled);
+ f.advance(1000);check('held finger cannot activate landing controls',!f.scene.input.enabled);
+ f.pointer.isDown=false;f.advance(129);
+ check('release still has a short landing guard',!f.scene.input.enabled);
+ f.advance(1);check('fresh tap works after release',f.scene.input.enabled);
+}
+{
+ const f=fixture();f.scene.input.enabled=true;f.pointer.isDown=true;
+ guardSceneEntryFromHeldPointer(f.scene);
+ for(const stop of [...f.shutdown])stop();
+ check('scene shutdown restores its input plugin',f.scene.input.enabled);
+}
+check('landing installs held gesture guard before controls',source.indexOf('guardSceneEntryFromHeldPointer(this);')
+  < source.indexOf('this.drawStreetBackground();'));
 const auth=readFileSync(new URL('../src/utils/authUI.js',import.meta.url),'utf8');
 check('in-game settings shares dismissal guard',auth.includes('guardModalDismissal(scene,pointer,event);destroyAll();'));
 const ui=readFileSync(new URL('../src/controllers/GameUI.js',import.meta.url),'utf8');

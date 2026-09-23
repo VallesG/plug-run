@@ -3,6 +3,13 @@
 export const CITY_VERSION = 1;
 export const CITY_BLOCKS = 10;
 export const CITY_HOUSES = 15;
+// City 1 is the released story. The Block 11 checkpoint is kept as proof
+// of completion so each gang can resume when the next season opens.
+export const STORY_FINAL_BLOCK = CITY_BLOCKS;
+export function storySeasonComplete(checkpoint = {}, cityState = {}) {
+  return (Number.isSafeInteger(checkpoint?.blockIndex) && checkpoint.blockIndex > STORY_FINAL_BLOCK)
+    || (Number.isSafeInteger(cityState?.completedThrough) && cityState.completedThrough >= STORY_FINAL_BLOCK);
+}
 const GANGS = ['crossline', 'iron-row', 'afterlight'];
 const NAMES = ['Duskport', 'Copper Bay', 'Railhaven', 'Neon Vale', 'Greybridge', 'Northwake'];
 const int = (value, fallback = 1) => Number.isSafeInteger(value) && value > 0 ? value : fallback;

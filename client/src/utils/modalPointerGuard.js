@@ -35,3 +35,27 @@ export function guardModalDismissal(scene, pointer, event) {
   timer=scene.time.delayedCall(250,release);
   return guard;
 }
+
+// Scene changes can happen on pointerdown. The old scene's shield dies during
+// shutdown, so the new menu must ignore that gesture's eventual pointerup.
+export function guardSceneEntryFromHeldPointer(scene) {
+  const input=scene.input;
+  const held=()=>input.manager?.pointers?.some(pointer=>pointer?.isDown)===true;
+  if(!held()||!scene.time?.delayedCall)return false;
+  input.enabled=false;
+  let timer=null,closed=false;
+  const cleanup=()=>{
+    if(closed)return;
+    closed=true;
+    timer?.remove?.(false);
+    input.enabled=true;
+    scene.events?.off?.('shutdown',cleanup);
+  };
+  const check=()=>{
+    if(closed)return;
+    timer=scene.time.delayedCall(held()?50:80,held()?check:cleanup);
+  };
+  scene.events?.once?.('shutdown',cleanup);
+  timer=scene.time.delayedCall(50,check);
+  return true;
+}

@@ -790,20 +790,15 @@ export class AudioManager {
 
   // Engine SFX helpers (SFX bus); crossfade start into idle
   startEngineLoop(/* pos */) {
+    // Re-showing the beacon must not replay the ignition over a running car.
+    if (this._engineIdle?.sound) {
+      const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
+      try { this._engineIdle.sound.setVolume(finalTarget); } catch {}
+      return;
+    }
     // Trigger start one-shot and duck music briefly
     try { this.play('engine_start', { volume: 0.85, rateRand: 0.01 }); } catch {}
     try { this.duckForEngineStart(); } catch {}
-
-    // If idle already playing, just ensure it's audible
-    if (this._engineIdle && this._engineIdle.sound) {
-      const finalTarget = 0.65 * this.masterVolume * (this.muted ? 0 : 1) * this._volSfx;
-      const idle = this._engineIdle.sound;
-      try {
-        idle.setVolume(finalTarget);
-        console.log('[AudioManager] Engine idle already running, volume set to:', finalTarget);
-      } catch {}
-      return;
-    }
 
     // Start idle loop with target volume (avoid tween race conditions)
     let idle = null;

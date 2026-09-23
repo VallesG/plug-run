@@ -3,6 +3,7 @@ import {
   WINDOW_GANGS, WINDOW_INTRO, WINDOW_ART, createWindowState, chooseWindowGang,
   windowGang, markWindowVisit, grantStoreCredit, spendStoreCredit, windowLayout
 } from '../src/logic/window.js';
+import { storySeasonComplete } from '../src/logic/city.js';
 
 let passed = 0;
 function check(name, ok) { if (!ok) throw new Error(name); passed++; }
@@ -84,13 +85,14 @@ console.log('the window: '+passed+' assertions passed');
 const {expressionArt,expressionIndex}=await import('../src/logic/contactExpressions.js');
 const sceneSource=readFileSync(new URL('../src/scenes/WindowScene.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/export /g,'');
 let activeWindow=createWindowState({gangID:'crossline',onboardingComplete:true});
+let storyCheckpoint={blockIndex:1,pveRound:1},storyCity={completedThrough:0};
 let switchedTo=null;
-const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang','getWindowState','switchCrewStory','expressionArt','expressionIndex',
+const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang','getWindowState','switchCrewStory','getJourneyProgress','getCityProgress','storySeasonComplete','expressionArt','expressionIndex',
   'const trackEvent=()=>{};'+sceneSource+';return WindowScene;')({Scene:class{}},WINDOW_GANGS,WINDOW_INTRO,WINDOW_ART,windowGang,windowLayout,
   gangID=>({applied:true,state:createWindowState({gangID})}),()=>activeWindow,gangID=>{
     switchedTo=gangID;activeWindow=createWindowState({...activeWindow,gangID});
     return {applied:true,state:activeWindow};
-  },expressionArt,expressionIndex);
+  },()=>storyCheckpoint,()=>storyCity,storySeasonComplete,expressionArt,expressionIndex);
 function reviewScene(width,height){
   const objects=[];
   const node=(kind,x,y,w=0,h=0)=>{const o={kind,x,y,width:w,height:h,active:true,
@@ -163,6 +165,13 @@ for(const [width,height] of [[280,480],[390,844],[1440,900]]){
   check('switch invokes save and returns to gang panel '+width,switchedTo==='afterlight'&&scene.state.gangID==='afterlight');
   activeWindow=createWindowState({gangID:'crossline',onboardingComplete:true});switchedTo=null;
 }
+storyCheckpoint={blockIndex:11,pveRound:1};storyCity={completedThrough:10};
+const finished=reviewScene(390,844);finished.scene.showHub();
+const finishedText=finished.objects.filter(o=>o.active&&o.kind==='text').map(o=>o.text);
+check('Ro says city two and season two are unavailable',finishedText.some(t=>t?.includes('City Two and Season Two')));
+check('Ro offers another gang and saved return',finishedText.some(t=>t?.includes('switch back anytime'))
+  && finishedText.includes('SWITCH GANGS'));
+storyCheckpoint={blockIndex:1,pveRound:1};storyCity={completedThrough:0};
 for(const [width,height] of [[280,480],[390,844],[671,838],[1440,900]]){
   const view=reviewScene(width,height);view.scene.showGangChoice();
   const layout=windowLayout(width,height);

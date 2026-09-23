@@ -115,4 +115,42 @@ for (const gang of ['crossline','iron-row','afterlight']) for(let chapter=0;chap
   host.showMissionExitHint();host.showMissionExitHint();
   check('car reminder is throttled ' + gang,nodes.filter(n=>n.kind==='text'&&String(n.args[2]).includes('REQUIRED')).length===1);
 }
+// Exercise the real pickup and beacon methods in both possible pickup orders.
+const beaconStart=source.indexOf('  showCarBeacon(){');
+const beaconEnd=source.indexOf('  startExtractionSequence(){',beaconStart);
+const BeaconHost=new Function('missionExitAllowed',
+  'class BeaconHost { '+source.slice(beaconStart,beaconEnd)+' } return BeaconHost;')(missionExitAllowed);
+for(const order of ['stash-first','case-first']) {
+  const host=new Host(),beacon=new BeaconHost();let starts=0;
+  const item={x:10,y:10,active:true,destroy(){this.active=false;}};
+  Object.assign(host,{mode:'pve',runKind:'journey',role:'runner',requiresMissionItem:true,
+    missionObject:{id:'mags',short:'CASE'},missionItem:item,hasMissionItem:false,
+    hasStash:false,roundOver:false,roundPausedForMenu:false,attacker:{active:true,visible:true},
+    cell:20,missionHalo:{clear(){}},
+    add:{text:()=>({setOrigin(){return this;},setDepth(){return this;},destroy(){}}),
+      circle:()=>({setStrokeStyle(){return this;},setDepth(){return this;},destroy(){}})},
+    tweens:{add(){}},audio:{playMissionItemPickup(){}},
+    vfx:{showCarBeacon(){starts++;},hideCarBeacon(){}},
+    showCarBeacon:beacon.showCarBeacon,canLeaveMissionHouse:beacon.canLeaveMissionHouse});
+  if(order==='stash-first') {
+    host.hasStash=true;host.showCarBeacon();
+    check('stash alone does not start mission car',starts===0);
+    host.checkMissionItemPickup();
+  } else {
+    host.checkMissionItemPickup();
+    check('case alone does not start mission car',starts===0);
+    host.hasStash=true;host.showCarBeacon();
+  }
+  check('both pickups start car once '+order,starts===1);
+}
+const audioSource=readFileSync(new URL('../src/audio/AudioManager.js',import.meta.url),'utf8');
+const engineStart=audioSource.indexOf('  startEngineLoop(/* pos */) {');
+const engineEnd=audioSource.indexOf('  stopEngineLoop()',engineStart);
+const EngineHost=new Function('class EngineHost {'+audioSource.slice(engineStart,engineEnd)+'} return EngineHost;')();
+const engine=new EngineHost();let ignitions=0,idles=0;
+Object.assign(engine,{masterVolume:1,muted:false,_volSfx:1,
+  play:key=>{if(key==='engine_start')ignitions++;},duckForEngineStart(){},
+  sound:{add:()=>{idles++;return {volume:0.65,play(){},setVolume(){}};}}});
+engine.startEngineLoop();engine.startEngineLoop();
+check('repeated beacon keeps one ignition and idle',ignitions===1&&idles===1);
 console.log(passed+' mission exit assertions passed');

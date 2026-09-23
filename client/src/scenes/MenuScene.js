@@ -1,5 +1,7 @@
-import { consumeModalPointer, guardModalDismissal } from '../utils/modalPointerGuard.js';
+import { consumeModalPointer, guardModalDismissal, guardSceneEntryFromHeldPointer } from '../utils/modalPointerGuard.js';
 import { getJourneyProgress } from '../utils/journeyProgress.js';
+import { getCityProgress } from '../utils/cityProgress.js';
+import { storySeasonComplete } from '../logic/city.js';
 import { firstPlayDestination } from '../logic/firstPlay.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
 import { campaignStashes } from '../utils/rivalsUnlock.js';
@@ -79,6 +81,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(){
+    guardSceneEntryFromHeldPointer(this);
     // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
     // Approved night-city art sits behind real, interactive menu controls.
@@ -345,7 +348,9 @@ export class MenuScene extends Phaser.Scene {
     c._update = () => {
       if (!t.active) return;
       const progress = getJourneyProgress();
-      t.setText(`BLOCK ${progress.blockIndex} · HOUSE ${progress.pveRound} / 15`);
+      t.setText(storySeasonComplete(progress, getCityProgress(progress))
+        ? 'CITY 1 COMPLETE · SEASON 2 SOON'
+        : `BLOCK ${progress.blockIndex} · HOUSE ${progress.pveRound} / 15`);
       const w = Math.max(190, t.width + 28);
       bg.setSize(w, h);
     };
@@ -2147,6 +2152,14 @@ export class MenuScene extends Phaser.Scene {
         return;
       }
       if(destination === 'TUTORIAL_MINI') k='learn';
+      if(k === 'runner' && (card.runKind || 'journey') === 'journey') {
+        const progress=getJourneyProgress();
+        if(storySeasonComplete(progress,getCityProgress(progress))) {
+          this.fadeOutStreetSounds();
+          this.scene.start('WINDOW', {seasonComplete:true});
+          return;
+        }
+      }
     }
 
     if (k === 'learn'){

@@ -6,7 +6,7 @@ import { drawBlockComplete } from './BlockComplete.js';
 import { crewSigil } from '../logic/crewSigils.js';
 import { seasonChapter } from '../logic/crewSeason.js';
 import { campaignContactCue as seasonCue, campaignContactFinish as seasonFinish } from '../logic/campaignContacts.js';
-import { CITY_BLOCKS, cityForBlock, cityView } from '../logic/city.js';
+import { CITY_BLOCKS, STORY_FINAL_BLOCK, cityForBlock, cityView } from '../logic/city.js';
 import { getCityProgress, completeCityBlock, startCityIntro } from '../utils/cityProgress.js';
 import { drawCityMap } from './CityMap.js';
 import { missionExitAllowed } from '../logic/missionItem.js';
@@ -700,6 +700,7 @@ export default class ProgressionManager {
     }); } catch {}
     const maps = PVE_BLOCK_MAPS;
     const journey = this.scene.runKind === 'journey';
+    const seasonFinale = journey && this.scene.blockIndex === STORY_FINAL_BLOCK;
     const gangID = journey ? (this.scene.blockGangID ?? getWindowState().gangID) : null;
     const mark = crewSigil(gangID);
     this.scene.pveBestRound = Math.max(this.scene.pveBestRound ?? 0, maps);
@@ -716,12 +717,15 @@ export default class ProgressionManager {
       fullScreen: true, completion: true, accent: mark?.color,
       title: 'BLOCK CLEARED',
       subtitle: this.scene.worldBlock ? this.scene.worldBlock.departure : `All ${maps} runs, start to finish.`,
-      lines: [],
+      lines: seasonFinale ? ['CITY 2 · SEASON 2 COMING LATER'] : [],
       buttons: journey ? [
-        { label: 'ENTER NEXT BLOCK', variant: 'primary', onClick: () => this.scene.scene.restart({
-          mode: 'pve', role: 'runner', runKind: 'journey',
-          blockIndex: this.scene.blockIndex + 1, pveRound: 1
-        }) },
+        seasonFinale
+          ? { label: 'SEE AUNTIE RO', variant: 'primary',
+              onClick: () => this.scene.scene.start('WINDOW', {seasonComplete:true}) }
+          : { label: 'ENTER NEXT BLOCK', variant: 'primary', onClick: () => this.scene.scene.restart({
+              mode: 'pve', role: 'runner', runKind: 'journey',
+              blockIndex: this.scene.blockIndex + 1, pveRound: 1
+            }) },
         ...(replay ? [{ pair: [replay, menu] }] : [menu])
       ] : [...(replay ? [replay] : []), menu]
     });
