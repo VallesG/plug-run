@@ -676,3 +676,32 @@ console.log('Rivals mixed summary: '+passed+' total assertions passed');
   check('watching the getaway costs no race time',rules.rivalElapsed(credited,10000)===5000);
 }
 console.log('rivals getaway animation: assertions passed');
+
+// The result scoreboard: you and the rival in your HUD colours, the margin on
+// a win, the block claim, and the block map keeps the rest of the space.
+{
+  const board=(extra)=>{
+    const texts=[];
+    const state={...rules.newRivalRace(course,splits),status:'finished',rivalCityIndex:1,opponentKind:'recorded-bot',
+      opponent:{displayName:'Jev',retries:2},retries:1,...extra};
+    const run=setup(state);
+    run.scene.add.text=(x,y,v,style)=>{const o=node(x,y);o.text=v;o.style=style;texts.push(o);return o;};
+    const area={x:16,y:100,width:358,height:540};
+    run.controller.drawResultTimes({contentBounds:area,registerExtra:()=>{}});
+    const find=v=>texts.find(t=>t.text===v);
+    return {texts,find,area};
+  };
+  const won=board({result:'win',clearTimes:[8000,16000,24000,32000,40000,48000,58000],finishedMs:58000,territoryClaim:{applied:true}});
+  check('scoreboard: your time in your blue',won.find('YOU')?.style.color==='#9bcae5'&&won.find('0:58.0')?.style.color==='#9bcae5');
+  check('scoreboard: the rival\'s time in its gold',won.find('JEV')?.style.color==='#dec386'&&won.find('1:10.0')?.style.color==='#dec386');
+  check('scoreboard: both times are large',won.find('0:58.0').style.fontSize===won.find('1:10.0').style.fontSize&&parseInt(won.find('0:58.0').style.fontSize)>=26);
+  check('scoreboard: retries under each time',!!won.find('7/7 · 1 RETRY')&&!!won.find('7/7 · 2 RETRIES'));
+  check('scoreboard: the winning margin',!!won.find('YOU BY 12.0s'));
+  check('scoreboard: the block claim',!!won.find('BLOCK CLAIMED · NEXT BLOCK OPEN'));
+  check('scoreboard: the map keeps the rest',won.area.y>100&&won.area.y+won.area.height===640&&won.area.height>300);
+  const lost=board({result:'loss',clearTimes:[8000,16000,24000,32000,40000],finishedMs:70000});
+  check('scoreboard: a loss shows your houses against the rival time',!!lost.find('5/7')&&!!lost.find('HOUSES')&&!!lost.find('1:10.0'));
+  check('scoreboard: no margin and no claim after a loss',!lost.texts.some(t=>/ BY |CLAIMED/.test(t.text)));
+}
+console.log('rival result scoreboard: '+passed+' total assertions passed');
+

@@ -655,9 +655,9 @@ export default class RivalsRace {
     };
     if(this.race.rivalCityIndex){
       config.completion=true;config.accent=crewSigil(this.race.territoryGang)?.color;
+      // The times and the block claim are drawn as a scoreboard above the
+      // block (drawResultTimes); only a save problem stays a plain line.
       config.lines=[
-        'YOU '+this.race.clearTimes.length+'/7 · '+rivalTimeLabel(this.race.finishedMs)+' / '+this.rivalLabel()+' '+rivalTimeLabel(this.race.rivalTimes[6]),
-        ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED · NEXT BLOCK OPEN']:[]),
         ...(this.saved===false||this.race.territoryClaim?.saved===false?['Local save unavailable. Map progress may be temporary.']:[])
       ];
       const menu=config.buttons.find(b=>b.label==='MAIN MENU');
@@ -666,7 +666,60 @@ export default class RivalsRace {
       config.buttons=[next,...(watch?[watch]:[]),menu];
     }
     const modal=this.scene.gameUI.showModal(config);
-    if(this.race.rivalCityIndex)drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
+    if(this.race.rivalCityIndex){
+      this.drawResultTimes(modal);
+      drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
+    }
+  }
+  /**
+   * The result's scoreboard: you and the rival side by side, each in the
+   * colour of their HUD rail (blue, gold), the margin under a win, then the
+   * block claim. It takes the top of the modal's free area; the block map
+   * gets the rest.
+   */
+  drawResultTimes(modal){
+    const area=modal?.contentBounds;
+    const keep=modal?.registerExtra;
+    if(!area||!keep||!this.scene.add?.text)return;
+    const s=this.scene,r=this.race,Z=20002;
+    const compact=area.height<380;
+    const text=(x,y,value,{size=12,color='#8ca7aa',font='monospace',spacing=2}={})=>{
+      const o=s.add.text(x,y,value,{fontFamily:font,fontSize:size+'px',fontStyle:'bold',color,letterSpacing:spacing})
+        .setOrigin(.5,0).setDepth(Z).setScrollFactor(0);
+      keep(o);return o;
+    };
+    const retries=n=>Number.isFinite(n)?n+(n===1?' RETRY':' RETRIES'):'';
+    const done=r.clearTimes.length,rivalMs=r.rivalTimes[RIVAL_HOUSES-1];
+    const sides=[
+      {x:area.x+area.width*.27,label:'YOU',color:'#9bcae5',
+        value:done===RIVAL_HOUSES?rivalTimeLabel(r.finishedMs):done+'/7',
+        detail:done===RIVAL_HOUSES?'7/7 · '+retries(r.retries):'HOUSES'},
+      {x:area.x+area.width*.73,label:this.rivalLabel(),color:'#dec386',
+        value:rivalTimeLabel(rivalMs),detail:'7/7'+(Number.isFinite(r.opponent?.retries)?' · '+retries(r.opponent.retries):'')}
+    ];
+    const big=compact?26:32;
+    let y=area.y+2;
+    for(const side of sides){
+      text(side.x,y,side.label,{size:12,color:side.color,spacing:3});
+      text(side.x,y+17,side.value,{size:big,color:side.color,font:'Arial, sans-serif',spacing:1});
+      if(!compact)text(side.x,y+19+big+4,side.detail,{size:10,color:'#8ca7aa',spacing:1});
+    }
+    const divider=s.add.rectangle(area.x+area.width/2,y+(compact?24:30),1,compact?40:52,0x3b4b58,1).setDepth(Z).setScrollFactor(0);
+    keep(divider);
+    y+=17+big+(compact?8:26);
+    // How far apart, measured on the two clocks: only a finished race has one.
+    const margin=r.result==='win'&&done===RIVAL_HOUSES?(rivalMs-r.finishedMs)/1000
+      :r.result==='draw'?0:null;
+    if(margin!=null){
+      text(area.x+area.width/2,y,margin>0?'YOU BY '+margin.toFixed(1)+'s':'DEAD HEAT',{size:13,color:margin>0?'#9bcae5':'#eee3c7'});
+      y+=22;
+    }
+    if(r.territoryClaim?.applied){
+      text(area.x+area.width/2,y,'BLOCK CLAIMED · NEXT BLOCK OPEN',{size:12,color:'#eee3c7'});
+      y+=22;
+    }
+    const used=y+6-area.y;
+    area.y+=used;area.height=Math.max(0,area.height-used);
   }
   /**
    * Recording-mode options survive New Race; a normal race carries none. A
