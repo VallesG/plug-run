@@ -1,6 +1,7 @@
 import { missionPickupSound } from '../logic/missionItem.js';
 import { GAMEPLAY_BEATS, selectBeat, momentNotes } from '../logic/musicPlaylist.js';
 import Phaser from 'phaser';
+import { RIVAL_ANNOUNCER_KEYS } from '../logic/rivalAnnouncer.js';
 
 // How early success2 (horns) and success3 (applause) start relative to
 // success1 (the drum roll) finishing. A small configurable value, not a
@@ -23,6 +24,11 @@ export class AudioManager {
   static _instance = null;
 
   static preloadMoments(scene) {
+    if (scene.runKind === 'rivals') {
+      for (const key of RIVAL_ANNOUNCER_KEYS) {
+        if (!scene.cache.audio.exists(key)) scene.load.audio(key, `/audio/rivals-announcer/${key}.mp3`);
+      }
+    }
     scene.load.audio('contact_open', '/audio/contact_open.wav');
     scene.load.audio('success1', '/audio/success1.wav');
     scene.load.audio('success2', '/audio/success2.mp3');
@@ -114,6 +120,7 @@ export class AudioManager {
 
   setVolume(v) {
     this.masterVolume = Math.max(0, Math.min(1, v || 0));
+    this._rivalVoice?.setVolume(0.95 * this.masterVolume * this._volSfx);
     try { localStorage.setItem('pr_sfx_volume', String(this.masterVolume)); } catch {}
   }
 
@@ -121,13 +128,40 @@ export class AudioManager {
 
   setMute(on) {
     this.muted = !!on;
+    if (this.muted) this.stopRivalAnnouncement();
     try { localStorage.setItem('pr_sfx_mute', this.muted ? '1' : '0'); } catch {}
   }
 
   isMuted() { return this.muted || this.masterVolume <= 0.001; }
 
+  playRivalAnnouncement(key) {
+    this.stopRivalAnnouncement();
+    if (this.isMuted() || !this.scene?.cache?.audio?.exists(key)) return;
+    try {
+      const voice = this.sound.add(key, { volume: 0.95 * this.masterVolume * this._volSfx });
+      this._rivalVoice = voice;
+      voice.once('complete', () => {
+        if (this._rivalVoice === voice) this.stopRivalAnnouncement();
+      });
+      if (voice.play() === false) { this.stopRivalAnnouncement(); return; }
+      this._rivalVoiceMix = 0.45;
+      this._applyMusicVolume();
+    } catch { this.stopRivalAnnouncement(); }
+  }
+
+  stopRivalAnnouncement() {
+    const voice = this._rivalVoice;
+    this._rivalVoice = null;
+    voice?.destroy();
+    this._rivalVoiceMix = 1;
+    if (voice) this._applyMusicVolume();
+  }
+
   // Per-group volume controls
-  setSfxVolume(v) { this._volSfx = Math.max(0, Math.min(1, v || 0)); }
+  setSfxVolume(v) {
+    this._volSfx = Math.max(0, Math.min(1, v || 0));
+    this._rivalVoice?.setVolume(0.95 * this.masterVolume * this._volSfx);
+  }
   getSfxVolume() { return this._volSfx; }
   setMusicVolume(v) {
     this._volMusic = Math.max(0, Math.min(1, v || 0));
@@ -661,7 +695,7 @@ export class AudioManager {
       return; // Sound is in invalid state
     }
 
-    const duck = this._duck?.mult ?? 1;
+    const duck = (this._duck?.mult ?? 1) * (this._rivalVoiceMix ?? 1);
     const base = this._musicVolState.base || 0;
     const contactMix = this._contactTokens?.size ? 0.5 : 1;
     const finalVol = this.muted || this.musicMuted ? 0 : Math.max(0, Math.min(1, base * duck * contactMix));

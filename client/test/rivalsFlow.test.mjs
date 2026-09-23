@@ -7,6 +7,7 @@ import * as skill from '../src/logic/rivalSkill.js';
 import * as capture from '../src/controllers/RivalReplayCapture.js';
 import * as matchmaking from '../src/logic/rivalMatchmaking.js';
 import { playExtraction } from '../src/controllers/extractionAnimation.js';
+import { nextRivalAnnouncement } from '../src/logic/rivalAnnouncer.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
@@ -30,6 +31,7 @@ class StubMatchScreen{
 const source=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const bindings={
+  nextRivalAnnouncement,
   trackScene:()=>{},
   ...rules, ...presets, ...capture, ...matchmaking,
   crewSigil:()=>null,completeRivalDistrict:()=>({applied:false}),

@@ -17,6 +17,7 @@ import { showRunnerLoadout } from './RunnerLoadout.js';
 import ReplaySystem from './ReplaySystem.js';
 import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
+import { nextRivalAnnouncement } from '../logic/rivalAnnouncer.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
 import { submitRivalRun } from '../utils/api.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
@@ -489,6 +490,8 @@ export default class RivalsRace {
   update() {
     if (this.disposed) return true;
     const now = performance.now();
+    const announcement = nextRivalAnnouncement(this.race, now);
+    if (announcement) this.scene.audio?.playRivalAnnouncement?.(announcement);
     if (this.race.status === 'ready' && this.screen) {
       this.pollSearch(now);
       this.screen?.tick(now);
@@ -608,6 +611,7 @@ export default class RivalsRace {
   }
   finish(result,now) {
     if (this.race.status==='finished') return;
+    this.scene.audio?.stopRivalAnnouncement?.();
     this.closeSettings(false);
     this.retryModal?.destroy?.({resumeTouch:false});this.retryModal=null;
     this.retryPicker?.destroy?.({resumeTouch:false});this.retryPicker=null;
@@ -824,6 +828,7 @@ export default class RivalsRace {
   dispose() {
     if(this.disposed)return;
     this.disposed=true;this.scene._touchSceneClosing=true;
+    if (!this.transitioning) this.scene.audio?.stopRivalAnnouncement?.();
     this.closeSettings(false);
     this.retryModal?.destroy?.({resumeTouch:false});this.retryPicker?.destroy?.({resumeTouch:false});
     this.pending?.remove?.();
