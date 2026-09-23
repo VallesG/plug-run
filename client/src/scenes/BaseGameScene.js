@@ -115,6 +115,8 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
       this.load.audio('bg_beat4', '/audio/gameplay_beat4.wav');
+      this.load.audio('bg_beat5', '/audio/gameplay_beat5.wav');
+      this.load.audio('bg_beat6', '/audio/gameplay_beat6.wav');
     } catch {}
   }
 
@@ -3134,6 +3136,9 @@ export class BaseGameScene extends Phaser.Scene {
       baseVol = 0.30;
       maxVol = 0.40;
     } else if (musicKey === 'bg_beat4') {
+      baseVol = 0.22;
+      maxVol = 0.48;
+    } else if (musicKey === 'bg_beat5' || musicKey === 'bg_beat6') {
       baseVol = 0.22;
       maxVol = 0.48;
     }

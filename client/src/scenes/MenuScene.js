@@ -59,6 +59,8 @@ export class MenuScene extends Phaser.Scene {
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
       this.load.audio('bg_beat4', '/audio/gameplay_beat4.wav');
+      this.load.audio('bg_beat5', '/audio/gameplay_beat5.wav');
+      this.load.audio('bg_beat6', '/audio/gameplay_beat6.wav');
       // Street ambience sounds for menu
       this.load.audio('street_ambience', ['/audio/street_ambience.ogg', '/audio/street_ambience.mp3']);
       this.load.audio('cars_pass', ['/audio/cars_pass.ogg', '/audio/cars_pass.mp3']);
@@ -2484,7 +2486,7 @@ export class MenuScene extends Phaser.Scene {
       this.sound.sounds.forEach(sound => {
         // Only mute SFX, not music
         if (sound.key !== 'bg_main' && sound.key !== 'bg_plug' && sound.key !== 'bg_learn' &&
-            sound.key !== 'bg_beat4' &&
+            sound.key !== 'bg_beat4' && sound.key !== 'bg_beat5' && sound.key !== 'bg_beat6' &&
             sound.key !== 'street_ambience' && sound.key !== 'cars_pass') {
           sound.setMute(!soundsOn);
         }

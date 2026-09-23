@@ -4,13 +4,13 @@ import { GAMEPLAY_BEATS, selectBeat, momentNotes } from '../src/logic/musicPlayl
 let state = null, last = null;
 for (let cycle = 0; cycle < 10; cycle++) {
   const seen = new Set();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < GAMEPLAY_BEATS.length; i++) {
     state = selectBeat(state, `${cycle}/${i}`, GAMEPLAY_BEATS, () => 0.3);
     assert.notEqual(state.key, last);
     seen.add(state.key); last = state.key;
     assert.equal(selectBeat(state, state.context, GAMEPLAY_BEATS), state);
   }
-  assert.equal(seen.size, 4);
+  assert.equal(seen.size, GAMEPLAY_BEATS.length);
 }
 assert.equal(selectBeat(state, 'missing', []), state);
 assert.equal(selectBeat(null, 'empty', []), null);

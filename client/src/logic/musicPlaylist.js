@@ -1,4 +1,4 @@
-export const GAMEPLAY_BEATS = Object.freeze(['bg_main', 'bg_plug', 'bg_learn', 'bg_beat4']);
+export const GAMEPLAY_BEATS = Object.freeze(['bg_main', 'bg_plug', 'bg_learn', 'bg_beat4', 'bg_beat5', 'bg_beat6']);
 
 // Presentation randomness only: never consume the course/AI seeded RNG.
 export function selectBeat(previous, context, available, random = Math.random) {
