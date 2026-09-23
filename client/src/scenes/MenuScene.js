@@ -2456,7 +2456,6 @@ export class MenuScene extends Phaser.Scene {
       if (this.carsPass) {
         this.carsPass.setVolume(musicOn ? 0.25 : 0);
       }
-      this.toast('Music ' + (musicOn ? 'ON' : 'OFF'));
     };
     musicBg.on('pointerdown', (pointer,x,y,event)=>{consumeModalPointer(pointer,event);applyMusic(!musicOn);});
 
@@ -2496,7 +2495,6 @@ export class MenuScene extends Phaser.Scene {
         localStorage.setItem('soundsMuted', String(!soundsOn));
       } catch {}
 
-      this.toast('Sounds ' + (soundsOn ? 'ON' : 'OFF'));
     };
 
     // Apply current setting on open

@@ -6,6 +6,7 @@ import { getUserID } from './userManager.js';
 
 const key = () => 'pr_contacts_v1_' + getUserID();
 const volatile = new Map();
+export function clearContactProgressCache() { volatile.delete(key()); }
 const save = state => {
   const account = key();
   try { localStorage.setItem(account, JSON.stringify(state)); volatile.delete(account); }

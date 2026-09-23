@@ -7,6 +7,7 @@ import {
 import {
   getWindowState, selectWindowGang, recordWindowVisit
 } from '../utils/windowProgress.js';
+import { switchCrewStory } from '../utils/crewProgress.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 
@@ -188,17 +189,24 @@ export class WindowScene extends Phaser.Scene {
     return this.drawContactPortrait(gang.primary.toLowerCase(),x,bottom,width,height);
   }
 
-  addButton(x,y,w,label,onClick,accent=COLORS.gold) {
+  addButton(x,y,w,label,onClick,accent=COLORS.gold,muted=false) {
+    const disabled=typeof onClick!=='function';
+    const dimmed=disabled||muted;
     const shadow=this.add.rectangle(x+4,y+5,w,44,COLORS.ink,0.75).setDepth(20);
-    const bg=this.add.rectangle(x,y,w,44,0x172126,1).setStrokeStyle(2,accent).setDepth(21)
-      .setInteractive({cursor:'pointer'});
+    const bg=this.add.rectangle(x,y,w,44,dimmed?0x1b2022:0x172126,1)
+      .setStrokeStyle(2,dimmed?0x566064:accent).setDepth(21);
     const text=this.add.text(x,y,label,{
-      fontFamily:'monospace',fontSize:(w<90?'9px':'13px'),fontStyle:'bold',
-      color:'#f4ecd7',letterSpacing:1,align:'center'
+      fontFamily:'monospace',fontSize:(dimmed?'9px':w<90?'9px':'13px'),fontStyle:'bold',
+      color:dimmed?'#899395':'#f4ecd7',letterSpacing:1,align:'center'
     }).setOrigin(0.5).setDepth(22);
-    bg.on('pointerover',()=>bg.setFillStyle(accent,0.3));
-    bg.on('pointerout',()=>bg.setFillStyle(0x172126,1));
-    bg.on('pointerup',onClick);
+    if(!disabled){
+      bg.setInteractive({cursor:'pointer'});
+      if(!muted){
+        bg.on('pointerover',()=>bg.setFillStyle(accent,0.3));
+        bg.on('pointerout',()=>bg.setFillStyle(0x172126,1));
+      }
+      bg.on('pointerup',onClick);
+    }
     this.keep(shadow,bg,text);
     return bg;
   }
@@ -242,13 +250,13 @@ export class WindowScene extends Phaser.Scene {
       ()=>last?this.showGangChoice():this.showIntro(this._introIndex+1));
   }
 
-  showGangChoice() {
+  showGangChoice(switching=false) {
     this.clearView();
     const a=windowLayout(this.scale.width,this.scale.height);
     const titleY=a.panelTop+a.headerH+18;
     const heading=this.add.rectangle(a.cx,titleY,a.contentW,44,0x0d1417,0.96)
       .setStrokeStyle(1,COLORS.gold,0.55).setDepth(7);
-    const title=this.add.text(a.cx,titleY,'WHO HAS YOUR BACK?',{
+    const title=this.add.text(a.cx,titleY,switching?'SWITCH GANGS':'WHO HAS YOUR BACK?',{
       fontFamily:'Arial, sans-serif',fontSize:Math.max(18,Math.min(24,a.contentW*0.055))+'px',
       fontStyle:'bold',color:'#fff0c7',align:'center'
     }).setOrigin(0.5).setDepth(8);
@@ -280,14 +288,43 @@ export class WindowScene extends Phaser.Scene {
         fontFamily:'Georgia, serif',fontSize:(textW<175?11:12.5)+'px',color:'#f0e7d2',
         wordWrap:{width:textW},lineSpacing:2
       }).setOrigin(0,0).setDepth(9);
-      const hit=this.add.rectangle(a.cx,y,a.contentW,cardH,gang.color,0.001).setDepth(12)
-        .setInteractive({cursor:'pointer'})
+      const current=switching&&this.state?.gangID===gang.id;
+      const hit=this.add.rectangle(a.cx,y,a.contentW,cardH,gang.color,0.001).setDepth(12);
+      if(!current)hit.setInteractive({cursor:'pointer'})
         .on('pointerover',()=>hit.setFillStyle(gang.color,0.12))
         .on('pointerout',()=>hit.setFillStyle(gang.color,0.001))
-        .on('pointerup',()=>this.confirmGang(gang.id));
+        .on('pointerup',()=>switching?this.showGangSwitchConfirmation(gang.id):this.confirmGang(gang.id));
       this.keep(name,contacts,story,hit);
     });
-    this.addButton(a.cx,a.panelBottom-a.pad-22,Math.min(180,a.contentW),'BACK TO RO',()=>this.showIntro(WINDOW_INTRO.length-1),COLORS.dim);
+    this.addButton(a.cx,a.panelBottom-a.pad-22,Math.min(180,a.contentW),switching?'BACK TO YOUR GANG':'BACK TO RO',
+      ()=>switching?this.showHub('gang'):this.showIntro(WINDOW_INTRO.length-1),COLORS.dim);
+  }
+
+  showGangSwitchConfirmation(gangID) {
+    const gang=windowGang(gangID);
+    if(!gang)return;
+    this.clearView();
+    const a=windowLayout(this.scale.width,this.scale.height);
+    const y=a.cy-24,h=Math.min(260,a.panelH*0.48);
+    this.addPanel(a.cx,y,a.contentW,h,gang.color);
+    const title=this.add.text(a.cx,y-h/2+22,'RUN WITH '+gang.name.toUpperCase()+'?',{
+      fontFamily:'Georgia, serif',fontSize:'20px',fontStyle:'bold',color:gang.css,
+      align:'center',wordWrap:{width:a.contentW-24}
+    }).setOrigin(0.5,0).setDepth(8);
+    const copy=this.add.text(a.cx,y-h/2+72,
+      'A new gang starts at Block 1. Your current gang\'s story is saved, and you can switch back to pick up where you left off.',{
+        fontFamily:'Georgia, serif',fontSize:'14px',color:'#e9dfc7',align:'center',
+        lineSpacing:4,wordWrap:{width:a.contentW-36}
+      }).setOrigin(0.5,0).setDepth(8);
+    this.keep(title,copy);
+    this.addButton(a.cx,a.panelBottom-a.pad-78,Math.min(210,a.contentW),'SWITCH TO '+gang.name.toUpperCase(),()=>{
+      const result=switchCrewStory(gangID);
+      if(!result.applied){this.showNotice('Could not save the switch. Your story is unchanged.');return;}
+      this.state=result.state;
+      trackEvent('crew_switched',{crew:gangID});
+      this.showHub('gang');
+    },gang.color);
+    this.addButton(a.cx,a.panelBottom-a.pad-22,Math.min(180,a.contentW),'BACK',()=>this.showGangChoice(true),COLORS.dim);
   }
 
   confirmGang(gangID) {
@@ -350,13 +387,10 @@ export class WindowScene extends Phaser.Scene {
     if(section==='counter') this.renderCounter(a,gang);
     else this.renderSection(a,gang,section);
 
-    const labels=[['COUNTER','counter'],['JOBS','jobs'],['YOUR GANG','gang'],['SHELF','shelf']];
-    const gap=Math.min(104,(a.contentW-6)/4);
-    const start=a.cx-gap*1.5;
-    labels.forEach(([label,id],i)=>{
-      const x=start+i*gap;
-      this.addButton(x,a.panelBottom-a.pad-72,gap-5,label,()=>this.showHub(id),id===section?gang.color:COLORS.dim);
-    });
+    const gap=Math.min(150,(a.contentW-6)/3);
+    this.addButton(a.cx-gap,a.panelBottom-a.pad-72,gap-5,'JOBS',()=>this.showComingSoon('JOBS'),COLORS.gold,true);
+    this.addButton(a.cx,a.panelBottom-a.pad-72,gap-5,'YOUR GANG',()=>this.showHub('gang'),COLORS.gold);
+    this.addButton(a.cx+gap,a.panelBottom-a.pad-72,gap-5,'SHELF',()=>this.showComingSoon('SHELF'),COLORS.gold,true);
     this.addButton(a.cx,a.panelBottom-a.pad-20,Math.min(190,a.contentW),'BACK TO THE STREET',()=>this.returnToMenu(),COLORS.gold);
   }
 
@@ -392,11 +426,12 @@ export class WindowScene extends Phaser.Scene {
   renderSection(a,gang,section) {
     const content={
       jobs:['JOBS BOARD','Daily missions will use verified stash, block, REP and Rival outcomes. No mission rewards are active yet.'],
-      gang:['YOUR GANG',gang.name+' · '+gang.story+'\n\n'+gang.primary+' keeps you in the loop. '+gang.jobs+' brings the work. Switching stays locked until its contest boundary is decided.'],
+      gang:['YOUR GANG',gang.name+' · '+gang.story+'\n\n'+gang.primary+' keeps you in the loop. '+gang.jobs+' brings the work.'],
       shelf:['THE SHELF','Cosmetic colorways, trails, frames, outfits and comic entrances will live here. Nothing sold here will change a race.']
     }[section];
     const y=a.cy-20;
-    this.addPanel(a.cx,y,a.contentW,Math.min(310,a.panelH*0.45),gang.color);
+    const panelH=Math.min(310,a.panelH*0.45);
+    this.addPanel(a.cx,y,a.contentW,panelH,gang.color);
     const title=this.add.text(a.cx,y-100,content[0],{
       fontFamily:'Georgia, serif',fontSize:'22px',fontStyle:'bold',color:gang.css,
       stroke:'#080b0d',strokeThickness:3,letterSpacing:1
@@ -406,6 +441,8 @@ export class WindowScene extends Phaser.Scene {
       align:'center',lineSpacing:7,wordWrap:{width:a.contentW-38}
     }).setOrigin(0.5,0).setDepth(8);
     this.keep(title,copy);
+    if(section==='gang')this.addButton(a.cx,y+panelH/2-33,Math.min(210,a.contentW-24),
+      'SWITCH GANGS',()=>this.showGangChoice(true),gang.color);
   }
 
   showNotice(message) {
@@ -416,6 +453,21 @@ export class WindowScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(40);
     this.keep(note);
     this.time.delayedCall(1800,()=>note?.destroy());
+  }
+
+  showComingSoon(section) {
+    this._comingSoon?.destroy();
+    const a=windowLayout(this.scale.width,this.scale.height);
+    const toast=this.add.text(a.cx,a.panelBottom-a.pad-126,section+' — COMING SOON',{
+      fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#f4ecd7',
+      backgroundColor:'#172126',padding:{x:12,y:8},align:'center'
+    }).setOrigin(0.5).setDepth(40);
+    this._comingSoon=toast;
+    this.keep(toast);
+    this.time.delayedCall(1600,()=>{
+      toast.destroy();
+      if(this._comingSoon===toast)this._comingSoon=null;
+    });
   }
 
   returnToMenu() {

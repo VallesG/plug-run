@@ -3,6 +3,9 @@ import { createCityState, beginCityBlock, claimCityBlock, claimCityIntro } from 
 import { getUserID } from './userManager.js';
 const key = () => 'pr_city_v1_' + getUserID();
 const volatile = new Map();
+// A gang switch replaces the active story snapshot; stale failed-write state
+// must not mask the newly restored city.
+export function clearCityProgressCache() { volatile.delete(key()); }
 function save(state) {
   const account = key();
   try { localStorage.setItem(account, JSON.stringify(state)); volatile.delete(account); return true; }

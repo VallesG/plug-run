@@ -83,30 +83,85 @@ console.log('the window: '+passed+' assertions passed');
 
 const {expressionArt,expressionIndex}=await import('../src/logic/contactExpressions.js');
 const sceneSource=readFileSync(new URL('../src/scenes/WindowScene.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/export /g,'');
-const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang','expressionArt','expressionIndex',
+let activeWindow=createWindowState({gangID:'crossline',onboardingComplete:true});
+let switchedTo=null;
+const Scene=new Function('Phaser','WINDOW_GANGS','WINDOW_INTRO','WINDOW_ART','windowGang','windowLayout','selectWindowGang','getWindowState','switchCrewStory','expressionArt','expressionIndex',
   'const trackEvent=()=>{};'+sceneSource+';return WindowScene;')({Scene:class{}},WINDOW_GANGS,WINDOW_INTRO,WINDOW_ART,windowGang,windowLayout,
-  gangID=>({applied:true,state:createWindowState({gangID})}),expressionArt,expressionIndex);
+  gangID=>({applied:true,state:createWindowState({gangID})}),()=>activeWindow,gangID=>{
+    switchedTo=gangID;activeWindow=createWindowState({...activeWindow,gangID});
+    return {applied:true,state:activeWindow};
+  },expressionArt,expressionIndex);
 function reviewScene(width,height){
   const objects=[];
   const node=(kind,x,y,w=0,h=0)=>{const o={kind,x,y,width:w,height:h,active:true,
     setOrigin(x,y=x){this.originX=x;this.originY=y;return this;},setDepth(d){this.depth=d;return this;},
     setScale(scale){this.displayWidth=this.width*scale;this.displayHeight=this.height*scale;return this;},
-    setFlipX(v){this.flipX=v;return this;},setStrokeStyle(){return this;},setInteractive(){return this;},
-    setFillStyle(){return this;},on(){return this;},destroy(){this.active=false;}};
+    setFlipX(v){this.flipX=v;return this;},setStrokeStyle(width,color){this.strokeColor=color;return this;},setInteractive(){return this;},
+    setFillStyle(){return this;},on(event,fn){this.handlers??={};this.handlers[event]=fn;return this;},destroy(){this.active=false;}};
     objects.push(o);return o;};
   const scene=new Scene();scene._view=[];scene.scale={width,height};
+  scene.time={delayedCall:(delay,callback)=>{scene.pendingToastExpiry=callback;}};
   scene.textures={exists:()=>true};
   scene.add={
     rectangle:(x,y,w,h)=>node('rectangle',x,y,w,h),
     circle:(x,y,r)=>node('circle',x,y,r*2,r*2),
+    ellipse:(x,y,w,h)=>node('ellipse',x,y,w,h),
     image:(x,y,key,frame)=>{
-      const w=key.startsWith('expression_')?320:key==='window_switch'?WINDOW_ART.switch.frameWidth:WINDOW_ART.cast.frames[frame].width;
-      const h=key.startsWith('expression_')?400:key==='window_switch'?WINDOW_ART.switch.frameHeight:WINDOW_ART.cast.height;
-      const image=node('image',x,y,w,h);image.key=key;image.frameID=frame;image.frame={width:w,height:h};return image;
+      const w=key.startsWith('expression_')?320:key==='window_switch'?WINDOW_ART.switch.frameWidth:
+        key==='window_bodega'?WINDOW_ART.bodega.portrait.width:WINDOW_ART.cast.frames[frame].width;
+      const h=key.startsWith('expression_')?400:key==='window_switch'?WINDOW_ART.switch.frameHeight:
+        key==='window_bodega'?WINDOW_ART.bodega.portrait.height:WINDOW_ART.cast.height;
+      const image=node('image',x,y,w,h);image.key=key;image.frameID=frame;image.frame={width:w,height:h};
+      image.setDisplaySize=(dw,dh)=>{image.displayWidth=dw;image.displayHeight=dh;return image;};return image;
     },
     text:(x,y,text,style)=>{const o=node('text',x,y);o.text=text;o.style=style;return o;}
   };
   return {scene,objects};
+}
+for(const [width,height] of [[280,480],[390,844],[1440,900]]){
+  const {scene,objects}=reviewScene(width,height);
+  scene.showHub();
+  let visible=objects.filter(o=>o.active);
+  check('hub removes the Counter tab '+width,!visible.some(o=>o.text==='COUNTER'));
+  for(const label of ['JOBS','SHELF']){
+    const t=visible.find(o=>o.text===label);
+    check('coming-soon control keeps its label and looks disabled '+width+'/'+label,
+      !!t&&t.style.color==='#899395');
+    const hit=visible.find(o=>o.kind==='rectangle'&&o.x===t.x&&o.y===t.y&&o.handlers?.pointerup);
+    check('coming-soon control opens popup '+width+'/'+label,!!hit);
+    check('unavailable control has grey outline '+width+'/'+label,hit?.strokeColor===0x566064);
+    hit.handlers.pointerup();
+    check('toast names unavailable section '+width+'/'+label,
+      objects.some(o=>o.active&&o.text===label+' — COMING SOON'));
+    check('no blocking modal appears '+width+'/'+label,
+      !objects.some(o=>o.active&&o.text==='OK'));
+    scene.pendingToastExpiry();
+    check('toast disappears quickly '+width+'/'+label,
+      !objects.some(o=>o.active&&o.text===label+' — COMING SOON'));
+  }
+  const gangButton=objects.find(o=>o.active&&o.text==='YOUR GANG');
+  const gangHit=objects.find(o=>o.active&&o.kind==='rectangle'&&o.x===gangButton.x&&o.y===gangButton.y&&o.handlers?.pointerup);
+  check('available gang control retains gold outline '+width,gangHit?.strokeColor===0xe2b45f);
+  const jobs=objects.find(o=>o.active&&o.text==='JOBS');
+  const shelf=objects.find(o=>o.active&&o.text==='SHELF');
+  objects.find(o=>o.active&&o.kind==='rectangle'&&o.x===jobs.x&&o.y===jobs.y&&o.handlers?.pointerup).handlers.pointerup();
+  objects.find(o=>o.active&&o.kind==='rectangle'&&o.x===shelf.x&&o.y===shelf.y&&o.handlers?.pointerup).handlers.pointerup();
+  check('only latest coming-soon toast remains '+width,
+    !objects.some(o=>o.active&&o.text==='JOBS — COMING SOON')&&
+    objects.some(o=>o.active&&o.text==='SHELF — COMING SOON'));
+  scene.pendingToastExpiry();
+  scene.showHub('gang');visible=objects.filter(o=>o.active);
+  check('gang panel offers switching '+width,visible.some(o=>o.text==='SWITCH GANGS'));
+  scene.showGangChoice(true);visible=objects.filter(o=>o.active);
+  check('switching shows all crews '+width,WINDOW_GANGS.every(g=>visible.some(o=>o.text===g.name.toUpperCase())));
+  scene.showGangSwitchConfirmation('afterlight');visible=objects.filter(o=>o.active);
+  check('switch confirmation promises reversible progress '+width,visible.some(o=>o.text?.includes('switch back')));
+  const confirm=visible.find(o=>o.text==='SWITCH TO AFTERLIGHT');
+  const hit=visible.find(o=>o.kind==='rectangle'&&o.x===confirm?.x&&o.y===confirm?.y&&o.handlers?.pointerup);
+  check('switch confirmation requires an explicit click '+width,!!hit);
+  hit.handlers.pointerup();
+  check('switch invokes save and returns to gang panel '+width,switchedTo==='afterlight'&&scene.state.gangID==='afterlight');
+  activeWindow=createWindowState({gangID:'crossline',onboardingComplete:true});switchedTo=null;
 }
 for(const [width,height] of [[280,480],[390,844],[671,838],[1440,900]]){
   const view=reviewScene(width,height);view.scene.showGangChoice();
