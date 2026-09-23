@@ -16,7 +16,7 @@ import { T, THEMES, generateSquareMaze } from '../utils/mazeGenerator.js';
 import { createSeededRNG } from '../utils/seededRandom.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import { PALETTE } from '../logic/palette.js';
-import { rivalTimeLabel, rivalArenaLayout, rivalHudLayout, rivalFloorClock } from '../logic/rivals.js';
+import { rivalTimeLabel, rivalArenaLayout, rivalHudLayout, rivalFloorClock, rivalHouseDesign } from '../logic/rivals.js';
 import {
   raceReplayTimeline, timelineCursor, replayStateAt, replayEventsBetween, replayStashesAt, unpackFlags, replayCardLabel
 } from '../logic/rivalReplay.js';
@@ -48,9 +48,11 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     fontFamily:'monospace',fontSize:size+'px',color,stroke:'#071018',strokeThickness:2
   }).setOrigin(...origin).setDepth(DEPTH+901));
   const rail=rivalHudLayout(W,H);
+  // The same name the race HUD used (RIVAL unless a short handle fits).
+  const who=String(opponentName||'RIVAL').toUpperCase();
   const clock=hudText(W/2,34,'0:00.0','#bbc4b9',12);
-  const label=hudText(W/2,H-57,'RIVAL REPLAY','#dec386',10);
-  const rivalLabel=hudText(W-7,rail.startY-20,'RIVAL 0/7','#dec386',9,[1,.5]);
+  const label=hudText(W/2,H-57,who+' REPLAY','#dec386',10);
+  const rivalLabel=hudText(W-7,rail.startY-20,who+' 0/7','#dec386',9,[1,.5]);
   const houseBars=rail.segmentYs.map(y=>mk(scene.add.rectangle(rail.rightX,y,rail.railW,rail.segmentH,0x23313a)
     .setStrokeStyle(1,0x3a4c58).setDepth(DEPTH+901)));
   const playerLabel=hudText(7,rail.startY-20,'YOU 0/7','#9bcae5',9,[0,.5]);
@@ -83,7 +85,10 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     const { theme, floorKeySingle } = themeForSeed(rep.houseSeed);
     let grid = null, egress=null;
     try {
-      const arena=generateSquareMaze(cols, rows, { rng: createSeededRNG(rep.houseSeed), role: 'runner', clusterScale: rep.scale });
+      // A designed course's house is rebuilt with its layout, found by the
+      // segment's house seed; an original-seven house has none.
+      const layout=rivalHouseDesign(rep.houseSeed)?.layout ?? null;
+      const arena=generateSquareMaze(cols, rows, { rng: createSeededRNG(rep.houseSeed), role: 'runner', clusterScale: rep.scale, layout });
       grid=arena.grid;egress=arena.egress;
     } catch { grid = null; }
     if(!grid)throw Error('Replay course regeneration failed');
@@ -273,7 +278,7 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
       clock.setText(rivalTimeLabel((segment.startedMs || 0) + local));
       const done = bundle.segments.filter((s, i) => s.outcome === 'extracted' && (i < cur.item.index || (i === cur.item.index && cur.item.kind === 'segment' && local >= (s.replay?.durationMs ?? 0)))).length;
       houseBars.forEach((b, j) => b.setFillStyle(j < done ? 0xc6ac70 : 0x23313a));
-      rivalLabel.setText('RIVAL '+done+'/7');
+      rivalLabel.setText(who+' '+done+'/7');
       const playerDone=playerTimes.filter(t=>t<=(segment.startedMs||0)+local).length;
       playerLabel.setText('YOU '+playerDone+'/7');
       playerBars.forEach((b,j)=>b.setFillStyle(j<playerDone?0x86bad5:0x23313a));

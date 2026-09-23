@@ -48,6 +48,15 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+// Development server only (never in a build): a handle for browser checks,
+// and ?rivalPool=rival-hard or ?rivalPool=apex to meet a challenge bank in
+// Block Rivals.
+if (import.meta.env?.DEV) {
+  window.__plugRunGame = game;
+  const pool = new URLSearchParams(window.location.search).get('rivalPool');
+  if (pool) window.__plugRunRivalPool = pool;
+}
+
 // Zoom/resize handling: no warning banner needed — every scene rebuilds
 // itself on layout-viewport changes (RESIZE mode + per-scene restart
 // handlers), so desktop browser zoom just relayouts. Mobile pinch zoom is

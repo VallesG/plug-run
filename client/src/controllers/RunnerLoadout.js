@@ -14,6 +14,8 @@ const POWERS = [
   {id:'dash',name:'DASH',description:'Burst out\nof danger',color:0xddbd72,css:'#ead194'},
   {id:'decoy',name:'DECOY',description:'Double draws\ntheir fire',color:0x81adbf,css:'#9bc4d4'}
 ];
+// The Block Rivals lobby draws the same three cards in its own layout.
+export const RUNNER_POWERS = POWERS;
 
 export function showRunnerLoadout(ui,onDone,options = {}) {
   const scene=ui.scene;

@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs';
-import {rivalTerritory,rivalDistrict,claimRivalDistrict} from '../src/logic/rivalCity.js';
+import {rivalTerritory,rivalDistrict,claimRivalDistrict,rivalCityName,RIVAL_CITY_NAMES} from '../src/logic/rivalCity.js';
 import * as rules from '../src/logic/rivals.js';
 import {rivalPoolCourse} from '../src/logic/rivals.js';
 import {cityMapLayout,cityStreetDistance,cityBlockConnector} from '../src/logic/city.js';
@@ -22,7 +22,11 @@ for(let index=1;index<=280;index++){
  check('fixed pool course '+index,!!rivalPoolCourse(d.slot));
 }
 check('ownership survives beyond capped history',Object.keys(state.owners).length===280);
-check('city boundary',rivalDistrict(8).city===2&&rivalDistrict(8).slot===1);
+check('city boundary: city 2 races the next seven courses',rivalDistrict(8).city===2&&rivalDistrict(8).slot===8&&rivalDistrict(14).slot===14);
+check('city 3 races courses 15-21',rivalDistrict(15).city===3&&rivalDistrict(15).slot===15&&rivalDistrict(21).slot===21);
+check('the circuit wraps to course 1 after the last course',rivalDistrict(22).city===4&&rivalDistrict(22).slot===1);
+check('every one of the 21 courses is some district',new Set(Array.from({length:rules.RIVAL_COURSE_POOL.length},(_,i)=>rivalDistrict(i+1).slot)).size===rules.RIVAL_COURSE_POOL.length);
+check('each circuit city is named',rivalCityName(1)==='Riverside Circuit'&&rivalCityName(2)===RIVAL_CITY_NAMES[1]&&rivalCityName(3)===RIVAL_CITY_NAMES[2]&&rivalCityName(4)==='Riverside Circuit 2');
 check('invalid state defaults',rivalTerritory({completed:-1}).completed===0);
 check('bad crew never invented',!claimRivalDistrict({}, {index:1,courseSlot:1,houses:7,result:'win',gangID:'bogus'}).state.owners[1]);
 const layout=cityMapLayout({width:760,height:920},'rivals');
@@ -37,9 +41,9 @@ for(const node of layout.nodes)for(const mirror of [false,true]){
 }
 const code=readFileSync(new URL('../src/utils/rivalCityProgress.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
 let user='one',fail=false;const memory=new Map();
-const api=new Function('rivalTerritory','rivalDistrict','claimRivalDistrict','rivalPoolCourse','getUserID','localStorage','console',
+const api=new Function('rivalTerritory','rivalDistrict','claimRivalDistrict','rivalCityName','rivalPoolCourse','getUserID','localStorage','console',
  code+';return {getRivalTerritory,rivalCityView,completeRivalDistrict};')(
- rivalTerritory,rivalDistrict,claimRivalDistrict,rivalPoolCourse,()=>user,
+ rivalTerritory,rivalDistrict,claimRivalDistrict,rivalCityName,rivalPoolCourse,()=>user,
  {getItem:k=>memory.get(k)||null,setItem:(k,v)=>{if(fail)throw Error('quota');memory.set(k,v);}}, {warn(){}});
 const race={territoryIndex:1,territoryUser:user,territoryGang:'iron-row',course:rivalPoolCourse(1),result:'win',clearTimes:Array(7).fill(1)};
 check('local first win saved',api.completeRivalDistrict(race).applied);
@@ -47,6 +51,8 @@ check('local owner persisted',api.getRivalTerritory().owners[1]==='iron-row');
 check('no capped results key writes',[...memory.keys()].join()==='pr_rival_city_v1_one');
 check('next block unlocked only',api.rivalCityView().blocks.filter(b=>b.status==='current')[0].local===2);
 check('recordings and course seeds untouched',api.rivalCityView().blocks.every((b,i)=>b.course.id===rivalPoolCourse(i+1).id));
+check('city 2 shows its own seven courses',api.rivalCityView(9).city.number===2&&api.rivalCityView(9).city.name===rivalCityName(2)&&
+  api.rivalCityView(9).blocks.map(b=>b.course.slot).join()==='8,9,10,11,12,13,14');
 user='two';
 check('accounts isolated',api.getRivalTerritory().completed===0);
 check('old account race cannot write new account',!api.completeRivalDistrict(race).applied);
@@ -66,12 +72,12 @@ const args={...rules,rivalDistrict,getRivalTerritory:()=>territory,getWindowStat
  createSeededRNG:()=>()=>.25};
 const create=new Function(...Object.keys(args),session+';return createRivalSession;')(...Object.values(args));
 const normal=create();
-check('random arena advances the current unlocked district',normal.course.slot>=1&&normal.course.slot<=7&&normal.territoryIndex===4&&normal.rivalCityIndex===4&&normal.territorySlot===4);
+check('random arena advances the current unlocked district',normal.course.slot>=1&&normal.course.slot<=rules.RIVAL_COURSE_POOL.length&&normal.territoryIndex===4&&normal.rivalCityIndex===4&&normal.territorySlot===4);
 check('gang and account frozen at race creation',normal.territoryGang==='crossline'&&normal.territoryUser==='runner');
 const rematch=create({seed:rules.rivalPoolCourse(3).seed});
 check('explicit course rematch cannot advance current district',rematch.course.slot===3&&rematch.territoryIndex===null);
 check('recording harness skips map and territory',create({recording:true}).rivalCityIndex===undefined);
 check('fixed-power harness retains old course policy',create({powers:['phase','dash']}).rivalCityIndex===undefined);
 territory={completed:7};
-check('seven wins open next circuit city regardless of arena',create().territoryIndex===8&&create().territorySlot===1);
+check('seven wins open next circuit city, on its own courses',create().territoryIndex===8&&create().territorySlot===8);
 console.log('Rivals selection: '+passed+' total assertions passed');

@@ -1,5 +1,5 @@
 // Account-scoped personal map; deliberately separate from the capped results log.
-import { rivalTerritory, rivalDistrict, claimRivalDistrict } from '../logic/rivalCity.js';
+import { rivalTerritory, rivalDistrict, claimRivalDistrict, rivalCityName } from '../logic/rivalCity.js';
 import { rivalPoolCourse } from '../logic/rivals.js';
 import { getUserID } from './userManager.js';
 const key=()=> 'pr_rival_city_v1_'+getUserID();
@@ -11,10 +11,10 @@ export function getRivalTerritory(){
 }
 export function rivalCityView(index=getRivalTerritory().completed+1){
   const state=getRivalTerritory(),d=rivalDistrict(index),first=(d.city-1)*7+1;
-  return {mapVariant:'rivals',city:{number:d.city,name:'Riverside Circuit',firstBlock:first},
+  return {mapVariant:'rivals',city:{number:d.city,name:rivalCityName(d.city),firstBlock:first},
     clearedBlocks:Math.max(0,Math.min(7,state.completed-first+1)),
     blocks:Array.from({length:7},(_,i)=>({blockIndex:first+i,local:i+1,
-      course:rivalPoolCourse(i+1),owner:state.owners[first+i]||null,
+      course:rivalPoolCourse(rivalDistrict(first+i).slot),owner:state.owners[first+i]||null,
       status:first+i<=state.completed?'cleared':first+i===index?'current':'locked'}))};
 }
 export function completeRivalDistrict(race){

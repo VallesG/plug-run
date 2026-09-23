@@ -74,7 +74,9 @@ const OPTIONS = {
   jevTimeoutMs: Number(arg('jevTimeoutMs', 15_000)),
   // apex preserves the unrestricted driver; rival-hard adds human opening latency.
   // `rival` remains an alias so the first completed Hard batch keeps working.
-  jevProfile: ['rival', 'rival-hard'].includes(arg('jevProfile', 'apex')) ? 'rival-hard' : 'apex',
+  jevProfile: arg('jevProfile', 'apex') === 'normal' ? 'normal'
+    : ['rival', 'rival-hard'].includes(arg('jevProfile', 'apex')) ? 'rival-hard' : 'apex',
+  jevProfileAsked: arg('jevProfile', 'apex'),
   // --video: an MP4 of each job, start to finish, with a diagnostic strip
   // under the gameplay. See tools/lib/video.mjs. Lands under tools/recordings,
   // which is git-ignored — keep --videoDir there.
@@ -199,6 +201,9 @@ export async function recordJob(job, shared) {
   // --resume would skip the treatment arm as already recorded.
   const tag = `slot${job.slot}-${job.style}-${job.powers.replace(/,/g, '')}` +
     (job.openingDecoy ? '-odecoy' : '') +
+    // A variant-plan job (planned stash seeds) shares its course and loadout
+    // with other jobs; its index block tells them apart.
+    (Array.isArray(job.stashSeeds) && job.stashSeeds.length ? '-i' + job.indexBase : '') +
     // In the filename, because a directory of raw captures is the one place
     // someone will look without opening anything.
     (OPTIONS.jev ? (OPTIONS.jevMock ? '-jevmock' : '-jev') : '');
@@ -249,6 +254,9 @@ export async function recordJob(job, shared) {
     // Opt-in driver behaviour. Recorded into driverConfig by the harness, so
     // an opening-Decoy race is identifiable in the bank forever after.
     ...(job.openingDecoy ? { openingDecoy: '1' } : {}),
+    // One planned stash seed per race (tools/rivals-variant-plan.mjs), so a
+    // batch covers every seven-house answer pattern instead of a random draw.
+    ...(Array.isArray(job.stashSeeds) && job.stashSeeds.length ? { stashSeeds: job.stashSeeds.join(',') } : {}),
     // No bot=1 and no aiLevel: the preset's own knobs stand, so the capable
     // runner AI is the motor and Jev sits above it as the strategist. (The
     // old aiLevel=0 override switched that AI off; the strategist now refuses
@@ -389,6 +397,11 @@ export async function recordJob(job, shared) {
 }
 
 async function main() {
+  // An unknown profile must never silently record Apex into another bank.
+  if (OPTIONS.jev && !['apex', 'rival', 'rival-hard', 'normal'].includes(OPTIONS.jevProfileAsked)) {
+    console.error(`--jevProfile ${OPTIONS.jevProfileAsked}: not a built Jev profile (apex, rival-hard, normal).`);
+    process.exit(2);
+  }
   if (OPTIONS.jev && !OPTIONS.jevMock) {
     // Existence only. Never printed, never length-checked into a log, never
     // written anywhere.
@@ -420,14 +433,28 @@ async function main() {
   // counts as done when any file carries its tag. Recording the same job twice
   // is harmless (more races is more coverage) — this only saves the time.
   const jobTag = j => `slot${j.slot}-${j.style}-${String(j.powers).replace(/,/g, '')}` +
-    (j.openingDecoy ? '-odecoy' : '') + (OPTIONS.jev ? (OPTIONS.jevMock ? '-jevmock' : '-jev') : '');
+    (j.openingDecoy ? '-odecoy' : '') + (Array.isArray(j.stashSeeds) && j.stashSeeds.length ? '-i' + j.indexBase : '') +
+    (OPTIONS.jev ? (OPTIONS.jevMock ? '-jevmock' : '-jev') : '');
   const all = jobs.slice();
   if (arg('resume', false)) {
     const done = new Set();
+    const byTag = new Map(all.map(j => [jobTag(j), j]));
     if (existsSync(OPTIONS.out)) {
       for (const name of readdirSync(OPTIONS.out)) {
         const m = name.match(/^(.*)-\d+\.json$/);
-        if (m) done.add(m[1]);
+        const job = m && byTag.get(m[1]);
+        if (!job || done.has(m[1])) continue;
+        try {
+          const capture = JSON.parse(readFileSync(join(OPTIONS.out, name), 'utf8'));
+          const races = capture.races;
+          if (capture.tool === 'rivals-record/1' && capture.done === true && !capture.aborted &&
+            capture.job?.slot === job.slot && capture.job?.indexBase === job.indexBase &&
+            Array.isArray(races) && races.length === job.runs && races.every(r => r.ok === true) &&
+            (!OPTIONS.jev || (capture.jev?.route === (OPTIONS.jevMock ? 'mock' : 'typesafe-direct') &&
+              capture.jev?.report?.budgetStopped == null && capture.jev?.relay?.ok > 0))) {
+            done.add(m[1]);
+          }
+        } catch { /* malformed capture is retried, never trusted */ }
       }
     }
     jobs = jobs.filter(j => !done.has(jobTag(j)));

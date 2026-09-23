@@ -1,3 +1,5 @@
+import { steps as walkSteps, hardChokes, routeAlternative, shortestPath, stepsFrom } from '../logic/rivalCourseAnalysis.js';
+
 const TILE_TYPES = { FLOOR: 0, WALL: 1 };
 
 export const THEMES = [
@@ -145,8 +147,12 @@ const SHAPES = [
   [[0, 0], [1, 0], [2, 0], [2, 1]]
 ];
 
-export function generateSquareMaze(cols, rows, { rng, role, clusterScale = 1 } = {}) {
+export function generateSquareMaze(cols, rows, { rng, role, clusterScale = 1, layout = null } = {}) {
   const rnd = typeof rng === 'function' ? rng : Math.random;
+  // Designed Rivals courses (logic/rivalCourseDesigns.js) take their own
+  // path. Without a layout nothing below changes, draw for draw: every
+  // campaign, daily and original Rivals house is byte-identical.
+  if (layout) return generateDesignedMaze(cols, rows, { rng: rnd, clusterScale, layout });
 
   // For plug mode, enforce minimum path length to reduce easy extractions
   // Allow 10% of maps to be fast (1-2 in every 10 rounds)
@@ -267,7 +273,292 @@ export function generateSquareMaze(cols, rows, { rng, role, clusterScale = 1 } =
   return { grid, spawns, objectives, egress };
 }
 
-export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale = 1) {
+// ---------------------------------------------------------------------------
+// DESIGNED RIVALS HOUSES
+//
+// The original seven Rivals courses are the legacy generator at seven cluster
+// scales: every one is the same 16x35 scatter of wall pieces, told apart only
+// by seed. A designed course (logic/rivalCourseDesigns.js) gives each house a
+// layout: grid size (passed in as cols/rows), a stamped STRUCTURE (lanes,
+// banded floors, a ring road, rooms, a street grid, pillars), which wall
+// PIECES fill the rest and how tightly, and a BIAS for where the runner,
+// plug, pockets and car go. Structures are one cell thick on purpose: every
+// wall a structure draws is a phase shortcut somewhere.
+//
+// Candidates are generated from the house's own seeded stream and judged
+// (routes, alternatives, hard chokes); the first that passes the layout's
+// acceptance rules is the house, so it is as deterministic as the legacy
+// path — same seed, same house, on every device and in every replay.
+const PIECE_SETS = {
+  mixed: SHAPES,
+  bars: [[[0, 0], [1, 0], [2, 0]], [[0, 0], [1, 0], [2, 0], [3, 0]], [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]]],
+  blocks: [[[0, 0]], [[0, 0], [1, 0]], [[0, 0], [1, 0], [0, 1], [1, 1]]],
+  hooks: SHAPES.slice(4),
+  dots: [[[0, 0]]]
+};
+
+function designedBlank(cols, rows) {
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(TILE_TYPES.FLOOR));
+  for (let x = 0; x < cols; x++) { grid[0][x] = TILE_TYPES.WALL; grid[rows - 1][x] = TILE_TYPES.WALL; }
+  for (let y = 0; y < rows; y++) { grid[y][0] = TILE_TYPES.WALL; grid[y][cols - 1] = TILE_TYPES.WALL; }
+  return { grid, occ: Array.from({ length: rows }, () => Array(cols).fill(0)) };
+}
+
+// occ: 1 = structure wall, 2 = structure doorway. Both keep random pieces a
+// GAP away, so pieces never seal a doorway or thicken a structure wall.
+function stampStructure(grid, occ, cols, rows, rnd, s) {
+  if (!s || s.kind === 'none') return;
+  const inside = (x, y) => x > 0 && y > 0 && x < cols - 1 && y < rows - 1;
+  const wall = (x, y) => { if (inside(x, y)) { grid[y][x] = TILE_TYPES.WALL; occ[y][x] = 1; } };
+  const door = (x, y) => { if (inside(x, y)) { grid[y][x] = TILE_TYPES.FLOOR; occ[y][x] = 2; } };
+  // n doorway starts spread over [lo, hi], one per equal segment.
+  const spread = (lo, hi, n, width) => {
+    const out = [];
+    const span = hi - lo + 1;
+    for (let k = 0; k < n; k++) {
+      const a = lo + Math.floor(k * span / n);
+      const b = Math.max(a, lo + Math.floor((k + 1) * span / n) - width);
+      out.push(a + ((rnd() * (b - a + 1)) | 0));
+    }
+    return out;
+  };
+  const vDoor = (x, y, lo, hi) => { door(x, y); if (y + 1 <= hi) door(x, y + 1); };
+  const hDoor = (x, y, lo, hi) => { door(x, y); if (x + 1 <= hi) door(x + 1, y); };
+
+  if (s.kind === 'lanes') {
+    // Long walls down the board with a few crossings: parallel lanes, each a
+    // firing lane, and a choice of which one to commit to.
+    const n = s.count ?? 1, m = s.margin ?? 3;
+    const y0 = m, y1 = rows - 1 - m;
+    for (let k = 0; k < n; k++) {
+      const x = Math.round((k + 1) * (cols - 1) / (n + 1));
+      for (let y = y0; y <= y1; y++) wall(x, y);
+      for (const d of spread(y0 + 1, y1 - 1, s.doors ?? 3, 2)) vDoor(x, d, y0, y1);
+    }
+  } else if (s.kind === 'bands') {
+    // Floors across the board. Serpentine puts one doorway at alternating
+    // ends (a switchback) plus `extra` shortcut doorways in the middle — the
+    // whole part always, the fraction as a chance (0.5 = half the bands get
+    // one); otherwise `doors` doorways spread across each band.
+    const every = s.every ?? 6;
+    let side = rnd() < 0.5 ? 0 : 1;
+    for (let y = s.start ?? every; y < rows - 3; y += every) {
+      for (let x = 1; x < cols - 1; x++) wall(x, y);
+      if (s.serpentine) {
+        const x = side ? cols - 3 : 1;
+        hDoor(x, y, 1, cols - 2);
+        side ^= 1;
+        const extra = s.extra ?? 0;
+        const n = Math.floor(extra) + (rnd() < extra - Math.floor(extra) ? 1 : 0);
+        if (n) for (const d of spread(4, cols - 6, n, 2)) hDoor(d, y, 1, cols - 2);
+      } else {
+        for (const d of spread(1, cols - 3, s.doors ?? 2, 2)) hDoor(d, y, 1, cols - 2);
+      }
+    }
+  } else if (s.kind === 'ring') {
+    // A ring road round a walled core: two ways round, doorways in and out.
+    const ins = s.inset ?? 3;
+    const x0 = ins, x1 = cols - 1 - ins, y0 = ins + 1, y1 = rows - 2 - ins;
+    for (let x = x0; x <= x1; x++) { wall(x, y0); wall(x, y1); }
+    for (let y = y0; y <= y1; y++) { wall(x0, y); wall(x1, y); }
+    const n = s.doors ?? 4;
+    for (let k = 0; k < n; k++) {
+      const side = ['N', 'S', 'W', 'E'][k % 4];
+      if (side === 'N' || side === 'S') hDoor(spread(x0 + 2, x1 - 3, 1, 2)[0], side === 'N' ? y0 : y1, x0, x1);
+      else vDoor(side === 'W' ? x0 : x1, spread(y0 + 2, y1 - 3, 1, 2)[0], y0, y1);
+    }
+  } else if (s.kind === 'rooms') {
+    // A grid of rooms; every wall segment between rooms has a doorway, some
+    // two. Which door, and which room the plug is standing in, is the game.
+    const w = s.w ?? 5, h = s.h ?? 7;
+    const xs = [], ys = [];
+    for (let x = w; x < cols - 2; x += w) xs.push(x);
+    for (let y = h; y < rows - 2; y += h) ys.push(y);
+    for (const x of xs) for (let y = 1; y < rows - 1; y++) wall(x, y);
+    for (const y of ys) for (let x = 1; x < cols - 1; x++) wall(x, y);
+    const bx = [0, ...xs, cols - 1], by = [0, ...ys, rows - 1];
+    for (const x of xs) {
+      for (let k = 0; k < by.length - 1; k++) {
+        const lo = by[k] + 1, hi = by[k + 1] - 1;
+        if (hi - lo < 1) continue;
+        const n = rnd() < (s.extraDoor ?? 0.3) ? 2 : 1;
+        for (const d of spread(lo, hi - 1, n, 2)) vDoor(x, d, lo, hi);
+      }
+    }
+    for (const y of ys) {
+      for (let k = 0; k < bx.length - 1; k++) {
+        const lo = bx[k] + 1, hi = bx[k + 1] - 1;
+        if (hi - lo < 1) continue;
+        const n = rnd() < (s.extraDoor ?? 0.3) ? 2 : 1;
+        for (const d of spread(lo, hi - 1, n, 2)) hDoor(d, y, lo, hi);
+      }
+    }
+  } else if (s.kind === 'streets') {
+    // City blocks with streets between: long straight lanes both ways, a
+    // parallel street for every street, plazas where a block is missing and
+    // a few closures that make one street a dead end.
+    const bw = s.bw ?? 3, bh = s.bh ?? 4, st = s.street ?? 2;
+    for (let y0 = 1 + st; y0 + bh <= rows - 1 - st; y0 += bh + st) {
+      for (let x0 = 1 + st; x0 + bw <= cols - 1 - st; x0 += bw + st) {
+        if (rnd() < (s.plazas ?? 0.12)) continue;
+        for (let y = y0; y < y0 + bh; y++) for (let x = x0; x < x0 + bw; x++) wall(x, y);
+        if (rnd() < (s.closures ?? 0) && x0 + bw + st < cols - 1) {
+          const cy = y0 + ((rnd() * bh) | 0);
+          for (let k = 0; k < st; k++) wall(x0 + bw + k, cy);
+        }
+      }
+    }
+  } else if (s.kind === 'pillars') {
+    // An open floor broken only by pillars: cover everywhere, lanes everywhere.
+    const every = s.every ?? 3, size = s.size ?? 1;
+    for (let y = 2; y < rows - 2; y += every) {
+      for (let x = 2; x < cols - 2; x += every) {
+        if (rnd() < (s.skip ?? 0.2)) continue;
+        for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) wall(x + dx, y + dy);
+      }
+    }
+  }
+}
+
+// The legacy piece scatter, with the piece set and spacing as parameters.
+function placeDesignedPieces(grid, occ, cols, rows, rnd, { target, set, gap }) {
+  const rotate = (cells, rot) => {
+    let pts = cells.map(([x, y]) => ({ x, y }));
+    for (let r = 0; r < rot; r++) pts = pts.map((p) => ({ x: -p.y, y: p.x }));
+    const minx = Math.min(...pts.map((p) => p.x)), miny = Math.min(...pts.map((p) => p.y));
+    return pts.map((p) => ({ x: p.x - minx, y: p.y - miny }));
+  };
+  const flip = (cells, doFlip) => {
+    if (!doFlip) return cells;
+    const maxx = Math.max(...cells.map((p) => p.x));
+    return cells.map((p) => ({ x: maxx - p.x, y: p.y }));
+  };
+  const canPlace = (atX, atY, cells) => {
+    const pad = rnd() < 0.4 ? 0 : 2;
+    for (const p of cells) {
+      const x = atX + p.x, y = atY + p.y;
+      if (x <= 0 || y <= 0 || x >= cols - 1 || y >= rows - 1) return false;
+      if (x < pad || y < pad || x > cols - 1 - pad || y > rows - 1 - pad) return false;
+      if (grid[y][x] === TILE_TYPES.WALL || occ[y][x]) return false;
+      for (let yy = y - gap; yy <= y + gap; yy++) {
+        for (let xx = x - gap; xx <= x + gap; xx++) {
+          if (yy >= 0 && yy < rows && xx >= 0 && xx < cols && occ[yy][xx]) return false;
+        }
+      }
+    }
+    return true;
+  };
+  let placed = 0, tries = 0;
+  while (placed < target && tries < target * 40) {
+    tries++;
+    const baseX = 1 + ((rnd() * (cols - 2)) | 0), baseY = 1 + ((rnd() * (rows - 2)) | 0);
+    const shape = flip(rotate(set[(rnd() * set.length) | 0], (rnd() * 4) | 0), rnd() < 0.5);
+    const offX = ((rnd() * 3) | 0) - 1, offY = ((rnd() * 3) | 0) - 1;
+    if (canPlace(baseX + offX, baseY + offY, shape)) {
+      for (const p of shape) { grid[baseY + offY + p.y][baseX + offX + p.x] = TILE_TYPES.WALL; occ[baseY + offY + p.y][baseX + offX + p.x] = 1; }
+      placed++;
+    }
+  }
+}
+
+/**
+ * How a designed house is judged. Returns { ok, score } — lower score is
+ * better, used to keep the least-bad candidate if none passes.
+ *   minRun / maxRun   the shortest full run (spawn, a bag, the car), in steps
+ *   maxChokes         hard chokes over all four legs (a cell a plug can hold
+ *                     with no way round it)
+ *   maxSingleLegs     legs with no alternative route at all
+ *   minPocketGap      walking steps between the two bags
+ */
+export function judgeDesignedHouse(arena, accept = {}) {
+  if (arena.failed) return { ok: false, score: 1e9, analysis: null };
+  const a = analyzeRoutes(arena);
+  if (!a.reachable) return { ok: false, score: 1e9, analysis: a };
+  // minPlugGapNoAlt: a leg with no separate corridor must not have the plug
+  // starting on it. The smoke bots looped 70-80 times on exactly such houses
+  // (the only way through, with the plug standing on it). A deliberate
+  // single-route house is exempt; its counterplay is phase.
+  const rules = { minRun: 18, maxRun: 150, maxChokes: 2, maxSingleLegs: 1, minPocketGap: 8, minPlugGap: 8,
+    minPlugGapNoAlt: accept.intentionalSingleRoute ? 0 : 4, ...accept };
+  let score = 0;
+  if (a.plugToBareLeg < rules.minPlugGapNoAlt) score += 30 + (rules.minPlugGapNoAlt - a.plugToBareLeg) * 10;
+  if (a.bestRun < rules.minRun) score += 100 + (rules.minRun - a.bestRun) * 10;
+  if (a.bestRun > rules.maxRun) score += 100 + (a.bestRun - rules.maxRun) * 10;
+  if (a.chokes > rules.maxChokes) score += 50 * (a.chokes - rules.maxChokes);
+  if (a.singleRouteLegs > rules.maxSingleLegs) score += 40 * (a.singleRouteLegs - rules.maxSingleLegs);
+  if (a.pocketGap < rules.minPocketGap) score += 30 + (rules.minPocketGap - a.pocketGap) * 5;
+  if (a.plugGap < rules.minPlugGap) score += 30 + (rules.minPlugGap - a.plugGap) * 5;
+  return { ok: score === 0, score, analysis: a };
+}
+
+// The route part of rivalCourseAnalysis.analyzeHouse, kept cheap: it runs
+// for every candidate while a house loads.
+function analyzeRoutes(arena) {
+  const { grid, spawns, objectives, egress } = arena;
+  const car = egress.entry;
+  const legs = [[spawns.runner, objectives.stash], [spawns.runner, objectives.extract],
+    [objectives.stash, car], [objectives.extract, car]];
+  const out = { reachable: true, chokes: 0, singleRouteLegs: 0, steps: [], plugToBareLeg: 99 };
+  const cols = grid[0].length;
+  let fromPlug = null;
+  for (const [from, to] of legs) {
+    const alt = routeAlternative(grid, from, to);
+    if (alt.steps == null) { out.reachable = false; return out; }
+    out.steps.push(alt.steps);
+    if (alt.alternative == null) {
+      out.singleRouteLegs++;
+      fromPlug = fromPlug || stepsFrom(grid, spawns.plug);
+      for (const c of shortestPath(grid, from, to) || []) {
+        const d = fromPlug[c.y * cols + c.x];
+        if (d >= 0) out.plugToBareLeg = Math.min(out.plugToBareLeg, d);
+      }
+    }
+    out.chokes += hardChokes(grid, from, to).length;
+  }
+  if (walkSteps(grid, spawns.plug, objectives.stash) == null || walkSteps(grid, spawns.plug, objectives.extract) == null) {
+    out.reachable = false; return out;
+  }
+  out.bestRun = Math.min(out.steps[0] + out.steps[2], out.steps[1] + out.steps[3]);
+  out.pocketGap = walkSteps(grid, objectives.stash, objectives.extract) ?? 0;
+  out.plugGap = walkSteps(grid, spawns.plug, spawns.runner) ?? 0;
+  return out;
+}
+
+export function generateDesignedMaze(cols, rows, { rng, clusterScale = 1, layout }) {
+  const rnd = typeof rng === 'function' ? rng : Math.random;
+  const set = PIECE_SETS[layout.pieces] || PIECE_SETS.mixed;
+  const gap = Number.isInteger(layout.gap) ? layout.gap : 1;
+  const target = Math.floor(((cols * rows) / 36) * Math.max(0.2, Math.min(1.8, clusterScale)) * (layout.fill ?? 1));
+  let best = null, bestScore = Infinity;
+  const candidate = (structure, fill) => {
+    const { grid, occ } = designedBlank(cols, rows);
+    stampStructure(grid, occ, cols, rows, rnd, structure);
+    placeDesignedPieces(grid, occ, cols, rows, rnd, { target: Math.floor(target * fill), set, gap });
+    return { grid, ...pickObjectives(grid, cols, rows, rnd, clusterScale, layout.objectives || {}) };
+  };
+  for (let attempt = 0; attempt < (layout.tries ?? 40); attempt++) {
+    const arena = candidate(layout.structure, 1);
+    const verdict = judgeDesignedHouse(arena, layout.accept);
+    if (verdict.ok) { delete arena.failed; return arena; }
+    if (verdict.score < bestScore) { best = arena; bestScore = verdict.score; }
+  }
+  // Nothing passed. Keep the least-bad candidate if it is at least whole;
+  // otherwise, a lighter open floor with the same objective zones — always
+  // winnable, never the legacy centre cross.
+  if (best && !best.failed) return best;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const arena = candidate({ kind: 'none' }, 0.6);
+    if (!arena.failed) return arena;
+  }
+  return candidate({ kind: 'none' }, 0);
+}
+
+// `bias` (designed Rivals courses only; see generateDesignedMaze) steers WHERE
+// things go without changing how they are carved: y-bands (fractions of the
+// height) for the runner, the plug and each pocket, whether a pocket may sit
+// on the plug's side, and which border the car's driveway opens in. With no
+// bias every statement below runs exactly as it always has, draw for draw.
+export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale = 1, bias = null) {
   // Helper: Check if two points are reachable via flood-fill
   const canReach = (from, to) => {
     if (!from || !to) return false;
@@ -340,14 +631,14 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale
   // Use accessible floors for spawns, fall back to all floors if needed
   const spawnFloors = accessibleFloors.length >= 2 ? accessibleFloors : allFloors;
 
-  const pickFar = (avoid, minD) => {
+  const pickFar = (avoid, minD, pool = spawnFloors) => {
     for (let k = 0; k < 400; k++) {
-      const c = spawnFloors[(rnd() * spawnFloors.length) | 0];
+      const c = pool[(rnd() * pool.length) | 0];
       if (avoid.every((pt) => manhattan(c, pt) >= minD)) return c;
     }
-    let best = spawnFloors[0];
+    let best = pool[0];
     let bestScore = -1;
-    for (const c of spawnFloors) {
+    for (const c of pool) {
       const d = avoid.length ? Math.min(...avoid.map((pt) => manhattan(c, pt))) : Infinity;
       if (d > bestScore) {
         bestScore = d;
@@ -469,15 +760,42 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale
     console.log('[MazeGen] Driveway was sealed — carved corridor to connect it');
   };
 
-  const runner = pickFar([], Math.floor((cols + rows) / 6));
-  const plug = pickFar([runner], Math.floor((cols + rows) / 4));
+  // A band as fractions of the board: [y0, y1] (e.g. [0, 0.3] = the top 30%)
+  // or { y: [y0, y1], x: [x0, x1] }. An empty band falls back to the whole
+  // board rather than failing.
+  const inBand = (band) => {
+    const yb = Array.isArray(band) ? band : band.y, xb = Array.isArray(band) ? null : band.x;
+    return (c) => (!yb || (c.y >= yb[0] * (rows - 1) && c.y <= yb[1] * (rows - 1))) &&
+      (!xb || (c.x >= xb[0] * (cols - 1) && c.x <= xb[1] * (cols - 1)));
+  };
+  const banded = (pool, band) => {
+    if (!band) return pool;
+    const kept = pool.filter(inBand(band));
+    return kept.length ? kept : pool;
+  };
 
-  const stashCandidates = allFloors.filter(
-    (c) => safeForPocket(c) && manhattan(c, runner) + 3 < manhattan(c, plug)
-  );
-  const extractCandidates = allFloors.filter(
-    (c) => safeForPocket(c) && manhattan(c, plug) + 3 < manhattan(c, runner)
-  );
+  const runner = bias
+    ? pickFar([], Math.floor((cols + rows) / 6), banded(spawnFloors, bias.runner))
+    : pickFar([], Math.floor((cols + rows) / 6));
+  const plug = bias
+    ? pickFar([runner], Math.floor((cols + rows) / 4), banded(spawnFloors, bias.plug))
+    : pickFar([runner], Math.floor((cols + rows) / 4));
+
+  // Legacy: the primary pocket sits on the runner's side and the secondary on
+  // the plug's. `contested` drops the side rule for a pocket so it may sit
+  // under the plug's nose.
+  const stashCandidates = bias
+    ? banded(allFloors.filter((c) => safeForPocket(c) &&
+        (bias.contested === 'both' || bias.contested === 'primary' || manhattan(c, runner) + 3 < manhattan(c, plug))), bias.primary)
+    : allFloors.filter(
+      (c) => safeForPocket(c) && manhattan(c, runner) + 3 < manhattan(c, plug)
+    );
+  const extractCandidates = bias
+    ? banded(allFloors.filter((c) => safeForPocket(c) &&
+        (bias.contested === 'both' || bias.contested === 'secondary' || manhattan(c, plug) + 3 < manhattan(c, runner))), bias.secondary)
+    : allFloors.filter(
+      (c) => safeForPocket(c) && manhattan(c, plug) + 3 < manhattan(c, runner)
+    );
 
   const pickFrom = (arr, avoid, minD) => {
     const src = arr.length ? arr.filter((c) => avoid.every((pt) => manhattan(c, pt) >= minD)) : [];
@@ -512,6 +830,9 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale
   const plugCanReachStash = canReach(plug, stash);
 
   if (!runnerCanReachStash || !stashCanReachExtract || !plugCanReachStash) {
+    // A designed house never takes the centre-cross fallback below: it says
+    // it failed, and generateDesignedMaze draws another candidate.
+    if (bias) return { failed: true, spawns: { runner, plug }, objectives: { stash, extract }, egress: { side: 'N', entry: { x: 1, y: 1 }, width: 3 } };
     // Spawns are in isolated areas! Force simple fallback layout
     const centerX = Math.floor(cols / 2);
     const centerY = Math.floor(rows / 2);
@@ -541,8 +862,11 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale
     };
   }
 
-  const egress = pickDriveway(grid, cols, rows, rnd);
+  const egress = pickDriveway(grid, cols, rows, rnd, bias?.car ?? null);
   ensureDrivewayReachable(stash, egress.entry);
+  // A designed course promises the car is reachable from EITHER pocket, not
+  // just the primary one (the legacy guarantee).
+  if (bias) ensureDrivewayReachable(extract, egress.entry);
 
   return {
     spawns: { runner, plug },
@@ -551,9 +875,10 @@ export function pickObjectives(grid, cols, rows, rnd = Math.random, clusterScale
   };
 }
 
-function pickDriveway(grid, cols, rows, rnd) {
+function pickDriveway(grid, cols, rows, rnd, forcedSide = null) {
   const sides = ['N', 'E', 'S', 'W'];
-  const side = sides[(rnd() * sides.length) | 0];
+  const drawn = sides[(rnd() * sides.length) | 0];
+  const side = forcedSide && sides.includes(forcedSide) ? forcedSide : drawn;
   const gapW = Math.max(3, Math.floor(cols / 10));
   let entry = { x: 1, y: 1 };
 

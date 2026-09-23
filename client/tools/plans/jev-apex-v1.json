@@ -1,0 +1,6386 @@
+[
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 101000,
+  "stashSeeds": [
+   3337106812,
+   3916559796,
+   3634016927,
+   1978633048,
+   3909999691,
+   1676668950,
+   1677782397,
+   3369197111
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 102000,
+  "stashSeeds": [
+   766933753,
+   2855868098,
+   2372388858,
+   3959812380,
+   2025657562,
+   3525957870,
+   142766663,
+   3343513472
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 103000,
+  "stashSeeds": [
+   3779487946,
+   723154198,
+   2071077298,
+   2720825967,
+   2041919,
+   1349458945,
+   4158230787,
+   3063854927
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 104000,
+  "stashSeeds": [
+   1278122243,
+   3683214745,
+   474254672,
+   622887499,
+   2537224940,
+   734596374,
+   229194311,
+   3016045422
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 105000,
+  "stashSeeds": [
+   147405820,
+   1699288654,
+   613218949,
+   1456587985,
+   2310891162,
+   418102134,
+   2667633939,
+   3772911392
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 106000,
+  "stashSeeds": [
+   906024050,
+   651411771,
+   2358882036,
+   141915124,
+   2895797873,
+   2750066855,
+   1143175214,
+   299833644
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 107000,
+  "stashSeeds": [
+   4214760818,
+   2635875640,
+   3825383989,
+   730852579,
+   2323817330,
+   2815773710,
+   4027008010,
+   2327784620
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 108000,
+  "stashSeeds": [
+   3254874556,
+   585381222,
+   1491413412,
+   2234120553,
+   2464155627,
+   1124689817,
+   2052539092,
+   4487628
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 109000,
+  "stashSeeds": [
+   1538145874,
+   2520588928,
+   4238888494,
+   370503460,
+   725978256,
+   1359490837,
+   1922516390,
+   1694847105
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 110000,
+  "stashSeeds": [
+   4031637643,
+   3880234672,
+   2350178202,
+   2885564604,
+   4146364669,
+   1793092897,
+   1113438223,
+   863956859
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 111000,
+  "stashSeeds": [
+   1952959724,
+   496360526,
+   1846780602,
+   946205420,
+   4127850761,
+   2584137646,
+   947804900,
+   3099404667
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 112000,
+  "stashSeeds": [
+   477214438,
+   3683468027,
+   2404099806,
+   410691637,
+   276633924,
+   4077039841,
+   2454213902,
+   4084928392
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 113000,
+  "stashSeeds": [
+   296281064,
+   3742158072,
+   3503816087,
+   278312905,
+   933551684,
+   1458089942,
+   2701976628,
+   2376306589
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 114000,
+  "stashSeeds": [
+   310312430,
+   3696548150,
+   2111918246,
+   3339614833,
+   2452668500,
+   1652968909,
+   1877492920,
+   292866011
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 115000,
+  "stashSeeds": [
+   168115433,
+   1428481208,
+   2661458374,
+   1807086644,
+   3052651058,
+   4291091774,
+   2297464726,
+   4233645537
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 116000,
+  "stashSeeds": [
+   791847675,
+   4109978608,
+   2876768898,
+   766381231,
+   3043476847,
+   3200188346,
+   2054298897,
+   227081222
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 117000,
+  "stashSeeds": [
+   4061474319,
+   1661854291,
+   1595394778,
+   2444129609,
+   2823717589,
+   3563601854,
+   423038166,
+   1969499922
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 118000,
+  "stashSeeds": [
+   1169350876,
+   2296128341,
+   2992750987,
+   3530704486,
+   2798707287,
+   4034622430,
+   1787765305,
+   865288603
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 119000,
+  "stashSeeds": [
+   483732418,
+   2357460762,
+   2912045768,
+   1373825145,
+   1023081137,
+   3071061600,
+   2056111056,
+   517754145
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 120000,
+  "stashSeeds": [
+   3752375464,
+   88391572,
+   566779448,
+   2113232672,
+   3180457079,
+   1346452007,
+   3677801193,
+   3851039557
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 121000,
+  "stashSeeds": [
+   3948145398,
+   2404106420,
+   2865817747,
+   1899720720,
+   2351279527,
+   855067618,
+   2788490024,
+   3022244495
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 101008,
+  "stashSeeds": [
+   1811719716,
+   1351381063,
+   3639142707,
+   3071261265,
+   377233567,
+   790293863,
+   3077985339,
+   395342368
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 102008,
+  "stashSeeds": [
+   2326269663,
+   1464371110,
+   3474237811,
+   1903267714,
+   880697334,
+   1188839357,
+   3863850695,
+   57366904
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 103008,
+  "stashSeeds": [
+   3527987503,
+   471586477,
+   3218304539,
+   674285353,
+   2752252603,
+   2563107299,
+   1488471866,
+   4285925947
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 104008,
+  "stashSeeds": [
+   830480647,
+   3846163980,
+   1334424842,
+   3207965026,
+   2012783658,
+   1313732103,
+   2353987768,
+   1044396327
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 105008,
+  "stashSeeds": [
+   1008184329,
+   2036906181,
+   619204549,
+   59251902,
+   1346571524,
+   2203761403,
+   1940964119,
+   705107278
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 106008,
+  "stashSeeds": [
+   240236024,
+   2187497283,
+   3936884105,
+   4137249944,
+   2091787077,
+   1627011418,
+   465350479,
+   2017311455
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 107008,
+  "stashSeeds": [
+   3898403379,
+   3605520166,
+   2210617670,
+   2361990921,
+   2845327142,
+   1601403148,
+   1038405551,
+   3500550002
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 108008,
+  "stashSeeds": [
+   3920746421,
+   466293392,
+   1459609926,
+   3164314382,
+   447087781,
+   811327339,
+   3388208955,
+   3195776383
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 109008,
+  "stashSeeds": [
+   1769016339,
+   3889003172,
+   3388880101,
+   2872590689,
+   181617710,
+   1441389755,
+   243719755,
+   555802670
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 110008,
+  "stashSeeds": [
+   3716226746,
+   4175175327,
+   3050286142,
+   26634272,
+   578635215,
+   3768708190,
+   2227493068,
+   3170834647
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 111008,
+  "stashSeeds": [
+   3053443319,
+   811957063,
+   1224100851,
+   1696908685,
+   2191325095,
+   4081240053,
+   3954886372,
+   2945110910
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 112008,
+  "stashSeeds": [
+   3584847873,
+   3416169321,
+   752216895,
+   2355992716,
+   3899760946,
+   532576703,
+   5108715,
+   3026047704
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 113008,
+  "stashSeeds": [
+   3076754916,
+   1246690646,
+   2618145385,
+   184238696,
+   2804554071,
+   1142024150,
+   3635303117,
+   1263184481
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 114008,
+  "stashSeeds": [
+   3787999784,
+   1247788054,
+   2052938704,
+   1991235428,
+   2273086086,
+   566811541,
+   2265750428,
+   3774164095
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 115008,
+  "stashSeeds": [
+   3864978981,
+   830354004,
+   3269303355,
+   142138569,
+   3544210366,
+   1235728657,
+   3297499840,
+   1619782415
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 116008,
+  "stashSeeds": [
+   1674200611,
+   1351174090,
+   759308896,
+   964958199,
+   3988593391,
+   542433808,
+   2988938901,
+   1821022519
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 117008,
+  "stashSeeds": [
+   1718200652,
+   3264702956,
+   2117646312,
+   4274542940,
+   2125795381,
+   587555111,
+   3027410515,
+   1391100159
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 118008,
+  "stashSeeds": [
+   1107042974,
+   3448999799,
+   2649195281,
+   1446234411,
+   3447859577,
+   3912089263,
+   3112198786,
+   2144834188
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 119008,
+  "stashSeeds": [
+   3917467356,
+   1670487669,
+   2872206369,
+   739512894,
+   3227390679,
+   1220315283,
+   2575850664,
+   3119426530
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 120008,
+  "stashSeeds": [
+   1677651681,
+   785166339,
+   1894456991,
+   3896351745,
+   3501217604,
+   274633241,
+   2974140252,
+   1383948457
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 121008,
+  "stashSeeds": [
+   4181644711,
+   2116490786,
+   521003909,
+   1176214213,
+   1531897568,
+   1682765455,
+   882936801,
+   1190376643
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 101016,
+  "stashSeeds": [
+   1189609722,
+   2104292238,
+   2495170281,
+   3106469522,
+   2868232503,
+   4052897824,
+   3127773026,
+   4248118891
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 102016,
+  "stashSeeds": [
+   563037903,
+   4137564566,
+   1386439521,
+   1120804150,
+   1367403136,
+   1918981518,
+   929876854,
+   3033013580
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 103016,
+  "stashSeeds": [
+   2701491349,
+   1879889390,
+   3099020123,
+   903870847,
+   915566945,
+   627762423,
+   386469651,
+   2584242700
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 104016,
+  "stashSeeds": [
+   2530991411,
+   3532385565,
+   810175337,
+   1683523398,
+   465025617,
+   3551179417,
+   4230965671,
+   2692516658
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 105016,
+  "stashSeeds": [
+   1951345327,
+   1072305698,
+   3099467120,
+   400119663,
+   1646819069,
+   2882585152,
+   2036281101,
+   2327729710
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 106016,
+  "stashSeeds": [
+   59134168,
+   2297907271,
+   306256032,
+   1160561353,
+   3881209010,
+   2650744449,
+   129643167,
+   3294992302
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 107016,
+  "stashSeeds": [
+   2282440859,
+   1956211962,
+   4072546206,
+   211799155,
+   3204790,
+   2939670723,
+   2457953489,
+   2637651868
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 108016,
+  "stashSeeds": [
+   1303156309,
+   2016190040,
+   1344482372,
+   4107492680,
+   3586673884,
+   1996453095,
+   3360384348,
+   952565623
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 109016,
+  "stashSeeds": [
+   786195372,
+   3528374875,
+   3725986445,
+   1343113291,
+   1625259974,
+   1863805915,
+   3050666199,
+   4216686826
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 110016,
+  "stashSeeds": [
+   3025025482,
+   497107979,
+   492999843,
+   2036998078,
+   3210092566,
+   1048009555,
+   2635418034,
+   1105669904
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 111016,
+  "stashSeeds": [
+   1754013790,
+   2150069226,
+   3364042920,
+   2616025800,
+   1519013614,
+   2089854214,
+   197230634,
+   179271818
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 112016,
+  "stashSeeds": [
+   274762527,
+   3602186246,
+   850983837,
+   1493444226,
+   688166353,
+   3981313602,
+   2435020798,
+   856111177
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 113016,
+  "stashSeeds": [
+   3480591104,
+   1675230121,
+   774898613,
+   2269562153,
+   3066804978,
+   4049190880,
+   1336074917,
+   771335104
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 114016,
+  "stashSeeds": [
+   3947154771,
+   4093556062,
+   1475888914,
+   3853675098,
+   4263914977,
+   4156160243,
+   1764773165,
+   1543790875
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 115016,
+  "stashSeeds": [
+   73247309,
+   381210234,
+   3140535523,
+   220130826,
+   1840224386,
+   3389519017,
+   1532001859,
+   2133823133
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 116016,
+  "stashSeeds": [
+   3383810632,
+   24894970,
+   3843354630,
+   1890685893,
+   2739877182,
+   560056788,
+   3313935438,
+   2669106607
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 117016,
+  "stashSeeds": [
+   2752469734,
+   3743054014,
+   1343531576,
+   4089252414,
+   665425804,
+   165236154,
+   1491457223,
+   3443795285
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 118016,
+  "stashSeeds": [
+   1956349693,
+   1679857812,
+   285826123,
+   1873155451,
+   1433261041,
+   2922619845,
+   682547568,
+   2488695780
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 119016,
+  "stashSeeds": [
+   4215200002,
+   1859141214,
+   2035055808,
+   788334960,
+   331538650,
+   1702894516,
+   1633708071,
+   2790059296
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 120016,
+  "stashSeeds": [
+   2367049908,
+   4152277990,
+   2973575603,
+   1664404142,
+   811373853,
+   2401421664,
+   2540697911,
+   1436703437
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 121016,
+  "stashSeeds": [
+   1774977167,
+   3718317657,
+   79902764,
+   3065262663,
+   508268067,
+   2708785052,
+   619891299,
+   2209899131
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 101024,
+  "stashSeeds": [
+   1922220111,
+   1193162973,
+   3705356748,
+   1461151097,
+   2318112024,
+   1207409368,
+   511047028,
+   1406156137
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 102024,
+  "stashSeeds": [
+   1056982725,
+   3767354263,
+   3528481680,
+   2641548315,
+   2567138701,
+   1680115482,
+   2182727782,
+   3497552595
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 103024,
+  "stashSeeds": [
+   3169053494,
+   199908260,
+   1165506060,
+   2752987382,
+   582085738,
+   1370743378,
+   475547835,
+   425455561
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 104024,
+  "stashSeeds": [
+   2128305788,
+   518712451,
+   3231789444,
+   1152605582,
+   1955082007,
+   3869853802,
+   1834261541,
+   1590166331
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 105024,
+  "stashSeeds": [
+   2386038517,
+   1644499438,
+   3660952350,
+   1148139049,
+   4196495718,
+   1559860054,
+   2023822430,
+   1480314092
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 106024,
+  "stashSeeds": [
+   464702092,
+   1493311745,
+   647236271,
+   2792741526,
+   108646318,
+   1723214555,
+   2854482641,
+   147166306
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 107024,
+  "stashSeeds": [
+   575895773,
+   2116903945,
+   3663375299,
+   635567047,
+   2171200094,
+   3405316982,
+   2056475238,
+   1749050173
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 108024,
+  "stashSeeds": [
+   966010716,
+   3274347472,
+   880210456,
+   2333912604,
+   1027379837,
+   160917331,
+   358622874,
+   2042448101
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 109024,
+  "stashSeeds": [
+   421641766,
+   2547997206,
+   3116053339,
+   4016732047,
+   3266207354,
+   2063142469,
+   2354643924,
+   99806932
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 110024,
+  "stashSeeds": [
+   1995423586,
+   638425546,
+   132784250,
+   352296177,
+   3392044066,
+   473479806,
+   782508866,
+   3561082249
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 111024,
+  "stashSeeds": [
+   852448132,
+   1052843551,
+   1841438797,
+   1333375553,
+   2988535939,
+   2684597897,
+   2004849823,
+   3891977316
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 112024,
+  "stashSeeds": [
+   4215094813,
+   131903977,
+   675138312,
+   3050504330,
+   307444027,
+   1995234504,
+   26141882,
+   1140960419
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 113024,
+  "stashSeeds": [
+   2364241544,
+   283381653,
+   474976574,
+   280245622,
+   101758638,
+   2137293645,
+   63322751,
+   1983376862
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 114024,
+  "stashSeeds": [
+   3332689261,
+   2445675646,
+   2404570514,
+   1615675645,
+   1890599514,
+   2017225713,
+   1009824364,
+   1986775164
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 115024,
+  "stashSeeds": [
+   91182086,
+   4125500158,
+   3663514068,
+   1518146884,
+   2331720336,
+   3394328761,
+   208651545,
+   2169548430
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 116024,
+  "stashSeeds": [
+   1040787198,
+   294362453,
+   2058717199,
+   1425528014,
+   2252586390,
+   4038989745,
+   2686028224,
+   3578671731
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 117024,
+  "stashSeeds": [
+   2556347860,
+   3451608545,
+   962285935,
+   2565914745,
+   44306719,
+   176960664,
+   2207521025,
+   2100086576
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 118024,
+  "stashSeeds": [
+   3378847318,
+   93446183,
+   1582310576,
+   379020992,
+   2741974537,
+   2443675619,
+   2511203315,
+   3730830461
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 119024,
+  "stashSeeds": [
+   3265958391,
+   2716910385,
+   1223001072,
+   1983495322,
+   2416875609,
+   1565159004,
+   1181112770,
+   2868821373
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 120024,
+  "stashSeeds": [
+   413231135,
+   1706386077,
+   3408666000,
+   1997922750,
+   525901862,
+   315739302,
+   1903154748,
+   1392035459
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 121024,
+  "stashSeeds": [
+   4165599239,
+   1373683347,
+   1673725182,
+   3035027591,
+   2276267475,
+   4099652777,
+   2299559310,
+   864812344
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 101032,
+  "stashSeeds": [
+   2925912434,
+   725245008,
+   839945759,
+   375202927,
+   4066578687,
+   3225834630,
+   3156782253,
+   2468810081
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 102032,
+  "stashSeeds": [
+   2136732699,
+   2074116130,
+   3669700932,
+   3172132135,
+   4059057364,
+   2055498581,
+   2089931723,
+   3318465076
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 103032,
+  "stashSeeds": [
+   3225809189,
+   2217775601,
+   3164900234,
+   2759038904,
+   92267787,
+   935643714,
+   3708875720,
+   4152919242
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 104032,
+  "stashSeeds": [
+   3112510327,
+   1316770856,
+   2904247962,
+   4165348355,
+   2616297506,
+   1001690675,
+   498992877,
+   268105797
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 105032,
+  "stashSeeds": [
+   3351028145,
+   2880680020,
+   1639324611,
+   3296471560,
+   2510588709,
+   2036830172,
+   3577770602,
+   2900798379
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 106032,
+  "stashSeeds": [
+   1107664056,
+   1975910730,
+   2129806965,
+   4047670695,
+   2433181892,
+   3690968591,
+   1257966565,
+   2812479842
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 107032,
+  "stashSeeds": [
+   2961874201,
+   995576977,
+   1017256684,
+   2137470241,
+   4171492863,
+   1469201601,
+   48408316,
+   1325127388
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 108032,
+  "stashSeeds": [
+   1375146678,
+   2570190263,
+   4106198481,
+   1525545365,
+   2022716909,
+   3849045909,
+   1446542799,
+   3367388785
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 109032,
+  "stashSeeds": [
+   1120421219,
+   4180476343,
+   336417919,
+   2269973252,
+   518897096,
+   3880804497,
+   618563581,
+   2464909154
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 110032,
+  "stashSeeds": [
+   969089309,
+   3721050192,
+   3272971997,
+   2085588428,
+   1522679060,
+   218626927,
+   2173752052,
+   2764750862
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 111032,
+  "stashSeeds": [
+   3603866873,
+   4106503355,
+   135666473,
+   1325097921,
+   2543541984,
+   2010439160,
+   564977397,
+   70431408
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 112032,
+  "stashSeeds": [
+   82089949,
+   1623079062,
+   697854586,
+   3405478040,
+   1114920109,
+   301490543,
+   1307375681,
+   2433078562
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 113032,
+  "stashSeeds": [
+   2922541432,
+   3812729075,
+   272468094,
+   2331389498,
+   2675403701,
+   3673540222,
+   4241378729,
+   2724925841
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 114032,
+  "stashSeeds": [
+   3705238686,
+   3700966783,
+   644365041,
+   2144596632,
+   2882287654,
+   1289511210,
+   4100590477,
+   1701273854
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 115032,
+  "stashSeeds": [
+   4130592960,
+   2581210221,
+   2361927184,
+   1423293011,
+   593497248,
+   1149771471,
+   195747847,
+   2483443419
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 116032,
+  "stashSeeds": [
+   219821307,
+   1701334299,
+   2367543743,
+   131487993,
+   805230369,
+   2175021947,
+   4245797800,
+   3307052999
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 117032,
+  "stashSeeds": [
+   2406464864,
+   205834355,
+   44075398,
+   2748902647,
+   2008774638,
+   823981978,
+   1320152057,
+   2292846903
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 118032,
+  "stashSeeds": [
+   3313916984,
+   1525594130,
+   2366126061,
+   231123236,
+   2320702547,
+   1469070607,
+   1008749580,
+   1921998389
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 119032,
+  "stashSeeds": [
+   1210569547,
+   3740555047,
+   4141590630,
+   2625049661,
+   280069571,
+   768030200,
+   276234667,
+   1701626988
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 120032,
+  "stashSeeds": [
+   821009007,
+   1705295113,
+   3990270896,
+   1168369641,
+   2755784717,
+   3659468430,
+   2772558077,
+   4098233938
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 121032,
+  "stashSeeds": [
+   3425409898,
+   1183901409,
+   3857189152,
+   1111513917,
+   3244370432,
+   2859521780,
+   4883061,
+   2660680106
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 101040,
+  "stashSeeds": [
+   4041190963,
+   283385562,
+   1513925049,
+   2079775651,
+   3292593187,
+   380352003,
+   2967635340,
+   2393055833
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 102040,
+  "stashSeeds": [
+   3229793137,
+   939356852,
+   44190049,
+   4141665606,
+   3944096764,
+   3089532728,
+   3875889833,
+   579880149
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 103040,
+  "stashSeeds": [
+   2183996983,
+   2514400897,
+   4142743564,
+   2490762543,
+   1620255865,
+   776958745,
+   3449082134,
+   1646400608
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 104040,
+  "stashSeeds": [
+   1464598663,
+   613121603,
+   1801849424,
+   4007790443,
+   1254007807,
+   3399519011,
+   1024667488,
+   483601427
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 105040,
+  "stashSeeds": [
+   1374154928,
+   2214820779,
+   2087900478,
+   3100260671,
+   2928415505,
+   2561761366,
+   2418800464,
+   2068900580
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 106040,
+  "stashSeeds": [
+   4168284239,
+   2297876039,
+   469126438,
+   3871237808,
+   1379375560,
+   3710690771,
+   3487166080,
+   117226882
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 107040,
+  "stashSeeds": [
+   1614789769,
+   3556466901,
+   819587708,
+   278332500,
+   145479559,
+   3997656534,
+   2257415870,
+   1367613120
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 108040,
+  "stashSeeds": [
+   84999116,
+   1723867625,
+   240189885,
+   4015701324,
+   3611110368,
+   1936249252,
+   910244777,
+   1918773618
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 109040,
+  "stashSeeds": [
+   3668486244,
+   377198731,
+   4125777284,
+   2391182989,
+   4057799240,
+   3378048884,
+   30266734,
+   3738568368
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 110040,
+  "stashSeeds": [
+   1610805202,
+   3634273033,
+   2829185589,
+   3293107583,
+   2509706566,
+   1001296134,
+   3662562551,
+   1706340409
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 111040,
+  "stashSeeds": [
+   797488879,
+   3061471897,
+   473979160,
+   3616643636,
+   105076753,
+   1002949865,
+   2593106420,
+   2684255814
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 112040,
+  "stashSeeds": [
+   450581555,
+   3279415781,
+   3784655517,
+   3701966851,
+   302065274,
+   585904217,
+   2167903359,
+   3554846130
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 113040,
+  "stashSeeds": [
+   1028203362,
+   1572049985,
+   3351508325,
+   3594798216,
+   3555339369,
+   1646245811,
+   1289570732,
+   1903762481
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 114040,
+  "stashSeeds": [
+   1187673029,
+   3802535720,
+   3190238066,
+   2360382662,
+   3264045037,
+   3252301081,
+   2842045683,
+   4020400485
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 115040,
+  "stashSeeds": [
+   1348648372,
+   4203246800,
+   3755893529,
+   1160007776,
+   1220148879,
+   3821506650,
+   2906882350,
+   2107079451
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 116040,
+  "stashSeeds": [
+   2153632880,
+   1579838261,
+   3120842557,
+   2228186528,
+   2373742313,
+   906829920,
+   3843243636,
+   3416670195
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 117040,
+  "stashSeeds": [
+   4041624399,
+   2823200893,
+   232214730,
+   3875216031,
+   803958706,
+   2082240639,
+   2740378214,
+   3240728048
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 118040,
+  "stashSeeds": [
+   1502378614,
+   434339366,
+   735712401,
+   2326136946,
+   4044695528,
+   2825022828,
+   3845818969,
+   3149431787
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 119040,
+  "stashSeeds": [
+   2920961757,
+   3378957013,
+   1652543894,
+   3997319454,
+   548513909,
+   2141527236,
+   88043890,
+   2389872266
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 120040,
+  "stashSeeds": [
+   266487877,
+   929766946,
+   3065443331,
+   1794057180,
+   615696715,
+   74598521,
+   991512725,
+   2648324548
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 121040,
+  "stashSeeds": [
+   2008081454,
+   729501085,
+   145523805,
+   1214920764,
+   3919713313,
+   2963681862,
+   3400865764,
+   2804334488
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 101048,
+  "stashSeeds": [
+   3470392544,
+   1884467461,
+   190867882,
+   3964913392,
+   2380231585,
+   1283619705,
+   3793425355,
+   153540910
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 102048,
+  "stashSeeds": [
+   184925608,
+   1904744336,
+   2799863917,
+   1421161188,
+   1645351054,
+   3074717514,
+   4144340381,
+   1639634579
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 103048,
+  "stashSeeds": [
+   1589221657,
+   751288431,
+   3569592061,
+   1325301675,
+   1445789523,
+   789151850,
+   3090621014,
+   3391935269
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 104048,
+  "stashSeeds": [
+   3973979568,
+   1371338865,
+   522471342,
+   3042564866,
+   1506882187,
+   3798613101,
+   602816864,
+   3411500604
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 105048,
+  "stashSeeds": [
+   169185441,
+   1707270639,
+   1408798832,
+   2238450627,
+   882661294,
+   2639030157,
+   3365315794,
+   2254650865
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 106048,
+  "stashSeeds": [
+   2005458557,
+   3974406940,
+   2972839354,
+   1378922417,
+   3741452344,
+   3704847309,
+   2930943042,
+   2785387847
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 107048,
+  "stashSeeds": [
+   1468893846,
+   3140796716,
+   1177305027,
+   2413070714,
+   2813482761,
+   103203563,
+   1092311155,
+   3696630269
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 108048,
+  "stashSeeds": [
+   3124704920,
+   2995252000,
+   1630316755,
+   3818431163,
+   20765823,
+   3892459584,
+   876128034,
+   2133191663
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 109048,
+  "stashSeeds": [
+   1932081802,
+   1771459958,
+   963748933,
+   73845976,
+   507406924,
+   1001934455,
+   3493697806,
+   4173458237
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 110048,
+  "stashSeeds": [
+   901095397,
+   825957130,
+   1912220276,
+   2066115591,
+   3031720893,
+   286000568,
+   3879350322,
+   2891940985
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 111048,
+  "stashSeeds": [
+   179630435,
+   2467319215,
+   2472439154,
+   1009971402,
+   3165826146,
+   1570337541,
+   1164119315,
+   3984135891
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 112048,
+  "stashSeeds": [
+   1731462795,
+   841828191,
+   2306802508,
+   989006759,
+   1450744444,
+   2552605076,
+   4208387014,
+   762228054
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 113048,
+  "stashSeeds": [
+   1961030503,
+   1422645550,
+   4035400259,
+   4136046226,
+   2158876701,
+   737540768,
+   3956204867,
+   1215923492
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 114048,
+  "stashSeeds": [
+   38782063,
+   3018827002,
+   1550559333,
+   1502511624,
+   1263745822,
+   405720734,
+   3121547204,
+   615541181
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 115048,
+  "stashSeeds": [
+   2236853050,
+   1849071906,
+   2532424039,
+   4136013641,
+   2044344581,
+   3707721920,
+   3196678878,
+   1931934690
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 116048,
+  "stashSeeds": [
+   1804489100,
+   3670388643,
+   3562705374,
+   3082667714,
+   3627395918,
+   1372283327,
+   2172002161,
+   1281066479
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 117048,
+  "stashSeeds": [
+   508817388,
+   2556829772,
+   1275682046,
+   1093223276,
+   3603359671,
+   939368333,
+   368622522,
+   1378324718
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 118048,
+  "stashSeeds": [
+   2678223458,
+   3056946682,
+   3606089719,
+   1782725638,
+   1981950827,
+   3948391517,
+   2110256909,
+   762531860
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 119048,
+  "stashSeeds": [
+   1405262375,
+   180113704,
+   1622102294,
+   424472255,
+   3129729982,
+   823663279,
+   2067890175,
+   1896047583
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 120048,
+  "stashSeeds": [
+   690249193,
+   3549587356,
+   3323906144,
+   1774777349,
+   3021118615,
+   835952555,
+   2591294119,
+   1416063946
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 121048,
+  "stashSeeds": [
+   1481704808,
+   1856201745,
+   3957157405,
+   1948577186,
+   37950238,
+   75010491,
+   342969141,
+   581535037
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 101056,
+  "stashSeeds": [
+   2864064649,
+   1182390734,
+   1687958118,
+   605915670,
+   369948769,
+   1446240896,
+   1254218379,
+   2044140683
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 102056,
+  "stashSeeds": [
+   3635840674,
+   1458013136,
+   283480744,
+   2837977526,
+   2840443503,
+   3845913340,
+   3663550726,
+   732239250
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 103056,
+  "stashSeeds": [
+   1796864159,
+   2573199043,
+   193099752,
+   1332919147,
+   1445895618,
+   947020244,
+   3477445133,
+   1475549363
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 104056,
+  "stashSeeds": [
+   2409962258,
+   2849741360,
+   4101359260,
+   1371982523,
+   1265784148,
+   411534925,
+   3764926144,
+   2223936291
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 105056,
+  "stashSeeds": [
+   3268279252,
+   3091125653,
+   1182471996,
+   1036841069,
+   846760017,
+   1516645889,
+   3422868365,
+   486901071
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 106056,
+  "stashSeeds": [
+   1068612189,
+   3375850926,
+   766317986,
+   3650550571,
+   1096525295,
+   1927062158,
+   37166129,
+   2650926076
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 107056,
+  "stashSeeds": [
+   528635789,
+   2400616467,
+   726135598,
+   2226337242,
+   1197695828,
+   2043857588,
+   317613625,
+   1904962773
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 108056,
+  "stashSeeds": [
+   1158994566,
+   1427406686,
+   3876114194,
+   1811857237,
+   1971337843,
+   3293298000,
+   4085041725,
+   693548811
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 109056,
+  "stashSeeds": [
+   166993844,
+   4126211943,
+   715512413,
+   1643358177,
+   1918477171,
+   787338552,
+   1682477724,
+   2132477530
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 110056,
+  "stashSeeds": [
+   1673572006,
+   1394441590,
+   2703945629,
+   231351299,
+   222465697,
+   2433982298,
+   3673975734,
+   1397291767
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 111056,
+  "stashSeeds": [
+   600834458,
+   3797735974,
+   4275742077,
+   1590029394,
+   3838044166,
+   2079386973,
+   227607000,
+   2968215117
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 112056,
+  "stashSeeds": [
+   1720386305,
+   1980549409,
+   124899236,
+   1234190804,
+   3252243850,
+   4042038021,
+   3735785186,
+   236995255
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 113056,
+  "stashSeeds": [
+   285313340,
+   1912651265,
+   284387468,
+   923476085,
+   1929838547,
+   3653440429,
+   3954808845,
+   500388872
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 114056,
+  "stashSeeds": [
+   3407503917,
+   2657163559,
+   1213697986,
+   186380941,
+   605858503,
+   1006023542,
+   3423444586,
+   1181934097
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 115056,
+  "stashSeeds": [
+   3941793335,
+   1841658744,
+   2808885704,
+   3227513033,
+   2961916644,
+   4152971267,
+   833843112,
+   548463662
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 116056,
+  "stashSeeds": [
+   1297184616,
+   3723085247,
+   1617980895,
+   423083182,
+   316122420,
+   1213954013,
+   4199538801,
+   533031244
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 117056,
+  "stashSeeds": [
+   217231168,
+   2089463958,
+   1132688163,
+   110517354,
+   765897730,
+   2012085147,
+   58051621,
+   3118245623
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 118056,
+  "stashSeeds": [
+   1698523822,
+   3008934804,
+   1806669462,
+   2424027492,
+   141635000,
+   1009748324,
+   233854221,
+   3287664514
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 119056,
+  "stashSeeds": [
+   344122988,
+   400223363,
+   780558490,
+   3074750113,
+   1725981989,
+   1588520099,
+   4195972416,
+   878227119
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 120056,
+  "stashSeeds": [
+   154309250,
+   1703499427,
+   780169242,
+   3944069140,
+   380003889,
+   4179429343,
+   3704219853,
+   1072121408
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 121056,
+  "stashSeeds": [
+   4046787772,
+   2462788463,
+   2952213449,
+   530995692,
+   551393576,
+   3122793800,
+   2576432401,
+   3857689521
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 101064,
+  "stashSeeds": [
+   2581916436,
+   1730456670,
+   5472707,
+   2483274882,
+   1377583925,
+   141824829,
+   1725682793,
+   28326442
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 102064,
+  "stashSeeds": [
+   1132438155,
+   4118766658,
+   75947673,
+   291605793,
+   2647329,
+   3864054273,
+   1665973606,
+   1426534691
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 103064,
+  "stashSeeds": [
+   3847915582,
+   2579051801,
+   3444110306,
+   3803911726,
+   2871394897,
+   1330407121,
+   1261097165,
+   363197569
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 104064,
+  "stashSeeds": [
+   454038989,
+   3218843403,
+   1557967863,
+   3701408773,
+   1384432836,
+   1779330051,
+   1919069888,
+   3345716811
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 105064,
+  "stashSeeds": [
+   3924872909,
+   1528294574,
+   1826722985,
+   282669012,
+   3033822531,
+   3068009923,
+   678067007,
+   2808805200
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 106064,
+  "stashSeeds": [
+   3269521089,
+   2082862386,
+   84002978,
+   2483568748,
+   259322871,
+   550718826,
+   1289791490,
+   3877292207
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 107064,
+  "stashSeeds": [
+   2577085955,
+   2769112844,
+   2492151492,
+   576078494,
+   3485280536,
+   1570524181,
+   762609706,
+   4265649871
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 108064,
+  "stashSeeds": [
+   2739819186,
+   3155327763,
+   3563446176,
+   3189756627,
+   468776656,
+   2097099435,
+   3789816116,
+   2657024117
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 109064,
+  "stashSeeds": [
+   4127384616,
+   1362496060,
+   2924352285,
+   3896808783,
+   3001749832,
+   727551980,
+   2852520376,
+   1265278733
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 110064,
+  "stashSeeds": [
+   1867784070,
+   2528665130,
+   2907976732,
+   3847024858,
+   4243850916,
+   2781928677,
+   1254601251,
+   3868093508
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 111064,
+  "stashSeeds": [
+   2049923224,
+   2287970831,
+   281433822,
+   2687727188,
+   1830485331,
+   567920831,
+   2501459571,
+   2754571756
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 112064,
+  "stashSeeds": [
+   2532870815,
+   4125881665,
+   3322927116,
+   3584033900,
+   3986212252,
+   1009953880,
+   1167827917,
+   1670774354
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 113064,
+  "stashSeeds": [
+   4147884623,
+   3098740029,
+   192278115,
+   2352213992,
+   2898738150,
+   3283357311,
+   2643325610,
+   4018240705
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 114064,
+  "stashSeeds": [
+   330358605,
+   826141836,
+   2874251919,
+   1330398248,
+   3258716090,
+   2193019164,
+   668945538,
+   529760961
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 115064,
+  "stashSeeds": [
+   3296892714,
+   1450050168,
+   3153128404,
+   908985160,
+   531803354,
+   2259841797,
+   4243504168,
+   1850434957
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 116064,
+  "stashSeeds": [
+   1425423268,
+   3643269532,
+   621976432,
+   2383714969,
+   1073406738,
+   75684393,
+   967214124,
+   3872068288
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 117064,
+  "stashSeeds": [
+   1271997942,
+   2960040563,
+   4200273871,
+   2650995382,
+   3815406087,
+   2266345006,
+   1685429966,
+   833862716
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 118064,
+  "stashSeeds": [
+   3534339411,
+   1646126284,
+   1726027382,
+   4082221458,
+   2533866895,
+   2897559121,
+   557834207,
+   3029339436
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 119064,
+  "stashSeeds": [
+   955846493,
+   2461426806,
+   3345626494,
+   1635530787,
+   3674948798,
+   3872510068,
+   2653984341,
+   1571147189
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 120064,
+  "stashSeeds": [
+   4271792475,
+   2373760608,
+   1882046256,
+   1048199419,
+   3683721212,
+   1077034009,
+   28760523,
+   727529697
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 121064,
+  "stashSeeds": [
+   4107485545,
+   1659859453,
+   326075890,
+   4105955759,
+   1680062577,
+   3369126395,
+   1168576217,
+   1006844261
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 101072,
+  "stashSeeds": [
+   1143143936,
+   3491078375,
+   1069496280,
+   179812262,
+   3710572278,
+   785260473,
+   759532737,
+   344600461
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 102072,
+  "stashSeeds": [
+   3360142575,
+   537434520,
+   4006633999,
+   2146763036,
+   2107104476,
+   4029617448,
+   449186109,
+   3580808522
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 103072,
+  "stashSeeds": [
+   49193937,
+   2111078836,
+   1003997247,
+   980432715,
+   137076099,
+   3910527305,
+   1302150196,
+   1767203061
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 104072,
+  "stashSeeds": [
+   185204757,
+   1729022306,
+   4014250089,
+   2842280230,
+   3775419943,
+   980945961,
+   878472797,
+   984602932
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 105072,
+  "stashSeeds": [
+   2295647139,
+   1455770956,
+   2055473099,
+   3664815729,
+   1918119432,
+   2290545329,
+   2129935716,
+   671558612
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 106072,
+  "stashSeeds": [
+   709350475,
+   3121252977,
+   1130529033,
+   1434597821,
+   2538559366,
+   3338164578,
+   3555069299,
+   3831693686
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 107072,
+  "stashSeeds": [
+   2966427732,
+   4000588014,
+   2444562343,
+   353863734,
+   1287142183,
+   3459265163,
+   1826540174,
+   1693347732
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 108072,
+  "stashSeeds": [
+   4164618257,
+   4004700537,
+   2697337382,
+   3936620774,
+   3650631784,
+   1768852763,
+   2031664800,
+   3206541983
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 109072,
+  "stashSeeds": [
+   208063205,
+   64682347,
+   2443975939,
+   4012703501,
+   4145741335,
+   632184510,
+   3568440542,
+   45990084
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 110072,
+  "stashSeeds": [
+   1008319571,
+   2336290996,
+   359123219,
+   814103918,
+   1423585028,
+   1484834414,
+   1429642358,
+   624054715
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 111072,
+  "stashSeeds": [
+   1202584603,
+   3199210476,
+   4053637573,
+   1872356940,
+   2353009105,
+   850180553,
+   2773878906,
+   1839493722
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 112072,
+  "stashSeeds": [
+   3373905210,
+   4088202559,
+   1654572230,
+   2314589703,
+   3249420115,
+   4249122881,
+   1430702294,
+   406247620
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 113072,
+  "stashSeeds": [
+   1016068479,
+   3364640592,
+   1102498787,
+   85794007,
+   1888925309,
+   2882233414,
+   2507653306,
+   1436745217
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 114072,
+  "stashSeeds": [
+   1675614073,
+   2418232276,
+   3836561552,
+   1101624953,
+   213545662,
+   33707698,
+   855990248,
+   1036880153
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 115072,
+  "stashSeeds": [
+   1609136398,
+   3744635886,
+   2378764193,
+   3586035880,
+   4088674548,
+   913195857,
+   3664004163,
+   1155630781
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 116072,
+  "stashSeeds": [
+   4235807741,
+   3829643822,
+   2973326273,
+   3356013792,
+   1888828942,
+   4093396492,
+   1251611151,
+   152112352
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 117072,
+  "stashSeeds": [
+   1106330737,
+   1459340931,
+   3191317785,
+   2650488163,
+   2063904265,
+   830826874,
+   1641786517,
+   1790150233
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 118072,
+  "stashSeeds": [
+   3414848482,
+   1579014075,
+   1962485951,
+   2940807362,
+   3025676058,
+   3389624355,
+   3960257604,
+   2883029666
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 119072,
+  "stashSeeds": [
+   577129150,
+   489487044,
+   3592409482,
+   2771867320,
+   3096632333,
+   2869689267,
+   876038409,
+   1848801092
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 120072,
+  "stashSeeds": [
+   71257903,
+   1386542855,
+   3265441736,
+   3641195153,
+   656674271,
+   861156812,
+   4179525120,
+   605167660
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 121072,
+  "stashSeeds": [
+   1152571486,
+   1286209833,
+   2914819339,
+   2406585414,
+   1376117257,
+   495953738,
+   3101658669,
+   1554879423
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 101080,
+  "stashSeeds": [
+   74925765,
+   2819440506,
+   3093742629,
+   1849871429,
+   3708677775,
+   1458709137,
+   3821534830,
+   1457225925
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 102080,
+  "stashSeeds": [
+   1854303308,
+   46841868,
+   3527051021,
+   1593583549,
+   4289028655,
+   796447838,
+   3202692165,
+   671596444
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 103080,
+  "stashSeeds": [
+   592385454,
+   16705260,
+   187453262,
+   470147197,
+   3460125449,
+   394643493,
+   208436037,
+   2956966919
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 104080,
+  "stashSeeds": [
+   3040788715,
+   2646015872,
+   1017826573,
+   709651910,
+   3330006692,
+   222433436,
+   3441292806,
+   337405288
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 105080,
+  "stashSeeds": [
+   2394579161,
+   3395570798,
+   2692489912,
+   1448546998,
+   1387125390,
+   840820112,
+   1530774804,
+   3884181057
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 106080,
+  "stashSeeds": [
+   4032443105,
+   1027638096,
+   3026461270,
+   1946516168,
+   2434067210,
+   1292664125,
+   1149780167,
+   3925345996
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 107080,
+  "stashSeeds": [
+   617112139,
+   3938600694,
+   1629025738,
+   3916638874,
+   3463698242,
+   1740657170,
+   3682226507,
+   81120730
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 108080,
+  "stashSeeds": [
+   2527982169,
+   1630059105,
+   2543082501,
+   37533653,
+   3456460292,
+   891704212,
+   1778687495,
+   247417445
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 109080,
+  "stashSeeds": [
+   660191961,
+   3411514433,
+   1771184348,
+   3435415804,
+   2161368957,
+   1493627858,
+   3790492907,
+   4284919177
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 110080,
+  "stashSeeds": [
+   2252218376,
+   4033342668,
+   2250482490,
+   3843222670,
+   2836453006,
+   2460999124,
+   1040824099,
+   3021727515
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 111080,
+  "stashSeeds": [
+   3448664847,
+   2669769300,
+   43852895,
+   3092612322,
+   3219696123,
+   1802955312,
+   926870848,
+   3106899215
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 112080,
+  "stashSeeds": [
+   136585331,
+   1549717678,
+   1682042928,
+   1335708591,
+   708500605,
+   2560476486,
+   3390207163,
+   257783487
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 113080,
+  "stashSeeds": [
+   947455492,
+   163676021,
+   2458569580,
+   1460412206,
+   795246577,
+   2813636226,
+   281858102,
+   3219920865
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 114080,
+  "stashSeeds": [
+   147217705,
+   3716841895,
+   4005192427,
+   2038392598,
+   4090914507,
+   81928729,
+   2268045116,
+   1397501986
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 115080,
+  "stashSeeds": [
+   2239914253,
+   2300502911,
+   206383149,
+   289751190,
+   2751585515,
+   4120517400,
+   225400979,
+   677504067
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 116080,
+  "stashSeeds": [
+   4057468943,
+   826844752,
+   1784871516,
+   2019628782,
+   856044648,
+   2243212589,
+   2816334598,
+   1405637490
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 117080,
+  "stashSeeds": [
+   878443465,
+   2119655086,
+   188405394,
+   550196895,
+   3611977711,
+   2534732985,
+   2631158379,
+   446598776
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 118080,
+  "stashSeeds": [
+   2672786985,
+   4038655949,
+   2660385325,
+   522633547,
+   2484424590,
+   2461015083,
+   1210633379,
+   2828020880
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 119080,
+  "stashSeeds": [
+   1855806421,
+   51253037,
+   3451036526,
+   4054794446,
+   578491555,
+   1187605183,
+   1978788906,
+   767791767
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 120080,
+  "stashSeeds": [
+   2994401957,
+   3194797838,
+   2005352363,
+   786522220,
+   2697162116,
+   586639981,
+   3941992677,
+   3647751765
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 121080,
+  "stashSeeds": [
+   3471764621,
+   1105083507,
+   3417697355,
+   1437548141,
+   1509461878,
+   2576274489,
+   3206714094,
+   3860180604
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 101088,
+  "stashSeeds": [
+   1264782553,
+   2041502995,
+   1428382826,
+   3497454426,
+   4291010686,
+   1483795935,
+   220553346,
+   671612484
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 102088,
+  "stashSeeds": [
+   3968296373,
+   995121066,
+   810691360,
+   1472410205,
+   1956078513,
+   3977011502,
+   1815149758,
+   2453353206
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 103088,
+  "stashSeeds": [
+   1296077963,
+   3346886161,
+   1203367093,
+   2771935712,
+   707021906,
+   2245383650,
+   2997746010,
+   500240292
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 104088,
+  "stashSeeds": [
+   1136166514,
+   3843784464,
+   901339940,
+   2057239475,
+   2934190649,
+   2787637338,
+   3366604187,
+   2766380161
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 105088,
+  "stashSeeds": [
+   1505709500,
+   3569253433,
+   1069363121,
+   1073269515,
+   827829365,
+   3917935544,
+   1838447262,
+   3120627956
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 106088,
+  "stashSeeds": [
+   2703558834,
+   722829957,
+   2383497653,
+   2389769813,
+   1170780779,
+   587802797,
+   4126666185,
+   3085408516
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 107088,
+  "stashSeeds": [
+   3143041100,
+   4086330759,
+   3481530515,
+   2624565182,
+   4246076193,
+   4282714729,
+   1969012625,
+   1587450589
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 108088,
+  "stashSeeds": [
+   1745622379,
+   2451033648,
+   1002459918,
+   1602851588,
+   4189538994,
+   3346238188,
+   634685219,
+   4244880072
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 109088,
+  "stashSeeds": [
+   1889429994,
+   3845185084,
+   2898797175,
+   91461019,
+   406117870,
+   2322034569,
+   2642394340,
+   146841323
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 110088,
+  "stashSeeds": [
+   2938631452,
+   4020696381,
+   3042189855,
+   242002015,
+   560655973,
+   4007814277,
+   4195818513,
+   3030641784
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 111088,
+  "stashSeeds": [
+   3955691512,
+   2646581773,
+   855487957,
+   1394861900,
+   3016672907,
+   1512059218,
+   2269097909,
+   3219218321
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 112088,
+  "stashSeeds": [
+   3992145124,
+   1174484478,
+   1017916118,
+   3305768596,
+   2460820143,
+   2981476092,
+   2275019145,
+   3442074516
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 113088,
+  "stashSeeds": [
+   1504514495,
+   4145821329,
+   1844495641,
+   1724483800,
+   842932206,
+   3049804799,
+   524809063,
+   441618622
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 114088,
+  "stashSeeds": [
+   3884495402,
+   2003032273,
+   2917656975,
+   3305414855,
+   1756290904,
+   2035994197,
+   4014992257,
+   32402364
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 115088,
+  "stashSeeds": [
+   3070504790,
+   2297852857,
+   2271127436,
+   4197453426,
+   3223813010,
+   3120659059,
+   1292281870,
+   2312414431
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 116088,
+  "stashSeeds": [
+   2645896921,
+   1927948891,
+   916597249,
+   3388317275,
+   4082616940,
+   850116427,
+   1970382976,
+   2939182259
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 117088,
+  "stashSeeds": [
+   2382874159,
+   3645835164,
+   2571839337,
+   3810347235,
+   1049759651,
+   3526193253,
+   3052395325,
+   2469110572
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 118088,
+  "stashSeeds": [
+   743144822,
+   3999570884,
+   1880479440,
+   1731388933,
+   2097769389,
+   3020770190,
+   3349447154,
+   3049967916
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 119088,
+  "stashSeeds": [
+   2582731715,
+   4123732079,
+   3635359017,
+   1872315365,
+   2243885763,
+   1991943703,
+   2227174546,
+   4209709171
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 120088,
+  "stashSeeds": [
+   1902596318,
+   3498057699,
+   1188199184,
+   2783725662,
+   2343572885,
+   61317519,
+   598882345,
+   3996107810
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 121088,
+  "stashSeeds": [
+   2275517276,
+   2433909321,
+   543018173,
+   1777657968,
+   3831196846,
+   138603432,
+   3305804295,
+   817056956
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 101096,
+  "stashSeeds": [
+   470693611,
+   2699038537,
+   43298963,
+   2405953350,
+   2532666252,
+   1941720342,
+   1056182326,
+   3087738741
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 102096,
+  "stashSeeds": [
+   4089552087,
+   1037109749,
+   3425196323,
+   1336587111,
+   1159275361,
+   3309797944,
+   3551400562,
+   407849428
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 103096,
+  "stashSeeds": [
+   1349105147,
+   2612658514,
+   2384940028,
+   3721720627,
+   2143405881,
+   2353115890,
+   1727497766,
+   1871364294
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 104096,
+  "stashSeeds": [
+   3561003914,
+   3958425129,
+   250799767,
+   2996485022,
+   2384031365,
+   1348041174,
+   807891110,
+   3737424704
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 105096,
+  "stashSeeds": [
+   1322475228,
+   259271671,
+   51341379,
+   86048319,
+   1021545186,
+   2226497568,
+   518999038,
+   809030953
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 106096,
+  "stashSeeds": [
+   388340998,
+   1018410919,
+   1331115776,
+   2328610487,
+   2676156574,
+   1021095486,
+   3426103519,
+   1652160684
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 107096,
+  "stashSeeds": [
+   1702737325,
+   2314415300,
+   4128629715,
+   2831112469,
+   935707085,
+   569715664,
+   2086546442,
+   2220501408
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 108096,
+  "stashSeeds": [
+   2254835997,
+   1854199221,
+   59518924,
+   2947010466,
+   3092566125,
+   2745061499,
+   544539752,
+   45687142
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 109096,
+  "stashSeeds": [
+   317411417,
+   2914707518,
+   4073852681,
+   1455403618,
+   3314724531,
+   1437230550,
+   3637310371,
+   23318554
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 110096,
+  "stashSeeds": [
+   317489175,
+   2287476890,
+   2387819857,
+   1465445505,
+   3750398744,
+   2373126919,
+   3640012090,
+   1789070233
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 111096,
+  "stashSeeds": [
+   893569213,
+   1715158200,
+   4100605633,
+   3210676861,
+   2281201772,
+   3902548628,
+   294989994,
+   260174134
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 112096,
+  "stashSeeds": [
+   3030163741,
+   3926730657,
+   5915691,
+   2467678342,
+   1855519514,
+   2339022014,
+   3864073541,
+   480813300
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 113096,
+  "stashSeeds": [
+   1060421037,
+   348872844,
+   1075204752,
+   182813425,
+   3139600563,
+   2873998463,
+   2193055534,
+   4140557410
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 114096,
+  "stashSeeds": [
+   2620585307,
+   3864073388,
+   3328113406,
+   2430217927,
+   2280198027,
+   4256068661,
+   307418925,
+   779334449
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 115096,
+  "stashSeeds": [
+   2414299879,
+   620496074,
+   193512201,
+   2907084459,
+   1901283725,
+   1587595339,
+   639578843,
+   3407516118
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 116096,
+  "stashSeeds": [
+   1323860687,
+   3618279519,
+   881579494,
+   1738085726,
+   3006602516,
+   1172421248,
+   678980816,
+   2669787810
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 117096,
+  "stashSeeds": [
+   4034166198,
+   2413967666,
+   553558070,
+   660768964,
+   1853002300,
+   1851292738,
+   108507615,
+   2856631310
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 118096,
+  "stashSeeds": [
+   354573293,
+   1934332960,
+   2785775278,
+   4173730018,
+   1893221269,
+   4207960268,
+   2751834784,
+   622513930
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 119096,
+  "stashSeeds": [
+   3271132669,
+   1721773573,
+   3156594896,
+   2668962365,
+   612652260,
+   3878244188,
+   1885081572,
+   2612216055
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 120096,
+  "stashSeeds": [
+   267336077,
+   3891362867,
+   1363480876,
+   438195292,
+   240724357,
+   1575388989,
+   2439766226,
+   97656589
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 121096,
+  "stashSeeds": [
+   1622242814,
+   3135333955,
+   172950054,
+   3895947897,
+   2651963850,
+   3210947178,
+   3471279433,
+   1353826889
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 101104,
+  "stashSeeds": [
+   275847550,
+   3620121737,
+   4272361921,
+   2835706782,
+   1727887906,
+   2372667614,
+   3503911251,
+   2669248346
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 102104,
+  "stashSeeds": [
+   416619539,
+   2374932001,
+   1472662887,
+   886081936,
+   2890434983,
+   853905162,
+   2654480700,
+   1916591245
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 103104,
+  "stashSeeds": [
+   1015299494,
+   3022209527,
+   2079103426,
+   3638454797,
+   591103089,
+   4284740568,
+   4211465347,
+   1372080539
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 104104,
+  "stashSeeds": [
+   1696053486,
+   2919319998,
+   3897921172,
+   2753570819,
+   2845021278,
+   57921127,
+   3249318393,
+   2377319431
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 105104,
+  "stashSeeds": [
+   3013498116,
+   4035926781,
+   3261234027,
+   3290172982,
+   329208738,
+   2923678117,
+   1015739514,
+   73881236
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 106104,
+  "stashSeeds": [
+   2582099508,
+   1647656120,
+   646697162,
+   2790638602,
+   2672013030,
+   2979746497,
+   1406714552,
+   898563822
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 107104,
+  "stashSeeds": [
+   4118061724,
+   474539989,
+   2769677457,
+   382650352,
+   3446778038,
+   975052756,
+   3396854142,
+   1015935089
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 108104,
+  "stashSeeds": [
+   583887953,
+   3384028817,
+   433976127,
+   3646144225,
+   357868989,
+   788754174,
+   1051637136,
+   1943573692
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 109104,
+  "stashSeeds": [
+   1250388453,
+   3878901790,
+   3745489422,
+   211129122,
+   1180026578,
+   2495790194,
+   1876965198,
+   3439009476
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 110104,
+  "stashSeeds": [
+   389374265,
+   2282030040,
+   3622119457,
+   1933272821,
+   1932666572,
+   895919477,
+   2477903554,
+   3658641210
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 111104,
+  "stashSeeds": [
+   490075637,
+   4136799924,
+   2662028508,
+   1634160522,
+   2660296545,
+   216473340,
+   301450087,
+   4069929678
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 112104,
+  "stashSeeds": [
+   501506792,
+   1660370602,
+   752013646,
+   822733061,
+   3266560235,
+   3327126825,
+   4224925473,
+   3191442642
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 113104,
+  "stashSeeds": [
+   1048032994,
+   1708713246,
+   271390313,
+   1937376403,
+   2282840994,
+   1957548938,
+   3694816364,
+   2657452275
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 114104,
+  "stashSeeds": [
+   3685060395,
+   1826790596,
+   3478001076,
+   2192456829,
+   3789208097,
+   3859845904,
+   355958377,
+   3481119844
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 115104,
+  "stashSeeds": [
+   1168870751,
+   1009101827,
+   61977949,
+   3350854494,
+   2467082048,
+   1056231798,
+   885195084,
+   1600606530
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 116104,
+  "stashSeeds": [
+   268947806,
+   3667988869,
+   1261728655,
+   774483526,
+   4199623123,
+   1423932342,
+   2513063354,
+   2966567450
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 117104,
+  "stashSeeds": [
+   2400398054,
+   2321989553,
+   3097878964,
+   4184215156,
+   879641152,
+   3467207202,
+   1491104352,
+   1045387821
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 118104,
+  "stashSeeds": [
+   119795505,
+   3049376909,
+   1087529510,
+   3393140642,
+   648704886,
+   597149867,
+   1263409984,
+   482684256
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 119104,
+  "stashSeeds": [
+   3938386899,
+   598666626,
+   3778002804,
+   3779428643,
+   107501288,
+   3594483853,
+   2752917888,
+   511783824
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 120104,
+  "stashSeeds": [
+   946746248,
+   1764785392,
+   1951107157,
+   3772928148,
+   3975822911,
+   955644804,
+   340593670,
+   925425107
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 121104,
+  "stashSeeds": [
+   3349774025,
+   876096502,
+   2458379566,
+   3105233019,
+   3820351826,
+   3245526684,
+   186268763,
+   3860828608
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 101112,
+  "stashSeeds": [
+   3984404762,
+   2074825217,
+   2884732298,
+   3665850226,
+   960818683,
+   680211311,
+   2420547568,
+   2841911690
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 102112,
+  "stashSeeds": [
+   311671180,
+   3820720962,
+   3004227688,
+   1814776653,
+   2824178520,
+   91753995,
+   3797488169,
+   1080463419
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 103112,
+  "stashSeeds": [
+   1769952797,
+   504366849,
+   1738308532,
+   730475736,
+   651659887,
+   4001775279,
+   3963404158,
+   1487666868
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 104112,
+  "stashSeeds": [
+   2184939643,
+   3451234799,
+   3502969696,
+   909794475,
+   300404320,
+   2603061328,
+   2055140607,
+   1808009406
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 105112,
+  "stashSeeds": [
+   3425439965,
+   1636307192,
+   3183203297,
+   1665309902,
+   1158789380,
+   2256369245,
+   3833877035,
+   2687078431
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 106112,
+  "stashSeeds": [
+   2953378378,
+   581747061,
+   3707735450,
+   2557833454,
+   3454201950,
+   2297523663,
+   2725194673,
+   2563781888
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 107112,
+  "stashSeeds": [
+   3293380651,
+   272359530,
+   2501663757,
+   148427217,
+   1549750115,
+   3911413308,
+   3984958479,
+   1613535539
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 108112,
+  "stashSeeds": [
+   2691427148,
+   2199607388,
+   2850615691,
+   1304602523,
+   4201417409,
+   1122232257,
+   264805075,
+   1480513874
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 109112,
+  "stashSeeds": [
+   4259049826,
+   1730139800,
+   3274782245,
+   640384381,
+   3282317745,
+   1576679289,
+   3589744700,
+   2600699942
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 110112,
+  "stashSeeds": [
+   3229056839,
+   2820977811,
+   409219091,
+   1226102990,
+   1063041448,
+   494695184,
+   191835724,
+   2161366897
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 111112,
+  "stashSeeds": [
+   3508931035,
+   3357768944,
+   3755177092,
+   1464053158,
+   1626466737,
+   159739461,
+   242990722,
+   1862489822
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 112112,
+  "stashSeeds": [
+   2810965524,
+   2848851270,
+   1904704032,
+   54026904,
+   156732858,
+   461036560,
+   3410681710,
+   854250904
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 113112,
+  "stashSeeds": [
+   4223243535,
+   745782976,
+   4104391387,
+   1892285338,
+   3537691541,
+   3239284592,
+   1359163223,
+   1752834012
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 114112,
+  "stashSeeds": [
+   911439529,
+   2701196275,
+   2260925370,
+   1784119807,
+   1649642000,
+   1501494214,
+   4197576885,
+   1570362407
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 115112,
+  "stashSeeds": [
+   3560765806,
+   542541722,
+   3795524297,
+   719237231,
+   2804184046,
+   2740823504,
+   942368911,
+   3863802113
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 116112,
+  "stashSeeds": [
+   3703988558,
+   3308378980,
+   3768510147,
+   1726083348,
+   547587654,
+   357045405,
+   4070017754,
+   810286889
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 117112,
+  "stashSeeds": [
+   2708211662,
+   3370659721,
+   4189617812,
+   2030537652,
+   3382830458,
+   8403854,
+   1964209344,
+   4279069739
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 118112,
+  "stashSeeds": [
+   505317538,
+   1733812059,
+   1729487611,
+   2251850913,
+   1238492897,
+   329226759,
+   2374526135,
+   228974536
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 119112,
+  "stashSeeds": [
+   2960415473,
+   2963790855,
+   2233284742,
+   1247456286,
+   2733429680,
+   1272512961,
+   167881640,
+   1354066938
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 120112,
+  "stashSeeds": [
+   734786471,
+   2079478914,
+   1735566262,
+   2946854859,
+   4013323937,
+   912104486,
+   961714884,
+   1274869943
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 121112,
+  "stashSeeds": [
+   838738850,
+   3134153613,
+   3431857996,
+   3726093009,
+   1976204045,
+   2541480286,
+   1830908968,
+   3550171177
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 101120,
+  "stashSeeds": [
+   67125209,
+   1272447645,
+   1964672898,
+   750751419,
+   4240674726,
+   99362865,
+   3369017440,
+   3638157432
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 102120,
+  "stashSeeds": [
+   751290425,
+   4158623763,
+   51150008,
+   4252433912,
+   648143060,
+   510174344,
+   2845804634,
+   635411535
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 103120,
+  "stashSeeds": [
+   2268985544,
+   1514035047,
+   1671318981,
+   1885481912,
+   4187725714,
+   2579118138,
+   1611870953,
+   507090002
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 104120,
+  "stashSeeds": [
+   2760043230,
+   3104371302,
+   3525530625,
+   526232400,
+   969085618,
+   3380956728,
+   991260893,
+   2600574750
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 105120,
+  "stashSeeds": [
+   1054131066,
+   3558782143,
+   3998087512,
+   1704936942,
+   263299271,
+   193256079,
+   1801655079,
+   2118985213
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 106120,
+  "stashSeeds": [
+   3811680170,
+   2438356124,
+   983105893,
+   779493186,
+   3261145793,
+   682899584,
+   2809675199,
+   1827076209
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 107120,
+  "stashSeeds": [
+   2511465307,
+   693725616,
+   3259920650,
+   2865832457,
+   3298732188,
+   1203514759,
+   1376095727,
+   3432695567
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 108120,
+  "stashSeeds": [
+   3127796874,
+   479523856,
+   1784106266,
+   356830895,
+   1500242720,
+   91688334,
+   1594371670,
+   2228562783
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 109120,
+  "stashSeeds": [
+   241734299,
+   3689755729,
+   3417934007,
+   2909758740,
+   3904013129,
+   1409712234,
+   122746450,
+   2061303702
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 110120,
+  "stashSeeds": [
+   3239852727,
+   1702498874,
+   3960125266,
+   952838803,
+   2648378318,
+   2377465875,
+   3386073418,
+   3297904732
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 111120,
+  "stashSeeds": [
+   3302473541,
+   3078906092,
+   1526858862,
+   860260871,
+   2239895640,
+   2080599716,
+   2115186455,
+   423836350
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 112120,
+  "stashSeeds": [
+   2442734139,
+   1930242996,
+   3686397625,
+   2015933917,
+   673461991,
+   1658022444,
+   3841665073,
+   4167626497
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 113120,
+  "stashSeeds": [
+   2888657097,
+   2389331677,
+   2615925065,
+   2308638498,
+   1674122800,
+   3880307285,
+   3250914389,
+   409952749
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 114120,
+  "stashSeeds": [
+   2653308911,
+   603349485,
+   2531383451,
+   3346893695,
+   2162777828,
+   2459010107,
+   102525169,
+   2253815552
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 115120,
+  "stashSeeds": [
+   1278961181,
+   328445207,
+   4109649003,
+   2930457085,
+   3581276848,
+   1584865298,
+   875804258,
+   4093150902
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 116120,
+  "stashSeeds": [
+   2290028690,
+   1655185350,
+   3528855789,
+   2151508779,
+   3403408111,
+   1696133854,
+   246093263,
+   1124035625
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 117120,
+  "stashSeeds": [
+   233529015,
+   3964349163,
+   166755058,
+   2754403865,
+   3910545955,
+   4231691860,
+   756637960,
+   172555742
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 118120,
+  "stashSeeds": [
+   3433334801,
+   517721446,
+   3632993953,
+   2311082208,
+   3076834951,
+   2982515438,
+   3191056692,
+   992434509
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 119120,
+  "stashSeeds": [
+   2385228415,
+   1918630470,
+   2610715478,
+   3768849535,
+   481530275,
+   1084642595,
+   1228992450,
+   2436816787
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 120120,
+  "stashSeeds": [
+   3210710697,
+   986780538,
+   995834410,
+   2232758926,
+   3154741324,
+   459931115,
+   1743701391,
+   1919542482
+  ]
+ },
+ {
+  "profile": "apex",
+  "bank": "jev-apex-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 121120,
+  "stashSeeds": [
+   2010978913,
+   1108655518,
+   3571199814,
+   1459731597,
+   2115255321,
+   852994997,
+   3670185584,
+   3338676326
+  ]
+ }
+]

@@ -5,7 +5,7 @@ import { crewStoryProgress } from '../logic/contactProgress.js';
 import { shouldShowCity } from '../logic/city.js';
 import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
-import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout, rivalSessionPocket, rivalUpcomingAttempt } from '../logic/rivals.js';
+import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout, rivalSessionPocket, rivalUpcomingAttempt, rivalHouseMazeOptions } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
 import RivalsRace from '../controllers/RivalsRace.js';
 import { advanceJourney, worldBlock, worldHouseSeed } from '../logic/worldBlocks.js';
@@ -175,7 +175,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // PvE session tracking
     this.runKind = ['journey','rivals'].includes(initData?.runKind) ? initData.runKind : 'daily';
-    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID })) : null;
+    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID, stashSeed: initData?.rivalStashSeed, pool: initData?.rivalPool ?? globalThis.__plugRunRivalPool })) : null;
     this.rivals = null;
     this._blockEntranceShown = false;
     this._showCityOnEntry = false;
@@ -232,6 +232,13 @@ export class BaseGameScene extends Phaser.Scene {
       // Runner and plug modes get different seeds for balanced gameplay
       const routeID = getCurrentRouteID();
       this.currentRouteID = this.runKind === 'rivals' ? this.rivalRace.course.id : routeID;
+      // A designed Rivals course has its own board size (logic/rivalCourseDesigns.js);
+      // the original seven and every other mode keep the fixed 16x35 grid.
+      if (this.runKind === 'rivals') {
+        const opts = rivalHouseMazeOptions(this.rivalRace.course, this.pveRound - 1);
+        this.cols = opts.cols;
+        this.rows = opts.rows;
+      }
       this.seed = this.runKind === 'rivals' ? this.rivalRace.course.seeds[this.pveRound - 1] : this.runKind === 'journey'
         ? worldHouseSeed(this.blockIndex, this.pveRound, 'runner')
         : getRouteSeed(routeID, this.pveRound, this.role);
@@ -680,7 +687,8 @@ export class BaseGameScene extends Phaser.Scene {
     const roundScale = this.runKind === 'rivals' ? this.rivalRace.course.scales[this.pveRound - 1] : this.mode === 'pve'
       ? ([0, 0.6, 0.75, 0.9, 0.95][this.pveRound] ?? 1)
       : 1;
-    const arena = generateSquareMaze(this.cols, this.rows, { rng: makeRng(this.seed), role: this.role, clusterScale: roundScale });
+    const layout = this.runKind === 'rivals' ? rivalHouseMazeOptions(this.rivalRace.course, this.pveRound - 1).layout : null;
+    const arena = generateSquareMaze(this.cols, this.rows, { rng: makeRng(this.seed), role: this.role, clusterScale: roundScale, layout });
     this.grid = arena.grid;
     this.stashCell   = arena.objectives.stash;
     this.extractCell = arena.objectives.extract;
@@ -1507,7 +1515,7 @@ export class BaseGameScene extends Phaser.Scene {
 
   // stash & extract
   // A Rivals match can take its stash seed from the recorded rival it is
-  // paired with (utils/rivalSession.resolveRivalOpponent), after the first
+  // paired with (utils/rivalSession.applyRivalOffer), after the first
   // house was built on the provisional seed. The two bags are identical
   // sprites; only which one `this.stash` points at differs, so re-pointing
   // before the house clock starts changes nothing a player can see. Retries

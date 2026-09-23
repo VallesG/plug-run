@@ -8,8 +8,9 @@ import {
   rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
   rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock, validRivalPowers
 } from '../logic/rivals.js';
-import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome } from '../utils/rivalSession.js';
-import { matchSearchMs, matchSearchSteps, matchCarousel, matchLanding, matchQuality, matchClock } from '../logic/rivalMatchmaking.js';
+import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome, findRivalMatch, applyRivalOffer } from '../utils/rivalSession.js';
+import { advanceMatch, planMatchSearch, matchSettleAt, MATCH_SEARCH_CAP_MS, rivalShortName } from '../logic/rivalMatchmaking.js';
+import { RivalMatchScreen } from './RivalMatchScreen.js';
 import { playRivalReplay } from './RivalReplayPlayer.js';
 import { playExtraction } from './extractionAnimation.js';
 import { showRunnerLoadout } from './RunnerLoadout.js';
@@ -17,6 +18,12 @@ import ReplaySystem from './ReplaySystem.js';
 import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
+
+// This session only, never saved: the last few search lengths (so the next
+// search does not repeat them) and the last mix taken into a race (the lobby
+// starts on it).
+const recentSearches = [];
+let lastLobbyPowers = null;
 
 // Scene adapter. Race state survives house restarts; Phaser objects never do.
 export default class RivalsRace {
@@ -45,8 +52,8 @@ export default class RivalsRace {
     if (this.race.status === 'countdown') return;
     this.scene.suspendTouchUI?.(true);
     if(this.race.rivalCityIndex){
-      if(this.race.entryStage==='search'){this.findMatch();return;}
-      if(this.race.entryStage==='loadout'){this.openLoadout();return;}
+      // A restart mid-match reopens the same stage; it never skips one.
+      if(['searching','unavailable','found','selecting'].includes(this.race.entryStage)){this.resumeMatch();return;}
       this.race.entryStage='block';
       if(!this.race.cityIntroShown){
         this.race.cityIntroShown=true;
@@ -74,101 +81,156 @@ export default class RivalsRace {
       fullScreen:true,title:this.race.course.name.toUpperCase(),
       subtitle:'BLOCK RIVALS · SEVEN HOUSES · ONE RACE',
       lines:[],buttons:[
-        {label:'LOOK FOR MATCH',variant:'primary',onClick:()=>{this.race.entryStage='loadout';this.openLoadout();}},
+        {label:'LOOK FOR MATCH',variant:'primary',onClick:()=>this.startSearch()},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
     });
     this.entryModal=modal;
     drawRivalDistrictMap(this.scene,modal,this.race);
   }
-  findMatch(){
-    if(this.disposed||this.searching||this.race.status!=='ready')return;
-    this.searching=true;this.race.entryStage='search';
-    trackScene(this.scene,'rivals_matchmaking_started',{course_slot:this.race.course.slot});
-    this.entryModal?.destroy?.({resumeTouch:false});
-    this.entryModal=this.scene.gameUI.showModal({
-      // No claim is made about anyone being online, in a queue or playing now,
-      // and no recording vocabulary reaches the player. Everything shown is
-      // true: the course, that the pick is matched to the player's measured
-      // pace, the names actually in this course's pool, and how the chosen
-      // rival's measured pace compares (logic/rivalMatchmaking.js).
-      title:'FINDING RIVAL',subtitle:this.race.course.name?this.race.course.name.toUpperCase():'BLOCK RIVALS',
-      lines:['SEVEN HOUSES · ONE RACE'],
-      buttons:[{label:'CANCEL',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}]
+  // -------------------------------------------------------------------------
+  // The match. race.entryStage walks block -> searching -> found -> selecting
+  // -> ready -> countdown -> racing (logic/rivalMatchmaking.js), one legal step
+  // at a time, and lives on the race: a restart (resize, rotation) reopens the
+  // same stage, and a stale callback finds the stage moved on and does nothing.
+  // Search, reveal and lobby are one opaque screen (RivalMatchScreen); the
+  // house underneath is first seen when READY starts the countdown.
+  //
+  // What is shown is what is raced: the rival named in the lobby is the one
+  // whose record READY applies, on the course picked, with that record's stash
+  // seed, times and replay (utils/rivalSession.findRivalMatch/applyRivalOffer).
+  // -------------------------------------------------------------------------
+  matchScreen(){
+    // The block screen's button resumes touch as it closes; the match screen
+    // keeps the world frozen and the touch controls away until GO.
+    this.scene.roundPausedForMenu=true;this.scene.input.keyboard.enabled=false;
+    this.scene.suspendTouchUI?.(true);
+    if(!this.screen||this.screen.destroyed)this.screen=new RivalMatchScreen(this.scene,{home:this.race.course,gangID:this.race.territoryGang,labels:{
+      overline:'BLOCK RIVALS',you:'YOU',vs:'VS',rival:'RIVAL',ready:'READY',notReady:'NOT READY',
+      finding:'FINDING RIVAL',found:'RIVAL FOUND',none:'NO RIVAL FOUND',cancel:'CANCEL',back:'BACK',retry:'SEARCH AGAIN',
+      leave:'LEAVE',opens:'RIVAL OPENS',yours:'YOUR POWERS',empty:'EMPTY',pick:'PICK TWO POWERS'}});
+    return this.screen;
+  }
+  closeMatchScreen(){this.screen?.destroy();this.screen=null;}
+  startSearch(){
+    const race=this.race;
+    if(this.disposed||race.status!=='ready'||!advanceMatch(race,'searching'))return;
+    this.entryModal?.destroy?.({resumeTouch:false});this.entryModal=null;
+    const plan=planMatchSearch({recent:recentSearches});
+    recentSearches.push(plan.band);recentSearches.splice(0,Math.max(0,recentSearches.length-4));
+    const search={startedAt:performance.now(),revealMs:plan.revealMs,loadedAt:null,match:null};
+    race.matchSearch=search;race.match=null;race.lobby=null;
+    trackScene(this.scene,'rivals_matchmaking_started',{course_slot:race.course.slot});
+    let task;try{task=findRivalMatch(race);}catch{task=null;}
+    Promise.resolve(task).catch(()=>null).then(match=>{
+      // A cancelled or superseded search never lands.
+      if(race.matchSearch!==search)return;
+      search.match=match||null;search.loadedAt=performance.now();
     });
-    const scene=this.scene,w=scene.scale.gameSize.width,h=scene.scale.gameSize.height;
-    const cx=w/2,cy=h*.47,D=22000;
-    const add=o=>{this.objects.push(o);return o.setScrollFactor(0);};
-    // Sonar: three rings pulsing out from behind the name card.
-    const rings=[0,1,2].map(i=>{
-      const ring=add(scene.add.circle(cx,cy,34,0x000000,0).setStrokeStyle(2,0x7fd1c7,0.85).setDepth(D-1));
-      scene.tweens.add({targets:ring,scale:{from:1,to:4.4},alpha:{from:0.85,to:0},duration:1800,delay:i*600,repeat:-1,ease:'Sine.easeOut'});
-      return ring;
+    this.showSearch();
+  }
+  showSearch(){
+    const search=this.race.matchSearch;
+    this.matchScreen().showSearching({startedAt:search.startedAt,onCancel:()=>this.backToBlock()});
+  }
+  /** Called every frame while searching: lands the search when it is due. */
+  pollSearch(now){
+    const race=this.race,search=race.matchSearch;
+    if(this.disposed||race.status!=='ready'||race.entryStage!=='searching'||!search)return;
+    const settle=matchSettleAt({startedAt:search.startedAt,revealMs:search.revealMs,loadedAt:search.loadedAt,found:!!search.match});
+    if(settle==null?now<search.startedAt+MATCH_SEARCH_CAP_MS:now<settle)return;
+    race.matchSearch=null;
+    if(search.match&&settle!=null){
+      if(!advanceMatch(race,'found'))return;
+      race.match=search.match;
+      race.lobby={slot:search.match.offers[0].slot,powers:validRivalPowers(lastLobbyPowers)?lastLobbyPowers.slice():[]};
+      trackScene(this.scene,'rivals_match_found',{course_slot:race.course.slot,courses:search.match.offers.length});
+      this.showFound(true);
+    }else if(advanceMatch(race,'unavailable')){
+      // Nobody eligible by the cap: say so and offer the way on, never a
+      // stand-in rival.
+      trackScene(this.scene,'rivals_match_unavailable',{course_slot:race.course.slot});
+      this.showUnavailable();
+    }
+  }
+  showFound(animate){
+    const race=this.race,match=race.match;
+    this.matchScreen().showFound({name:this.rivalDisplayName(match.identity.displayName),
+      quality:match.offers[0].quality,animate,onDone:()=>{
+        if(this.disposed||race!==this.race||race.status!=='ready'||!advanceMatch(race,'selecting'))return;
+        this.showLobby(animate);
+      }});
+  }
+  showUnavailable(){
+    this.matchScreen().showUnavailable({onRetry:()=>this.startSearch(),onBack:()=>this.backToBlock()});
+  }
+  resumeMatch(){
+    const race=this.race,stage=race.entryStage;
+    const reset=()=>{race.entryStage='block';race.matchSearch=null;race.match=null;race.lobby=null;this.openDistrict();};
+    if(stage==='searching'){if(race.matchSearch)this.showSearch();else reset();return;}
+    if(stage==='unavailable'){this.showUnavailable();return;}
+    if(!race.match?.offers?.length){reset();return;}
+    // The reveal already happened; a restart goes straight to the lobby.
+    if(stage==='found')advanceMatch(race,'selecting');
+    this.showLobby(false);
+  }
+  showLobby(animate){
+    const race=this.race,match=race.match;
+    const lobby=race.lobby||(race.lobby={slot:match.offers[0].slot,powers:[]});
+    if(!match.offers.some(o=>o.slot===lobby.slot))lobby.slot=match.offers[0].slot;
+    this.matchScreen().showLobby({animate,
+      // A recorded rival is ready the moment it is found; a live one would
+      // report here when it is.
+      state:{name:this.rivalDisplayName(match.identity.displayName),offers:match.offers,slot:lobby.slot,
+        powers:lobby.powers,rivalReady:true},
+      onCourse:slot=>{
+        if(this.disposed||race.entryStage!=='selecting'||!match.offers.some(o=>o.slot===slot))return;
+        lobby.slot=slot;this.screen?.setCourse(slot);
+      },
+      onPowers:powers=>{if(race.entryStage==='selecting')lobby.powers=powers.slice();},
+      onReady:powers=>this.lockIn(powers),
+      onLeave:()=>this.backToBlock()
     });
-    this.searchCard=add(scene.add.text(cx,cy,'RIVAL',{
-      fontFamily:'Arial, sans-serif',fontSize:'22px',fontStyle:'bold',color:'#eee3c7',wordWrap:{width:w-70},
-      backgroundColor:'#111c23',padding:{x:20,y:12},align:'center'
-    }).setOrigin(.5).setDepth(D));
-    const status=add(scene.add.text(cx,cy+58,'',{fontFamily:'Arial, sans-serif',fontSize:'13px',fontStyle:'bold',color:'#7fd1c7',align:'center'}).setOrigin(.5).setDepth(D));
-    const clock=add(scene.add.text(cx,cy-60,'0:00',{fontFamily:'Arial, sans-serif',fontSize:'13px',color:'#9aa7ad',align:'center'}).setOrigin(.5).setDepth(D));
-
-    const started=performance.now();
-    const salt=(this.race.territoryUser||'')+'/'+this.race.course.id+'/'+Math.round(started);
-    const minMs=matchSearchMs(salt), steps=matchSearchSteps(this.race.course.name);
-    const tick=()=>{
-      const el=performance.now()-started;
-      clock.setText(matchClock(el));
-      status.setText(steps[Math.min(steps.length-1,Math.floor(el/(minMs/steps.length)))]);
-    };
-    let settled=false,i=0;
-    let task;try{task=resolveRivalOpponent(this.race);}catch{task=null;}
-    Promise.resolve(task).catch(()=>false).then(()=>{settled=true;});
-    const names=()=>matchCarousel((this.race.searchNames?.length?this.race.searchNames:['RIVAL']).map(n=>this.rivalDisplayName(n)),salt);
-
-    // Candidates cycle until the pick is known AND the search has run its
-    // course; then the wheel slows and lands on the actual pick.
-    const spin=()=>{
-      if(this.disposed||this.race.status!=='ready')return;
-      tick();
-      const pool=names();
-      if(settled&&performance.now()-started>=minMs){land(pool);return;}
-      this.searchCard.setText(pool[i++%pool.length]);
-      this.searchTimer=scene.time.delayedCall(110,spin);
-    };
-    const land=pool=>{
-      if(!this.race.opponent){found();return;}
-      const tail=matchLanding(pool,this.rivalDisplayName(this.race.opponent.displayName));
-      let k=0;
-      const step=()=>{
-        if(this.disposed||this.race.status!=='ready')return;
-        tick();
-        this.searchCard.setText(tail[k].name);
-        const ms=tail[k++].ms;
-        this.searchTimer=scene.time.delayedCall(ms,k<tail.length?step:found);
-      };
-      step();
-    };
-    const found=()=>{
-      if(this.disposed||this.race.status!=='ready')return;
-      rings.forEach(r=>{scene.tweens.killTweensOf(r);r.setVisible(false);});
-      const o=this.race.opponent;
-      if(o){
-        const quality=matchQuality(this.race.playerSkill?.estimateMs,o.benchmarkMs);
-        status.setText('RIVAL FOUND');
-        this.searchCard.setText(this.rivalDisplayName(o.displayName||'RIVAL')+(quality?'\n'+quality:'')
-          +(o.orderedPowers?'\n'+o.orderedPowers.map(p=>p.toUpperCase()).join(' → '):''));
-      }else{
-        status.setText('PACE TRIAL');
-        this.searchCard.setText('PACE TRIAL\nBeat the clock');
-      }
-      scene.tweens.add({targets:this.searchCard,scale:{from:1.18,to:1},duration:260,ease:'Back.easeOut'});
-      this.searchTimer=scene.time.delayedCall(1600,()=>{
-        if(this.disposed)return;
-        [this.searchCard,status,clock,...rings].forEach(x=>x?.destroy?.());this.entryModal?.destroy?.();
-        this.searching=false;this.race.entryStage='matched';this.preparePickupProgress();this.armCountdown();
-      });
-    };
-    spin();
+  }
+  backToBlock(){
+    const race=this.race;
+    if(this.disposed||race.status!=='ready')return;
+    const from=race.entryStage;
+    if(!advanceMatch(race,'block'))return;
+    race.matchSearch=null;race.match=null;race.lobby=null;
+    trackScene(this.scene,'rivals_match_left',{course_slot:race.course.slot,stage:from});
+    this.closeMatchScreen();
+    this.openDistrict();
+  }
+  /**
+   * READY, once. Applies the offer's record (on its course, with its stash
+   * seed) and starts the countdown at once: a recorded rival is never waited
+   * for. A different course than the house already built restarts the scene
+   * into that course's first house under the countdown.
+   */
+  lockIn(powers){
+    const race=this.race,match=race.match,lobby=race.lobby;
+    if(this.disposed||race.status!=='ready'||race.entryStage!=='selecting'||!validRivalPowers(powers))return;
+    const offer=match?.offers?.find(o=>o.slot===lobby?.slot);
+    const target=offer?applyRivalOffer(race,match,offer):null;
+    if(!target)return;
+    advanceMatch(race,'ready');
+    if(target!==race)target.entryStage='ready';
+    advanceMatch(target,'countdown');
+    lastLobbyPowers=powers.slice();
+    target.powers=powers.slice();
+    this.scene.runnerPowersSelected=powers.slice();this.scene.runnerPowersConsumed=[false,false];
+    trackScene(this.scene,'rivals_match_ready',{course_slot:offer.slot,power_1:powers[0],power_2:powers[1]});
+    target.status='countdown';target.countdownEndsAt=performance.now()+RIVAL_COUNTDOWN_MS;
+    this.closeMatchScreen();
+    if(target!==race){
+      this.setRace(target);
+      this.scene.scene.restart({mode:'pve',role:'runner',runKind:'rivals',pveRound:1,rivalRace:target});
+      return;
+    }
+    this.preparePickupProgress();
+    this.scene.roundPausedForMenu=true;this.scene.input.keyboard.enabled=false;
+    this.scene.suspendTouchUI?.(true);
   }
   armCountdown(){
     if(this.disposed||this.race.status!=='ready')return;
@@ -178,6 +240,11 @@ export default class RivalsRace {
     this.scene.suspendTouchUI?.(true);
   }
   rivalDisplayName(name){return String(name).replace(/\bBOT\s*[·:—-]?\s*/gi,'RIVAL · ').replace(/\bAI\s+/gi,'');}
+  /** RIVAL, or the recorded rival's own name when it is short and clean. */
+  rivalLabel(){
+    const name=this.race.opponentKind==='recorded-bot'?this.race.opponent?.displayName:null;
+    return (name&&rivalShortName(this.rivalDisplayName(name)))||'RIVAL';
+  }
   openLoadout() {
     if (this.race.status !== 'ready') return;
     this.preparePickupProgress();
@@ -196,10 +263,10 @@ export default class RivalsRace {
     }
     showRunnerLoadout(this.scene.gameUI, () => {
       this.race.powers = this.scene.runnerPowersSelected.slice();
-      if(this.race.rivalCityIndex)this.findMatch();else armCountdown();
+      armCountdown();
     }, {
       title:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
-      startLabel:this.race.rivalCityIndex?'LOOK FOR MATCH':'READY TO RACE',
+      startLabel:'READY TO RACE',
       helpText:this.race.opponent?.orderedPowers
         ? 'Rival starts: '+this.race.opponent.orderedPowers.map(id=>id.toUpperCase()).join(' → ')+'\nYour powers refill each house.'
         : 'Your powers refill each house and retry.',
@@ -333,7 +400,7 @@ export default class RivalsRace {
       rivalCarryingAt(this.race.pickupProgress?.windows,counts[1],elapsed)
     ];
     this.rows?.forEach((row,i)=>{
-      row.label.setText((i?'RIVAL ':'YOU ')+counts[i]+'/7');
+      row.label.setText((i?this.rivalLabel()+' ':'YOU ')+counts[i]+'/7');
       const levels=rivalHouseFill(counts[i],carrying[i]);
       row.bars.forEach((bar,j)=>{
         bar.setStrokeStyle(j===counts[i]?2:1,j===counts[i]?row.color:0x42525c,.98);
@@ -402,6 +469,10 @@ export default class RivalsRace {
   update() {
     if (this.disposed) return true;
     const now = performance.now();
+    if (this.race.status === 'ready' && this.screen) {
+      this.pollSearch(now);
+      this.screen?.tick(now);
+    }
     if (this.race.status === 'countdown') {
       const left = this.race.countdownEndsAt-now;
       this.notice?.setText(String(Math.max(1,Math.ceil(left/1000))));
@@ -409,6 +480,7 @@ export default class RivalsRace {
         // Use the scheduled GO, not a late frame: backgrounding never pauses a race.
         this.race.startedAt=this.race.countdownEndsAt;
         this.race.status='racing';
+        if(this.race.entryStage==='countdown')advanceMatch(this.race,'racing');
         trackScene(this.scene,'rivals_match_started',{course_slot:this.race.course.slot,power_1:this.race.powers?.[0],power_2:this.race.powers?.[1]});
         this.notice?.setText('');
         beginRaceCapture(this.race);
@@ -550,7 +622,7 @@ export default class RivalsRace {
       try { this.scene.audio?.playBlockClear?.(); } catch {}
     }
     const recorded = this.race.opponentKind === 'recorded-bot';
-    const who = 'RIVAL';
+    const who = this.rivalLabel();
     const config={
       fullScreen:!!this.race.rivalCityIndex,
       title:({win:'YOU WIN',loss:who.toUpperCase()+' WINS',draw:'PHOTO FINISH',forfeit:'RACE ENDED'})[this.race.result] || 'RACE ENDED',
@@ -575,7 +647,8 @@ export default class RivalsRace {
         // route and stash answers, which a player could learn. Every new race
         // meets a freshly chosen rival on a fresh match.
         {label:this.race.rivalCityIndex?(this.race.result==='win'?'ENTER NEXT BLOCK':'TRY AGAIN'):'NEW RACE',variant:'primary',onClick:()=>this.scene.scene.restart({
-          mode:'pve',role:'runner',runKind:'rivals',...this.harnessRestartData()
+          mode:'pve',role:'runner',runKind:'rivals',...this.harnessRestartData(),
+          ...(this.race.pool&&this.race.pool!=='ordinary'?{rivalPool:this.race.pool}:{})
         })},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
@@ -583,7 +656,7 @@ export default class RivalsRace {
     if(this.race.rivalCityIndex){
       config.completion=true;config.accent=crewSigil(this.race.territoryGang)?.color;
       config.lines=[
-        'YOU '+this.race.clearTimes.length+'/7 · '+rivalTimeLabel(this.race.finishedMs)+' / RIVAL '+rivalTimeLabel(this.race.rivalTimes[6]),
+        'YOU '+this.race.clearTimes.length+'/7 · '+rivalTimeLabel(this.race.finishedMs)+' / '+this.rivalLabel()+' '+rivalTimeLabel(this.race.rivalTimes[6]),
         ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED · NEXT BLOCK OPEN']:[]),
         ...(this.saved===false||this.race.territoryClaim?.saved===false?['Local save unavailable. Map progress may be temporary.']:[])
       ];
@@ -619,7 +692,7 @@ export default class RivalsRace {
       if (this.disposed) return;
       if (!bundle) { back('REPLAY UNAVAILABLE'); return; }
       playRivalReplay(this.scene,{
-        bundle, record:this.race.opponentRecord, opponentName:'RIVAL',
+        bundle, record:this.race.opponentRecord, opponentName:this.rivalLabel(),
         playerTimes:this.race.clearTimes, onDone:()=>back('')
       });
     };
@@ -646,7 +719,7 @@ export default class RivalsRace {
     this.closeSettings(false);
     this.retryModal?.destroy?.({resumeTouch:false});this.retryPicker?.destroy?.({resumeTouch:false});
     this.pending?.remove?.();
-    this.searchTimer?.remove?.();
+    this.closeMatchScreen();
     this.cityIntro?.destroy?.();
     this.entryModal?.destroy?.();
     this.objects.forEach(o=>o.destroy?.());

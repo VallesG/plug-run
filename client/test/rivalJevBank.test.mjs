@@ -13,7 +13,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  selectJevBank, validateRecordAndBundle, traceErrors, assignmentErrors, jevEligibilityError,
+  selectJevBank, validateRecordAndBundle, traceErrors, assignmentErrors, jevEligibilityError, jevRaceReport,
   JEV_BANK_ID, JEV_BANK_ROOT, ORDINARY_BANK_ROOT, JEV_APEX_BANK_ID, JEV_APEX_BANK_ROOT, JEV_RIVAL_HARD_BANK_ID, JEV_RIVAL_HARD_BANK_ROOT
 } from '../tools/lib/jevBank.mjs';
 import { readJevBank } from '../tools/rivals-assemble-jev.mjs';
@@ -162,10 +162,35 @@ for (const [bankId, rel, profiles] of [[JEV_APEX_BANK_ID, JEV_APEX_BANK_ROOT, [n
     if (f.isDirectory()) walk(p); else if (/\.(js|mjs)$/.test(f.name) && /jev-apex-v1|jev-rival-hard-v1/.test(readFileSync(p, 'utf8'))) hits.push(p);
   } };
   walk(pathOf('src'));
-  check('the game never reads a challenge bank (outside ordinary matchmaking)', hits.length === 0, hits.join(', '));
+  // A challenge bank is its own pool: named in one place, selectable only by
+  // that name, and never part of ordinary matchmaking.
+  check('challenge banks are named only in the opponent pool table',
+    hits.length === 1 && /utils[\\/]rivalSession\.js$/.test(hits[0]), hits.join(', '));
+  const { RIVAL_OPPONENT_POOLS, rivalPoolName } = await import('../src/utils/rivalSession.js');
+  const roots = (name) => RIVAL_OPPONENT_POOLS[name].map((b) => b.root).join();
+  check('ordinary matchmaking never reads a challenge bank (outside ordinary matchmaking)',
+    !/jev-apex-v1|jev-rival-hard-v1/.test(roots('ordinary')), roots('ordinary'));
+  check('each challenge bank is a pool of its own',
+    roots('apex') === '/rivals/jev-apex-v1/' && roots('rival-hard') === '/rivals/jev-rival-hard-v1/');
+  check('only an exact pool name selects a challenge bank',
+    rivalPoolName(undefined) === 'ordinary' && rivalPoolName('Apex') === 'ordinary' && rivalPoolName('constructor') === 'ordinary' && rivalPoolName('apex') === 'apex');
 }
 
 /* ---------------- admission rules, on the banked races ---------------- */
+
+{
+  const first = { jev: { report: { logicalRequests: 10, answers: 10, tokensBilled: 1000, costUsd: 0.01,
+    powers: { activated: 2 }, http: { attempts: 10, statuses: { 200: 10 } },
+    houses: [{ house: 1 }, { house: 7 }], strategies: { adopted: 10 }, time: { jevMs: 5000 } } } };
+  const second = { jev: { report: { logicalRequests: 17, answers: 17, tokensBilled: 1700, costUsd: 0.017,
+    powers: { activated: 5 }, http: { attempts: 17, statuses: { 200: 17 } },
+    houses: [...first.jev.report.houses, { house: 1 }, { house: 7 }],
+    strategies: { adopted: 17 }, time: { jevMs: 8500 } } } };
+  const delta = jevRaceReport({ races: [first, second] }, second);
+  check('planned job race two uses only its own API, power and house counts',
+    delta.logicalRequests === 7 && delta.tokensBilled === 700 && delta.powers.activated === 3 &&
+    delta.http.statuses[200] === 7 && delta.houses.length === 2 && delta.strategies.adopted === 7);
+}
 
 // A raw capture reconstructed from a banked entry: the shape the recorder
 // writes, with intent traces that match the record.
