@@ -124,4 +124,21 @@ check('floor clock occupies the actual open patch',clock?.x===5.5 && clock?.y===
 check('clock placement never mutates collision grid',JSON.stringify(floor)===before);
 check('solid grid has no clock footprint',rivalFloorClock([[1,1,1],[1,1,1],[1,1,1]])===null);
 check('missing grid is safe',rivalFloorClock(null)===null);
+// The rival finishing first decides nothing on its own: the player plays it
+// out, and the result settles with their seventh clear.
+{
+  const r = await import('../src/logic/rivals.js');
+  check('no result while the player has houses left',r.rivalFinalOutcome([1,2,3,4,5,6],splits)===null);
+  check('a seventh clear before the rival wins',r.rivalFinalOutcome([1,2,3,4,5,6,75000],splits)==='win');
+  check('a seventh clear after the rival is a loss',r.rivalFinalOutcome([1,2,3,4,5,6,90000],splits)==='loss');
+  check('the same millisecond is a draw',r.rivalFinalOutcome(splits,splits)==='draw');
+  check('the rival is home at its last clear',!r.rivalHasFinished(splits,75999)&&r.rivalHasFinished(splits,76000));
+  // Settings sits above the player rail, never over floor a runner can use.
+  for (const [W,H] of [[320,568],[360,640],[390,844],[414,896],[430,932],[768,1024],[844,390],[1280,720]]) {
+    const hud=r.rivalHudLayout(W,H), a=r.rivalArenaLayout(W,H,16,35), g=r.rivalSettingsSpot(hud,a.pad,a.cell);
+    check('settings off the floor '+W+'x'+H,g.x+g.r<=a.pad.x+a.cell&&g.x-g.r>=0&&g.y-g.r>=0);
+    check('settings above the rail label '+W+'x'+H,g.y+g.r<hud.startY-30);
+    check('settings has a thumb-sized target '+W+'x'+H,g.hit.w>=28&&g.hit.h>=38);
+  }
+}
 console.log(passed+' rivals assertions passed');

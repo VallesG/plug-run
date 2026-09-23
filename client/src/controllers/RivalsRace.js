@@ -5,8 +5,8 @@ import { drawCityMap } from './CityMap.js';
 import { drawRivalDistrictMap } from './RivalDistrictMap.js';
 import {
   RIVAL_HOUSES, RIVAL_COUNTDOWN_MS, RIVAL_TRANSITION_MS, RIVAL_RETRY_MS,
-  rivalElapsed, rivalProgress, rivalOutcome, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
-  rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock, validRivalPowers
+  rivalElapsed, rivalProgress, rivalFinalOutcome, rivalHasFinished, recordRivalClear, rivalTimeLabel, rivalRecord, nextRivalSlot, rivalHudLayout,
+  rivalHouseFill, rivalPickupWindows, rivalCarryingAt, rivalFloorClock, rivalSettingsSpot, validRivalPowers
 } from '../logic/rivals.js';
 import { saveRivalResult, resolveRivalOpponent, loadRivalReplay, noteRivalOutcome, findRivalMatch, applyRivalOffer } from '../utils/rivalSession.js';
 import { advanceMatch, planMatchSearch, matchSettleAt, MATCH_SEARCH_CAP_MS, rivalShortName } from '../logic/rivalMatchmaking.js';
@@ -371,9 +371,13 @@ export default class RivalsRace {
         color:'#bbc4b9',stroke:'#101820',strokeThickness:1
       }).setOrigin(.5).setAlpha(.65)).setDepth(1.72);
     }
-    const gear=add(scene.add.rectangle(27,height-29,44,44,0x0a121a,.7)
-      .setStrokeStyle(1,0x42525c,.7)).setInteractive({useHandCursor:true});
-    add(drawPowerIcon(scene,27,height-29,'settings',25,0xb7c6cf,15001)).setDepth(15001);
+    // Settings sits in the top-left corner, over the outer wall above your
+    // rail: off the floor, clear of the driveway, the same on every layout.
+    const spot=rivalSettingsSpot(layout,scene.pad,scene.cell);
+    add(scene.add.circle(spot.x,spot.y,spot.r,0x0a121a,.62).setStrokeStyle(1,0x5b6b74,.85));
+    add(drawPowerIcon(scene,spot.x,spot.y,'settings',spot.r*1.25,0xc9d3d8,15001)).setDepth(15001).setAlpha(.9);
+    const gear=add(scene.add.rectangle(spot.hit.x+spot.hit.w/2,spot.hit.y+spot.hit.h/2,spot.hit.w,spot.hit.h,0x000000,.001))
+      .setInteractive({useHandCursor:true});
     gear.on('pointerdown',(_p,_x,_y,event)=>{
       event?.stopPropagation();
       this.openSettings();
@@ -489,10 +493,11 @@ export default class RivalsRace {
     }
     if (this.race.status === 'racing') {
       const elapsed = rivalElapsed(this.race,now);
-      const outcome = rivalOutcome(this.race.clearTimes,this.race.rivalTimes,elapsed);
-      if (outcome) this.finish(outcome,now);
+      // A rival crossing the line first decides the result but does not end
+      // the race: the player plays it out (or quits from settings).
+      if (!this.race.rivalFinishSeen && rivalHasFinished(this.race.rivalTimes,elapsed)) this.announceRivalFinish();
       // Recording harness only: a race that will never end is not a race.
-      else if (this.race.hardLimitMs && elapsed >= this.race.hardLimitMs) this.finish('forfeit',now);
+      if (this.race.hardLimitMs && elapsed >= this.race.hardLimitMs) this.finish('forfeit',now);
       else if (!this.transitioning && !this.scene.roundOver && !this.settingsOpen) tickAttemptCapture(this.scene,this.race,now);
     }
     this.paint(now);
@@ -517,6 +522,16 @@ export default class RivalsRace {
       });
     });
   }
+  /** The rival crossed the line: say so briefly, keep racing. */
+  announceRivalFinish(){
+    this.race.rivalFinishSeen=true;
+    const label=this.rivalLabel()+' FINISHED';
+    this.notice?.setText(label+'\n'+rivalTimeLabel(this.race.rivalTimes[RIVAL_HOUSES-1]));
+    this.rivalFinishTimer?.remove?.();
+    this.rivalFinishTimer=this.scene.time?.delayedCall?.(1800,()=>{
+      if(this.notice?.text?.startsWith(label))this.notice.setText('');
+    });
+  }
   // Same pull-in as the campaign so the beat reads identically; a shorter
   // drive-off because this is a race and it happens seven times.
   static BOARD_MS = 400;
@@ -527,10 +542,6 @@ export default class RivalsRace {
     const now=performance.now(), elapsed=rivalElapsed(this.race,now);
     const next=recordRivalClear(this.race,this.scene.pveRound,elapsed);
     if (next===this.race) return;
-    // If the rival already finished, the late player clear cannot change the result.
-    if (elapsed > this.race.rivalTimes[RIVAL_HOUSES-1]) {
-      this.finish('loss',now); return;
-    }
     this.setRace(next);
     trackScene(this.scene,'round_complete',{course_slot:this.race.course.slot,success:true,round_number:this.scene.pveRound});
     endAttemptCapture(this.scene,next,'extracted',now);
@@ -538,7 +549,8 @@ export default class RivalsRace {
     this.scene.finalizeRun?.('rivals_extracted');
     ReplaySystem.finalize();
     this.freeze();
-    const outcome=rivalOutcome(next.clearTimes,next.rivalTimes,elapsed);
+    // Settled by the seventh clear only; after the rival has finished it is a loss.
+    const outcome=rivalFinalOutcome(next.clearTimes,next.rivalTimes);
     // Show the getaway rather than cutting straight to the card, and credit
     // back the time it actually takes, measured rather than
     // assumed: the clear time is already recorded, but the race clock is raw
@@ -560,9 +572,6 @@ export default class RivalsRace {
   retryHouse(reason='ended') {
     if (this.scene.roundOver || this.race.status!=='racing') return;
     const now=performance.now();
-    if (rivalOutcome(this.race.clearTimes,this.race.rivalTimes,rivalElapsed(this.race,now))) {
-      this.finish('loss',now); return;
-    }
     // A death is 'caught', the round clock running out is 'timeout'; a resize
     // retry is neither and is marked so the race cannot be exported as a record.
     const outcome = reason==='resize' ? 'abandoned' : ((this.scene.attacker?.hp ?? 1) <= 0 ? 'caught' : 'timeout');
@@ -587,9 +596,12 @@ export default class RivalsRace {
     this.retryModal?.destroy?.({resumeTouch:false});this.retryModal=null;
     this.retryPicker?.destroy?.({resumeTouch:false});this.retryPicker=null;
     delete this.race.retryChoiceHouse;delete this.race.retryMixHouse;
+    // Quitting once the rival is home is a loss, not an abandoned race.
+    if(result==='forfeit'&&!this.race.recording&&rivalHasFinished(this.race.rivalTimes,rivalElapsed(this.race,now)))result='loss';
     this.race.status='finished';
     this.race.result=result;
-    this.race.finishedMs=result==='loss' ? this.race.rivalTimes[RIVAL_HOUSES-1] : rivalElapsed(this.race,now);
+    // The player's own clock: the seventh clear, or when they stopped.
+    this.race.finishedMs=rivalElapsed(this.race,now);
     trackScene(this.scene,'rivals_match_completed',{course_slot:this.race.course.slot,result,elapsed_seconds:Math.round(this.race.finishedMs)/1000,retries:this.race.retries});
     endAttemptCapture(this.scene,this.race,'abandoned',now);
     this.freeze();
@@ -636,7 +648,7 @@ export default class RivalsRace {
         'Rival: '+rivalTimeLabel(this.race.rivalTimes[RIVAL_HOUSES-1])
           +(recorded && Number.isFinite(this.race.opponent?.retries) ? ' \u00b7 '+this.race.opponent.retries+' retries' : ''),
         ...(this.saved===false ? ['Local result could not be saved.'] : []),
-        ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED · NEXT BLOCK OPEN']:[]),
+        ...(this.race.territoryClaim?.applied?['BLOCK CLAIMED']:[]),
         ...(this.race.territoryClaim?.saved===false?['Map progress is temporary; local save failed.']:[])
       ],
       buttons:[
@@ -646,7 +658,7 @@ export default class RivalsRace {
         // No rematch: racing the same recorded rival again would replay its
         // route and stash answers, which a player could learn. Every new race
         // meets a freshly chosen rival on a fresh match.
-        {label:this.race.rivalCityIndex?(this.race.result==='win'?'ENTER NEXT BLOCK':'TRY AGAIN'):'NEW RACE',variant:'primary',onClick:()=>this.scene.scene.restart({
+        {label:this.race.rivalCityIndex&&this.race.result!=='win'?'TRY AGAIN':'NEW RACE',variant:'primary',onClick:()=>this.scene.scene.restart({
           mode:'pve',role:'runner',runKind:'rivals',...this.harnessRestartData(),
           ...(this.race.pool&&this.race.pool!=='ordinary'?{rivalPool:this.race.pool}:{})
         })},
@@ -661,7 +673,7 @@ export default class RivalsRace {
         ...(this.saved===false||this.race.territoryClaim?.saved===false?['Local save unavailable. Map progress may be temporary.']:[])
       ];
       const menu=config.buttons.find(b=>b.label==='MAIN MENU');
-      const next=config.buttons.find(b=>['ENTER NEXT BLOCK','TRY AGAIN'].includes(b.label));
+      const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN'].includes(b.label));
       const watch=config.buttons.find(b=>b.label.includes('WATCH RIVAL'));
       config.buttons=[next,...(watch?[watch]:[]),menu];
     }
@@ -708,14 +720,14 @@ export default class RivalsRace {
     keep(divider);
     y+=17+big+(compact?8:26);
     // How far apart, measured on the two clocks: only a finished race has one.
-    const margin=r.result==='win'&&done===RIVAL_HOUSES?(rivalMs-r.finishedMs)/1000
-      :r.result==='draw'?0:null;
+    const margin=done===RIVAL_HOUSES?(rivalMs-r.finishedMs)/1000:null;
     if(margin!=null){
-      text(area.x+area.width/2,y,margin>0?'YOU BY '+margin.toFixed(1)+'s':'DEAD HEAT',{size:13,color:margin>0?'#9bcae5':'#eee3c7'});
+      const label=margin>0?'YOU BY '+margin.toFixed(1)+'s':margin<0?sides[1].label+' BY '+(-margin).toFixed(1)+'s':'DEAD HEAT';
+      text(area.x+area.width/2,y,label,{size:13,color:margin>0?'#9bcae5':margin<0?'#dec386':'#eee3c7'});
       y+=22;
     }
     if(r.territoryClaim?.applied){
-      text(area.x+area.width/2,y,'BLOCK CLAIMED · NEXT BLOCK OPEN',{size:12,color:'#eee3c7'});
+      text(area.x+area.width/2,y,'BLOCK CLAIMED',{size:12,color:'#eee3c7'});
       y+=22;
     }
     const used=y+6-area.y;

@@ -106,8 +106,13 @@ check('clock includes death penalty time',rules.rivalElapsed(state,now)===8650);
 run.controller.resize();
 check('active resize counts as retry, no free reset',state.retries===2 && run.events.length===1);
 now=74010;run.controller.update();
-check('background catchup resolves opponent finish',state.status==='finished' && state.result==='loss');
-check('finish stamps rival exact time not late frame',state.finishedMs===70000);
+check('the rival finishing first does not end the race',state.status==='racing' && !state.result);
+check('the rival finish is announced once',state.rivalFinishSeen===true && /FINISHED/.test(run.controller.notice.text));
+check('the rival rail shows seven',run.controller.rows[1].label.text==='RIVAL 7/7');
+// The player plays on, then quits from settings: a loss on their own clock.
+run.controller.finish('forfeit',now);
+check('quitting after the rival finished is a loss',state.status==='finished' && state.result==='loss');
+check('finish stamps the player clock at the quit',state.finishedMs===70010&&state.finishedMs===rules.rivalElapsed(state,now));
 check('pending retry cancelled at finish',run.events[0].removed);
 check('result saved exactly once',saved.length===1);
 run.controller.update();run.controller.finish('win',now);
@@ -180,7 +185,9 @@ check('recorded match preserves player mix on next house',run.scene.runnerPowers
 now=9000;run.controller.retryHouse();run.events[0].fn();data=run.restarts[0];now=9650;run=setup(data.rivalRace,2);
 check('recorded match refills player mix on retry',run.scene.runnerPowersSelected.join()==='decoy,decoy' && run.scene.runnerPowersConsumed.join()==='false,false');
 now=70000;run.controller.update();
-check('recorded rival finishing first is a loss at its recorded time',state.result==='loss' && state.finishedMs===63000);
+check('a recorded rival finishing first leaves the race running',state.status==='racing' && state.rivalFinishSeen===true);
+run.controller.finish('forfeit',now);
+check('stopping after it is a loss on the player clock',state.result==='loss' && state.finishedMs===rules.rivalElapsed(state,now) && state.finishedMs>63000);
 const result=run.modals.at(-1);
 check('result uses only the rival label',result.title==='RIVAL WINS' && result.subtitle==='RIVAL · SEVEN HOUSES' && result.lines.some(l=>l.startsWith('Rival: 1:03.0')));
 check('the result says nothing technical',!/recorded|bank|driver|bot/i.test(result.subtitle+' '+result.title));
@@ -238,7 +245,9 @@ check('back resumes without resetting powers or clock',!run.controller.settingsO
 run.controller.openSettings();
 const settings=run.modals.at(-1);
 now=70001;run.controller.update();
-check('rival can finish while settings is open',state.result==='loss' && settings.destroyed && !run.controller.settingsOpen);
+check('the rival finishing leaves settings open and the race on',state.status==='racing' && !settings.destroyed && run.controller.settingsOpen);
+settings.buttons[3].onClick();
+check('QUIT RACE after the rival finished is a loss',state.result==='loss' && state.finishedMs===70001 && !run.controller.settingsOpen);
 check('settings cannot reopen over result',(run.controller.openSettings(),run.modals.at(-1).title==='RIVAL WINS'));
 now=1000;
 state={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','phase']};
@@ -607,9 +616,13 @@ check('resize preserves pending retry choice without another death',choiceState.
 now=5200;recovery=setup(choiceState,1);
 check('reload restores recovery instead of starting attempt',recoveryState.capture.current===null&&recovery.modals.at(-1).buttons[1].label==='SWITCH POWERS');
 recovery.modals.at(-1).buttons[1].onClick();now=70001;recovery.controller.update();
-check('opponent can win while retry picker open',recoveryState.status==='finished'&&recoveryState.result==='loss');
+check('the rival finishing leaves the retry picker up and the race on',recoveryState.status==='racing'&&recoveryState.rivalFinishSeen===true);
+recovery.scene.runnerPowersSelected=['phase','decoy'];lastPicker.done();
+check('the player can still retry after the rival finished',recoveryState.powers.join()==='phase,decoy'&&recovery.events.some(e=>e.delay===rules.RIVAL_RETRY_MS&&!e.removed));
+recovery.controller.finish('forfeit',now);
+check('quitting then is a loss and cancels the retry',recoveryState.result==='loss'&&recovery.events.every(e=>e.delay!==rules.RIVAL_RETRY_MS||e.removed));
 lastPicker.done();
-check('late picker cannot restart finished race',recovery.restarts.length===0&&recoveryState.powers.join()==='decoy,phase');
+check('late picker cannot restart finished race',recovery.restarts.length===0&&recoveryState.status==='finished');
 
 now=1000;const automated={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['decoy','dash'],recording:true,houseRetries:{1:10}};
 const automatedRun=setup(automated,1);automatedRun.scene.attacker={hp:0};automatedRun.controller.retryHouse();
@@ -642,7 +655,7 @@ console.log('Rivals mixed summary: '+passed+' total assertions passed');
     attacker:{active:true,x:180,y:300,setVisible(){this.hidden=true;return this;}},
     removeCarryPackage(){this.packageRemoved=true;},
     finalizeRun(){},forensics:null,
-    add:{rectangle:node,text:node,graphics(){return {setDepth(){return this;},lineStyle(){return this;},lineBetween(){return this;}};}},
+    add:{rectangle:node,text:node,circle:node,graphics(){return {setDepth(){return this;},lineStyle(){return this;},lineBetween(){return this;}};}},
     scene:{restart:d=>restarts.push(d),start(){}},
     gameUI:{showModal:o=>({...o,destroy(){}})},
     tweens:{add(config){tweens.push(config);return config;}},
@@ -697,11 +710,13 @@ console.log('rivals getaway animation: assertions passed');
   check('scoreboard: both times are large',won.find('0:58.0').style.fontSize===won.find('1:10.0').style.fontSize&&parseInt(won.find('0:58.0').style.fontSize)>=26);
   check('scoreboard: retries under each time',!!won.find('7/7 · 1 RETRY')&&!!won.find('7/7 · 2 RETRIES'));
   check('scoreboard: the winning margin',!!won.find('YOU BY 12.0s'));
-  check('scoreboard: the block claim',!!won.find('BLOCK CLAIMED · NEXT BLOCK OPEN'));
+  check('scoreboard: the block claim, and no promise of a next block',!!won.find('BLOCK CLAIMED')&&!won.texts.some(t=>/NEXT/.test(t.text)));
   check('scoreboard: the map keeps the rest',won.area.y>100&&won.area.y+won.area.height===640&&won.area.height>300);
   const lost=board({result:'loss',clearTimes:[8000,16000,24000,32000,40000],finishedMs:70000});
   check('scoreboard: a loss shows your houses against the rival time',!!lost.find('5/7')&&!!lost.find('HOUSES')&&!!lost.find('1:10.0'));
-  check('scoreboard: no margin and no claim after a loss',!lost.texts.some(t=>/ BY |CLAIMED/.test(t.text)));
+  check('scoreboard: no margin and no claim after an unfinished loss',!lost.texts.some(t=>/ BY |CLAIMED/.test(t.text)));
+  const playedOut=board({result:'loss',clearTimes:[9000,19000,29000,39000,49000,59000,82000],finishedMs:82000});
+  check('scoreboard: a played-out loss shows your time and the rival margin in its gold',!!playedOut.find('1:22.0')&&playedOut.find('JEV BY 12.0s')?.style.color==='#dec386');
 }
 console.log('rival result scoreboard: '+passed+' total assertions passed');
 
