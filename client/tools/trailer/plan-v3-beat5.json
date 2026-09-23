@@ -1,0 +1,167 @@
+{
+ "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat5.wav",
+ "musicDb": -7,
+ "segments": [
+  {
+   "src": "v3-story-ironrow",
+   "from": 2068,
+   "to": 2137,
+   "note": "cold open: bullet 0.21 cells, dodged with phase",
+   "follow": "runner",
+   "zoom": 1.4
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 12,
+   "to": 63,
+   "screen": true,
+   "note": "The Window: Auntie Ro"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 155,
+   "to": 197,
+   "screen": true,
+   "note": "crew picker"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 1030,
+   "to": 1096,
+   "note": "stash grab"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 455,
+   "to": 497,
+   "screen": true,
+   "note": "Switch"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 832,
+   "to": 898,
+   "note": "near miss 0.93 cells"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 496,
+   "to": 550,
+   "screen": true,
+   "note": "Mags: aura"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 1190,
+   "to": 1262,
+   "note": "escape to the car"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 215,
+   "to": 254,
+   "screen": true,
+   "note": "You run with Afterlight"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 632,
+   "to": 683,
+   "screen": true,
+   "note": "Sol: Sol-id"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 1045,
+   "to": 1111,
+   "note": "decoy"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 490,
+   "to": 544,
+   "screen": true,
+   "note": "Rook: good luck"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 575,
+   "to": 611,
+   "screen": true,
+   "note": "Brick: I did not"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 1005,
+   "to": 1071,
+   "death": true,
+   "note": "caught by the Plug",
+   "follow": "runner",
+   "zoom": 1.4
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 318,
+   "to": 390,
+   "screen": true,
+   "note": "Block Rivals: finding rival, Jev found"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 400,
+   "to": 460,
+   "screen": true,
+   "note": "lobby: powers, READY"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 478,
+   "to": 553,
+   "screen": true,
+   "note": "countdown into the race"
+  },
+  {
+   "src": "v3-jev-undercroft",
+   "from": 460,
+   "to": 541,
+   "follow": "jev",
+   "zoom": 1.7,
+   "note": "Jev decoy, close-up"
+  },
+  {
+   "src": "v3-jev-ace",
+   "from": 530,
+   "to": 599,
+   "follow": "jev",
+   "zoom": 1.7,
+   "note": "Jev dash, close-up"
+  },
+  {
+   "src": "v3-jev-switchback",
+   "from": 195,
+   "to": 264,
+   "follow": "jev",
+   "zoom": 1.7,
+   "note": "Jev near miss 0.83 cells, close-up"
+  },
+  {
+   "src": "v3-jev-ace",
+   "from": 970,
+   "to": 1036,
+   "follow": "jev",
+   "zoom": 1.7,
+   "note": "Jev phase, close-up"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 1652,
+   "to": 1706,
+   "screen": true,
+   "note": "Mags: lowkey eating"
+  },
+  {
+   "image": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/promo/plug-run-poster-1080x1920.png",
+   "seconds": 3
+  }
+ ]
+}

@@ -211,3 +211,14 @@ Captured 2026-09-22 from master `fe24bbc` (dev server, same code) with `session2
 - **"Race the latest AI":** the Block Rivals opponent Jev is recorded runs planned by the Jev AI strategist (requested model `jev-latest`, served as Jev 1.13.0), driven by BotDriver. On screen: "Jev · AI-driven rival runs". The final Rivals shot is a real race where Jev finished (0:59.4) while the bot was still on house 5.
 - **Audio:** the game's own `main_beat` with game SFX from logged cues. Only the deaths and rivals takes logged cues; the story take did not, so those clips carry music only.
 - **Fixed-step clock** as in v1: every frame advances the game exactly 1/30s. It's a deterministic capture, not a real-time recording.
+
+## Vertical cut v3 - 47.0s (`plug-run-vertical-v3-beat5.mp4`, `plug-run-vertical-v3-beat6.mp4`)
+
+Replaces v2 (its overlay text is gone). Same style as the first vertical cut: hard cuts, game SFX from logged cues, a game music track looped underneath (`gameplay_beat5` or `gameplay_beat6`, otherwise identical), the approved poster as the end card. Built with `edit3.mjs` from `plan-v3.json` / `plan-v3-beat5.json`.
+
+- **Calmer bot for gameplay takes:** `replanMs=260&wrongTurnChance=0.02&hesitateChance=0.01&dodgeCommitMs=450&dodgeRestMs=900`. Bot settings only; the game is untouched.
+- **Twitch screen:** `edit3.mjs` refuses any gameplay clip where the runner (or Jev) reverses direction more than twice in any half second. Every clip in v3 passes (worst: 2).
+- **Characters:** in-game Window and crew consultations from three takes, one per crew (`CREW=` taps that crew's card): Auntie Ro, the crew picker, Switch, Mags, Sol, Rook and Brick.
+- **Block Rivals:** the real entrance on a fresh profile (entered with the scene start the menu button uses once it unlocks): finding rival, Jev found, lobby picks and READY, countdown.
+- **Jev:** three of Jev's shipped runs played in the game's own rival replay viewer (`playRivalReplay`, what WATCH RIVAL opens), recorded with `jev-take.mjs`: `jev-v1/rec-undercroft-balanced-318015-xmh3zn` (decoy), `jev-v1/rec-switchback-stairs-balanced-320004-jztafe` (decoy and phase), `jev-rival-hard-v1/rec-low-end-rush-ace-9701-153bicc` (dash and phase). The DECOY / DASH / PHASE / BUNK! callouts are the viewer's own. Close-ups follow Jev's recorded position at 1.7x; the cold open and the catch follow the runner at 1.4x.
+- **Near misses:** runner 0.21 and 0.93 cells, Jev 0.83 cells, each with no hit in the next second.
