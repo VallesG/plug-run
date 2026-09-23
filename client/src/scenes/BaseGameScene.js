@@ -117,6 +117,7 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('bg_beat4', '/audio/gameplay_beat4.wav');
       this.load.audio('bg_beat5', '/audio/gameplay_beat5.wav');
       this.load.audio('bg_beat6', '/audio/gameplay_beat6.wav');
+      this.load.audio('bg_beat7', '/audio/gameplay_beat7.wav');
     } catch {}
   }
 
@@ -3145,7 +3146,7 @@ export class BaseGameScene extends Phaser.Scene {
     } else if (musicKey === 'bg_beat4') {
       baseVol = 0.22;
       maxVol = 0.48;
-    } else if (musicKey === 'bg_beat5' || musicKey === 'bg_beat6') {
+    } else if (musicKey === 'bg_beat5' || musicKey === 'bg_beat6' || musicKey === 'bg_beat7') {
       baseVol = 0.22;
       maxVol = 0.48;
     }

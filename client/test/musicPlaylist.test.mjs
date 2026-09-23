@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GAMEPLAY_BEATS, selectBeat, momentNotes } from '../src/logic/musicPlaylist.js';
+assert(GAMEPLAY_BEATS.includes('bg_beat7'));
 let state = null, last = null;
 for (let cycle = 0; cycle < 10; cycle++) {
   const seen = new Set();
