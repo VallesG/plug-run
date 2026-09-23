@@ -1,0 +1,227 @@
+{
+ "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat5.wav",
+ "musicDb": -7,
+ "segments": [
+  {
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/all-maps-v5/video/slot2-ace-phasedash-jev-1790059872825.mp4",
+   "start": 16.688,
+   "dur": 2.3,
+   "cx": 0.52,
+   "cy": 0.26,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 822,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 822,
+     "key": "spickup",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev: dash out from beside the Plug (slot2-ace-phasedash-jev-1790059872825.mp4)"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 30,
+   "to": 78,
+   "screen": true,
+   "note": "Rivals district map"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 318,
+   "to": 390,
+   "screen": true,
+   "note": "finding rival, Jev found"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 400,
+   "to": 470,
+   "screen": true,
+   "note": "lobby: powers, READY"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 478,
+   "to": 553,
+   "screen": true,
+   "note": "countdown into the race"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 590,
+   "to": 656,
+   "note": "you: stash grab"
+  },
+  {
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/rival-v1/video/slot2-ace-phasedash-jev-1790062496610.mp4",
+   "start": 26.533,
+   "dur": 2.3,
+   "cx": 0.63,
+   "cy": 0.36,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 998,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 998,
+     "key": "spickup",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "phase",
+     "vol": 0.7
+    }
+   ],
+   "note": "Jev: phase at the stash, Plug above (slot2-ace-phasedash-jev-1790062496610.mp4)"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 775,
+   "to": 842,
+   "note": "you: decoy"
+  },
+  {
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/all-maps-v5/video/slot2-ace-phasedash-jev-1790059872825.mp4",
+   "start": 7.488,
+   "dur": 2.3,
+   "cx": 0.33,
+   "cy": 0.85,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 1019,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 1019,
+     "key": "spickup",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev: dash away from the Plug (slot2-ace-phasedash-jev-1790059872825.mp4)"
+  },
+  {
+   "src": "v3-rivals-b",
+   "from": 562,
+   "to": 630,
+   "note": "you: dash"
+  },
+  {
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/all-maps-v5/video/slot3-ace-phasedash-jev-1790060050137.mp4",
+   "start": 8.368,
+   "dur": 2.3,
+   "cx": 0.55,
+   "cy": 0.33,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 1139,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 1139,
+     "key": "spickup",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev: dash onto a stash (slot3-ace-phasedash-jev-1790060050137.mp4)"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 1084,
+   "to": 1150,
+   "note": "you: dash"
+  },
+  {
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/all-maps-v5/video/slot1-ace-phasedash-jev-1790059806578.mp4",
+   "start": 39.814,
+   "dur": 2.3,
+   "cx": 0.66,
+   "cy": 0.5,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev: dash past the Plug (slot1-ace-phasedash-jev-1790059806578.mp4)"
+  },
+  {
+   "src": "v3-rivals-b",
+   "from": 3030,
+   "to": 3096,
+   "note": "you: near miss 0.22 cells"
+  },
+  {
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/all-maps-v5/video/slot3-ace-phasedash-jev-1790060050137.mp4",
+   "start": 20.185,
+   "dur": 2.3,
+   "cx": 0.37,
+   "cy": 0.6,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 822,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 822,
+     "key": "spickup",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev: dash, Plug on his heels (slot3-ace-phasedash-jev-1790060050137.mp4)"
+  },
+  {
+   "src": "v3-rivals-a",
+   "from": 2598,
+   "to": 2643,
+   "note": "JEV FINISHED 1:04.6 while you are still running"
+  },
+  {
+   "src": "v3-result",
+   "from": 12,
+   "to": 108,
+   "screen": true,
+   "note": "race result: JEV WINS"
+  },
+  {
+   "image": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/promo/plug-run-poster-1080x1920.png",
+   "seconds": 3
+  }
+ ]
+}
