@@ -75,7 +75,12 @@ function houseGrid(seg, layout) {
 const near = (a, b, d = 0.01) => a && b && Math.abs(a.x - b.x) <= d && Math.abs(a.y - b.y) <= d;
 
 /** Does this attempt's movement stay inside what the game allows? */
-export function attemptMotionErrors(seg, orderedPowers) {
+// The game snaps a runner left inside a wall (a phase that ran out mid-wall)
+// to the nearest free cell (BaseGameScene.ensureUnstuck). That one step may
+// go this much further than walking allows.
+export const EJECT_CELLS = 2.0;
+
+export function attemptMotionErrors(seg, orderedPowers, ejects = new Set()) {
   const errors = [];
   const frames = seg.frames || [];
   // Powers: each slot fires at most once per attempt, as the game allows.
@@ -93,7 +98,7 @@ export function attemptMotionErrors(seg, orderedPowers) {
     const d = Math.hypot(b[FRAME.RX] - a[FRAME.RX], b[FRAME.RY] - a[FRAME.RY]);
     const dt = dtMs / 1000;
     if (dt >= 0.05 && d >= 0.1) moving.push(d / dt);
-    let excess = d - (WALK_CAP * Math.max(dt, SAMPLE_S) + SLACK_CELLS);
+    let excess = d - (WALK_CAP * Math.max(dt, SAMPLE_S) + SLACK_CELLS + (ejects.has(i) ? EJECT_CELLS : 0));
     if (excess > 0) {
       for (const dash of dashes) {
         if (b[FRAME.T] < dash.t + DASH_WINDOW[0] || a[FRAME.T] > dash.t + DASH_WINDOW[1]) continue;
@@ -138,10 +143,17 @@ export function playerRunErrors(record, bundle) {
       if (e.k === 'pickup' && e.i !== genuine) errors.push(at + 'picked up the bunk bag');
       if (e.k === 'bunk' && e.i !== 1 - genuine) errors.push(at + 'the genuine bag was a bunk');
     }
-    // Never inside a wall unless phasing.
-    for (const f of seg.frames) {
-      if (f[FRAME.RF] & (FLAG.PHASE | FLAG.HIDDEN)) continue;
-      if (arena.grid[Math.floor(f[FRAME.RY])]?.[Math.floor(f[FRAME.RX])] === 1) { errors.push(at + 'inside a wall without phasing at t=' + f[FRAME.T]); break; }
+    // Never inside a wall unless phasing. One exception is the game's own:
+    // a phase that runs out mid-wall leaves the runner in the wall for the
+    // sample where it ends, and the game puts them on open floor by the next.
+    const inWall = (f) => arena.grid[Math.floor(f[FRAME.RY])]?.[Math.floor(f[FRAME.RX])] === 1;
+    const ejects = new Set();
+    for (let k = 0; k < seg.frames.length; k++) {
+      const f = seg.frames[k];
+      if (f[FRAME.RF] & (FLAG.PHASE | FLAG.HIDDEN) || !inWall(f)) continue;
+      const prev = seg.frames[k - 1], next = seg.frames[k + 1];
+      if (prev && (prev[FRAME.RF] & FLAG.PHASE) && next && !(next[FRAME.RF] & FLAG.PHASE) && !inWall(next)) { ejects.add(k + 1); continue; }
+      errors.push(at + 'inside a wall without phasing at t=' + f[FRAME.T]); break;
     }
     // A cleared house ends at the car.
     if (s.outcome === 'extracted') {
@@ -149,7 +161,7 @@ export function playerRunErrors(record, bundle) {
       const r = ex && replayStateAt(seg, ex.t)?.runner;
       if (!ex || !r || Math.hypot(r.x - seg.car.x, r.y - seg.car.y) > EXTRACT_REACH) errors.push(at + 'cleared away from the car');
     }
-    for (const m of attemptMotionErrors(seg, record.attempts[i].orderedPowers ?? record.orderedPowers)) errors.push(at + m);
+    for (const m of attemptMotionErrors(seg, record.attempts[i].orderedPowers ?? record.orderedPowers, ejects)) errors.push(at + m);
   });
   return errors;
 }

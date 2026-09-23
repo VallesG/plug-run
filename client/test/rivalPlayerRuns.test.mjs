@@ -95,6 +95,21 @@ const has = (errs, re) => errs.some((m) => re.test(m));
     check('a power used twice in one attempt is refused', has(errs, /used twice/), errs[0]);
   }
 
+  // A phase that runs out mid-wall: the game ejects the runner on the next
+  // sample (banked, and passes above). Without the phase before it, or
+  // without the eject after it, the same sample is standing in a wall.
+  const ej = entries.find(({ e }) => e.record.recordingID === 'rec-lastlight-loop-balanced-306039-56qnjr');
+  if (ej) {
+    const at = (fn) => { const ss = asPlayer(ej.e, ej.bank).bundle.segments.map((x) => clone(x.replay));
+      const g = ss.find((x) => x.house === 2), k = g.frames.findIndex((fr) => fr[0] === 12196); fn(g.frames, k);
+      return errorsOf(asPlayer(ej.e, ej.bank, { segments: ss })); };
+    check('the phase-end eject is not a wall', !has(at(() => {}), /inside a wall/));
+    errs = at((fr, k) => { for (let j = k - 3; j < k; j++) fr[j][3] &= ~2; });
+    check('in a wall with no phase before it is refused', has(errs, /inside a wall/), errs[0]);
+    errs = at((fr, k) => { fr[k + 1][1] = fr[k][1]; fr[k + 1][2] = fr[k][2]; });
+    check('staying in the wall after the phase is refused', has(errs, /inside a wall|runner moved/), errs[0]);
+  }
+
   s = segs(); s[0].houseSeed = (s[0].houseSeed + 1) >>> 0;
   errs = errorsOf(rebuilt(s));
   check('a house that is not the course house is refused', has(errs, /course house/), errs[0]);
