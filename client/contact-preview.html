@@ -58,7 +58,7 @@ function render() {
     ? crewSeason(gangID).chapters.map(c => ({value:c.number-1,label:c.number+' · '+c.title})) : [],
     chapter, v => { chapter=v; render(); });
   bar(document.getElementById('performance'), crewSeason(gangID)
-    ? ['neutral','flawless','comeback','noDeaths','noPowers','bunk','phase','dash','decoy'].map(id=>({value:id,label:id})) : [],
+    ? ['neutral','flawless','comeback','noDeaths','noPowers','phase','dash','decoy'].map(id=>({value:id,label:id})) : [],
     performance, v => { performance=v; render(); });
   const bank=document.getElementById('bank');
   bank.replaceChildren();

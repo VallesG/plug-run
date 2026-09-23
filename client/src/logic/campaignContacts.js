@@ -1,171 +1,20 @@
 // Story-first presentation layer. Fixed chapter banter is not performance praise.
 // Gap-filling banter adds stable claim IDs; existing authored identities stay intact.
-import { crewSeason, seasonChapter, seasonCue, seasonFinish } from './crewSeason.js';
+import { crewSeason, seasonChapter, seasonCue, seasonFinish, seasonHouses } from './crewSeason.js';
 import { campaignCadenceHouses, campaignCadencePages } from './campaignCadence.js';
 export function campaignContactHouses(gangID,{chapter=0,blockIndex=1}={}) {
  const story=seasonChapter(gangID,chapter);
  if(!story)return [];
  const block=Number.isSafeInteger(blockIndex)&&blockIndex>0?blockIndex:1;
- return campaignCadenceHouses(Object.keys(story.beats).map(Number),block+story.number);
+ return campaignCadenceHouses(seasonHouses(gangID,{chapter,blockIndex:block}),block+story.number);
 }
-const exchanges={
-  "afterlight": [
-    [
-      "Ro said our showcase needs a permit. Sol brought her a playlist.",
-      "It has a track called Permit. I thought that covered it."
-    ],
-    [
-      "The spray caps are for walls, Sol. Not every object needs our signature.",
-      "The toaster looked unfinished. You're welcome."
-    ],
-    [
-      "An amber light in a violet showcase. This is why I keep mood boards.",
-      "My mood is visible from three streets away."
-    ],
-    [
-      "Sol calls it a sound check. The neighbors call it evidence.",
-      "Same audience. Different reviews."
-    ],
-    [
-      "I left the stencil binder somewhere safe. Unfortunately, I was being artistic about safe.",
-      "After this pickup, we're labeling the shelf SAFE."
-    ],
-    [
-      "Ro says a velvet rope won't make us respectable.",
-      "It will make the line disrespect us in an orderly fashion."
-    ],
-    [
-      "Sol tested the fog rig indoors. We lost the couch.",
-      "We found it. Eventually. By sound."
-    ],
-    [
-      "The showcase banner needs a dramatic entrance.",
-      "I can run in holding it. That counts as wind."
-    ],
-    [
-      "Nobody touches the trophy before opening night.",
-      "I wasn't touching it. I was practicing my acceptance speech at it."
-    ],
-    [
-      "One city, one showcase, and Sol still hasn't written a guest list.",
-      "The list says everybody. Very efficient."
-    ]
-  ],
-  "crossline": [
-    [
-      "Mags named the radio channels after snacks. Nothing about this is operational.",
-      "Channel Pretzel is clear. See? Works."
-    ],
-    [
-      "A clean route needs clear labels. Not arrows drawn on old receipts.",
-      "That receipt got us home. Respect the stationery."
-    ],
-    [
-      "Mags, your radio is picking up a cooking show.",
-      "They said keep moving the pan. Sound advice for the runner."
-    ],
-    [
-      "Ro asked why our route board includes her coffee break.",
-      "Critical infrastructure. Nobody argues with the coffee break."
-    ],
-    [
-      "No more shortcuts named after people you've annoyed.",
-      "Fine. Long Way Around Switch it is."
-    ],
-    [
-      "The ledger needs fewer doodles and more addresses.",
-      "The angry pigeon is a landmark. Ask anyone."
-    ],
-    [
-      "Mags borrowed my wirecutters and left a thank-you note.",
-      "That's called a paper trail. Thought you'd appreciate it."
-    ],
-    [
-      "The antenna does not need a crew flag.",
-      "How else will the signal know who it works for?"
-    ],
-    [
-      "We are testing the network. Not naming every blinking light.",
-      "Too late. That's Gerald. He's doing his best."
-    ],
-    [
-      "Ten blocks of routes, and the desk is still a mess.",
-      "Organized mess. Don't move Gerald."
-    ]
-  ],
-  "iron-row": [
-    [
-      "Rook has a coffee plan. That worries me more than the doors.",
-      "The old brew stripped paint. This is workplace safety."
-    ],
-    [
-      "My wrench went missing. Rook says check the last place I saw it.",
-      "I also said stop accusing the drawer."
-    ],
-    [
-      "A brass clock won't make lunch come sooner.",
-      "No, but now you'll ask me with historical accuracy."
-    ],
-    [
-      "The laminator is not a license to cover the shop in rules.",
-      "Then quit giving me material."
-    ],
-    [
-      "We need a switch for the bay door, not a ceremony.",
-      "You get one dramatic lever. Let me have this."
-    ],
-    [
-      "Rook says breakfast improves morale.",
-      "Mostly mine. You can have the waffles that survive inspection."
-    ],
-    [
-      "He wants to put his name on every tool.",
-      "Only the ones you call ours when you lose yours."
-    ],
-    [
-      "My back's fine. The bucket was poorly engineered.",
-      "Sure. We'll put the bucket on light duty."
-    ],
-    [
-      "If that blower works, we might finally smell fresh air.",
-      "Imagine a shop where the air doesn't have a service history."
-    ],
-    [
-      "Rook found a bell. I already dislike the direction this is going.",
-      "Customer satisfaction starts with a loud, clear answer."
-    ]
-  ]
-};
-const invitations={
-  "afterlight": [
-    "Once you claim this block, you can race other runners in Block Rivals. Put Afterlight's name out there.",
-    "Seven houses in a race. Pick your powers, rep the crew, and come back with something I can brag about."
-  ],
-  "crossline": [
-    "Claim this block and Block Rivals opens up. Then you can race other runners for Crossline.",
-    "Seven houses, another runner, your choice of powers. Let's see what your route looks like under race pressure."
-  ],
-  "iron-row": [
-    "Once you claim this block, you can race other runners in Block Rivals. Give Iron Row a good showing.",
-    "Seven houses to race. Choose your powers and bring the Row a win. I'll handle the bragging."
-  ]
-};
 export function campaignContactCue(gangID, options={}) {
   const cue=seasonCue(gangID,options);
   const story=seasonChapter(gangID,options.chapter);
   const arc=crewSeason(gangID);
   if(!story||!arc)return cue;
-  // Introduce the unlock at the first door, before the player claims block 1.
-  // Keep the authored cue identity so an existing save never replays it.
-  if(options.chapter===0&&options.blockIndex===1&&options.house===1&&cue){
-    const invite=invitations[gangID];
-    if(invite){
-      const pages=[...cue.pages,{speaker:arc.primary,text:invite[0]},{speaker:arc.secondary,text:invite[1]}];
-      return {...cue,pages};
-    }
-  }
+  const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
   if(options.house===15){
-    const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
     const warnings={
       'iron-row':"Two Plugs in House 15. Watch both firing lines, grab the stash, and make the curb.",
       crossline:"House 15 has two Plugs. Track both lanes and keep your route to the car in sight.",
@@ -178,34 +27,21 @@ export function campaignContactCue(gangID, options={}) {
       speaker:arc.primary,praiseKey:null,lineID:null,
       chapterLabel:'HOUSE 15 · TWO PLUGS',action:'VIEW THE BLOCK  >>'};
   }
-  if(!cue){
-    const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
-    const houses=campaignContactHouses(gangID,options);
-    const added=houses.filter(h=>!story.beats[h]);
-    const pages=campaignCadencePages(gangID,options.house,added,block+story.number);
-    if(!pages)return null;
-    const id='cadence-house-'+options.house;
-    return {
-      eventID:'contact/v1/block-'+block+'/'+id+'/'+arc.primary,
-      beat:{id,house:options.house,kind:'banter'},
-      pages,text:pages[0].text,speaker:pages[0].speaker,praiseKey:null,lineID:null,
-      banterID:gangID+'/chapter-'+story.number+'/'+id,
-      chapterLabel:'CHAPTER '+story.number+' · '+story.title.toUpperCase(),
-      action:'VIEW THE BLOCK  >>'
-    };
-  }
-  // One short exchange per chapter, at its first existing non-opening check-in.
-  // Tease pages remain after the exchange; House 9 always keeps its full briefing.
-  const slot=Object.keys(story.beats).map(Number).sort((a,b)=>a-b).find(h=>h!==1&&h!==9);
-  const banter=exchanges[gangID]?.[story.number-1];
-  if(options.house!==slot||!banter)return cue;
-  const pages=[
-    {speaker:arc.primary,text:banter[0]},
-    {speaker:arc.secondary,text:banter[1]},
-    ...cue.pages.slice(1)
-  ];
-  return {...cue,pages,text:pages[0].text,speaker:pages[0].speaker,
-    praiseKey:null,lineID:null,banterID:gangID+'/chapter-'+story.number};
+  if(cue)return cue;
+  // Short crew banter where the script leaves a long silence.
+  const authored=seasonHouses(gangID,{chapter:options.chapter,blockIndex:block});
+  const added=campaignContactHouses(gangID,options).filter(h=>!authored.includes(h));
+  const pages=campaignCadencePages(gangID,options.house,added,block+story.number);
+  if(!pages)return null;
+  const id='cadence-house-'+options.house;
+  return {
+    eventID:'contact/v1/block-'+block+'/'+id+'/'+arc.primary,
+    beat:{id,house:options.house,kind:'banter'},
+    pages,text:pages[0].text,speaker:pages[0].speaker,praiseKey:null,lineID:null,
+    banterID:gangID+'/chapter-'+story.number+'/'+id,
+    chapterLabel:'CHAPTER '+story.number+' · '+story.title.toUpperCase(),
+    action:'VIEW THE BLOCK  >>'
+  };
 }
 export function campaignContactFinish(gangID,chapter=0,cityName) {
   return seasonFinish(gangID,chapter,cityName);

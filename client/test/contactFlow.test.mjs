@@ -1,4 +1,4 @@
-import { seasonChapter, seasonCue, seasonFinish } from '../src/logic/crewSeason.js';
+import { seasonChapter, seasonCue, seasonFinish, seasonHouses } from '../src/logic/crewSeason.js';
 import { cityForBlock } from '../src/logic/city.js';
 // The entrance seam: who speaks, once, and what must never trigger one.
 // Exercises the real ProgressionManager source against a stub scene, the same
@@ -303,11 +303,14 @@ for(let chapter=0;chapter<10;chapter++){
   for(let house=1;house<=14;house++){
     shownPanels=[];
     const current=seam({house,blockIndex});
-    check('live season schedule '+chapter+'/'+house,shownPanels.length===(story.beats[house]?1:0));
-    if(story.beats[house]){
+    const speaks=seasonHouses(gangID,{chapter,blockIndex}).includes(house);
+    check('live season schedule '+chapter+'/'+house,shownPanels.length===(speaks?1:0));
+    if(speaks){
       const cue=shownPanels[0];
       check('live pages retain authored speakers '+chapter+'/'+house,
-        cue.pages.map(p=>p.contact.id).join(',')===story.beats[house].pages.map(p=>p.speaker).join(','));
+        cue.pages.slice(cue.pages.length-story.beats[house].pages.length).map(p=>p.contact.id).join(',')===story.beats[house].pages.map(p=>p.speaker).join(',')
+        &&cue.pages.length-story.beats[house].pages.length===(story.beats[house].reactive?1:0)
+        &&(!story.beats[house].reactive||cue.pages[0].contact.id===story.beats[house].pages[0].speaker));
       check('live chapter label '+chapter+'/'+house,cue.chapterLabel.includes('CHAPTER '+(chapter+1)+' ·'));
       current.result.advance();
       shownPanels=[];seam({house,blockIndex});
@@ -328,11 +331,11 @@ for(let chapter=0;chapter<10;chapter++){
 }
 }
 // The real adapter must derive every category from complete recorded evidence.
-for(const crew of ['crossline','afterlight']) for(let chapter=0;chapter<10;chapter++){
+for(const crew of ['crossline','iron-row','afterlight']) for(let chapter=0;chapter<10;chapter++){
  gangID=crew;
  const story=seasonChapter(crew,chapter);
  const house=Number(Object.keys(story.beats).find(h=>story.beats[h].reactive));
- for(const expected of ['flawless','comeback','noDeaths','noPowers','bunk','phase','dash','decoy']){
+ for(const expected of ['flawless','comeback','noDeaths','noPowers','phase','dash','decoy']){
   store=createContactProgress();
   for(let b=1;b<=chapter;b++)store=completeCrewStory(store,{gangID,blockIndex:b,clearedHouses:15}).state;
   const blockIndex=700+chapter;

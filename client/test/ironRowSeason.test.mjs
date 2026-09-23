@@ -1,35 +1,34 @@
 import { readFileSync } from 'node:fs';
-// Iron Row final manuscript, live predicates and legacy/incomplete-history boundaries.
-import { IRON_ROW_CHAPTERS, IRON_ROW_DIALOGUE_BANK, IRON_ROW_PRIORITY,
-  ironRowChapter, ironRowCue, ironRowJob, ironRowFinish } from '../src/logic/ironRowSeason.js';
+// Iron Row's Season 1 through the shared crew cue, and legacy/incomplete-history boundaries.
+import { IRON_ROW_CHAPTERS, IRON_ROW_DIALOGUE_BANK } from '../src/logic/ironRowSeason.js';
+import { seasonChapter, seasonCue, seasonHouses, seasonJob, seasonFinish, SEASON_PRIORITY as IRON_ROW_PRIORITY } from '../src/logic/crewSeason.js';
 import { beginBlockRun, createBlockRun, recordHouseClear, recordBlockDeath, recordMissionOutcome, blockRunStats } from '../src/logic/blockRun.js';
 import { praiseEarned, contactCue, contactDialoguePages, contactPanelLayout } from '../src/logic/contacts.js';
 import { missionPickupSound } from '../src/logic/missionItem.js';
 let passed=0;
 function check(name,ok){if(!ok)throw Error(name);passed++;}
-const fixedSchedules=[[1,4,9,10],[1,7,9,13],[4,9,10,13],[1,7,9,13],[1,4,9,10],
-  [4,7,9,13],[1,4,9,10],[7,9,10,13],[1,4,9,13],[1,4,9,10,13]];
+const ironRowChapter=c=>seasonChapter('iron-row',c),ironRowJob=c=>seasonJob('iron-row',c);
+const ironRowFinish=(c,city)=>seasonFinish('iron-row',c,city),ironRowCue=o=>seasonCue('iron-row',o);
+const fixedSchedules=[[1,4,6,9,10],[1,7,9,13],[3,9,11,13],[1,7,9,13],[1,4,9,10],
+  [4,7,9,13],[1,4,9,11],[6,9,10,13],[1,4,9,13],[1,4,9,13]];
 check('legacy claimed beat identity survives upgrade',ironRowCue({chapter:0,house:9,blockIndex:5}).eventID===contactCue({gangID:'iron-row',house:9,blockIndex:5}).eventID);
 check('ten authored chapters',IRON_ROW_CHAPTERS.length===10);
-check('112 unique lines',IRON_ROW_DIALOGUE_BANK.length===112 &&
-  new Set(IRON_ROW_DIALOGUE_BANK.map(line=>line.id)).size===112);
+check('unique bank lines, no retired bunk category',new Set(IRON_ROW_DIALOGUE_BANK.map(line=>line.id)).size===IRON_ROW_DIALOGUE_BANK.length&&
+  !IRON_ROW_DIALOGUE_BANK.some(line=>line.category==='BUNK_BAGS'));
 check('no manuscript citation debris',!JSON.stringify(IRON_ROW_CHAPTERS).includes('MD'));
 check('one chapter-specific item per chapter',new Set(IRON_ROW_CHAPTERS.map(c=>c.jobName)).size===10);
 check('continuation does not replay the finale',ironRowChapter(10)===null&&ironRowJob(10)===null&&ironRowFinish(10)===null);
-check('season priority matches final manuscript',IRON_ROW_PRIORITY.join(',')==='flawless,comeback,noDeaths,noPowers,bunk,phase,dash,decoy');
+check('season priority matches the script\'s slots',IRON_ROW_PRIORITY.join(',')==='flawless,comeback,noDeaths,noPowers,phase,dash,decoy');
 for(let chapter=0;chapter<10;chapter++){
   const story=ironRowChapter(chapter),spoken=[];
   for(let house=1;house<=15;house++){
     const cue=ironRowCue({chapter,house,blockIndex:chapter+1,cityName:'Copper Bay'});
-    check('authored silence '+chapter+'/'+house,Boolean(cue)===fixedSchedules[chapter].includes(house));
+    check('authored silence '+chapter+'/'+house,Boolean(cue)===fixedSchedules[chapter].includes(house)&&seasonHouses('iron-row',{chapter,blockIndex:chapter+1}).includes(house)===Boolean(cue));
     if(!cue)continue;
     check('speaker contract '+chapter+'/'+house,cue.pages.every(p=>['brick','rook'].includes(p.speaker)&&p.text));
     check('cue stable '+chapter+'/'+house,JSON.stringify(cue)===JSON.stringify(ironRowCue({chapter,house,blockIndex:chapter+1,cityName:'Copper Bay'})));
     check('neutral never marks praise '+chapter+'/'+house,cue.praiseKey===null);
-    if(house===4||house===7)for(const p of cue.pages.filter(p=>p.text.includes('house 9'))){
-      check('tease states later briefing '+chapter+'/'+house,/brief|explain|rundown|tell|before that door/i.test(p.text));
-      check('tease is not current pickup instruction '+chapter+'/'+house,!/grab.*case|violet case/.test(p.text));
-    }
+    if(house<9)check('look-ahead is not a current pickup instruction '+chapter+'/'+house,cue.pages.every(p=>!/grab.*case|violet case/i.test(p.text)));
     spoken.push(...cue.pages.map(p=>p.text));
   }
   const job=ironRowJob(chapter);
@@ -44,11 +43,10 @@ for(let chapter=0;chapter<10;chapter++){
   for(const key of IRON_ROW_PRIORITY){
     const cue=ironRowCue({chapter,house,blockIndex:chapter+1,earnedPraise:[key],telemetryComplete:true});
     const line=IRON_ROW_DIALOGUE_BANK.find(l=>l.id===cue.lineID);
-    check('eligible variant spoken '+chapter+'/'+key,cue.praiseKey===key&&line.minChapter<=chapter+1&&story.beats[house].eligibleIDs.includes(line.id));
-    const tail=story.beats[house].pages[0].text.split('.').slice(1).join('.').trim();
-    check('authored encouragement survives '+chapter+'/'+key,cue.pages[0].text.endsWith(tail));
+    check('eligible variant spoken '+chapter+'/'+key,cue.praiseKey===key&&line.minChapter<=chapter+1&&line.speaker===story.beats[house].pages[0].speaker&&cue.pages[0].text===line.text);
+    check('authored exchange follows unchanged '+chapter+'/'+key,cue.pages.slice(1).map(p=>p.text).join('|')===story.beats[house].pages.map(p=>p.text.replaceAll('{city}','this city')).join('|'));
     const capped=ironRowCue({chapter,house,earnedPraise:[key],usedPraise:['flawless'],telemetryComplete:true});
-    check('block cap preserves fixed dialogue '+chapter+'/'+key,capped.praiseKey===null&&capped.pages[0].text===story.beats[house].pages[0].text.replaceAll('{city}','this city'));
+    check('block cap preserves fixed dialogue '+chapter+'/'+key,capped.praiseKey===null&&capped.pages.length===story.beats[house].pages.length&&capped.pages[0].text===story.beats[house].pages[0].text.replaceAll('{city}','this city'));
     const absent=ironRowCue({chapter,house,earnedPraise:[key],telemetryComplete:false});
     check('missing telemetry is neutral '+chapter+'/'+key,absent.praiseKey===null&&absent.lineID===story.beats[house].fallback);
   }
@@ -94,7 +92,6 @@ for(const outcome of ['win','miss']){
  const cue=contactCue({gangID:'crossline',house:10,missionOutcome:outcome,stats});
  check('mission debrief never consumes an unspoken praise '+outcome,cue.praiseKey===null);
 }
-check('future bell callback is unavailable during season',IRON_ROW_DIALOGUE_BANK.find(l=>l.id==='IR_ROK_BUNK_06').minChapter===11);
 for(const line of IRON_ROW_DIALOGUE_BANK){
  check('bank has no forbidden real-stash language '+line.id,!/real stash|charge|scraped fender/i.test(line.text));
  if(line.category==='NO_POWERS')check('powers explicitly scoped to clears '+line.id,/clear|successful|winning|extract/i.test(line.text));

@@ -1,241 +1,232 @@
-// Iron Row Season 1: normalized from the final specification, not its earlier drafts.
-// Import-free story data. No RNG, storage, rewards, maze changes or Rivals claims.
-// Chapter is crew-owned and zero-based; world block/city labels are independent.
+// Season 1, from "Plug Run - Season One Updated" (revised character + systems pass).
+// Import-free story data: no RNG, storage, rewards, maze changes or Rivals claims.
+// Chapter is crew-owned and zero-based; {city} is the block being played.
+// Each beat is keyed by the house it plays before; house 15's script lines are
+// the finish, after extraction. One beat per chapter is reactive: a line from
+// the bank below, picked from what the block measured, opens it.
 export const IRON_ROW_CHAPTERS = Object.freeze([
   {
     "number": 1,
     "title": "Asphalt Welcome",
     "jobName": "A ledger of every job the old crew never finished",
-    "reason": "Brick found it wedged behind a workbench nobody's used in years. Somebody quit on this shop mid-sentence.",
+    "reason": "A ledger lists jobs the previous garage crew never finished. It ends mid-entry.",
+    "short": "LEDGER",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "brick",
-            "text": "First door of the season. Grab the stash, clear the hallway, and make your sprint straight to the car."
+            "text": "First door. Bag to trunk. Keep the hallway boring."
           },
           {
             "speaker": "rook",
-            "text": "Don't stand around admiring the wallpaper. Move your boots."
+            "text": "Brick means “good luck,” in her special little way."
+          },
+          {
+            "speaker": "brick",
+            "text": "I did not."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses cleared. Keep bringing them out."
+            "text": "Three clear."
           },
           {
-            "speaker": "brick",
-            "text": "Rook's got something at house 9. He'll tell you before that door."
+            "speaker": "rook",
+            "text": "Look at us. Functional workplace. HR would be shaking. We do not have HR."
           }
         ]
       },
-      "9": {
+      "6": {
+        "label": "BLOCK RIVALS TEASE",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Here's the play. There's a ledger in the violet case — half the jobs in it never got closed out. Grab the case and the stash."
+            "text": "Once we own all fifteen, Block Rivals opens. Seven-house race, head-to-head, powers picked before the start."
           },
           {
             "speaker": "brick",
-            "text": "Somebody walked off this shop mid-job."
+            "text": "Earn the block first. Then race whoever wants it."
+          }
+        ],
+        "rivalsTease": true
+      },
+      "9": {
+        "label": "THE JOB",
+        "pages": [
+          {
+            "speaker": "rook",
+            "text": "Violet case has the old shop ledger. Half these jobs never got closed."
+          },
+          {
+            "speaker": "brick",
+            "text": "Last line?"
           },
           {
             "speaker": "rook",
-            "text": "Or got walked off it. Grab the case and the bag, runner. Both come with you."
+            "text": "“Do not let Brick—” and then nothing."
+          },
+          {
+            "speaker": "brick",
+            "text": "Cute."
+          },
+          {
+            "speaker": "rook",
+            "text": "That is your scary voice. Runner, grab both."
           }
         ]
       },
       "10": {
+        "label": "DEBRIEF",
         "pages": [
           {
+            "speaker": "rook",
+            "text": "You know who wrote it?"
+          },
+          {
             "speaker": "brick",
-            "text": "Six houses remain on this stretch. Keep your line and finish what you started."
+            "text": "Six doors left."
+          },
+          {
+            "speaker": "rook",
+            "text": "Also a scary answer."
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_01",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "IR_ROK_NEUT_01"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Fifteen out of fifteen. First block's marked."
+        "text": "Fifteen."
       },
       {
         "speaker": "rook",
-        "text": "That ledger's got names in it I don't recognize. Somebody worked this shop before us and stopped answering for it."
+        "text": "Ledger has names I do not know."
+      },
+      {
+        "speaker": "brick",
+        "text": "Then we learn them."
+      },
+      {
+        "speaker": "rook",
+        "text": "See? “Good luck.” Brick by Brick, she is opening up."
       }
     ]
   },
   {
     "number": 2,
     "title": "Service Corridor",
-    "jobName": "A work jacket, too small for him now, IRON ROW stitched on the back in an older font",
-    "reason": "It belonged to whoever ran this garage before Brick did. He's never said who.",
+    "jobName": "A work jacket, too small for her now, IRON ROW stitched on the back in an older font",
+    "reason": "An old Iron Row work jacket, too small for Brick now, stitched in an older shop logo. It belonged to whoever ran the garage before her. Brick has never said who.",
+    "short": "OLD JACKET",
+    "tag": "personal",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Tight avenues out here. Watch your corners on the way out."
+            "text": "New block, new me. I am choosing peace today."
           },
           {
             "speaker": "brick",
-            "text": "Just get the bag to the trunk. We've got work."
+            "text": "Then choose it quietly."
           }
         ]
       },
       "7": {
+        "label": "LOOK AHEAD",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Six houses cleared. Keep your boots moving."
+            "text": "Six clear. House nine is Brick business."
+          },
+          {
+            "speaker": "brick",
+            "text": "Do not call it that."
           },
           {
             "speaker": "rook",
-            "text": "House 9's Brick's business, not mine. He'll explain before that door."
+            "text": "Brick-adjacent mystery?"
+          },
+          {
+            "speaker": "brick",
+            "text": "Worse."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Door 9. There's a jacket in the violet case. Smaller size than mine. Old stitching. Grab the case and the stash."
+            "text": "Violet case. Old shop jacket. Small size. Old logo."
           },
           {
             "speaker": "rook",
-            "text": "You gonna say whose it was?"
+            "text": "Hers?"
           },
           {
             "speaker": "brick",
-            "text": "Grab it and the bag, runner. Both come out, and neither one gets asked about again."
+            "text": "Do not."
+          },
+          {
+            "speaker": "rook",
+            "text": "Got it."
+          },
+          {
+            "speaker": "brick",
+            "text": "Runner, both come out. No folding it weird."
           }
         ]
       },
       "13": {
+        "label": "DEBRIEF",
         "pages": [
           {
+            "speaker": "rook",
+            "text": "I am not asking."
+          },
+          {
             "speaker": "brick",
-            "text": "Three houses remain. Stay focused on the door in front of you and sprint to the car."
+            "text": "Good."
+          },
+          {
+            "speaker": "rook",
+            "text": "I am so not asking, it is basically a podcast."
+          },
+          {
+            "speaker": "brick",
+            "text": "You are somehow loud at silence."
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_02",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "IR_ROK_NEUT_02"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Thirty stashes. Jacket's in the truck."
+        "text": "Thirty total. Jacket is in my truck."
       },
       {
         "speaker": "rook",
-        "text": "First thing you've kept from a house that wasn't tools or food. I'm not gonna ask."
+        "text": "First thing you kept that was not a wrench, food, or evidence."
       },
       {
         "speaker": "brick",
-        "text": "Good."
+        "text": "Go home, Rook."
+      },
+      {
+        "speaker": "rook",
+        "text": "See you tomorrow, boss."
       }
     ]
   },
@@ -243,94 +234,84 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 3,
     "title": "Scrap Mile",
     "jobName": "A repair order, unsigned, for a car reported stolen two years ago",
-    "reason": "Somebody in this neighborhood has been running plates that don't exist. Rook wants to know who taught them that trick.",
+    "reason": "An unsigned repair order belongs to a car reported stolen two years ago. Someone is running ghost plates through a real shop.",
+    "short": "REPAIR ORDER",
     "beats": {
-      "4": {
+      "3": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses cleared. Keep moving down the street."
+            "text": "Two clear."
+          },
+          {
+            "speaker": "rook",
+            "text": "House nine has paperwork for a car that legally does not exist."
           },
           {
             "speaker": "brick",
-            "text": "Rook's got a favor at house 9. He'll give you the rundown before that porch."
+            "text": "My favorite kind of customer."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Time for the pickup. The violet case holds a repair order, no signature, for a car that's supposed to not exist anymore. Grab the case and the stash."
+            "text": "Repair order in the violet case. No signature. VIN comes back stolen two years ago."
           },
           {
             "speaker": "brick",
-            "text": "Somebody's running ghost plates through a real shop."
+            "text": "Plate?"
           },
           {
             "speaker": "rook",
-            "text": "Not our shop. Not yet, anyway. Grab the case and the bag."
+            "text": "Also fake."
+          },
+          {
+            "speaker": "brick",
+            "text": "So somebody taught them enough to be annoying."
+          },
+          {
+            "speaker": "rook",
+            "text": "Exactly. Grab both."
           }
         ]
       },
-      "10": {
+      "11": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Six houses remain. Stride it out and keep moving to the next door."
+            "text": "You think old-shop work?"
+          },
+          {
+            "speaker": "brick",
+            "text": "I think guessing is how idiots become witnesses."
           }
         ],
         "reactive": true,
-        "fallback": "IR_ROK_NEUT_01",
-        "eligibleIDs": [
-          "IR_ROK_ZDEATH_01",
-          "IR_ROK_ZDEATH_02",
-          "IR_ROK_ZDEATH_03",
-          "IR_ROK_ZDEATH_04",
-          "IR_ROK_UNTOUCH_01",
-          "IR_ROK_UNTOUCH_02",
-          "IR_ROK_UNTOUCH_03",
-          "IR_ROK_UNTOUCH_04",
-          "IR_ROK_UNTOUCH_05",
-          "IR_ROK_COMEBACK_01",
-          "IR_ROK_COMEBACK_02",
-          "IR_ROK_COMEBACK_03",
-          "IR_ROK_COMEBACK_04",
-          "IR_ROK_COMEBACK_05",
-          "IR_ROK_NOPOW_01",
-          "IR_ROK_NOPOW_02",
-          "IR_ROK_NOPOW_03",
-          "IR_ROK_NOPOW_04",
-          "IR_ROK_NOPOW_05",
-          "IR_ROK_BUNK_01",
-          "IR_ROK_BUNK_02",
-          "IR_ROK_BUNK_03",
-          "IR_ROK_BUNK_04",
-          "IR_ROK_BUNK_05",
-          "IR_ROK_PHASE_01",
-          "IR_ROK_PHASE_02",
-          "IR_ROK_PHASE_03",
-          "IR_ROK_PHASE_04",
-          "IR_ROK_PHASE_05",
-          "IR_ROK_DASH_01",
-          "IR_ROK_DASH_02",
-          "IR_ROK_DASH_03",
-          "IR_ROK_DASH_04",
-          "IR_ROK_DASH_05",
-          "IR_ROK_DASH_06",
-          "IR_ROK_DECOY_01",
-          "IR_ROK_DECOY_02",
-          "IR_ROK_DECOY_03",
-          "IR_ROK_DECOY_04",
-          "IR_ROK_DECOY_05"
-        ],
-        "minChapter": 0
+        "fallback": "IR_ROK_NEUT_03"
       },
       "13": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses left. Close this block out."
+            "text": "Three left."
+          },
+          {
+            "speaker": "rook",
+            "text": "Our runner is faster than my last tow truck."
+          },
+          {
+            "speaker": "brick",
+            "text": "Your last tow truck was on fire."
+          },
+          {
+            "speaker": "rook",
+            "text": "And it was still giving main character. Rest in pieces, Big Tow."
           }
         ]
       }
@@ -338,11 +319,15 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "finish": [
       {
         "speaker": "brick",
-        "text": "This block's in the bag. Forty-five total houses cleared for the Row."
+        "text": "Forty-five total."
       },
       {
         "speaker": "rook",
-        "text": "Whoever taught that trick knew what they were doing. I want to know if they're still teaching it."
+        "text": "Ghost-plate job was clean."
+      },
+      {
+        "speaker": "brick",
+        "text": "Too clean. Find who taught it."
       }
     ]
   },
@@ -350,116 +335,104 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 4,
     "title": "Neon Strip",
     "jobName": "A stack of unpaid invoices, addressed to businesses that don't exist on this street anymore",
-    "reason": "Brick's shop is legit on paper. Somebody's been laundering through paper that isn't.",
+    "reason": "Unpaid invoices point to businesses that no longer exist. Someone is laundering money through dead addresses.",
+    "short": "INVOICES",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Too many billboard lights out here. Makes my eyes ache."
+            "text": "This block is giving me a migraine."
           },
           {
             "speaker": "brick",
-            "text": "Don't stare at the signs; watch the porch steps. Get the stash and get out."
+            "text": "You say that every time we leave the garage."
+          },
+          {
+            "speaker": "rook",
+            "text": "The garage gets me. The garage is my safe space."
           }
         ]
       },
       "7": {
+        "label": "LOOK AHEAD",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Six houses cleared. Keep the bags coming."
+            "text": "Six clear. Paperwork at nine."
+          },
+          {
+            "speaker": "brick",
+            "text": "Real paperwork?"
           },
           {
             "speaker": "rook",
-            "text": "House 9's got paperwork in it. I'll explain before that door."
+            "text": "Technically. Morally? Absolutely not."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "House 9. The violet case has invoices in it — for shops that don't exist. Somebody's running money through addresses on this street that aren't real anymore. Grab the case and the stash."
+            "text": "Invoices in the violet case. Businesses closed years ago, money still moving through them."
           },
           {
             "speaker": "brick",
-            "text": "That's not scrap work. That's somebody's whole business."
+            "text": "Amounts?"
           },
           {
             "speaker": "rook",
-            "text": "Which is exactly why it's not staying in this house. Grab the case, grab the bag."
+            "text": "Enough that I suddenly feel underpaid."
+          },
+          {
+            "speaker": "brick",
+            "text": "You are underpaid."
+          },
+          {
+            "speaker": "rook",
+            "text": "Thank you."
+          },
+          {
+            "speaker": "brick",
+            "text": "Because you work for me."
           }
         ]
       },
       "13": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses remain. Keep moving."
+            "text": "Three left."
+          },
+          {
+            "speaker": "rook",
+            "text": "I know two names on these invoices."
+          },
+          {
+            "speaker": "brick",
+            "text": "Ask quiet."
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_03",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "IR_BRK_NEUT_04"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Block secured. Sixty doors down in {city}."
+        "text": "Sixty total."
       },
       {
         "speaker": "rook",
-        "text": "I know three of those business names. I'm gonna ask around, quiet."
+        "text": "This is not garage hustle. It is a system."
+      },
+      {
+        "speaker": "brick",
+        "text": "Then systems have owners."
       }
     ]
   },
@@ -467,116 +440,96 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 5,
     "title": "Copper Terrace",
     "jobName": "A set of master keys, cut for buildings that changed locks a week ago",
-    "reason": "Somebody wanted back into houses Iron Row already cleared. Rook doesn't like being followed.",
+    "reason": "Fresh master keys fit buildings whose locks changed only a week ago. Somebody is shadowing Iron Row’s schedule.",
+    "short": "MASTER KEYS",
     "beats": {
-      "4": {
+      "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses cleared. Onto the next porch."
+            "text": "Bags only. Do not wander."
+          },
+          {
+            "speaker": "rook",
+            "text": "Translation: no sightseeing. {city} tourism board in shambles."
+          }
+        ]
+      },
+      "4": {
+        "label": "CHECK-IN",
+        "pages": [
+          {
+            "speaker": "brick",
+            "text": "Three clear."
+          },
+          {
+            "speaker": "rook",
+            "text": "House nine has fresh keys to fresh locks."
           },
           {
             "speaker": "brick",
-            "text": "Rook's got something at house 9 that's got him quiet all morning. He'll explain before that door."
+            "text": "That sentence annoys me already."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Here we go. Master keys in the violet case — freshly cut, for locks that changed a week ago. Somebody wanted back into houses we already ran. Grab the case and the stash."
+            "text": "Master keys. Cut this week. Fits places we already ran."
           },
           {
             "speaker": "brick",
-            "text": "Followed, or just late?"
+            "text": "Followed or late?"
           },
           {
             "speaker": "rook",
-            "text": "Don't know yet. Grab the case and the bag — we figure that out at the shop, not the curb."
+            "text": "Either way, somebody knows our route."
+          },
+          {
+            "speaker": "brick",
+            "text": "Take the keys. Leave them the lock."
           }
         ]
       },
       "10": {
+        "label": "DEBRIEF",
         "pages": [
           {
-            "speaker": "brick",
-            "text": "Six houses remain. Keep your stride all the way to the curb."
-          }
-        ],
-        "reactive": true,
-        "fallback": "IR_BRK_NEUT_04",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
-      },
-      "1": {
-        "pages": [
+            "speaker": "rook",
+            "text": "That was cold."
+          },
           {
             "speaker": "brick",
-            "text": "Wider porches on this avenue. Don't wander in the halls — find the stash and head straight back out the door."
+            "text": "That was practical."
           },
           {
             "speaker": "rook",
-            "text": "Fast on your feet, runner."
+            "text": "Same car, different paint job."
           }
-        ]
+        ],
+        "reactive": true,
+        "fallback": "IR_ROK_NEUT_05"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Halfway through our shop setup. Seventy-five stashes logged for Iron Row."
+        "text": "Seventy-five total."
       },
       {
         "speaker": "rook",
-        "text": "Whoever cut those keys knows our schedule better than I'm comfortable with."
+        "text": "Whoever cut these knows our schedule."
+      },
+      {
+        "speaker": "brick",
+        "text": "Then tomorrow our schedule changes."
+      },
+      {
+        "speaker": "rook",
+        "text": "Love that. New route, who dis."
       }
     ]
   },
@@ -584,116 +537,109 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 6,
     "title": "Boiler Line",
     "jobName": "A torn Crossline route map, left where Brick would find it on purpose",
-    "reason": "Somebody wanted Iron Row to know they'd been walked in on. Brick doesn't do subtle back.",
+    "reason": "A torn Crossline route map was left where Brick would find it. Whether it is a threat or bait is unclear.",
+    "short": "ROUTE MAP",
+    "tag": "rival",
     "beats": {
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Loud pipe hum around these foundations. Keep your eyes up when you navigate the halls."
+            "text": "Three clear. My ears are ringing."
           },
           {
             "speaker": "brick",
-            "text": "Hallway navigation is simple: grab the bag and move. Keep running."
+            "text": "You can survive noise."
+          },
+          {
+            "speaker": "rook",
+            "text": "Can I survive Crossline leaving arts and crafts on our floor?"
+          }
+        ]
+      },
+      "7": {
+        "label": "LOOK AHEAD",
+        "pages": [
+          {
+            "speaker": "brick",
+            "text": "Six clear."
+          },
+          {
+            "speaker": "rook",
+            "text": "House nine has Switch’s route map. Torn. Dramatically."
+          },
+          {
+            "speaker": "brick",
+            "text": "He would hate the drama."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "House 9. There's a route map in the violet case — Crossline's, torn on purpose, left right where I'd trip over it. Grab the case and the stash."
+            "text": "Violet case. Crossline map. Somebody ripped it in half and planted it here."
           },
           {
             "speaker": "brick",
-            "text": "That's not an accident. That's Switch's crew telling us they know our floor plan."
+            "text": "That is not Switch."
           },
           {
             "speaker": "rook",
-            "text": "Or telling us they want us to think that. Either way, grab the case and the bag. We're not leaving a message back — not yet."
+            "text": "You sound sure."
+          },
+          {
+            "speaker": "brick",
+            "text": "He labels corners with a ruler. Man is physically incapable of a theatrical tear."
+          },
+          {
+            "speaker": "rook",
+            "text": "Fair. Grab it anyway."
           }
         ]
       },
       "13": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses remain. Push through the finish."
-          }
-        ],
-        "reactive": true,
-        "fallback": "IR_BRK_NEUT_05",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
-      },
-      "7": {
-        "pages": [
-          {
-            "speaker": "brick",
-            "text": "Six houses cleared. Keep pulling bags."
+            "text": "Three left."
           },
           {
             "speaker": "rook",
-            "text": "I'll need you at house 9. Found something that's got me looking twice. I'll explain before that door."
+            "text": "So maybe somebody wants us mad at Crossline."
+          },
+          {
+            "speaker": "brick",
+            "text": "Then disappointing them costs nothing."
           }
-        ]
+        ],
+        "reactive": true,
+        "fallback": "IR_BRK_NEUT_06"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "Ninety houses down in our campaign ledger."
+        "text": "Ninety total."
       },
       {
         "speaker": "rook",
-        "text": "If Crossline wants to leave notes on our floor, next time I'm leaving one on theirs. In person."
+        "text": "I had a whole threatening note drafted."
+      },
+      {
+        "speaker": "brick",
+        "text": "Delete it."
+      },
+      {
+        "speaker": "rook",
+        "text": "It had a skull. The skull had a little wrench. It was torque of the town."
+      },
+      {
+        "speaker": "brick",
+        "text": "Especially delete it."
       }
     ]
   },
@@ -701,116 +647,116 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 7,
     "title": "Rivet Flats",
     "jobName": "A payoff envelope, still sealed, addressed to nobody",
-    "reason": "Somebody's been paying somebody to look away from this block. Rook wants to know who's on the other end before he decides whether to open it.",
+    "reason": "A sealed payoff envelope, heavy with cash and addressed to nobody, suggests somebody is being paid to look away.",
+    "short": "ENVELOPE",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Rails and gravel along this block. Watch your footing on the steps and sprint straight to the car."
+            "text": "Hands on bags. Nothing else."
           },
           {
             "speaker": "rook",
-            "text": "Let's keep this moving."
+            "text": "And if you find free money, legally it is ours."
+          },
+          {
+            "speaker": "brick",
+            "text": "That is not law."
+          },
+          {
+            "speaker": "rook",
+            "text": "It is case law. As in, it is in a case."
+          },
+          {
+            "speaker": "brick",
+            "text": "Walk."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
-            "speaker": "brick",
-            "text": "Three houses cleared. Keep that van loaded."
+            "speaker": "rook",
+            "text": "Three clear. House nine has an envelope that feels expensive."
           },
           {
             "speaker": "brick",
-            "text": "Rook's got something heavier than usual at house 9. He'll brief you before that door."
+            "text": "Do not shake evidence."
+          },
+          {
+            "speaker": "rook",
+            "text": "I was appreciating density."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Special job time. Sealed envelope in the violet case, cash-heavy, no name on it. Grab the case and the stash."
+            "text": "Sealed envelope. No name. Cash-heavy."
           },
           {
             "speaker": "brick",
-            "text": "Somebody's paying somebody."
+            "text": "Open it?"
           },
           {
             "speaker": "rook",
-            "text": "And I want to know which somebody, before I decide if we're the ones who get to keep it. Grab the case, runner."
+            "text": "Not here."
+          },
+          {
+            "speaker": "brick",
+            "text": "Good answer."
+          },
+          {
+            "speaker": "rook",
+            "text": "Please note the growth."
           }
         ]
       },
-      "10": {
+      "11": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Six houses remain. Run through the threshold every time."
+            "text": "Five left."
+          },
+          {
+            "speaker": "rook",
+            "text": "You think somebody is paying inspectors?"
+          },
+          {
+            "speaker": "brick",
+            "text": "I think cash does not become innocent because it has stationery."
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_06",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "IR_BRK_NEUT_07"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "One hundred and five doors in the win column."
+        "text": "One-oh-five total."
       },
       {
         "speaker": "rook",
-        "text": "Envelope's still sealed. Some things you open together or not at all."
+        "text": "Envelope is still sealed."
+      },
+      {
+        "speaker": "brick",
+        "text": "We open it together."
+      },
+      {
+        "speaker": "rook",
+        "text": "Aw."
+      },
+      {
+        "speaker": "brick",
+        "text": "Do not ruin it."
       }
     ]
   },
@@ -818,101 +764,97 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 8,
     "title": "Canal Run",
     "jobName": "A wedding ring, found months ago, that he never turned in",
-    "reason": "Rook's kept it in his toolbox since a job that went sideways. He still means to find whoever lost it.",
+    "reason": "A wedding ring Rook found months ago on a job gone sideways. He kept it rather than sell it and still wants to return it.",
+    "short": "THE RING",
+    "tag": "personal",
     "beats": {
-      "7": {
+      "6": {
+        "label": "LOOK AHEAD",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Six houses cleared. Keep pulling bags."
+            "text": "Five clear."
           },
           {
             "speaker": "rook",
-            "text": "House 9 is mine to explain. Give me the room."
+            "text": "House nine is mine. Please be normal about it."
+          },
+          {
+            "speaker": "brick",
+            "text": "You asking that of me is offensive."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "House 9. It's a ring, in the violet case. Not mine. Found it on a job months back — never turned it in, never sold it either. Grab the case and the stash."
+            "text": "Violet case has a ring. Wedding band. Not mine."
           },
           {
             "speaker": "brick",
-            "text": "Rook."
+            "text": "The one from the old job?"
           },
           {
             "speaker": "rook",
-            "text": "I know how it looks. I keep meaning to find who it belongs to. Grab it and the bag, runner. Both come out."
+            "text": "Yeah."
+          },
+          {
+            "speaker": "brick",
+            "text": "You still have it?"
+          },
+          {
+            "speaker": "rook",
+            "text": "I said please be normal."
+          },
+          {
+            "speaker": "brick",
+            "text": "Runner, both out."
           }
         ]
       },
       "10": {
+        "label": "DEBRIEF",
         "pages": [
           {
+            "speaker": "brick",
+            "text": "Months, Rook."
+          },
+          {
             "speaker": "rook",
-            "text": "Six houses remain on this canal stretch. Keep moving."
+            "text": "I know."
+          },
+          {
+            "speaker": "brick",
+            "text": "Why not sell it?"
+          },
+          {
+            "speaker": "rook",
+            "text": "Because somebody had a whole life attached to it. Feels cheap to turn that into gas money."
           }
         ],
         "reactive": true,
-        "fallback": "IR_ROK_NEUT_02",
-        "eligibleIDs": [
-          "IR_ROK_ZDEATH_01",
-          "IR_ROK_ZDEATH_02",
-          "IR_ROK_ZDEATH_03",
-          "IR_ROK_ZDEATH_04",
-          "IR_ROK_ZDEATH_05",
-          "IR_ROK_ZDEATH_06",
-          "IR_ROK_UNTOUCH_01",
-          "IR_ROK_UNTOUCH_02",
-          "IR_ROK_UNTOUCH_03",
-          "IR_ROK_UNTOUCH_04",
-          "IR_ROK_UNTOUCH_05",
-          "IR_ROK_UNTOUCH_06",
-          "IR_ROK_COMEBACK_01",
-          "IR_ROK_COMEBACK_02",
-          "IR_ROK_COMEBACK_03",
-          "IR_ROK_COMEBACK_04",
-          "IR_ROK_COMEBACK_05",
-          "IR_ROK_COMEBACK_06",
-          "IR_ROK_NOPOW_01",
-          "IR_ROK_NOPOW_02",
-          "IR_ROK_NOPOW_03",
-          "IR_ROK_NOPOW_04",
-          "IR_ROK_NOPOW_05",
-          "IR_ROK_NOPOW_06",
-          "IR_ROK_BUNK_01",
-          "IR_ROK_BUNK_02",
-          "IR_ROK_BUNK_03",
-          "IR_ROK_BUNK_04",
-          "IR_ROK_BUNK_05",
-          "IR_ROK_PHASE_01",
-          "IR_ROK_PHASE_02",
-          "IR_ROK_PHASE_03",
-          "IR_ROK_PHASE_04",
-          "IR_ROK_PHASE_05",
-          "IR_ROK_PHASE_06",
-          "IR_ROK_DASH_01",
-          "IR_ROK_DASH_02",
-          "IR_ROK_DASH_03",
-          "IR_ROK_DASH_04",
-          "IR_ROK_DASH_05",
-          "IR_ROK_DASH_06",
-          "IR_ROK_DECOY_01",
-          "IR_ROK_DECOY_02",
-          "IR_ROK_DECOY_03",
-          "IR_ROK_DECOY_04",
-          "IR_ROK_DECOY_05",
-          "IR_ROK_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "IR_BRK_NEUT_08"
       },
       "13": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Three houses remain. Finish the canal row and let's get back to the shop."
+            "text": "Three left."
+          },
+          {
+            "speaker": "brick",
+            "text": "Find the owner."
+          },
+          {
+            "speaker": "rook",
+            "text": "I will."
+          },
+          {
+            "speaker": "brick",
+            "text": "That was not a suggestion."
           }
         ]
       }
@@ -920,15 +862,15 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "finish": [
       {
         "speaker": "rook",
-        "text": "One hundred and twenty houses cleared. Ring's still in my toolbox."
+        "text": "One-twenty total. Ring is back in my toolbox."
       },
       {
         "speaker": "brick",
-        "text": "You've had months."
+        "text": "Temporary."
       },
       {
         "speaker": "rook",
-        "text": "I know. I'll find them. I always finish what I start — you know that better than anybody."
+        "text": "Temporary."
       }
     ]
   },
@@ -936,118 +878,112 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 9,
     "title": "Granite Ridge",
     "jobName": "A city inspection notice, stamped, for a building that was never inspected",
-    "reason": "Somebody's been forging paperwork to keep buildings on this block condemned. Rook wants to know who profits from that.",
+    "reason": "A stamped city inspection notice is fake. Someone profits from keeping buildings condemned and empty.",
+    "short": "INSPECTION",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Steep avenue here. Keep your stride measured on the walkways and don't stall inside the doors."
+            "text": "Heads down. Bags out."
           },
           {
             "speaker": "rook",
-            "text": "We take the ridge, we see the whole water from up here. Let's work."
+            "text": "Motivational. Put that on a mug."
+          },
+          {
+            "speaker": "brick",
+            "text": "Then buy a mug."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
+            "speaker": "rook",
+            "text": "Three clear. I can see the garage from here."
+          },
+          {
             "speaker": "brick",
-            "text": "Three houses cleared. Keep working up the incline."
+            "text": "Can the garage see you working?"
           },
           {
             "speaker": "rook",
-            "text": "Look down the slope — you can trace our entire route across {city} from here."
+            "text": "Crazy thing to say to a man mid-cardio."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "Door 9. City inspection notice, in the violet case — stamped, official-looking, and completely fake. Grab the case and the stash."
+            "text": "Inspection notice. Official stamp. Building was never inspected."
           },
           {
             "speaker": "brick",
-            "text": "Fake how?"
+            "text": "Who benefits?"
           },
           {
             "speaker": "rook",
-            "text": "Building's never been inspected a day in its life. Somebody wants it condemned on paper. Grab the case and the bag — I want to know who benefits."
+            "text": "Owner gets squeezed, property stays empty, somebody buys cheap."
+          },
+          {
+            "speaker": "brick",
+            "text": "There it is. Business wearing a city badge."
           }
         ]
       },
       "13": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses remain. Finish the ridge run and bring it home."
+            "text": "Three left."
+          },
+          {
+            "speaker": "rook",
+            "text": "You hate fake paperwork more than actual crime."
+          },
+          {
+            "speaker": "brick",
+            "text": "Crime should at least have the courage to look like crime."
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_07",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_COMEBACK_06",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DASH_06",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "IR_BRK_NEUT_01"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "One hundred and thirty-five stashes logged."
+        "text": "One-thirty-five total."
       },
       {
         "speaker": "rook",
-        "text": "Somebody's making money off empty buildings nobody's allowed to fix. That's not scrap work. That's a business."
+        "text": "Whole ridge is being kept broken on purpose."
+      },
+      {
+        "speaker": "brick",
+        "text": "Then somebody made broken profitable."
+      },
+      {
+        "speaker": "rook",
+        "text": "There is a Copper Bay service rate buried in the packet. Almost double ours."
+      },
+      {
+        "speaker": "brick",
+        "text": "Because?"
+      },
+      {
+        "speaker": "rook",
+        "text": "Notes say “multi-Plug houses.” Bigger money, worse doors."
+      },
+      {
+        "speaker": "brick",
+        "text": "That is not a bonus. That is hazard pay."
       }
     ]
   },
@@ -1055,138 +991,128 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
     "number": 10,
     "title": "Sovereign Center",
     "jobName": "A courier's business card, left by a customer who never gave a name",
-    "reason": "He paid cash, said the Row's reputation reaches Copper Bay now, and left before Rook could ask what that meant.",
+    "reason": "A nameless courier pays cash and asks whether Iron Row is “ready for Copper Bay work.”",
+    "short": "BUSINESS CARD",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Final stretch of our shop setup in {city}. Fifteen houses to close this chapter of our campaign ledger."
+            "text": "Last {city} block."
           },
           {
             "speaker": "rook",
-            "text": "Let's run these porches like we built them."
+            "text": "Garage is stocked, van is alive, nobody has sued us."
+          },
+          {
+            "speaker": "brick",
+            "text": "Yet."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "brick",
-            "text": "Three houses cleared. Keep moving to the next porch."
+            "text": "Three clear."
+          },
+          {
+            "speaker": "rook",
+            "text": "I had a customer this morning who did not want a repair."
           },
           {
             "speaker": "brick",
-            "text": "Rook had a customer today he didn't like the look of. He'll explain before house 9."
+            "text": "Then why was he in my shop?"
+          },
+          {
+            "speaker": "rook",
+            "text": "Exactly."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "rook",
-            "text": "This is it — door 9. Guy came in this morning, paid cash, didn't leave a name. Left this card in the violet case instead. Grab the case and the stash."
+            "text": "Business card in the violet case. No name, just a Copper Bay number."
           },
           {
             "speaker": "brick",
-            "text": "What'd he want?"
+            "text": "What did he ask?"
           },
           {
             "speaker": "rook",
-            "text": "Didn't ask for a repair. Just wanted to know if the Row was 'ready for Copper Bay work.' Then he left. Grab the case and the bag, runner."
+            "text": "If Iron Row was “ready for Copper Bay work.”"
+          },
+          {
+            "speaker": "brick",
+            "text": "What did you say?"
+          },
+          {
+            "speaker": "rook",
+            "text": "I asked his budget."
+          },
+          {
+            "speaker": "brick",
+            "text": "Of course you did."
+          },
+          {
+            "speaker": "rook",
+            "text": "Rook-ie mistake would have been not asking."
           }
         ]
       },
-      "10": {
+      "13": {
+        "label": "CHECK-IN",
         "pages": [
           {
+            "speaker": "rook",
+            "text": "Three left."
+          },
+          {
             "speaker": "brick",
-            "text": "Six houses remain on this block. Leave nothing on the table."
+            "text": "Finish the city before we cross anything."
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_08",
-        "eligibleIDs": [
-          "IR_BRK_ZDEATH_01",
-          "IR_BRK_ZDEATH_02",
-          "IR_BRK_ZDEATH_03",
-          "IR_BRK_ZDEATH_04",
-          "IR_BRK_ZDEATH_05",
-          "IR_BRK_ZDEATH_06",
-          "IR_BRK_UNTOUCH_01",
-          "IR_BRK_UNTOUCH_02",
-          "IR_BRK_UNTOUCH_03",
-          "IR_BRK_UNTOUCH_04",
-          "IR_BRK_UNTOUCH_05",
-          "IR_BRK_UNTOUCH_06",
-          "IR_BRK_COMEBACK_01",
-          "IR_BRK_COMEBACK_02",
-          "IR_BRK_COMEBACK_03",
-          "IR_BRK_COMEBACK_04",
-          "IR_BRK_COMEBACK_05",
-          "IR_BRK_COMEBACK_06",
-          "IR_BRK_NOPOW_01",
-          "IR_BRK_NOPOW_02",
-          "IR_BRK_NOPOW_03",
-          "IR_BRK_NOPOW_04",
-          "IR_BRK_NOPOW_05",
-          "IR_BRK_NOPOW_06",
-          "IR_BRK_BUNK_01",
-          "IR_BRK_BUNK_02",
-          "IR_BRK_BUNK_03",
-          "IR_BRK_BUNK_04",
-          "IR_BRK_BUNK_05",
-          "IR_BRK_BUNK_06",
-          "IR_BRK_PHASE_01",
-          "IR_BRK_PHASE_02",
-          "IR_BRK_PHASE_03",
-          "IR_BRK_PHASE_04",
-          "IR_BRK_PHASE_05",
-          "IR_BRK_PHASE_06",
-          "IR_BRK_DASH_01",
-          "IR_BRK_DASH_02",
-          "IR_BRK_DASH_03",
-          "IR_BRK_DASH_04",
-          "IR_BRK_DASH_05",
-          "IR_BRK_DASH_06",
-          "IR_BRK_DECOY_01",
-          "IR_BRK_DECOY_02",
-          "IR_BRK_DECOY_03",
-          "IR_BRK_DECOY_04",
-          "IR_BRK_DECOY_05",
-          "IR_BRK_DECOY_06"
-        ],
-        "minChapter": 0
-      },
-      "13": {
-        "pages": [
-          {
-            "speaker": "rook",
-            "text": "Three houses remain to lock down the city center. Stride it out all the way to the car."
-          }
-        ]
+        "fallback": "IR_ROK_NEUT_02"
       }
     },
     "finish": [
       {
         "speaker": "brick",
-        "text": "One hundred and fifty stashes for Iron Row. Ten whole blocks in our campaign ledger, and the garage is ready."
+        "text": "One-fifty."
       },
       {
         "speaker": "rook",
-        "text": "That customer wasn't wrong about one thing — word's already crossed the water about us."
+        "text": "Word crossed the water before we did."
       },
       {
         "speaker": "brick",
-        "text": "Copper Bay work. What's that supposed to mean."
+        "text": "Heavier stashes?"
       },
       {
         "speaker": "rook",
-        "text": "Heavier stashes, from what I hear. And more than one set of hands waiting behind every door over there."
+        "text": "Yeah. Harder houses too. More than one Plug behind a door is normal over there."
+      },
+      {
+        "speaker": "rook",
+        "text": "Customer also used one name: the Connect."
       },
       {
         "speaker": "brick",
-        "text": "Then we go in ready, not curious. Pack the van, Rook. Whoever's asking about us on the other side of that water is about to get an answer."
+        "text": "Who."
+      },
+      {
+        "speaker": "rook",
+        "text": "Nobody seems to know. Whoever supplies the Plugs in Copper Bay. Every crew buys through them, far as the story goes."
+      },
+      {
+        "speaker": "brick",
+        "text": "Then we learn the streets before we learn the person."
       }
     ]
   }
@@ -1211,14 +1137,14 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "ZERO_DEATHS",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "No wipeouts yet. Stay mindful on the threshold and don't give anyone an easy target."
+    "text": "No wipeouts yet. Don’t give anyone an easy target."
   },
   {
     "id": "IR_BRK_ZDEATH_04",
     "category": "ZERO_DEATHS",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "You've stayed on your feet across this whole stretch. Keep that momentum going to the curb."
+    "text": "You've stayed on your feet across this whole block. Keep that momentum going to the curb."
   },
   {
     "id": "IR_BRK_ZDEATH_05",
@@ -1246,7 +1172,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "ZERO_DEATHS",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Still in one piece on this stretch. Keep running like that and we're home early."
+    "text": "Still in one piece this block. Keep running like that and we're home early."
   },
   {
     "id": "IR_ROK_ZDEATH_03",
@@ -1267,14 +1193,14 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "ZERO_DEATHS",
     "speaker": "rook",
     "minChapter": 5,
-    "text": "Haven't lost you once on this street. Keep this up and I'll laminate your name for the locker."
+    "text": "Haven't lost you once on this block. Keep this up and I'll laminate your name for the locker."
   },
   {
     "id": "IR_ROK_ZDEATH_06",
     "category": "ZERO_DEATHS",
     "speaker": "rook",
     "minChapter": 4,
-    "text": "Still haven't dropped once. Even Brick's old brass clock is ticking along without an interruption."
+    "text": "Still haven’t dropped once. Cleaner than those ghost plates, and those were professional."
   },
   {
     "id": "IR_BRK_UNTOUCH_01",
@@ -1295,7 +1221,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "FLAWLESS",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "On your successful clears: you're dodging clean and staying completely upright. Keep that spacing tight on the next door."
+    "text": "On your successful clears: you’re dodging clean and staying completely upright. Do that again on the next door."
   },
   {
     "id": "IR_BRK_UNTOUCH_04",
@@ -1309,7 +1235,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "FLAWLESS",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "On your successful clears: untouched and still standing. Keep your exits sharp and don't linger in the hallways."
+    "text": "On your successful clears: untouched and still standing. Don’t linger. Don’t get cute."
   },
   {
     "id": "IR_BRK_UNTOUCH_06",
@@ -1386,14 +1312,14 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "COMEBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "You've hit the pavement multiple times on this stretch, but the bags keep coming. Finish hard."
+    "text": "You've hit the pavement multiple times this block, but the bags keep coming. Finish hard."
   },
   {
     "id": "IR_BRK_COMEBACK_05",
     "category": "COMEBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Rough patch behind you. What matters is you're still standing and ready for the next threshold."
+    "text": "Rough patch behind you. What matters is you’re still standing and ready for the next door."
   },
   {
     "id": "IR_BRK_COMEBACK_06",
@@ -1407,7 +1333,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "COMEBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Took multiple spills on this street, but you bounced back. Iron bends before it breaks."
+    "text": "Took multiple spills on this block, but you bounced back. Iron bends before it breaks."
   },
   {
     "id": "IR_ROK_COMEBACK_02",
@@ -1529,90 +1455,6 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "text": "No powers on those clears. I ought to stamp an 'ALL-NATURAL' tag for your jacket."
   },
   {
-    "id": "IR_BRK_BUNK_01",
-    "category": "BUNK_BAGS",
-    "speaker": "brick",
-    "minChapter": 1,
-    "text": "Triggered a few bunk bags on your way to the stash. At least you found the score in the end."
-  },
-  {
-    "id": "IR_BRK_BUNK_02",
-    "category": "BUNK_BAGS",
-    "speaker": "brick",
-    "minChapter": 1,
-    "text": "Hit some decoy sacks in there before finding the right one. Keep your eyes sharp."
-  },
-  {
-    "id": "IR_BRK_BUNK_03",
-    "category": "BUNK_BAGS",
-    "speaker": "brick",
-    "minChapter": 1,
-    "text": "Had a couple bunk bags vanish on you today. Stay patient and keep scanning the rooms."
-  },
-  {
-    "id": "IR_BRK_BUNK_04",
-    "category": "BUNK_BAGS",
-    "speaker": "brick",
-    "minChapter": 1,
-    "text": "Popped multiple false bags on this block. Keep your focus until your hands hit the stash."
-  },
-  {
-    "id": "IR_BRK_BUNK_05",
-    "category": "BUNK_BAGS",
-    "speaker": "brick",
-    "minChapter": 1,
-    "text": "Touched a couple empty bags along the way, but the stash made it to the car. That’s what matters."
-  },
-  {
-    "id": "IR_BRK_BUNK_06",
-    "category": "BUNK_BAGS",
-    "speaker": "brick",
-    "minChapter": 1,
-    "text": "Touching bunk bags is like grabbing the wrong wrench from the tray. Take a beat and spot the stash."
-  },
-  {
-    "id": "IR_ROK_BUNK_01",
-    "category": "BUNK_BAGS",
-    "speaker": "rook",
-    "minChapter": 1,
-    "text": "Dissolved a few bunk bags in those halls. If you want empty clutter, come clean Brick's locker instead."
-  },
-  {
-    "id": "IR_ROK_BUNK_02",
-    "category": "BUNK_BAGS",
-    "speaker": "rook",
-    "minChapter": 1,
-    "text": "Hit multiple false bags on this block. Good thing you tracked down the stash before heading out."
-  },
-  {
-    "id": "IR_ROK_BUNK_03",
-    "category": "BUNK_BAGS",
-    "speaker": "rook",
-    "minChapter": 1,
-    "text": "Had a couple fake bags pop on you today. Keep your eyes peeled so you find the stash faster."
-  },
-  {
-    "id": "IR_ROK_BUNK_04",
-    "category": "BUNK_BAGS",
-    "speaker": "rook",
-    "minChapter": 1,
-    "text": "Triggered some empty bags earlier. Just keep moving until you locate the stash that counts."
-  },
-  {
-    "id": "IR_ROK_BUNK_05",
-    "category": "BUNK_BAGS",
-    "speaker": "rook",
-    "minChapter": 1,
-    "text": "Popped a few decoys today. Reminds me of Brick digging through my bench and grabbing the wrong tool."
-  },
-  {
-    "id": "IR_ROK_BUNK_06",
-    "category": "BUNK_BAGS",
-    "speaker": "rook",
-    "minChapter": 11,
-    "text": "Hit multiple bunk bags on this stretch. If I had my counter bell out here, I’d ding you for each one."
-  },
-  {
     "id": "IR_BRK_PHASE_01",
     "category": "POWER_PHASE",
     "speaker": "brick",
@@ -1680,7 +1522,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_PHASE",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Phase is your go-to on this stretch. Ghosting around is fine, but you still have to sprint the curb."
+    "text": "Phase is your go-to this block. Ghosting around is fine, but you still have to sprint the curb."
   },
   {
     "id": "IR_ROK_PHASE_05",
@@ -1708,7 +1550,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Leaning on Dash more than the rest. Fast acceleration, just stay in control when you hit the exit."
+    "text": "Leaning on Dash more than the rest. Fast acceleration. Stay in control."
   },
   {
     "id": "IR_BRK_DASH_03",
@@ -1729,7 +1571,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Using Dash more than anything else. Quick burst of speed helps, but keep your eyes on the threshold."
+    "text": "Using Dash more than anything else. Quick burst of speed helps, but keep your eyes on the bag."
   },
   {
     "id": "IR_BRK_DASH_06",
@@ -1743,7 +1585,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Dash has been your favorite power on this street. You hit that burst like you're running late for inspection."
+    "text": "Dash has been your favorite power on this block. You hit that burst like you're running late for inspection."
   },
   {
     "id": "IR_ROK_DASH_02",
@@ -1771,7 +1613,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "You favor that Dash burst on your clears. Keep your eyes on the car; the bag still needs an exit."
+    "text": "You favor that Dash burst on your clears. Keep your eyes on the car; the bag still needs a ride."
   },
   {
     "id": "IR_ROK_DASH_06",
@@ -1806,14 +1648,14 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DECOY",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Decoy leads your choices on this stretch. Giving them something else to look at keeps your lane open."
+    "text": "Decoy leads your choices this block. Give them something else to look at. Works on Rook too."
   },
   {
     "id": "IR_BRK_DECOY_05",
     "category": "POWER_DECOY",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Popping Decoy more than the rest. Good distraction tool, as long as you keep your exit in sight."
+    "text": "Popping Decoy more than the rest. Good distraction tool, as long as you keep the car in sight."
   },
   {
     "id": "IR_BRK_DECOY_06",
@@ -1855,7 +1697,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DECOY",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Dropping Decoys all over the hallway today. As long as you keep moving toward the car, I won't complain."
+    "text": "Dropping Decoys like it’s a group project. The decoy is doing all the work."
   },
   {
     "id": "IR_ROK_DECOY_06",
@@ -1876,7 +1718,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Next porch is waiting. Find the stash, take your corner, and sprint to the curb."
+    "text": "Next door is waiting. Find the stash and get to the car."
   },
   {
     "id": "IR_BRK_NEUT_03",
@@ -1897,14 +1739,14 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Stay on the line and keep your eyes on the threshold. Get in and get out."
+    "text": "Stay focused. Get in and get out."
   },
   {
     "id": "IR_BRK_NEUT_06",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Check your footing before you cross that porch. Iron Row needs every bag accounted for."
+    "text": "Check yourself before the next door. Iron Row needs every bag accounted for."
   },
   {
     "id": "IR_BRK_NEUT_07",
@@ -1918,7 +1760,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Another door, another haul. Keep pulling bags and we'll have this street locked down."
+    "text": "Another door, another haul. Keep pulling bags and we'll have this block locked down."
   },
   {
     "id": "IR_ROK_NEUT_01",
@@ -1977,64 +1819,3 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "text": "Stay on task out there. Scoop the stash and let’s keep the tally rolling."
   }
 ].map(line => Object.freeze(line)));
-export const IRON_ROW_PRIORITY = Object.freeze(['flawless', 'comeback', 'noDeaths', 'noPowers', 'bunk', 'phase', 'dash', 'decoy']);
-const categories = { flawless:'FLAWLESS', comeback:'COMEBACK', noDeaths:'ZERO_DEATHS', noPowers:'NO_POWERS', bunk:'BUNK_BAGS', phase:'POWER_PHASE', dash:'POWER_DASH', decoy:'POWER_DECOY' };
-const validChapter = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
-const safeBlock = value => Number.isSafeInteger(value) && value > 0 ? value : 1;
-const render = (text, cityName) => String(text).replaceAll('{city}', cityName || 'this city');
-export function ironRowChapter(chapter = 0) {
-  return IRON_ROW_CHAPTERS[validChapter(chapter)] || null;
-}
-/** Name only: the existing mechanical pickup sound and violet case stay intact. */
-export function ironRowJob(chapter = 0) {
-  const story = ironRowChapter(chapter);
-  if (!story) return null;
-  return { id: 'keys', label: story.jobName.toUpperCase(), short: ['LEDGER','OLD JACKET','REPAIR ORDER','INVOICES','MASTER KEYS','ROUTE MAP','ENVELOPE','THE RING','INSPECTION','BUSINESS CARD'][story.number - 1], name: story.jobName };
-}
-/** One fixed consultation per authored slot; blank slots really stay silent. */
-export function ironRowCue({chapter = 0, house, blockIndex = 1, cityName, earnedPraise = [], usedPraise = [], telemetryComplete = false} = {}) {
-  const story = ironRowChapter(chapter);
-  const beat = story?.beats[house];
-  if (!beat) return null;
-  const pages = beat.pages.map(page => ({ ...page, text: render(page.text, cityName) }));
-  let praiseKey = null, lineID = null;
-  if (beat.reactive) {
-    // Season 1 reserves one reactive slot per chapter and caps all categories
-    // together. Existing contacts outside this season keep their original cap.
-    const key = telemetryComplete && usedPraise.length === 0
-      ? IRON_ROW_PRIORITY.find(id => earnedPraise.includes(id)) : null;
-    const speaker = pages[0].speaker;
-    const candidates = IRON_ROW_DIALOGUE_BANK.filter(line => line.speaker === speaker
-      && line.category === categories[key] && beat.eligibleIDs.includes(line.id)
-      && line.minChapter <= story.number);
-    let line = null;
-    if (key && candidates.length) {
-      line = candidates[(safeBlock(blockIndex) * 17 + house * 7 + story.number * 13) % candidates.length];
-      praiseKey = key;
-    } else if (usedPraise.length === 0) {
-      line = IRON_ROW_DIALOGUE_BANK.find(entry => entry.id === beat.fallback);
-    }
-    if (line) {
-      // Only sentence 1 changes: keep authored encouragement, tease and job.
-      const tail = pages[0].text.slice(pages[0].text.indexOf('.') + 1).trim();
-      pages[0].text = line.text + (tail ? ' ' + tail : '');
-      lineID = line.id;
-    }
-  }
-  return {
-    // Preserve existing claim identities across the manuscript upgrade,
-    // including a Rook-led check-in that previously displayed Brick.
-    eventID: 'contact/v1/block-' + safeBlock(blockIndex) + '/'
-      + ({1:'open',4:'checkin-1',7:'tease',9:'brief',10:'debrief',13:'checkin-2'})[house]
-      + '/' + (house === 9 ? 'rook' : 'brick'),
-    beat: {id:({1:'open',4:'checkin-1',7:'tease',9:'brief',10:'debrief',13:'checkin-2'})[house],
-      house, kind:house === 9 ? 'brief' : 'story'},
-    pages, text:pages[0].text, speaker:pages[0].speaker, praiseKey, lineID,
-    chapterLabel:'CHAPTER ' + story.number + ' · ' + story.title.toUpperCase(),
-    action:'VIEW THE BLOCK  >>'
-  };
-}
-export function ironRowFinish(chapter = 0, cityName) {
-  const story = ironRowChapter(chapter);
-  return story ? story.finish.map(page => ({...page, text:render(page.text, cityName)})) : null;
-}

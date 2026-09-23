@@ -1,120 +1,118 @@
-// Season 1 normalized from CROSSLINE_SEASON_1.md. Manuscript prompts/citation/downloader debris are not runtime instructions.
-// Import-free narrative data; no progression, rewards, maze mutations or RNG.
+// Season 1, from "Plug Run - Season One Updated" (revised character + systems pass).
+// Import-free story data: no RNG, storage, rewards, maze changes or Rivals claims.
+// Chapter is crew-owned and zero-based; {city} is the block being played.
+// Each beat is keyed by the house it plays before; house 15's script lines are
+// the finish, after extraction. One beat per chapter is reactive: a line from
+// the bank below, picked from what the block measured, opens it.
 export const CROSSLINE_CHAPTERS = Object.freeze([
   {
     "number": 1,
     "title": "Signal Lock",
     "jobName": "A working scanner off the old harbor band",
-    "reason": "Whoever's running that frequency knows things about this block Crossline doesn't. Mags wants to listen before somebody else starts talking first.",
+    "reason": "A working scanner off the old harbor band. The channel was supposed to be dead. It is very much not dead.",
     "short": "SCANNER",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "switch",
-            "text": "First porch of the campaign. Find the stash, keep your corners clean, and make a straight line for the getaway car."
+            "text": "First block. Fifteen doors. No hero stuff. Bag, curb, car."
           },
           {
             "speaker": "mags",
-            "text": "I've got the radio tuned to the neighborhood band. Move fast and don't make me listen to dead air."
+            "text": "And if your earpiece chirps, that is me, not a ghost. Probably. Ghosts do not have this much aura."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
-            "speaker": "switch",
-            "text": "Three houses cleared. Keep bringing them out."
+            "speaker": "mags",
+            "text": "Three clean. Not to be dramatic, but the runner is lowkey eating."
           },
           {
             "speaker": "switch",
-            "text": "Mags will need you at house 9. She'll brief you before you take that entrance. For now, keep pulling bags."
+            "text": "Do not feed them. They will expect it every block."
           }
         ]
+      },
+      "6": {
+        "label": "BLOCK RIVALS TEASE",
+        "pages": [
+          {
+            "speaker": "mags",
+            "text": "Once this entire block is ours, Block Rivals opens. Seven houses, you versus another runner, powers picked before the race."
+          },
+          {
+            "speaker": "switch",
+            "text": "Good. Something to do after you finish claiming this block."
+          }
+        ],
+        "rivalsTease": true
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. There's a beat-up scanner in the violet case — still locked to the harbor channel nobody's supposed to use anymore. Grab the case and the stash, we're leaving together."
+            "text": "Violet case. Beat-up scanner, harbor band, already tuned. Bring the case and the stash."
           },
           {
             "speaker": "switch",
-            "text": "That channel's been dead since before we started. If it's still locked there, someone kept it that way on purpose."
+            "text": "That channel has been dead for years."
           },
           {
             "speaker": "mags",
-            "text": "Which is exactly why I want it in my hands and not somebody else's. Move, runner."
+            "text": "Cool. It just said our street name."
+          },
+          {
+            "speaker": "switch",
+            "text": "...Bring it out. Now."
           }
         ]
       },
-      "10": {
+      "11": {
+        "label": "DEBRIEF",
         "pages": [
           {
+            "speaker": "mags",
+            "text": "Scanner is still whispering. Mostly numbers."
+          },
+          {
             "speaker": "switch",
-            "text": "Six houses remain on this avenue. Keep your stride long and finish the set."
+            "text": "Mute it."
+          },
+          {
+            "speaker": "mags",
+            "text": "You said that like it is your ex calling."
+          },
+          {
+            "speaker": "switch",
+            "text": "Five doors left, Mags."
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_01",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "CL_MAG_NEUT_01"
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Fifteen doors cleared. The block is quiet behind us."
+        "text": "Fifteen. Car is loaded."
       },
       {
         "speaker": "mags",
-        "text": "The scanner works. It's tuned to a channel that's supposed to be dead. Somebody's still listening on the other end of it — I just don't know who yet."
+        "text": "And our dead channel has a pulse. Love that for us."
+      },
+      {
+        "speaker": "switch",
+        "text": "You do not love that."
+      },
+      {
+        "speaker": "mags",
+        "text": "Not even a little. It is giving haunted."
       }
     ]
   },
@@ -122,117 +120,104 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 2,
     "title": "The Wire Sweep",
     "jobName": "A logbook, taped shut, from the last crew that ran this frequency",
-    "reason": "Mags wants to know who was on this channel before Crossline claimed it — and why they stopped writing in the middle of a page.",
+    "reason": "A taped-shut logbook from the last crew on the frequency. The final entry stops mid-sentence.",
     "short": "LOGBOOK",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Old telephone drops all along these fences. Watch the overhangs on your way out."
+            "text": "This whole block used to be phone-line heaven. Somebody loved copper wire and bad decisions."
           },
           {
             "speaker": "switch",
-            "text": "Ignore the wiring and focus on the exit threshold. Move the bags to the car."
+            "text": "Eyes forward. Nostalgia gets you caught."
           }
         ]
       },
-      "7": {
+      "6": {
+        "label": "CHECK-IN",
         "pages": [
           {
-            "speaker": "mags",
-            "text": "Six houses cleared. Keep bringing them out."
+            "speaker": "switch",
+            "text": "Five houses. Pace is good."
           },
           {
             "speaker": "mags",
-            "text": "I'll need you at house 9 for a hardware pickup. I'll explain the piece before you enter. Stay on the move."
+            "text": "Sorry, was that a compliment? Screenshotting."
+          },
+          {
+            "speaker": "switch",
+            "text": "It was telemetry."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "House 9. The violet case holds a log — taped shut, every frequency and date somebody didn't want found. Grab the case and the stash."
+            "text": "Violet case has a logbook. Tape is old. Pages are not."
           },
           {
             "speaker": "switch",
-            "text": "Whoever wrote it stopped mid-page."
+            "text": "Open it later."
           },
           {
             "speaker": "mags",
-            "text": "Yeah. I noticed that too."
+            "text": "Already peeked."
+          },
+          {
+            "speaker": "switch",
+            "text": "Of course you did."
+          },
+          {
+            "speaker": "mags",
+            "text": "Last sentence ends with: “If Switch comes back—”"
+          },
+          {
+            "speaker": "switch",
+            "text": "Case. Car. Now."
           }
         ]
       },
-      "13": {
+      "12": {
+        "label": "DEBRIEF",
         "pages": [
           {
+            "speaker": "mags",
+            "text": "You want me to pretend I did not read your name?"
+          },
+          {
             "speaker": "switch",
-            "text": "Three houses remain. Commit to your line and finish this avenue."
+            "text": "I want four more houses cleared."
+          },
+          {
+            "speaker": "mags",
+            "text": "That is not a no."
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_02",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "CL_MAG_NEUT_02"
       }
     },
     "finish": [
       {
         "speaker": "mags",
-        "text": "Thirty stashes in, and I read every page of that log twice. Whoever had this block before us didn't leave on their own terms."
+        "text": "Thirty stashes total. I read the whole log."
       },
       {
         "speaker": "switch",
-        "text": "Then we don't make their mistake. Keep moving."
+        "text": "And?"
+      },
+      {
+        "speaker": "mags",
+        "text": "Whoever had this block before us did not quit."
+      },
+      {
+        "speaker": "switch",
+        "text": "Then we do not repeat their ending."
       }
     ]
   },
@@ -240,107 +225,96 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 3,
     "title": "High Impedance",
     "jobName": "An old handheld CB, dead battery, initials scratched into the casing",
-    "reason": "It belonged to whoever taught Switch this street, before the frequency went dark on both of them. He's never said the name out loud.",
+    "reason": "An old handheld CB with dead batteries and initials carved into the case. It belonged to the person who taught Switch the street.",
     "short": "OLD RADIO",
+    "tag": "personal",
     "beats": {
-      "4": {
+      "3": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses cleared. Keep them coming."
+            "text": "Two in. Keep your corners boring."
           },
           {
             "speaker": "mags",
-            "text": "House 9's got something in it. I already know what it is, but I'm not explaining it over the open channel."
+            "text": "House nine has something you are going to hate."
+          },
+          {
+            "speaker": "switch",
+            "text": "That narrows it down to everything you enjoy."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. There's a CB radio in the violet case — old, dead battery, initials scratched into it. Grab the case and the stash."
+            "text": "Violet case. Old handheld CB. Dead battery. Initials scratched into the back."
           },
           {
             "speaker": "switch",
-            "text": "(quiet) Whose initials."
+            "text": "Which initials?"
           },
           {
             "speaker": "mags",
-            "text": "Later. Both come out whole, runner."
+            "text": "You know which."
+          },
+          {
+            "speaker": "switch",
+            "text": "Say them off-channel."
+          },
+          {
+            "speaker": "mags",
+            "text": "Copy. Runner, both items come out whole."
           }
         ]
       },
       "10": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Six houses remain. Radio's on my lap. Don't ask."
+            "text": "Radio is on my lap."
+          },
+          {
+            "speaker": "switch",
+            "text": "Do not turn it on."
+          },
+          {
+            "speaker": "mags",
+            "text": "It has no battery."
+          },
+          {
+            "speaker": "switch",
+            "text": "I know."
+          },
+          {
+            "speaker": "mags",
+            "text": "...Okay."
           }
         ],
         "reactive": true,
-        "fallback": "CL_MAG_NEUT_01",
-        "eligibleIDs": [
-          "CL_MAG_ZDEATH_01",
-          "CL_MAG_ZDEATH_02",
-          "CL_MAG_ZDEATH_03",
-          "CL_MAG_ZDEATH_04",
-          "CL_MAG_UNTOUCH_01",
-          "CL_MAG_UNTOUCH_02",
-          "CL_MAG_UNTOUCH_03",
-          "CL_MAG_UNTOUCH_04",
-          "CL_MAG_UNTOUCH_05",
-          "CL_MAG_COMEBACK_01",
-          "CL_MAG_COMEBACK_02",
-          "CL_MAG_COMEBACK_03",
-          "CL_MAG_COMEBACK_04",
-          "CL_MAG_COMEBACK_05",
-          "CL_MAG_NOPOW_01",
-          "CL_MAG_NOPOW_02",
-          "CL_MAG_NOPOW_03",
-          "CL_MAG_NOPOW_04",
-          "CL_MAG_NOPOW_05",
-          "CL_MAG_BUNK_01",
-          "CL_MAG_BUNK_02",
-          "CL_MAG_BUNK_03",
-          "CL_MAG_BUNK_04",
-          "CL_MAG_BUNK_05",
-          "CL_MAG_PHASE_01",
-          "CL_MAG_PHASE_02",
-          "CL_MAG_PHASE_03",
-          "CL_MAG_PHASE_04",
-          "CL_MAG_PHASE_05",
-          "CL_MAG_DASH_01",
-          "CL_MAG_DASH_02",
-          "CL_MAG_DASH_03",
-          "CL_MAG_DASH_04",
-          "CL_MAG_DASH_05",
-          "CL_MAG_DASH_06",
-          "CL_MAG_DECOY_01",
-          "CL_MAG_DECOY_02",
-          "CL_MAG_DECOY_03",
-          "CL_MAG_DECOY_04",
-          "CL_MAG_DECOY_05"
-        ],
-        "minChapter": 0
-      },
-      "13": {
-        "pages": [
-          {
-            "speaker": "switch",
-            "text": "Three houses remain. Finish it clean."
-          }
-        ]
+        "fallback": "CL_MAG_NEUT_03"
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "(closing the case himself, this time) Fifteen more in the log. Radio's staying in the Dispatch, not the field bag."
+        "text": "Forty-five total. Radio stays at Dispatch."
       },
       {
         "speaker": "mags",
-        "text": "First thing you've asked to keep quiet about all year. Already told the crew nothing. You're welcome."
+        "text": "I already told everybody it is junk."
+      },
+      {
+        "speaker": "switch",
+        "text": "Thanks."
+      },
+      {
+        "speaker": "mags",
+        "text": "You are welcome. Also, that was emotional damage. Very rude."
       }
     ]
   },
@@ -348,117 +322,108 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 4,
     "title": "Hot Transistors",
     "jobName": "A stack of intercepted courier manifests, still warm",
-    "reason": "Somebody's running product through routes Crossline thought were dead. Mags wants names before Switch wants apologies.",
+    "reason": "Fresh courier manifests show product moving through routes Crossline thought were abandoned.",
     "short": "MANIFESTS",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "mags",
-            "text": "The air out here smells like hot circuit boards and ozone."
+            "text": "Map Room is hot enough to cook an egg."
           },
           {
             "speaker": "switch",
-            "text": "Because our repeaters are working double-time. Clear the porches and keep the route open."
+            "text": "Do not cook an egg in the Map Room again."
+          },
+          {
+            "speaker": "mags",
+            "text": "One time."
+          },
+          {
+            "speaker": "switch",
+            "text": "There was cheese."
+          },
+          {
+            "speaker": "mags",
+            "text": "The Map Room was a whole mood. A melt-down, if you will."
+          },
+          {
+            "speaker": "switch",
+            "text": "I will not."
           }
         ]
       },
       "7": {
+        "label": "LOOK AHEAD",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Six houses cleared. Keep bringing them out."
+            "text": "Six down. House nine paperwork is still warm."
+          },
+          {
+            "speaker": "switch",
+            "text": "How warm?"
           },
           {
             "speaker": "mags",
-            "text": "I'll need you at house 9. The Map Room is cooking, and so is something else. I'll brief you before you go in."
+            "text": "“Somebody left five minutes ago” warm."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. The violet case has manifests in it, still warm — somebody's using this route this week. Grab the case and the stash."
+            "text": "Manifests in the violet case. This route ran this morning."
           },
           {
             "speaker": "switch",
-            "text": "Then it's not dead. It's ours, and somebody forgot to tell them."
+            "text": "Names?"
           },
           {
             "speaker": "mags",
-            "text": "Or they know exactly whose it is and don't care yet. Grab the case, runner — we read these at the Dispatch, not the curb."
+            "text": "Codes. One repeats: CB-17."
+          },
+          {
+            "speaker": "switch",
+            "text": "Copper Bay?"
+          },
+          {
+            "speaker": "mags",
+            "text": "Or somebody wants us to think Copper Bay. Either way, yoink."
           }
         ]
       },
       "13": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses remain. Don't lose your focus on the home stretch."
+            "text": "Three left. No chasing ghosts."
+          },
+          {
+            "speaker": "mags",
+            "text": "I am not chasing. I am aggressively noticing."
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_03",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "CL_SWT_NEUT_04"
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "Sixty doors cleared in {city}. The manifests confirm it — somebody's running our route without asking."
+        "text": "Sixty total."
       },
       {
         "speaker": "mags",
-        "text": "First thing I do tomorrow is find out who signs those pickups."
+        "text": "And somebody is moving through our “dead” lanes like they pay rent."
+      },
+      {
+        "speaker": "switch",
+        "text": "Tomorrow we find the landlord."
       }
     ]
   },
@@ -466,117 +431,100 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 5,
     "title": "Spectrum Map",
     "jobName": "A jammer, still running, pulled off a rooftop two blocks over",
-    "reason": "Somebody's been drowning Crossline's signal on purpose. Switch wants it off the air before he wants to know who built it.",
+    "reason": "A live jammer is chewing Crossline’s clean frequency into static.",
     "short": "JAMMER",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Wide walkways along this residential stretch. Plan your approach, grab the stash, and head straight out."
+            "text": "Easy block. Do not invent difficulty."
           },
           {
             "speaker": "mags",
-            "text": "Watch the gravel paths. Keep your steps light."
+            "text": "Static spike at eleven o’clock. Somebody is absolutely inventing difficulty."
           }
         ]
       },
-      "4": {
+      "5": {
+        "label": "CHECK-IN",
         "pages": [
           {
-            "speaker": "switch",
-            "text": "Three houses cleared. Keep bringing them out."
+            "speaker": "mags",
+            "text": "Four houses in and the interference is getting stronger."
           },
           {
             "speaker": "switch",
-            "text": "Mags will need a hand at house 9. She'll explain what she found before that entrance. Stay on task."
+            "text": "Source?"
+          },
+          {
+            "speaker": "mags",
+            "text": "House nine. Obviously. The plot is plotting."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. There's a jammer in the violet case, still live, chewing our clean frequency to static. Grab the case and the stash."
+            "text": "Jammer in the violet case. Still live."
           },
           {
             "speaker": "switch",
-            "text": "Cut its power before you touch anything else."
+            "text": "Kill power first."
           },
           {
             "speaker": "mags",
-            "text": "Already unplugged it, Switch. Grab the case and the bag — I want this thing dead in our hands, not theirs."
+            "text": "Already did."
+          },
+          {
+            "speaker": "switch",
+            "text": "Then why can I still hear static?"
+          },
+          {
+            "speaker": "mags",
+            "text": "That is me chewing ice. Sorry."
+          },
+          {
+            "speaker": "switch",
+            "text": "Mute yourself."
           }
         ]
       },
-      "10": {
+      "12": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Six houses remain. Keep your stride measured all the way to the car."
+            "text": "Signal is clean."
+          },
+          {
+            "speaker": "mags",
+            "text": "Almost. The jammer was tuned specifically to us."
+          },
+          {
+            "speaker": "switch",
+            "text": "So somebody has been listening long enough to learn us."
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_04",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "CL_SWT_NEUT_05"
       }
     },
     "finish": [
       {
+        "speaker": "mags",
+        "text": "Seventy-five total. We are officially interesting to strangers."
+      },
+      {
         "speaker": "switch",
-        "text": "Seventy-five stashes. The static's gone."
+        "text": "Worst kind of interesting."
       },
       {
         "speaker": "mags",
-        "text": "Whoever built that jammer knew our frequency on purpose. That's not luck. That's somebody who's been listening back."
+        "text": "Main character energy, but make it surveillance."
       }
     ]
   },
@@ -584,117 +532,104 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 6,
     "title": "Brownout Buffer",
     "jobName": "A backup line, spliced straight into the block's old utility trunk",
-    "reason": "If the grid drops for real, Crossline's the only ones who don't go dark. Switch calls it insurance. Mags calls it a bet.",
+    "reason": "A backup line is spliced directly into the old utility trunk. Crossline can stay online if the grid drops.",
     "short": "SPLICE LINE",
     "beats": {
-      "4": {
+      "2": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Streetlights are flickering along this line. Grid voltage is sagging."
+            "text": "Streetlights are flickering. Grid is sagging."
           },
           {
             "speaker": "switch",
-            "text": "Our runs don't depend on streetlights. Find the door, take the bag, and sprint out."
+            "text": "Good thing we planned for ugly."
+          },
+          {
+            "speaker": "mags",
+            "text": "You mean I planned. You called it “paranoid arts and crafts.”"
           }
         ]
       },
       "7": {
+        "label": "LOOK AHEAD",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Six houses cleared. Keep bringing them out."
+            "text": "Six clear."
           },
           {
             "speaker": "mags",
-            "text": "I'll need you at house 9 for a power pickup. I'll explain before that door. Keep pulling bags."
+            "text": "House nine has a splice line that looks suspiciously familiar."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. The violet case holds a splice line — somebody already ran it into the utility trunk here. Grab the case and the stash."
+            "text": "Violet case. Backup splice, already tied into the trunk."
           },
           {
             "speaker": "switch",
-            "text": "Somebody, or us? Be specific."
+            "text": "Ours?"
           },
           {
             "speaker": "mags",
-            "text": "Fine. Future-us. Past-us was smarter than I give us credit for. Grab the case and the bag."
+            "text": "Future ours. I laid the route months ago and forgot I finished it."
+          },
+          {
+            "speaker": "switch",
+            "text": "That is not comforting."
+          },
+          {
+            "speaker": "mags",
+            "text": "It is to me. Past me cooked."
           }
         ]
       },
-      "13": {
+      "11": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses remain. Finish strong through the dark stretch."
+            "text": "Lights just dropped behind us."
+          },
+          {
+            "speaker": "mags",
+            "text": "Crossline did not."
+          },
+          {
+            "speaker": "switch",
+            "text": "Okay. You can say it."
+          },
+          {
+            "speaker": "mags",
+            "text": "I told you so."
+          },
+          {
+            "speaker": "switch",
+            "text": "Once."
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_05",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "CL_SWT_NEUT_06"
       }
     },
     "finish": [
       {
+        "speaker": "mags",
+        "text": "Ninety total. Whole block is dark."
+      },
+      {
         "speaker": "switch",
-        "text": "Ninety houses down in our campaign ledger. If the grid drops tonight, we're the only ones still talking."
+        "text": "Dispatch is still talking."
       },
       {
         "speaker": "mags",
-        "text": "That's the whole plan. Let everyone else go quiet for a change."
+        "text": "Paranoid arts and crafts wins again."
       }
     ]
   },
@@ -702,271 +637,74 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 7,
     "title": "Noise Baffle",
     "jobName": "A notch filter, tuned exactly to Iron Row's garage frequency",
-    "reason": "Somebody in Iron Row has been running their radio over Crossline's clean channel. Switch doesn't call it a coincidence twice.",
+    "reason": "A notch filter is tuned exactly to Iron Row’s garage frequency. Somebody is stepping on Crossline’s line.",
     "short": "NOTCH FILTER",
+    "tag": "rival",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
+            "speaker": "mags",
+            "text": "East side chatter is bleeding onto us."
+          },
+          {
             "speaker": "switch",
-            "text": "Watch your footing on the rail beds, this block's uneven."
+            "text": "Accidental?"
           },
           {
             "speaker": "mags",
-            "text": "There's a lot of chatter bleeding onto our line from the east. Somebody's doing it on purpose now."
+            "text": "The filter literally says IRON ROW in grease pencil."
+          },
+          {
+            "speaker": "switch",
+            "text": "Subtle."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses cleared. Keep bringing them out."
+            "text": "Three clear."
+          },
+          {
+            "speaker": "mags",
+            "text": "Rook is on their channel arguing with a vending machine."
           },
           {
             "speaker": "switch",
-            "text": "Mags found the source of that bleed. House 9. She'll brief you there."
+            "text": "Do not engage."
+          },
+          {
+            "speaker": "mags",
+            "text": "I did not. The vending machine is ratioing him."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. This notch filter's in the violet case, already tuned — to Rook's garage frequency, exact channel. Grab the case and the stash."
+            "text": "Notch filter in the violet case. Exact garage frequency."
           },
           {
             "speaker": "switch",
-            "text": "Twice in one week is not an accident, Mags."
+            "text": "Take it."
           },
           {
             "speaker": "mags",
-            "text": "No. It's not. Grab the case and the bag — we're not leaving this in their hands to try a third time."
-          }
-        ]
-      },
-      "10": {
-        "pages": [
-          {
-            "speaker": "switch",
-            "text": "Six houses remain. Don't slow down — I want this handled before the day's out."
-          }
-        ],
-        "reactive": true,
-        "fallback": "CL_SWT_NEUT_06",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
-      }
-    },
-    "finish": [
-      {
-        "speaker": "switch",
-        "text": "One hundred and five doors cleared. The line's clean again."
-      },
-      {
-        "speaker": "mags",
-        "text": "For now. If Iron Row wants to keep testing our patience, I'll stop being polite about how I answer it."
-      }
-    ]
-  },
-  {
-    "number": 8,
-    "title": "Long Haul",
-    "jobName": "A sealed waterproof drop case, pulled from under the old dock",
-    "reason": "Someone's been using the canal route to move things Crossline doesn't control yet. Mags wants to know what, before Switch decides whether to stop it.",
-    "short": "DROP CASE",
-    "beats": {
-      "7": {
-        "pages": [
-          {
-            "speaker": "switch",
-            "text": "Six houses cleared. Keep bringing them out."
-          },
-          {
-            "speaker": "mags",
-            "text": "I'll need you at house 9. We found something already sealed shut down at the water. I'll explain before you step up."
-          }
-        ]
-      },
-      "9": {
-        "pages": [
-          {
-            "speaker": "mags",
-            "text": "Door 9. Sealed drop case, hidden under the floorboards like it's been used before. Grab the case and the stash."
+            "text": "Want me to leave a note?"
           },
           {
             "speaker": "switch",
-            "text": "Don't open it in the field."
+            "text": "No."
           },
           {
             "speaker": "mags",
-            "text": "Wasn't planning to. Grab the case and the bag, runner — we look at this at the Dispatch, together."
-          }
-        ]
-      },
-      "10": {
-        "pages": [
-          {
-            "speaker": "mags",
-            "text": "Six houses remain on this canal line. Keep moving."
-          }
-        ],
-        "reactive": true,
-        "fallback": "CL_MAG_NEUT_02",
-        "eligibleIDs": [
-          "CL_MAG_ZDEATH_01",
-          "CL_MAG_ZDEATH_02",
-          "CL_MAG_ZDEATH_03",
-          "CL_MAG_ZDEATH_04",
-          "CL_MAG_ZDEATH_05",
-          "CL_MAG_ZDEATH_06",
-          "CL_MAG_UNTOUCH_01",
-          "CL_MAG_UNTOUCH_02",
-          "CL_MAG_UNTOUCH_03",
-          "CL_MAG_UNTOUCH_04",
-          "CL_MAG_UNTOUCH_05",
-          "CL_MAG_UNTOUCH_06",
-          "CL_MAG_COMEBACK_01",
-          "CL_MAG_COMEBACK_02",
-          "CL_MAG_COMEBACK_03",
-          "CL_MAG_COMEBACK_04",
-          "CL_MAG_COMEBACK_05",
-          "CL_MAG_COMEBACK_06",
-          "CL_MAG_NOPOW_01",
-          "CL_MAG_NOPOW_02",
-          "CL_MAG_NOPOW_03",
-          "CL_MAG_NOPOW_04",
-          "CL_MAG_NOPOW_05",
-          "CL_MAG_NOPOW_06",
-          "CL_MAG_BUNK_01",
-          "CL_MAG_BUNK_02",
-          "CL_MAG_BUNK_03",
-          "CL_MAG_BUNK_04",
-          "CL_MAG_BUNK_05",
-          "CL_MAG_PHASE_01",
-          "CL_MAG_PHASE_02",
-          "CL_MAG_PHASE_03",
-          "CL_MAG_PHASE_04",
-          "CL_MAG_PHASE_05",
-          "CL_MAG_PHASE_06",
-          "CL_MAG_DASH_01",
-          "CL_MAG_DASH_02",
-          "CL_MAG_DASH_03",
-          "CL_MAG_DASH_04",
-          "CL_MAG_DASH_05",
-          "CL_MAG_DASH_06",
-          "CL_MAG_DECOY_01",
-          "CL_MAG_DECOY_02",
-          "CL_MAG_DECOY_03",
-          "CL_MAG_DECOY_04",
-          "CL_MAG_DECOY_05",
-          "CL_MAG_DECOY_06"
-        ],
-        "minChapter": 0
-      },
-      "13": {
-        "pages": [
-          {
-            "speaker": "switch",
-            "text": "Three houses remain. Finish the canal line and bring the haul back."
-          }
-        ]
-      }
-    },
-    "finish": [
-      {
-        "speaker": "switch",
-        "text": "One hundred and twenty houses logged. The case is sealed."
-      },
-      {
-        "speaker": "mags",
-        "text": "Whatever's in there, it's not ours yet. Give me a night with it."
-      }
-    ]
-  },
-  {
-    "number": 9,
-    "title": "The Encryption Key",
-    "jobName": "A radio contest ribbon, faded, folded inside a torn envelope",
-    "reason": "It was Mags's, once — before the streets, before Switch, before any of this. She never talks about the years it's from.",
-    "short": "CONTEST RIBBON",
-    "beats": {
-      "1": {
-        "pages": [
-          {
-            "speaker": "switch",
-            "text": "Steep incline on this ridge. Measure your stride on the walkways and don't stall in the halls."
-          },
-          {
-            "speaker": "mags",
-            "text": "This neighborhood used to have a ham club two blocks over. Long gone now."
-          }
-        ]
-      },
-      "4": {
-        "pages": [
-          {
-            "speaker": "switch",
-            "text": "Three houses cleared. Keep bringing them out."
-          },
-          {
-            "speaker": "mags",
-            "text": "House 9's mine. I mean that. I'll explain before we get there."
-          }
-        ]
-      },
-      "9": {
-        "pages": [
-          {
-            "speaker": "mags",
-            "text": "Door 9. It's — nothing, it's fine. Grab the case and the stash."
+            "text": "A tasteful note?"
           },
           {
             "speaker": "switch",
@@ -974,86 +712,281 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           },
           {
             "speaker": "mags",
-            "text": "It's a ribbon. First-place. I was twelve. We're not doing this here, runner — just get us both out."
+            "text": "Fine. Emotionally repressed theft only."
           }
         ]
       },
       "13": {
+        "label": "DEBRIEF",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses remain. Finish the ridge run and bring it home."
+            "text": "Three left. Finish before they notice."
+          },
+          {
+            "speaker": "mags",
+            "text": "Too late. Rook just said, “Who stole my little metal guy?”"
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_07",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
+        "fallback": "CL_SWT_NEUT_07"
       }
     },
     "finish": [
       {
         "speaker": "mags",
-        "text": "One hundred and thirty-five stashes. And yeah. I kept it this whole time."
+        "text": "One-oh-five total. Line is clean."
       },
       {
         "speaker": "switch",
-        "text": "Twelve years old and already better at this than half the crew I run now. Doesn't surprise me."
+        "text": "Good."
       },
       {
         "speaker": "mags",
-        "text": "...Thanks, Switch."
+        "text": "I did not leave a note."
       },
       {
         "speaker": "switch",
-        "text": "Don't get used to it."
+        "text": "Why did you say that like a confession?"
+      },
+      {
+        "speaker": "mags",
+        "text": "No reason. It was a sticky note. It said “skill issue.”"
+      }
+    ]
+  },
+  {
+    "number": 8,
+    "title": "Long Haul",
+    "jobName": "A sealed waterproof drop case, pulled from under the old dock",
+    "reason": "A sealed waterproof drop case is hidden under the old dock. Someone is using the canal route quietly.",
+    "short": "DROP CASE",
+    "beats": {
+      "6": {
+        "label": "LOOK AHEAD",
+        "pages": [
+          {
+            "speaker": "switch",
+            "text": "Five clear. Stay dry."
+          },
+          {
+            "speaker": "mags",
+            "text": "Also there is a waterproof case under house nine that definitely did not swim there by itself."
+          }
+        ]
+      },
+      "9": {
+        "label": "THE JOB",
+        "pages": [
+          {
+            "speaker": "mags",
+            "text": "Sealed drop case in the violet case. Yes, case inside case. Very premium."
+          },
+          {
+            "speaker": "switch",
+            "text": "Do not open it here."
+          },
+          {
+            "speaker": "mags",
+            "text": "Was not going to."
+          },
+          {
+            "speaker": "switch",
+            "text": "You were thinking about it."
+          },
+          {
+            "speaker": "mags",
+            "text": "I was not thinking. I was manifesting."
+          }
+        ]
+      },
+      "10": {
+        "label": "DEBRIEF",
+        "pages": [
+          {
+            "speaker": "mags",
+            "text": "It is heavier than it should be."
+          },
+          {
+            "speaker": "switch",
+            "text": "That sentence has never improved my evening."
+          }
+        ],
+        "reactive": true,
+        "fallback": "CL_MAG_NEUT_08"
+      },
+      "13": {
+        "label": "CHECK-IN",
+        "pages": [
+          {
+            "speaker": "switch",
+            "text": "Three left. Bring it home."
+          },
+          {
+            "speaker": "mags",
+            "text": "Drop case is not ticking, by the way."
+          },
+          {
+            "speaker": "switch",
+            "text": "Why would you say that?"
+          },
+          {
+            "speaker": "mags",
+            "text": "Vibes-based bomb check. It passed. Mostly."
+          }
+        ]
+      }
+    },
+    "finish": [
+      {
+        "speaker": "mags",
+        "text": "One-twenty total. Case is still sealed."
+      },
+      {
+        "speaker": "switch",
+        "text": "Good."
+      },
+      {
+        "speaker": "mags",
+        "text": "I deserve a medal."
+      },
+      {
+        "speaker": "switch",
+        "text": "You get dinner."
+      },
+      {
+        "speaker": "mags",
+        "text": "Honestly better."
+      },
+      {
+        "speaker": "mags",
+        "text": "One weird thing on the seal: “C.B. - CONNECT HANDOFF.”"
+      },
+      {
+        "speaker": "switch",
+        "text": "Connect is a person?"
+      },
+      {
+        "speaker": "mags",
+        "text": "Looks like a title. Whoever it is, people over there write it like everybody should already know."
+      }
+    ]
+  },
+  {
+    "number": 9,
+    "title": "The Encryption Key",
+    "jobName": "A radio contest ribbon, faded, folded inside a torn envelope",
+    "reason": "A faded first-place radio contest ribbon. Mags won it at twelve and never threw it away.",
+    "short": "CONTEST RIBBON",
+    "tag": "personal",
+    "beats": {
+      "1": {
+        "label": "BLOCK OPENS",
+        "pages": [
+          {
+            "speaker": "switch",
+            "text": "Quiet block. Keep it that way."
+          },
+          {
+            "speaker": "mags",
+            "text": "There used to be a ham club here."
+          },
+          {
+            "speaker": "switch",
+            "text": "You know that very quickly."
+          },
+          {
+            "speaker": "mags",
+            "text": "I know things. It is literally my brand."
+          }
+        ]
+      },
+      "4": {
+        "label": "CHECK-IN",
+        "pages": [
+          {
+            "speaker": "switch",
+            "text": "Three clear."
+          },
+          {
+            "speaker": "mags",
+            "text": "House nine is mine. No commentary."
+          },
+          {
+            "speaker": "switch",
+            "text": "That request guarantees commentary."
+          }
+        ]
+      },
+      "9": {
+        "label": "THE JOB",
+        "pages": [
+          {
+            "speaker": "mags",
+            "text": "Violet case has a ribbon. First place."
+          },
+          {
+            "speaker": "switch",
+            "text": "For?"
+          },
+          {
+            "speaker": "mags",
+            "text": "Regional radio contest. I was twelve. We are moving on."
+          },
+          {
+            "speaker": "switch",
+            "text": "You kept it."
+          },
+          {
+            "speaker": "mags",
+            "text": "Runner. Case. Bag. Save me."
+          }
+        ]
+      },
+      "12": {
+        "label": "DEBRIEF",
+        "pages": [
+          {
+            "speaker": "switch",
+            "text": "You were twelve and building radios?"
+          },
+          {
+            "speaker": "mags",
+            "text": "Please discover shame. Or at least mute."
+          },
+          {
+            "speaker": "switch",
+            "text": "I am impressed."
+          },
+          {
+            "speaker": "mags",
+            "text": "That is somehow worse."
+          }
+        ],
+        "reactive": true,
+        "fallback": "CL_SWT_NEUT_01"
+      }
+    },
+    "finish": [
+      {
+        "speaker": "mags",
+        "text": "One-thirty-five total. Ribbon is staying with me."
+      },
+      {
+        "speaker": "switch",
+        "text": "Good."
+      },
+      {
+        "speaker": "mags",
+        "text": "Do not get sincere now."
+      },
+      {
+        "speaker": "switch",
+        "text": "Would not dream of it, champ."
+      },
+      {
+        "speaker": "mags",
+        "text": "I hate you."
       }
     ]
   },
@@ -1061,169 +994,144 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
     "number": 10,
     "title": "Master Carrier",
     "jobName": "A relay log, freshly intercepted, addressed across the water",
-    "reason": "The very last frequency Crossline swept was already talking to Copper Bay. Someone over there already knows this block is spoken for.",
+    "reason": "A relay log is addressed across the water. Copper Bay has known Crossline’s name longer than expected.",
     "short": "RELAY LOG",
     "beats": {
       "1": {
+        "label": "BLOCK OPENS",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Fifteen more doors to finish our opening route ledger. Grab the stashes and bring them home."
+            "text": "Last {city} block."
           },
           {
             "speaker": "mags",
-            "text": "Every repeater is synced and waiting. Let's finish the map."
+            "text": "Every repeater is synced. Weirdly emotional about it."
+          },
+          {
+            "speaker": "switch",
+            "text": "Do not cry on the equipment."
+          },
+          {
+            "speaker": "mags",
+            "text": "There he is. Mr. Stay On Frequency."
           }
         ]
       },
       "4": {
+        "label": "CHECK-IN",
         "pages": [
           {
             "speaker": "switch",
-            "text": "Three houses cleared. Keep bringing them out."
+            "text": "Three clear."
           },
           {
-            "speaker": "switch",
-            "text": "Mags picked up something at house 9 that isn't ours. She'll brief you there."
+            "speaker": "mags",
+            "text": "House nine has traffic addressed outside {city}."
           }
         ]
       },
       "9": {
+        "label": "THE JOB",
         "pages": [
           {
             "speaker": "mags",
-            "text": "Door 9. It's a relay log in the violet case — and it's not talking to anybody in {city}. It's addressed across the water, to Copper Bay. Grab the case and the stash."
+            "text": "Relay log. Destination: Copper Bay."
           },
           {
             "speaker": "switch",
-            "text": "Copper Bay doesn't know we exist."
+            "text": "They do not know us."
           },
           {
             "speaker": "mags",
-            "text": "Copper Bay's had ears on us for longer than we've had ears on them, Switch. Grab the case and the bag — we need to read every line of this before we go anywhere near that water."
+            "text": "Page one says CROSSLINE in all caps."
+          },
+          {
+            "speaker": "switch",
+            "text": "I withdraw the statement."
+          },
+          {
+            "speaker": "mags",
+            "text": "Smart. Grab everything."
           }
         ]
       },
-      "10": {
+      "13": {
+        "label": "CHECK-IN",
         "pages": [
           {
+            "speaker": "mags",
+            "text": "Three doors left."
+          },
+          {
             "speaker": "switch",
-            "text": "Six houses remain in {city}. Finish clean — we've got harder listening to do after this."
+            "text": "Finish {city} before we start worrying about water."
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_08",
-        "eligibleIDs": [
-          "CL_SWT_ZDEATH_01",
-          "CL_SWT_ZDEATH_02",
-          "CL_SWT_ZDEATH_03",
-          "CL_SWT_ZDEATH_04",
-          "CL_SWT_ZDEATH_05",
-          "CL_SWT_ZDEATH_06",
-          "CL_SWT_UNTOUCH_01",
-          "CL_SWT_UNTOUCH_02",
-          "CL_SWT_UNTOUCH_03",
-          "CL_SWT_UNTOUCH_04",
-          "CL_SWT_UNTOUCH_05",
-          "CL_SWT_UNTOUCH_06",
-          "CL_SWT_COMEBACK_01",
-          "CL_SWT_COMEBACK_02",
-          "CL_SWT_COMEBACK_03",
-          "CL_SWT_COMEBACK_04",
-          "CL_SWT_COMEBACK_05",
-          "CL_SWT_NOPOW_01",
-          "CL_SWT_NOPOW_02",
-          "CL_SWT_NOPOW_03",
-          "CL_SWT_NOPOW_04",
-          "CL_SWT_NOPOW_05",
-          "CL_SWT_NOPOW_06",
-          "CL_SWT_BUNK_01",
-          "CL_SWT_BUNK_02",
-          "CL_SWT_BUNK_03",
-          "CL_SWT_BUNK_04",
-          "CL_SWT_BUNK_05",
-          "CL_SWT_BUNK_06",
-          "CL_SWT_PHASE_01",
-          "CL_SWT_PHASE_02",
-          "CL_SWT_PHASE_03",
-          "CL_SWT_PHASE_04",
-          "CL_SWT_PHASE_05",
-          "CL_SWT_PHASE_06",
-          "CL_SWT_DASH_01",
-          "CL_SWT_DASH_02",
-          "CL_SWT_DASH_03",
-          "CL_SWT_DASH_04",
-          "CL_SWT_DASH_05",
-          "CL_SWT_DECOY_01",
-          "CL_SWT_DECOY_02",
-          "CL_SWT_DECOY_03",
-          "CL_SWT_DECOY_04",
-          "CL_SWT_DECOY_05",
-          "CL_SWT_DECOY_06"
-        ],
-        "minChapter": 0
-      },
-      "13": {
-        "pages": [
-          {
-            "speaker": "mags",
-            "text": "Three houses left. Run your line straight to the curb. Copper Bay can wait one more block."
-          }
-        ]
+        "fallback": "CL_MAG_NEUT_02"
       }
     },
     "finish": [
       {
         "speaker": "switch",
-        "text": "One hundred and fifty stashes logged. Our network here is closed — clean, quiet, ours."
+        "text": "One-fifty. Network closed."
       },
       {
         "speaker": "mags",
-        "text": "And Copper Bay already knows it. Word from over there is their stashes run heavier than ours ever did — and every house holds more than one Plug waiting behind the door."
+        "text": "Copper Bay says their stashes run heavier and their houses run crowded."
       },
       {
         "speaker": "switch",
-        "text": "Heavier stash, harder rooms. That's not a rumor, Mags, that's a warning."
+        "text": "Bigger bags, harder rooms."
       },
       {
         "speaker": "mags",
-        "text": "Somebody's running that whole side of the water. Nobody says a name. Not yet."
+        "text": "And one name sits on every supply entry: the Connect."
       },
       {
         "speaker": "switch",
-        "text": "Then we find out before we cross it. Pack the terminal — next block's not like the last ten."
+        "text": "Supplier?"
+      },
+      {
+        "speaker": "mags",
+        "text": "If the relay log is real, every Plug in the Bay traces back to them. No real name. No address."
+      },
+      {
+        "speaker": "switch",
+        "text": "Then we learn the houses first. The Connect comes later."
       }
     ]
   }
-]);
+].map(chapter => Object.freeze(chapter)));
 export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
   {
     "id": "CL_SWT_ZDEATH_01",
     "category": "ZERO_DEATHS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Zero deaths on this stretch. Keep the route moving, one door at a time."
+    "text": "Zero deaths this block. Keep it moving, one door at a time."
   },
   {
     "id": "CL_SWT_ZDEATH_02",
     "category": "ZERO_DEATHS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Haven't lost you once on this block. Keep your lane discipline steady through the next door."
+    "text": "Haven’t lost you once this block. Keep that discipline through the next door."
   },
   {
     "id": "CL_SWT_ZDEATH_03",
     "category": "ZERO_DEATHS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "No deaths logged this block. Stay sharp on your entry angles; don't give them a seam."
+    "text": "No deaths logged this block. Stay sharp. Do not give them a reason."
   },
   {
     "id": "CL_SWT_ZDEATH_04",
     "category": "ZERO_DEATHS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "You've stayed upright across this whole avenue. Keep that exact trajectory to the curb."
+    "text": "You’ve stayed upright this whole block. Keep doing exactly that."
   },
   {
     "id": "CL_SWT_ZDEATH_05",
@@ -1236,8 +1144,8 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "id": "CL_SWT_ZDEATH_06",
     "category": "ZERO_DEATHS",
     "speaker": "switch",
-    "minChapter": 3,
-    "text": "Still running without a wipeout. If you finish this clean, Mags might let you hear the crystal radio."
+    "minChapter": 2,
+    "text": "Still running without a wipeout. Finish this clean and Mags might let you listen to the scanner."
   },
   {
     "id": "CL_MAG_ZDEATH_01",
@@ -1251,7 +1159,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "ZERO_DEATHS",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "Still in one piece across this whole street. Keep moving like that and we wrap early."
+    "text": "Still in one piece across this whole block. Keep moving like that and we wrap early."
   },
   {
     "id": "CL_MAG_ZDEATH_03",
@@ -1271,8 +1179,8 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "id": "CL_MAG_ZDEATH_05",
     "category": "ZERO_DEATHS",
     "speaker": "mags",
-    "minChapter": 5,
-    "text": "Zero drops logged. Even Switch’s finned heat sinks haven't broken a sweat tracking you."
+    "minChapter": 7,
+    "text": "Zero drops logged. Cleaner than my splice job, and my splice job is beautiful."
   },
   {
     "id": "CL_MAG_ZDEATH_06",
@@ -1300,7 +1208,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "FLAWLESS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your successful clears, untouched by gunfire and completely upright. Maintain those exact exit trajectories."
+    "text": "On your successful clears, untouched by gunfire and completely upright. Do not change a thing."
   },
   {
     "id": "CL_SWT_UNTOUCH_04",
@@ -1314,14 +1222,14 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "FLAWLESS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your successful clears, zero hits taken and no wipeouts. Keep your transitions tight and don't linger at the threshold."
+    "text": "On your successful clears, zero hits taken and no wipeouts. Don’t linger. Don’t get cute."
   },
   {
     "id": "CL_SWT_UNTOUCH_06",
     "category": "FLAWLESS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your successful clears, not a bullet hit on your clears and zero drops. That’s textbook route discipline."
+    "text": "On your successful clears, not a bullet hit and zero drops. That’s textbook. I would know. I wrote the textbook."
   },
   {
     "id": "CL_MAG_UNTOUCH_01",
@@ -1363,7 +1271,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "FLAWLESS",
     "speaker": "mags",
     "minChapter": 9,
-    "text": "On your successful clears, zero hits, zero drops. You're cutting through corridors as clean as our canal laser."
+    "text": "On your successful clears, zero hits, zero drops. Tighter than the seal on that drop case."
   },
   {
     "id": "CL_SWT_COMEBACK_01",
@@ -1391,14 +1299,14 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "COMEBACK",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Multiple drops on this block, but you found the exit lane. Execute cleanly on this next door."
+    "text": "Multiple drops this block, but you found your way back. Execute cleanly on this next door."
   },
   {
     "id": "CL_SWT_COMEBACK_05",
     "category": "COMEBACK",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "You’ve had to reset your route several times this block. What matters is the line is moving again."
+    "text": "You’ve had to reset several times this block. What matters is you’re moving again."
   },
   {
     "id": "CL_SWT_COMEBACK_06",
@@ -1412,7 +1320,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "COMEBACK",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "Took multiple spills on this street, but you bounced right back. Circuit stayed closed."
+    "text": "Took multiple spills on this block, but you bounced right back. Circuit stayed closed."
   },
   {
     "id": "CL_MAG_COMEBACK_02",
@@ -1447,7 +1355,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "COMEBACK",
     "speaker": "mags",
     "minChapter": 7,
-    "text": "Took some rough attempts and you're still walking. You've got more resilience than our backup power bank."
+    "text": "Took some rough attempts and you’re still walking. More stubborn than my backup splice, and that thing survived a blackout."
   },
   {
     "id": "CL_SWT_NOPOW_01",
@@ -1475,21 +1383,21 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "NO_POWERS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your successful clears, no power usage on those extractions. Pure geometry and clean movement to the threshold."
+    "text": "On your successful clears, no power usage on those extractions. Pure fundamentals. Old-school."
   },
   {
     "id": "CL_SWT_NOPOW_05",
     "category": "NO_POWERS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your successful clears, bringing stashes in without activating powers. Trust your angles and keep running."
+    "text": "On your successful clears, bringing stashes in without activating powers. Trust your instincts and keep running."
   },
   {
     "id": "CL_SWT_NOPOW_06",
     "category": "NO_POWERS",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your successful clears, zero powers used on those clears. Crisp, unassisted legwork across every hallway."
+    "text": "On your successful clears, zero powers used. Crisp, unassisted legwork. Respect."
   },
   {
     "id": "CL_MAG_NOPOW_01",
@@ -1510,7 +1418,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "NO_POWERS",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your successful clears, haven't touched a power once on this avenue. Doing it the hard way keeps your senses sharp."
+    "text": "On your successful clears, haven't touched a power once this block. Doing it the hard way keeps your senses sharp."
   },
   {
     "id": "CL_MAG_NOPOW_04",
@@ -1524,7 +1432,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "NO_POWERS",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your successful clears, running completely unassisted. Works like a passive crystal radio—no extra power required."
+    "text": "On your successful clears, running completely unassisted. No batteries, no powers, all aura."
   },
   {
     "id": "CL_MAG_NOPOW_06",
@@ -1532,90 +1440,6 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "speaker": "mags",
     "minChapter": 1,
     "text": "On your successful clears, no powers burned across those clears. Pure raw hustle from the porch to the trunk."
-  },
-  {
-    "id": "CL_SWT_BUNK_01",
-    "category": "BUNK_BAGS",
-    "speaker": "switch",
-    "minChapter": 1,
-    "text": "You triggered multiple bunk bags before securing the stash. Verify your target before committing."
-  },
-  {
-    "id": "CL_SWT_BUNK_02",
-    "category": "BUNK_BAGS",
-    "speaker": "switch",
-    "minChapter": 1,
-    "text": "Touched a few false bags in those rooms. Keep your scanning deliberate and locate the stash."
-  },
-  {
-    "id": "CL_SWT_BUNK_03",
-    "category": "BUNK_BAGS",
-    "speaker": "switch",
-    "minChapter": 1,
-    "text": "Had a couple bunk bags dissolve on you. Don't let decoy targets pull you off your vector."
-  },
-  {
-    "id": "CL_SWT_BUNK_04",
-    "category": "BUNK_BAGS",
-    "speaker": "switch",
-    "minChapter": 1,
-    "text": "Popped multiple decoy bags on this stretch. Stay focused until your hands hit the stash."
-  },
-  {
-    "id": "CL_SWT_BUNK_05",
-    "category": "BUNK_BAGS",
-    "speaker": "switch",
-    "minChapter": 1,
-    "text": "A few empty bags touched along the way, but the stash reached the car. Tighten up your search."
-  },
-  {
-    "id": "CL_SWT_BUNK_06",
-    "category": "BUNK_BAGS",
-    "speaker": "switch",
-    "minChapter": 1,
-    "text": "Touching bunk bags is like chasing false signal reflections. Filter out the noise and grab the score."
-  },
-  {
-    "id": "CL_MAG_BUNK_01",
-    "category": "BUNK_BAGS",
-    "speaker": "mags",
-    "minChapter": 1,
-    "text": "Dissolved a few bunk bags in there. If you want useless decoys, come sift through Switch’s cable drawer."
-  },
-  {
-    "id": "CL_MAG_BUNK_02",
-    "category": "BUNK_BAGS",
-    "speaker": "mags",
-    "minChapter": 1,
-    "text": "Hit multiple false bags on this block. Good thing you tracked down the stash before leaving."
-  },
-  {
-    "id": "CL_MAG_BUNK_03",
-    "category": "BUNK_BAGS",
-    "speaker": "mags",
-    "minChapter": 1,
-    "text": "Had a couple fake bags pop on you this block. Keep your eyes peeled so you find the stash faster."
-  },
-  {
-    "id": "CL_MAG_BUNK_04",
-    "category": "BUNK_BAGS",
-    "speaker": "mags",
-    "minChapter": 1,
-    "text": "Triggered some empty bags earlier. Just keep moving until you touch the stash that counts."
-  },
-  {
-    "id": "CL_MAG_BUNK_05",
-    "category": "BUNK_BAGS",
-    "speaker": "mags",
-    "minChapter": 1,
-    "text": "Popped a few decoys this block. Reminds me of tuning into ghost stations on a bad antenna."
-  },
-  {
-    "id": "CL_MAG_BUNK_06",
-    "category": "BUNK_BAGS",
-    "speaker": "mags",
-    "minChapter": 11,
-    "text": "Hit multiple bunk bags on this run. If I had my brass ringer here, I’d clang it for each one."
   },
   {
     "id": "CL_SWT_PHASE_01",
@@ -1629,7 +1453,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_PHASE",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, you've been activating Phase more than your other powers. Keep your momentum ready when you exit."
+    "text": "On your clears, you’ve been activating Phase more than your other powers. Keep your momentum ready when it ends."
   },
   {
     "id": "CL_SWT_PHASE_03",
@@ -1643,14 +1467,14 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_PHASE",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, triggering Phase frequently. Remember to commit to the sprint lane the second you're solid."
+    "text": "On your clears, triggering Phase frequently. Commit the second you’re solid."
   },
   {
     "id": "CL_SWT_PHASE_05",
     "category": "POWER_PHASE",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, phase has been your dominant choice. It solves tight corners, but keep your eyes on the threshold."
+    "text": "On your clears, phase has been your dominant choice. It solves problems. Do not let it become the plan."
   },
   {
     "id": "CL_SWT_PHASE_06",
@@ -1671,7 +1495,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_PHASE",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your clears, you've leaned on Phase more than anything else. Beats looking for an open hallway, I admit."
+    "text": "On your clears, you’ve leaned on Phase more than anything else. Walls are just a suggestion now, I guess."
   },
   {
     "id": "CL_MAG_PHASE_03",
@@ -1685,7 +1509,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_PHASE",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your clears, phase is your go-to on this stretch. Slipping out of sight is neat, but you still have to sprint the curb."
+    "text": "On your clears, phase is your go-to this block. Slipping out of sight is neat, but you still have to sprint the curb."
   },
   {
     "id": "CL_MAG_PHASE_05",
@@ -1706,21 +1530,21 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, dash has been your dominant power this block. That burst closes distance fast; keep your lane square."
+    "text": "On your clears, dash has been your dominant power this block. That burst closes distance fast. Stay in control."
   },
   {
     "id": "CL_SWT_DASH_02",
     "category": "POWER_DASH",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, leaning on Dash more than the rest. Rapid linear acceleration, just stay in control at the exit."
+    "text": "On your clears, leaning on Dash more than the rest. Rapid acceleration. Just stay in control."
   },
   {
     "id": "CL_SWT_DASH_03",
     "category": "POWER_DASH",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, you've been triggering Dash quite a bit. Good burst velocity, just don't overrun your exit angle."
+    "text": "On your clears, you’ve been triggering Dash quite a bit. Good burst. Just don’t overrun the bag."
   },
   {
     "id": "CL_SWT_DASH_04",
@@ -1734,7 +1558,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, using Dash more than anything else. Rapid pace helps, but keep your focus on the threshold."
+    "text": "On your clears, using Dash more than anything else. Rapid pace helps. Keep your focus on the bag."
   },
   {
     "id": "CL_SWT_DASH_06",
@@ -1748,14 +1572,14 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your clears, dash has been your most-used power on this street. You hit that burst like your shoes caught fire."
+    "text": "On your clears, dash has been your most-used power on this block. You hit that burst like your shoes caught fire."
   },
   {
     "id": "CL_MAG_DASH_02",
     "category": "POWER_DASH",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your clears, triggering Dash more than anything else. Fast lunge, just make sure you don't trip on the threshold."
+    "text": "On your clears, triggering Dash more than anything else. Speedrun energy. Love that for you."
   },
   {
     "id": "CL_MAG_DASH_03",
@@ -1776,7 +1600,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DASH",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your clears, you favor that Dash burst on your clears. Keep your eyes on the car; the stash still needs an exit."
+    "text": "On your clears, you favor that Dash burst on your clears. Keep your eyes on the car; the stash still needs a ride."
   },
   {
     "id": "CL_MAG_DASH_06",
@@ -1790,7 +1614,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DECOY",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, decoy is your go-to move this block. Splitting attention buys you time; keep your exit path open."
+    "text": "On your clears, decoy is your go-to move this block. Splitting attention buys you time. Spend it well."
   },
   {
     "id": "CL_SWT_DECOY_02",
@@ -1811,7 +1635,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DECOY",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "On your clears, decoy leads your activations on this stretch. Keep your route to the curb in mind."
+    "text": "On your clears, decoy leads your activations this block. Keep the car in mind."
   },
   {
     "id": "CL_SWT_DECOY_05",
@@ -1860,7 +1684,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "POWER_DECOY",
     "speaker": "mags",
     "minChapter": 1,
-    "text": "On your clears, dropping Decoys all over the hallway this block. As long as you make for the car, I won't complain."
+    "text": "On your clears, dropping Decoys everywhere this block. Your clone has more screen time than you."
   },
   {
     "id": "CL_MAG_DECOY_06",
@@ -1881,7 +1705,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Next porch is waiting. Find the stash, take your corner, and sprint to the curb."
+    "text": "Next door is waiting. Find the stash and get to the car."
   },
   {
     "id": "CL_SWT_NEUT_03",
@@ -1902,14 +1726,14 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Stay on the line and keep your eyes on the threshold. Get in and get out."
+    "text": "Stay focused. Get in and get out."
   },
   {
     "id": "CL_SWT_NEUT_06",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Check your footing before you cross that porch. Crossline needs every bag accounted for."
+    "text": "Check yourself before the next door. Crossline needs every bag accounted for."
   },
   {
     "id": "CL_SWT_NEUT_07",
@@ -1923,7 +1747,7 @@ export const CROSSLINE_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "switch",
     "minChapter": 1,
-    "text": "Another door, another haul. Keep pulling bags and we'll have this avenue locked down."
+    "text": "Another door, another haul. Keep pulling bags and we’ll have this block locked down."
   },
   {
     "id": "CL_MAG_NEUT_01",

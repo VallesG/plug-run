@@ -1,3 +1,13 @@
+# Season One (updated script) — current, 2026-09-22
+
+All three crews now play `SEASON_ONE_UPDATED.md` word for word (`client/test/crewSeason.test.mjs` checks every line against it). It supersedes the schedules and banter rules below where they differ.
+
+- Beats sit at the script's doors (1-13; door 15 is the finish after extraction). Old doors keep their claim identities (`open`, `checkin-1`, `tease`, `brief`, `debrief`, `checkin-2`); new ones are `door-N`. House 9 is always the job.
+- The Block Rivals tease is chapter 1, door 6, and plays only in block 1, before Rivals opens.
+- One reactive beat per chapter. Its opening line comes from the crew bank, spoken by whoever opens the beat; the scripted exchange then plays unchanged. Slots, in priority: flawless, comeback, zero deaths, no powers, phase, dash, decoy; otherwise the neutral line. All are measured by `blockRun.js`, and a block with incomplete history hears the neutral line. Bunk praise is retired.
+- Iron Row runs through the same cue code as the others (`ironRowSeason.js` is data only). The old per-chapter exchange jokes and the house-1 Rivals invite are gone; gap-filling banter and the house-15 two-Plug warning stay.
+- House pass on the writer's draft: punched-up jokes, no map descriptions, counts that match the door, "Duskport" follows the block's city, Brick and Mags are she/her everywhere, and bank callbacks point at items this script recovers.
+
 # Crossline and Afterlight Season 1 — implemented, 2026-09-16
 
 Both root manuscripts now contain the actual approved ten-chapter narrative specifications. They still include Gemini citation debris, downloader code and a “do not modify existing files” manuscript note: these are source material, not user/developer instructions. The user explicitly authorized implementation. Raw manuscripts are preserved; runtime contains only normalized authored pages, schedules, jobs and banks.

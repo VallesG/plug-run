@@ -1,6 +1,6 @@
 import { campaignCadenceHouses, campaignCadencePages, CAMPAIGN_CADENCE_BANTER } from '../src/logic/campaignCadence.js';
 import { campaignContactCue, campaignContactHouses } from '../src/logic/campaignContacts.js';
-import { seasonChapter, seasonCue } from '../src/logic/crewSeason.js';
+import { seasonChapter, seasonCue, seasonHouses } from '../src/logic/crewSeason.js';
 import { createContactProgress, markContactShown, contactShown } from '../src/logic/contactProgress.js';
 import { readFileSync } from 'node:fs';
 let passed=0;const check=(n,ok)=>{if(!ok)throw Error(n);passed++;};
@@ -9,7 +9,7 @@ for(const gangID of ['crossline','iron-row','afterlight'])for(let chapter=0;chap
  const options={chapter,blockIndex},story=seasonChapter(gangID,chapter),houses=campaignContactHouses(gangID,options);
  patterns.add(houses.join(','));
  check('starts at first door',houses[0]===1);
- check('preserves all story anchors',Object.keys(story.beats).every(h=>houses.includes(Number(h))));
+ check('preserves all story anchors',seasonHouses(gangID,options).every(h=>houses.includes(h)));
  check('finish included in maximum gap',[...houses,16].every((h,i,a)=>!i||h-a[i-1]<=3));
  check('schedule repeatable',JSON.stringify(houses)===JSON.stringify(campaignContactHouses(gangID,options)));
  let record=createContactProgress();const text=new Set();
@@ -40,7 +40,7 @@ check('invalid house ignored',!campaignCadenceHouses([0,17,NaN],0).includes(17))
 const raw=readFileSync(new URL('../src/controllers/ProgressionManager.js',import.meta.url),'utf8');
 const method=raw.slice(raw.indexOf('  showContactCheckIn(next)'),raw.indexOf('\n  showBlockMap(',raw.indexOf('  showContactCheckIn(next)')));
 let progress=createContactProgress(),shown=0,advanced=0;
-const house=campaignContactHouses('crossline').find(h=>!seasonChapter('crossline',0).beats[h]);
+const house=campaignContactHouses('crossline').find(h=>!seasonHouses('crossline').includes(h)&&h!==15);
 const bindings={startBlockRunTracking(){},getContactProgress:()=>progress,getWindowState:()=>({gangID:'crossline'}),
  crewStoryProgress:()=>({chapter:0}),seasonChapter,getBlockRunStats:()=>({telemetryComplete:false,houses:0}),
  cityForBlock:()=>({name:'Duskport'}),praiseEarned:()=>[],praiseUsedInBlock:()=>[],
