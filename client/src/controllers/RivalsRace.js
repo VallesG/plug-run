@@ -19,7 +19,18 @@ import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
 import { submitRivalRun } from '../utils/api.js';
-import { getUserID } from '../utils/userManager.js';
+import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
+
+/** A short reason a run was not shared, from the submission's answer. */
+function shareReason(error){
+  const e=String(error||'');
+  if(/no identity|identity not recognised|HTTP 40[13]/.test(e))return 'NO PLAYER ID';
+  if(/HTTP 422/.test(e))return 'FAILED CHECKS';
+  if(/HTTP 429|daily limit/.test(e))return 'DAILY LIMIT';
+  if(/HTTP 413/.test(e))return 'TOO LARGE';
+  if(/HTTP 5\d\d/.test(e))return 'SERVER ERROR';
+  return 'NO CONNECTION';
+}
 
 // This session only, never saved: the last few search lengths (so the next
 // search does not repeat them) and the last mix taken into a race (the lobby
@@ -748,16 +759,19 @@ export default class RivalsRace {
     area.y+=used;area.height=Math.max(0,area.height-used);
   }
   shareLabel(){
-    return ({sending:'SHARING YOUR RUN…',shared:'RUN SHARED',failed:'RUN NOT SHARED',unfinished:'RUN NOT SHARED · UNFINISHED'})[this.race.shareStatus]||'';
+    const why=this.race.shareWhy?' · '+this.race.shareWhy:'';
+    return ({sending:'SHARING YOUR RUN…',shared:'RUN SHARED',failed:'RUN NOT SHARED'+why,unfinished:'RUN NOT SHARED · UNFINISHED'})[this.race.shareStatus]||'';
   }
   /** Send the finished race the player opted to share; the result shows how it went. */
   shareOwnRun(own){
     const race=this.race;
     race.shareStatus='sending';
-    Promise.resolve(submitRivalRun({userId:getUserID(),record:own.record,bundle:own.bundle}))
+    let local=null;try{local=getCurrentUserSync()?.id;}catch{}
+    Promise.resolve(submitRivalRun({userIds:[getUserID(),local],record:own.record,bundle:own.bundle}))
       .catch(()=>({ok:false}))
       .then(res=>{
         race.shareStatus=res?.ok?'shared':'failed';
+        if(!res?.ok)race.shareWhy=shareReason(res?.error);
         trackScene(this.scene,'rivals_run_shared',{course_slot:race.course.slot,ok:!!res?.ok});
         if(!this.disposed&&this.race===race)this.shareLine?.setText(this.shareLabel());
       });

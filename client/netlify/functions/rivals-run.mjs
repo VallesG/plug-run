@@ -63,6 +63,8 @@ export default async (req) => {
       },
       now: () => Date.now()
     });
+    // The reason a run was refused, for the site's function log. No ids or tokens.
+    if (result.status !== 200) console.warn('[rivals-run] refused', result.status, result.body.error);
     return json(result.status, result.body);
   } catch (e) {
     console.error('[rivals-run]', e?.message || e);

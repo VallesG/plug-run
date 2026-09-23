@@ -149,6 +149,13 @@ const body = (run, extra = {}) => JSON.stringify({ userId: 'user-1', token: 'tok
   r = await submitPlayerRun(body(broken), w.deps);
   check('a tampered run is refused and not stored', r.status === 422 && w.kv.size === 0, r.body.error);
 
+  // A browser can carry an old account id first and the id its identity was
+  // provisioned under second; the token decides which one is the player.
+  r = await submitPlayerRun(body(run, { userId: 'old-account-id', userIds: ['old-account-id', 'user-1'] }), world().deps);
+  check('the id the token belongs to is used when a browser has two', r.status === 200 && r.body.ok, JSON.stringify(r.body));
+  r = await submitPlayerRun(body(run, { userId: 'old-account-id', userIds: ['old-account-id', 'nobody'] }), world().deps);
+  check('a token for neither id is still refused', r.status === 403);
+
   r = await submitPlayerRun(body(run), w.deps);
   check('an honest run is accepted', r.status === 200 && r.body.ok && /^player-/.test(r.body.recordingID), JSON.stringify(r.body));
   const keys = [...w.kv.keys()];

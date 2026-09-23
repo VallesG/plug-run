@@ -203,11 +203,19 @@ export async function submitPlayerRun(raw, deps) {
   if (typeof raw !== 'string' || raw.length > PLAYER_RUN_MAX_BYTES) return bad(413, 'too large');
   let body;
   try { body = JSON.parse(raw); } catch { return bad(400, 'not JSON'); }
-  const { userId, token, consent, record, bundle } = body || {};
+  const { token, consent, record, bundle } = body || {};
   if (consent !== true) return bad(400, 'no consent');
-  if (!nonEmpty(userId) || userId.length > 64 || !nonEmpty(token)) return bad(401, 'no identity');
-  const meta = await deps.userMeta(userId);
-  if (!meta || meta.token !== token || !nonEmpty(meta.username)) return bad(403, 'identity not recognised');
+  // A browser can carry two ids: an old account id and the local id its
+  // leaderboard identity was provisioned under. The token names one of them.
+  const ids = [...new Set([body?.userId, ...(Array.isArray(body?.userIds) ? body.userIds.slice(0, 2) : [])])]
+    .filter((id) => nonEmpty(id) && id.length <= 64);
+  if (!ids.length || !nonEmpty(token)) return bad(401, 'no identity');
+  let userId = null, meta = null;
+  for (const id of ids) {
+    const m = await deps.userMeta(id);
+    if (m && m.token === token && nonEmpty(m.username)) { userId = id; meta = m; break; }
+  }
+  if (!meta) return bad(403, 'identity not recognised');
   const errors = playerRunErrors(record, bundle);
   if (errors.length) return bad(422, errors[0]);
   if (await deps.store.get('seen/' + record.payloadHash)) return { status: 200, body: { ok: true, duplicate: true } };

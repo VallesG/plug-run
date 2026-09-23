@@ -45,7 +45,7 @@ const bindings={
   // Real module: with no car in these stub scenes it fires its callback
   // immediately, so the flow assertions below stay synchronous.
   playExtraction,
-  submitRivalRun:(p)=>{sharedRuns.push(p);return shareAnswer(p);}, getUserID:()=>'user-1'
+  submitRivalRun:(p)=>{sharedRuns.push(p);return shareAnswer(p);}, getUserID:()=>'user-1', getCurrentUserSync:()=>({id:'local-1'})
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -742,7 +742,7 @@ console.log('rival result scoreboard: '+passed+' total assertions passed');
   sharedRuns.length=0;
   const shared=race7(true);
   check('a finished race the player opted to share is sent once',sharedRuns.length===1&&shared.st.result==='win');
-  check('with its seven clears and full replay',sharedRuns[0].record.clearTimes.length===7&&sharedRuns[0].bundle.segments.length===7&&sharedRuns[0].userId==='user-1');
+  check('with its seven clears and full replay',sharedRuns[0].record.clearTimes.length===7&&sharedRuns[0].bundle.segments.length===7&&sharedRuns[0].userIds.join()==='user-1,local-1');
   check('the result says it is being shared',shared.st.shareStatus==='sending');
   await Promise.resolve();await Promise.resolve();await Promise.resolve();
   check('then that it was',shared.st.shareStatus==='shared');
@@ -756,7 +756,7 @@ console.log('rival result scoreboard: '+passed+' total assertions passed');
   shareAnswer=()=>Promise.resolve({ok:false,error:'identity not recognised'});
   const refused=race7(true);
   await Promise.resolve();await Promise.resolve();await Promise.resolve();
-  check('a refused share is reported as not shared',refused.st.shareStatus==='failed');
+  check('a refused share is reported as not shared, with why',refused.st.shareStatus==='failed'&&refused.st.shareWhy==='NO PLAYER ID');
   shareAnswer=()=>Promise.resolve({ok:true});
 }
 console.log('rival run sharing: '+passed+' total assertions passed');

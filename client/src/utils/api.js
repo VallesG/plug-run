@@ -107,14 +107,15 @@ export async function restoreIdentity(recoveryCode) {
  * server checks it, names it by the player's display name, and holds it for
  * review. Resolves { ok, error? }; never throws.
  */
-export async function submitRivalRun({ userId, record, bundle }) {
+export async function submitRivalRun({ userIds, record, bundle }) {
   const token = getToken();
-  if (!userId || !token) return { ok: false, error: 'no identity' };
+  const ids = [...new Set(userIds || [])].filter(Boolean);
+  if (!ids.length || !token) return { ok: false, error: 'no identity' };
   try {
     return await tryFetch('/.netlify/functions/rivals-run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, token, consent: true, record, bundle }),
+      body: JSON.stringify({ userId: ids[0], userIds: ids, token, consent: true, record, bundle }),
       keepalive: false
     }, 15000);
   } catch (e) {
