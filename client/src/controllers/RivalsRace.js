@@ -108,7 +108,7 @@ export default class RivalsRace {
     if(!this.screen||this.screen.destroyed)this.screen=new RivalMatchScreen(this.scene,{home:this.race.course,gangID:this.race.territoryGang,labels:{
       overline:'BLOCK RIVALS',you:'YOU',vs:'VS',rival:'RIVAL',ready:'READY',notReady:'NOT READY',
       finding:'FINDING RIVAL',found:'RIVAL FOUND',none:'NO RIVAL FOUND',cancel:'CANCEL',back:'BACK',retry:'SEARCH AGAIN',
-      leave:'LEAVE',opens:'RIVAL OPENS',yours:'YOUR POWERS',empty:'EMPTY',pick:'PICK TWO POWERS'}});
+      leave:'LEAVE',yours:'YOUR POWERS',empty:'EMPTY',pick:'PICK TWO POWERS'}});
     return this.screen;
   }
   closeMatchScreen(){this.screen?.destroy();this.screen=null;}

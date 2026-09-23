@@ -119,13 +119,13 @@ export function rivalShortName(name, max = 10) {
 // Lobby geometry. Search, reveal and lobby are the SAME screen in different
 // states: the you-vs-rival header and the block stay put from the first tap
 // to READY; the rival's empty slot fills when one is found, and the zone under
-// the block goes from the search status to the rival's opening and your
-// powers.
+// the block goes from the search status to your powers. The rival's powers are
+// never shown before the race.
 //
 //   header  you vs rival
 //   art     the block (existing block-map art)
 //   name    the course name, with arrows when there is a choice
-//   zone    = opens + powers: search status, reveal, then the pickers
+//   zone    = powers: search status, reveal, then your power picker
 //   footer  CANCEL, or LEAVE / READY
 //
 // Wide screens put art and name on the left and the rest on the right. Every
@@ -138,8 +138,6 @@ export function rivalLobbyLayout(width, height) {
   const wide = W >= 520 && W >= H * 1.25;
   const edge = W < 360 ? 12 : 16;
   const buttonH = H < 600 ? 44 : 48;
-  const opensH = 26;
-  const zoneOf = (opens, powers) => ({ x: opens.x, y: opens.y, w: opens.w, h: powers.y + powers.h - opens.y });
   if (!wide) {
     const colW = Math.min(W - edge * 2, 440), x = (W - colW) / 2;
     const top = H < 620 ? 8 : 16;
@@ -147,11 +145,10 @@ export function rivalLobbyLayout(width, height) {
     const footer = { x, y: H - (H < 620 ? 12 : 20) - buttonH, w: colW, h: buttonH };
     const powers = { x, y: footer.y - 14 - Math.round(Math.max(112, Math.min(150, H * 0.18))), w: colW, h: 0 };
     powers.h = footer.y - 14 - powers.y;
-    const opens = { x, y: powers.y - 6 - opensH, w: colW, h: opensH };
     const art = { x, y: header.y + header.h + 6, w: colW, h: 0 };
-    art.h = Math.max(60, opens.y - 4 - LOBBY_NAME_ROW - art.y);
+    art.h = Math.max(60, powers.y - 8 - LOBBY_NAME_ROW - art.y);
     const name = { x, y: art.y + art.h, w: colW, h: LOBBY_NAME_ROW };
-    return { wide, header, art, name, opens, powers, zone: zoneOf(opens, powers), footer, buttonH };
+    return { wide, header, art, name, powers, zone: { ...powers }, footer, buttonH };
   }
   const gap = 24;
   const total = Math.min(W - edge * 2, 980);
@@ -161,13 +158,11 @@ export function rivalLobbyLayout(width, height) {
   const colX = left + mapW + gap, colW = total - mapW - gap;
   const header = { x: colX, y: top, w: colW, h: Math.round(Math.max(72, Math.min(100, H * 0.2))) };
   const footer = { x: colX, y: H - (H < 480 ? 10 : 20) - buttonH, w: colW, h: buttonH };
-  // The rival's opening and your powers sit centred between header and footer.
+  // Your powers sit centred between header and footer.
   const bandTop = header.y + header.h + 8, bandBottom = footer.y - 12;
-  const powersH = Math.round(Math.max(100, Math.min(150, bandBottom - bandTop - opensH - 6)));
-  const groupTop = Math.max(bandTop, Math.round(bandTop + (bandBottom - bandTop - (opensH + 6 + powersH)) / 2));
-  const opens = { x: colX, y: groupTop, w: colW, h: opensH };
-  const powers = { x: colX, y: groupTop + opensH + 6, w: colW, h: powersH };
+  const powersH = Math.round(Math.max(100, Math.min(150, bandBottom - bandTop)));
+  const powers = { x: colX, y: Math.max(bandTop, Math.round(bandTop + (bandBottom - bandTop - powersH) / 2)), w: colW, h: powersH };
   const art = { x: left, y: top, w: mapW, h: H - top * 2 - LOBBY_NAME_ROW };
   const name = { x: left, y: art.y + art.h, w: mapW, h: LOBBY_NAME_ROW };
-  return { wide, header, art, name, opens, powers, zone: zoneOf(opens, powers), footer, buttonH };
+  return { wide, header, art, name, powers, zone: { ...powers }, footer, buttonH };
 }

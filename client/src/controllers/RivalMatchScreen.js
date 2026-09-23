@@ -3,7 +3,7 @@
 // rivalLobbyLayout): the you-vs-rival header and the block stay where they are
 // from LOOK FOR MATCH until READY. The rival's empty slot fills when one is
 // found; the zone under the block goes from the search status to the reveal to
-// the rival's opening and your powers. Nothing of the house built underneath
+// your powers. The rival's powers are never shown before the race. Nothing of the house built underneath
 // shows through.
 //
 // Presentation only. RivalsRace owns the match stages, the words, the timing
@@ -346,7 +346,6 @@ export class RivalMatchScreen {
     this.retire('zone', animate ? 180 : 0);
     this.retire('footer', animate ? 160 : 0);
     fresh.push(...this.drawCourse());
-    fresh.push(...this.drawOpens());
     fresh.push(...this.drawPowers(state.powers));
     fresh.push(...this.drawFooter());
     if (animate) this.fadeIn(fresh, 160, 300);
@@ -365,29 +364,6 @@ export class RivalMatchScreen {
       dots: count > 1 ? { count, index } : null,
       arrows: count > 1 ? (dir) => this.handlers.onCourse?.(offers[(index + dir + count) % count].slot) : null
     });
-  }
-  /** What the rival opens with on this course: that record's own mix. */
-  drawOpens() {
-    const { offer } = this.offer(), o = this.L.opens, y = o.y + o.h / 2;
-    const made = [];
-    const label = this.text('zone', o.x, y, this.labels.opens, { size: 10, color: C.faint, font: MONO, spacing: 2, origin: [0, 0.5] });
-    made.push(label);
-    let x = o.x + label.width + 12;
-    offer.orderedPowers.forEach((id, i) => {
-      const p = RUNNER_POWERS.find((q) => q.id === id);
-      if (i) { const arrow = this.text('zone', x + 2, y, '→', { size: 12, color: C.faint, origin: [0, 0.5] }); made.push(arrow); x += arrow.width + 8; }
-      made.push(this.put('zone', drawPowerIcon(this.scene, x + 8, y, id, 15, C.rival, Z + 6)));
-      const t = this.text('zone', x + 20, y, p ? p.name : String(id).toUpperCase(), { size: 12, color: C.rivalCss, origin: [0, 0.5] });
-      made.push(t);
-      x += 20 + t.width + 8;
-    });
-    // How the rival measures up, when it is known and there is room.
-    if (offer.quality) {
-      const q = this.text('zone', o.x + o.w, y, offer.quality, { size: 10, color: C.muted, font: MONO, spacing: 1, origin: [1, 0.5] });
-      if (o.x + o.w - q.width < x + 6) { this.groups.zone.pop(); this.drop(q); } else made.push(q);
-    }
-    this.opensObjects = made;
-    return made;
   }
   drawPowers(initial) {
     const p = this.L.powers, lb = this.labels;
@@ -448,16 +424,11 @@ export class RivalMatchScreen {
     this.refreshPowers(false);
     return [a.bg, a.text, this.readyButton.bg, this.readyButton.text];
   }
-  /** The course changed: redraw the card and the rival's opening only. */
+  /** The course changed: redraw the card only. */
   setCourse(slot) {
     if (!this.state || this.destroyed) return;
     this.state.slot = slot;
-    for (const o of this.opensObjects || []) {
-      this.groups.zone = this.groups.zone.filter((x) => x !== o);
-      this.drop(o);
-    }
     this.drawCourse();
-    this.drawOpens();
   }
 
   tick(now) {

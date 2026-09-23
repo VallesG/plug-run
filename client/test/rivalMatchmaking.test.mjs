@@ -110,7 +110,7 @@ const seeded = (seed) => () => { seed = (Math.imul(seed ^ (seed >>> 15), 2246822
 {
   const sizes = [[320, 568], [360, 640], [375, 667], [390, 844], [414, 896], [430, 932], [768, 1024],
     [568, 320], [667, 375], [844, 390], [932, 430], [1024, 768], [1280, 720], [1920, 1080]];
-  const keys = ['header', 'art', 'name', 'opens', 'powers', 'footer'];
+  const keys = ['header', 'art', 'name', 'powers', 'footer'];
   for (const [W, H] of sizes) {
     const L = rivalLobbyLayout(W, H);
     const out = keys.filter((k) => { const r = L[k]; return r.w <= 0 || r.h <= 0 || r.x < 0 || r.y < 0 || r.x + r.w > W + 0.01 || r.y + r.h > H + 0.01; });
@@ -123,7 +123,8 @@ const seeded = (seed) => () => { seed = (Math.imul(seed ^ (seed >>> 15), 2246822
     check(`${W}x${H}: nothing overlaps`, hit.length === 0, hit.join());
     check(`${W}x${H}: buttons are thumb-sized`, L.footer.h >= 44 && L.powers.h >= 100 && L.name.h >= 30);
     check(`${W}x${H}: the block is big enough to read`, Math.min(L.art.w, L.art.h * 200 / 220) >= 190, `${L.art.w}x${L.art.h}`);
-    check(`${W}x${H}: the status zone is the pickers' own space`, L.zone.y === L.opens.y && L.zone.y + L.zone.h === L.powers.y + L.powers.h);
+    check(`${W}x${H}: the status zone is the power picker's own space`, L.zone.y === L.powers.y && L.zone.h === L.powers.h);
+    check(`${W}x${H}: no row for the rival's powers`, !('opens' in L));
   }
   check('phones stack; landscape splits', !rivalLobbyLayout(390, 844).wide && rivalLobbyLayout(844, 390).wide);
 }
