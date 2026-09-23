@@ -19,9 +19,10 @@ On top of the three commits listed below:
   (`RIVALS_MATCH_PRESENTATION_HANDOFF.md`), planned stash seeds, variant plans
   and bank tools;
 - a fix treating the site's HTML fallback (a missing bank file) as missing;
-- the first Normal bank: `client/public/rivals/jev-v1/` holds 168 races, 8 on
-  each of the 21 courses (the first 21 sealed jobs of `tools/plans/jev-v1.json`,
-  assembled with `--fresh`, zero rejections, `v2` unchanged).
+- the Normal bank: `client/public/rivals/jev-v1/` holds 328 races, 16 on
+  each of courses 1-20 and 8 on course 21 (the first 41 sealed jobs of
+  `tools/plans/jev-v1.json`, assembled with `--fresh`, zero rejections, `v2`
+  unchanged).
 
 Ordinary players now meet Jev on every course. The Normal recorder keeps
 running toward 128 per course; re-assemble `jev-v1` with `--fresh` from

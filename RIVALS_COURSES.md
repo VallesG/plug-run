@@ -192,10 +192,10 @@ course is short, and `--json` gives machine-readable output.
 
 Current state:
 
-- `jev-v1` (Normal) holds the first 21 sealed jobs of the fresh Normal
-  recording (`tools/plans/jev-v1.json`): 168 races, 8 on every one of the 21
-  courses, all with match stash rules and 8 distinct seven-house patterns
-  per course. It replaced the 7 historical races (no match rules), which
+- `jev-v1` (Normal) holds the first 41 sealed jobs of the fresh Normal
+  recording (`tools/plans/jev-v1.json`): 328 races, 16 on each of courses
+  1-20 and 8 on course 21, all with match stash rules and a distinct
+  seven-house pattern per race on each course. It replaced the 7 historical races (no match rules), which
   git still has. Ordinary players now meet Jev on every course. Re-assemble
   with `--fresh` as the recording continues; the plan's target is 128 per
   course.

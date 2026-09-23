@@ -2,14 +2,14 @@
  "schemaVersion": 1,
  "bank": "jev-v1",
  "rulesVersion": "rivals-v1",
- "generatedAt": "2026-09-23T00:42:44.706Z",
+ "generatedAt": "2026-09-23T05:21:00.605Z",
  "note": "Jev Rival: reserved for beatable opponents pooled into ordinary Block Rivals matchmaking.",
  "courses": [
   {
    "slot": 1,
    "name": "Low End Rush",
    "courseID": "rivals-v1-2722422571",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-low-end-rush-balanced-301000-bl884q",
     "rec-low-end-rush-balanced-301001-1hfjlxh",
@@ -18,7 +18,15 @@
     "rec-low-end-rush-balanced-301004-1hvnu4k",
     "rec-low-end-rush-balanced-301005-5q7dsi",
     "rec-low-end-rush-balanced-301006-1lsben1",
-    "rec-low-end-rush-balanced-301007-o46wa2"
+    "rec-low-end-rush-balanced-301007-o46wa2",
+    "rec-low-end-rush-balanced-301008-t217ky",
+    "rec-low-end-rush-balanced-301009-xjtryb",
+    "rec-low-end-rush-balanced-301010-10tdcq",
+    "rec-low-end-rush-balanced-301011-k5vxby",
+    "rec-low-end-rush-balanced-301012-dqur4d",
+    "rec-low-end-rush-balanced-301013-19ta6gz",
+    "rec-low-end-rush-balanced-301014-131ghtg",
+    "rec-low-end-rush-balanced-301015-gt6jf0"
    ],
    "elapsedMs": [
     59480.19999998808,
@@ -28,7 +36,15 @@
     61564.89999997616,
     84987.80000001192,
     85690.39999997616,
-    124489.40000003576
+    124489.40000003576,
+    64694.19999998808,
+    71281.69999986887,
+    62393.20000010729,
+    72868.30000001192,
+    101721.09999996424,
+    94435.60000008345,
+    96987.09999996424,
+    78811.40000003576
    ],
    "retries": [
     0,
@@ -38,7 +54,15 @@
     0,
     2,
     1,
-    4
+    4,
+    0,
+    0,
+    0,
+    1,
+    4,
+    0,
+    2,
+    1
    ],
    "costUsd": [
     0.0008,
@@ -48,14 +72,22 @@
     0.0007000000000000001,
     0.0008999999999999998,
     0.001,
-    0.0011999999999999997
+    0.0011999999999999997,
+    0.0007,
+    0.0008,
+    0.0007999999999999999,
+    0.0009000000000000002,
+    0.0012000000000000001,
+    0.001,
+    0.001,
+    0.0008999999999999998
    ]
   },
   {
    "slot": 2,
    "name": "Copper Climb",
    "courseID": "rivals-v1-2917822448",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-copper-climb-balanced-302000-5nauz9",
     "rec-copper-climb-balanced-302001-2o2oa",
@@ -64,7 +96,15 @@
     "rec-copper-climb-balanced-302004-x0690u",
     "rec-copper-climb-balanced-302005-kburj8",
     "rec-copper-climb-balanced-302006-18l7u0h",
-    "rec-copper-climb-balanced-302007-yiurx4"
+    "rec-copper-climb-balanced-302007-yiurx4",
+    "rec-copper-climb-balanced-302008-1raigeu",
+    "rec-copper-climb-balanced-302009-zfo96a",
+    "rec-copper-climb-balanced-302010-168azob",
+    "rec-copper-climb-balanced-302011-w9z6tg",
+    "rec-copper-climb-balanced-302012-1d8d1k8",
+    "rec-copper-climb-balanced-302013-1jwl7o7",
+    "rec-copper-climb-balanced-302014-1qfvzbz",
+    "rec-copper-climb-balanced-302015-11po85h"
    ],
    "elapsedMs": [
     95294.89999997616,
@@ -74,7 +114,15 @@
     113789.19999998808,
     108471.9999999404,
     91874.10000002384,
-    129611.20000010729
+    129611.20000010729,
+    150664.90000003576,
+    84557.39999997616,
+    252121.29999995232,
+    126986.70000004768,
+    197219.69999998808,
+    135599.4999999404,
+    198633.40000003576,
+    101005.70000004768
    ],
    "retries": [
     3,
@@ -84,7 +132,15 @@
     4,
     4,
     3,
-    6
+    6,
+    8,
+    1,
+    23,
+    5,
+    11,
+    7,
+    11,
+    3
    ],
    "costUsd": [
     0.0012,
@@ -94,14 +150,22 @@
     0.0015999999999999999,
     0.0013000000000000008,
     0.0011999999999999997,
-    0.0014999999999999996
+    0.0014999999999999996,
+    0.002,
+    0.0008999999999999998,
+    0.0033,
+    0.0015999999999999999,
+    0.0025000000000000005,
+    0.0017999999999999995,
+    0.0023,
+    0.0011000000000000003
    ]
   },
   {
    "slot": 3,
    "name": "Freight Run",
    "courseID": "rivals-v1-1245351574",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-freight-run-balanced-303000-12zq3v1",
     "rec-freight-run-balanced-303001-137gbhf",
@@ -110,7 +174,15 @@
     "rec-freight-run-balanced-303004-1ks70qn",
     "rec-freight-run-balanced-303005-zlj24w",
     "rec-freight-run-balanced-303006-fanqta",
-    "rec-freight-run-balanced-303007-qp1xcp"
+    "rec-freight-run-balanced-303007-qp1xcp",
+    "rec-freight-run-balanced-303008-1pseyxc",
+    "rec-freight-run-balanced-303009-drw5my",
+    "rec-freight-run-balanced-303010-u59q8o",
+    "rec-freight-run-balanced-303011-ggou8h",
+    "rec-freight-run-balanced-303012-18o2nnl",
+    "rec-freight-run-balanced-303013-wlkc3g",
+    "rec-freight-run-balanced-303014-sf32kp",
+    "rec-freight-run-balanced-303015-t65hky"
    ],
    "elapsedMs": [
     62568.69999998808,
@@ -120,7 +192,15 @@
     77291.29999995232,
     65582.90000009537,
     69514.20000004768,
-    98056.00000011921
+    98056.00000011921,
+    97173.10000002384,
+    92297.09999990463,
+    76125.40000003576,
+    121734.69999998808,
+    88783.5,
+    95407.79999995232,
+    81481.5,
+    82222.0000000596
    ],
    "retries": [
     1,
@@ -130,7 +210,15 @@
     2,
     1,
     1,
-    4
+    4,
+    2,
+    2,
+    3,
+    7,
+    1,
+    2,
+    1,
+    1
    ],
    "costUsd": [
     0.0008,
@@ -140,14 +228,22 @@
     0.001,
     0.0008999999999999998,
     0.0008000000000000004,
-    0.0013
+    0.0013,
+    0.001,
+    0.0010999999999999998,
+    0.0011000000000000003,
+    0.0015,
+    0.001,
+    0.0010999999999999994,
+    0.001,
+    0.0008999999999999998
    ]
   },
   {
    "slot": 4,
    "name": "Afterglow Mile",
    "courseID": "rivals-v1-2476136539",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-afterglow-mile-balanced-304000-1x3y4z2",
     "rec-afterglow-mile-balanced-304001-g2qpxu",
@@ -156,7 +252,15 @@
     "rec-afterglow-mile-balanced-304004-zu0vu7",
     "rec-afterglow-mile-balanced-304005-18w0qk3",
     "rec-afterglow-mile-balanced-304006-12wlo9k",
-    "rec-afterglow-mile-balanced-304007-khqpfy"
+    "rec-afterglow-mile-balanced-304007-khqpfy",
+    "rec-afterglow-mile-balanced-304008-qwrwfh",
+    "rec-afterglow-mile-balanced-304009-1cdrn9q",
+    "rec-afterglow-mile-balanced-304010-8gdt81",
+    "rec-afterglow-mile-balanced-304011-ody3bi",
+    "rec-afterglow-mile-balanced-304012-1d96icy",
+    "rec-afterglow-mile-balanced-304013-1cyo8xj",
+    "rec-afterglow-mile-balanced-304014-pc6su1",
+    "rec-afterglow-mile-balanced-304015-1y5xtdd"
    ],
    "elapsedMs": [
     62623.89999997616,
@@ -166,7 +270,15 @@
     79447.39999997616,
     91456.19999986887,
     73680.60000008345,
-    72290.90000003576
+    72290.90000003576,
+    64929.89999997616,
+    53629.79999989271,
+    52144.60000002384,
+    88048.79999995232,
+    75478.10000002384,
+    62477,
+    66473.90000003576,
+    65228.5
    ],
    "retries": [
     0,
@@ -176,7 +288,15 @@
     1,
     0,
     1,
-    0
+    0,
+    1,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0,
+    1
    ],
    "costUsd": [
     0.0006,
@@ -186,14 +306,22 @@
     0.0009000000000000002,
     0.0009999999999999996,
     0.0008000000000000004,
-    0.0008000000000000004
+    0.0008000000000000004,
+    0.0008,
+    0.0007,
+    0.0007000000000000001,
+    0.0010999999999999998,
+    0.0008999999999999998,
+    0.0008000000000000004,
+    0.0007999999999999995,
+    0.0007000000000000001
    ]
   },
   {
    "slot": 5,
    "name": "Switchyard Seven",
    "courseID": "rivals-v1-2143714553",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-switchyard-seven-balanced-305000-161tkd0",
     "rec-switchyard-seven-balanced-305001-1ayhznh",
@@ -202,7 +330,15 @@
     "rec-switchyard-seven-balanced-305004-42bv8k",
     "rec-switchyard-seven-balanced-305005-fj94aw",
     "rec-switchyard-seven-balanced-305006-1uilyom",
-    "rec-switchyard-seven-balanced-305007-6avhnx"
+    "rec-switchyard-seven-balanced-305007-6avhnx",
+    "rec-switchyard-seven-balanced-305008-1n43je",
+    "rec-switchyard-seven-balanced-305009-ameg0r",
+    "rec-switchyard-seven-balanced-305010-1go4iwa",
+    "rec-switchyard-seven-balanced-305011-1hz9edb",
+    "rec-switchyard-seven-balanced-305012-1p7mqo5",
+    "rec-switchyard-seven-balanced-305013-xkfm95",
+    "rec-switchyard-seven-balanced-305014-4hfcib",
+    "rec-switchyard-seven-balanced-305015-3tf5om"
    ],
    "elapsedMs": [
     71442.59999996424,
@@ -212,7 +348,15 @@
     89774.20000010729,
     75917.09999996424,
     72724.69999998808,
-    86099.59999996424
+    86099.59999996424,
+    95456.19999992847,
+    79631.10000014305,
+    69126.39999997616,
+    85393.60000002384,
+    62669.40000003576,
+    67860.29999995232,
+    74828.69999998808,
+    71885.59999996424
    ],
    "retries": [
     0,
@@ -222,7 +366,15 @@
     1,
     0,
     0,
-    3
+    3,
+    2,
+    1,
+    1,
+    1,
+    0,
+    0,
+    1,
+    2
    ],
    "costUsd": [
     0.0009,
@@ -232,14 +384,22 @@
     0.0011000000000000003,
     0.0008999999999999998,
     0.001,
-    0.0010999999999999994
+    0.0010999999999999994,
+    0.0011,
+    0.0009999999999999998,
+    0.001,
+    0.0010999999999999998,
+    0.0008000000000000004,
+    0.0007999999999999995,
+    0.0009000000000000006,
+    0.001
    ]
   },
   {
    "slot": 6,
    "name": "Lastlight Loop",
    "courseID": "rivals-v1-2077357177",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-lastlight-loop-balanced-306000-1bilvz4",
     "rec-lastlight-loop-balanced-306001-1akzt7q",
@@ -248,7 +408,15 @@
     "rec-lastlight-loop-balanced-306004-13pazte",
     "rec-lastlight-loop-balanced-306005-rtgcfe",
     "rec-lastlight-loop-balanced-306006-1rudoxi",
-    "rec-lastlight-loop-balanced-306007-o9f1e9"
+    "rec-lastlight-loop-balanced-306007-o9f1e9",
+    "rec-lastlight-loop-balanced-306008-1h5o03p",
+    "rec-lastlight-loop-balanced-306009-1qe67vf",
+    "rec-lastlight-loop-balanced-306010-xq3qtt",
+    "rec-lastlight-loop-balanced-306011-1q6ht4h",
+    "rec-lastlight-loop-balanced-306012-loi186",
+    "rec-lastlight-loop-balanced-306013-1f753sz",
+    "rec-lastlight-loop-balanced-306014-1dcydsb",
+    "rec-lastlight-loop-balanced-306015-1xoy98y"
    ],
    "elapsedMs": [
     75204.5,
@@ -258,7 +426,15 @@
     76882.5,
     73106.29999995232,
     57452.90000009537,
-    93660.90000003576
+    93660.90000003576,
+    66534.29999995232,
+    76848.89999997616,
+    96342.89999997616,
+    83497.10000008345,
+    63713.80000001192,
+    60199.299999952316,
+    93508.09999996424,
+    53632.299999952316
    ],
    "retries": [
     1,
@@ -268,7 +444,15 @@
     0,
     0,
     0,
-    1
+    1,
+    0,
+    1,
+    4,
+    0,
+    0,
+    0,
+    2,
+    0
    ],
    "costUsd": [
     0.0008,
@@ -278,14 +462,22 @@
     0.0007999999999999999,
     0.0008000000000000004,
     0.0007000000000000001,
-    0.0008999999999999998
+    0.0008999999999999998,
+    0.0008,
+    0.001,
+    0.0013,
+    0.0009000000000000002,
+    0.0008999999999999998,
+    0.0007000000000000001,
+    0.0011999999999999997,
+    0.0008000000000000004
    ]
   },
   {
    "slot": 7,
    "name": "Blacktop Crown",
    "courseID": "rivals-v1-2334749748",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-blacktop-crown-balanced-307000-fs2pdg",
     "rec-blacktop-crown-balanced-307001-1yrug61",
@@ -294,7 +486,15 @@
     "rec-blacktop-crown-balanced-307004-1qq1pcb",
     "rec-blacktop-crown-balanced-307005-lbiy95",
     "rec-blacktop-crown-balanced-307006-1j5qe95",
-    "rec-blacktop-crown-balanced-307007-1iph3a8"
+    "rec-blacktop-crown-balanced-307007-1iph3a8",
+    "rec-blacktop-crown-balanced-307008-19o4mkr",
+    "rec-blacktop-crown-balanced-307009-1olj93y",
+    "rec-blacktop-crown-balanced-307010-345zvc",
+    "rec-blacktop-crown-balanced-307011-1r19eh",
+    "rec-blacktop-crown-balanced-307012-18jfrft",
+    "rec-blacktop-crown-balanced-307013-z5rrt1",
+    "rec-blacktop-crown-balanced-307014-1th5nrv",
+    "rec-blacktop-crown-balanced-307015-p5zequ"
    ],
    "elapsedMs": [
     76451.69999992847,
@@ -304,7 +504,15 @@
     85773.39999991655,
     85854.30000007153,
     76025.20000004768,
-    64846.999999940395
+    64846.999999940395,
+    81624,
+    79450.9999999404,
+    88568.09999990463,
+    58494.90000003576,
+    61789.999999940395,
+    80100.60000002384,
+    71130.79999995232,
+    59463.299999952316
    ],
    "retries": [
     1,
@@ -314,7 +522,15 @@
     1,
     0,
     1,
-    0
+    0,
+    2,
+    2,
+    1,
+    1,
+    0,
+    0,
+    1,
+    1
    ],
    "costUsd": [
     0.001,
@@ -324,14 +540,22 @@
     0.001,
     0.001,
     0.0008999999999999998,
-    0.0008999999999999998
+    0.0008999999999999998,
+    0.0011,
+    0.0009999999999999998,
+    0.0011000000000000003,
+    0.0007999999999999999,
+    0.0008999999999999998,
+    0.0008999999999999998,
+    0.001,
+    0.0007000000000000001
    ]
   },
   {
    "slot": 8,
    "name": "Canal Street",
    "courseID": "rivals-v1-2222013742",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-canal-street-balanced-308000-1s6h42a",
     "rec-canal-street-balanced-308001-14gm5c3",
@@ -340,7 +564,15 @@
     "rec-canal-street-balanced-308004-1x3hqyf",
     "rec-canal-street-balanced-308005-1jffesq",
     "rec-canal-street-balanced-308006-14imhcn",
-    "rec-canal-street-balanced-308007-1pvlor6"
+    "rec-canal-street-balanced-308007-1pvlor6",
+    "rec-canal-street-balanced-308008-6lke9j",
+    "rec-canal-street-balanced-308009-wdepm9",
+    "rec-canal-street-balanced-308010-rovu7o",
+    "rec-canal-street-balanced-308011-1itxoa5",
+    "rec-canal-street-balanced-308012-1uoxrk7",
+    "rec-canal-street-balanced-308013-1n35o03",
+    "rec-canal-street-balanced-308014-wl7h8t",
+    "rec-canal-street-balanced-308015-6khq6i"
    ],
    "elapsedMs": [
     93886.69999992847,
@@ -350,7 +582,15 @@
     76317.60000014305,
     97463.20000004768,
     84496.60000008345,
-    75082.30000007153
+    75082.30000007153,
+    62242.90000003576,
+    61901.39999997616,
+    74221.5000000596,
+    91488.10000002384,
+    73968.20000004768,
+    75398.9999999404,
+    69315.19999998808,
+    82416.40000003576
    ],
    "retries": [
     1,
@@ -359,6 +599,14 @@
     0,
     0,
     1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     0,
     0
    ],
@@ -370,14 +618,22 @@
     0.0006999999999999997,
     0.0011000000000000003,
     0.0008999999999999998,
-    0.0008000000000000004
+    0.0008000000000000004,
+    0.0007,
+    0.0007,
+    0.0008000000000000001,
+    0.0007999999999999999,
+    0.0007999999999999999,
+    0.0006999999999999997,
+    0.0006000000000000007,
+    0.0006999999999999992
    ]
   },
   {
    "slot": 9,
    "name": "Rooftop Relay",
    "courseID": "rivals-v1-2425999850",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-rooftop-relay-balanced-309000-16djezh",
     "rec-rooftop-relay-balanced-309001-msow1t",
@@ -386,7 +642,15 @@
     "rec-rooftop-relay-balanced-309004-1cyofw2",
     "rec-rooftop-relay-balanced-309005-1p646nv",
     "rec-rooftop-relay-balanced-309006-13u13f",
-    "rec-rooftop-relay-balanced-309007-1c294df"
+    "rec-rooftop-relay-balanced-309007-1c294df",
+    "rec-rooftop-relay-balanced-309008-14o6ih9",
+    "rec-rooftop-relay-balanced-309009-185tbjt",
+    "rec-rooftop-relay-balanced-309010-1oenfps",
+    "rec-rooftop-relay-balanced-309011-bc1754",
+    "rec-rooftop-relay-balanced-309012-1csavy",
+    "rec-rooftop-relay-balanced-309013-1gwuu7c",
+    "rec-rooftop-relay-balanced-309014-h91flk",
+    "rec-rooftop-relay-balanced-309015-9tbqus"
    ],
    "elapsedMs": [
     70679.80000007153,
@@ -396,7 +660,15 @@
     67811.39999997616,
     68313.89999997616,
     88089.19999998808,
-    69477.69999992847
+    69477.69999992847,
+    70640.10000002384,
+    69950.39999991655,
+    66249.50000017881,
+    72805.19999998808,
+    78781.60000008345,
+    94289.19999992847,
+    67750.19999998808,
+    67694.5000000596
    ],
    "retries": [
     0,
@@ -405,6 +677,14 @@
     1,
     0,
     0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    0,
+    1,
+    2,
     1,
     0
    ],
@@ -416,14 +696,22 @@
     0.0008999999999999998,
     0.0007000000000000001,
     0.001,
-    0.0007000000000000001
+    0.0007000000000000001,
+    0.0008,
+    0.0008999999999999999,
+    0.0006999999999999999,
+    0.0008000000000000004,
+    0.0009000000000000002,
+    0.001,
+    0.0007999999999999995,
+    0.0008000000000000004
    ]
   },
   {
    "slot": 10,
    "name": "Market Square",
    "courseID": "rivals-v1-2192743687",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-market-square-balanced-310000-eqbasr",
     "rec-market-square-balanced-310001-u1e87c",
@@ -432,7 +720,15 @@
     "rec-market-square-balanced-310004-1ojr1uy",
     "rec-market-square-balanced-310005-14psi5w",
     "rec-market-square-balanced-310006-d8sw6f",
-    "rec-market-square-balanced-310007-1isbb8"
+    "rec-market-square-balanced-310007-1isbb8",
+    "rec-market-square-balanced-310008-ogsuo",
+    "rec-market-square-balanced-310009-18sb563",
+    "rec-market-square-balanced-310010-wz4iyh",
+    "rec-market-square-balanced-310011-mrwvqt",
+    "rec-market-square-balanced-310012-1qyvd4d",
+    "rec-market-square-balanced-310013-1qbpneb",
+    "rec-market-square-balanced-310014-ml8p3r",
+    "rec-market-square-balanced-310015-vpdiiq"
    ],
    "elapsedMs": [
     84342.59999996424,
@@ -442,7 +738,15 @@
     61975.50000011921,
     87071.79999995232,
     71331.90000003576,
-    56581.40000003576
+    56581.40000003576,
+    59949.90000003576,
+    73119.29999995232,
+    61777.199999928474,
+    71393.40000009537,
+    61320.80000001192,
+    60683.5,
+    67765.60000002384,
+    70189.80000013113
    ],
    "retries": [
     2,
@@ -452,7 +756,15 @@
     0,
     2,
     1,
-    0
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    1
    ],
    "costUsd": [
     0.0009,
@@ -462,14 +774,22 @@
     0.0008000000000000004,
     0.001,
     0.0007999999999999995,
-    0.0007000000000000001
+    0.0007000000000000001,
+    0.0007,
+    0.0009000000000000001,
+    0.0007999999999999997,
+    0.001,
+    0.0007000000000000005,
+    0.0006999999999999992,
+    0.0009000000000000006,
+    0.0008999999999999998
    ]
   },
   {
    "slot": 11,
    "name": "Tunnel Nine",
    "courseID": "rivals-v1-1463392172",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-tunnel-nine-balanced-311000-wsfc8x",
     "rec-tunnel-nine-balanced-311001-4yos47",
@@ -478,7 +798,15 @@
     "rec-tunnel-nine-balanced-311004-ager0f",
     "rec-tunnel-nine-balanced-311005-tvc93q",
     "rec-tunnel-nine-balanced-311006-mlyu9m",
-    "rec-tunnel-nine-balanced-311007-183a0w7"
+    "rec-tunnel-nine-balanced-311007-183a0w7",
+    "rec-tunnel-nine-balanced-311008-kqdm8k",
+    "rec-tunnel-nine-balanced-311009-1s8l6n6",
+    "rec-tunnel-nine-balanced-311010-xkurr6",
+    "rec-tunnel-nine-balanced-311011-rvyw12",
+    "rec-tunnel-nine-balanced-311012-c3x1km",
+    "rec-tunnel-nine-balanced-311013-e8dzo2",
+    "rec-tunnel-nine-balanced-311014-1o3e6pv",
+    "rec-tunnel-nine-balanced-311015-1xaim9b"
    ],
    "elapsedMs": [
     81207.30000001192,
@@ -488,7 +816,15 @@
     98835.19999986887,
     91359.19999998808,
     77350.5,
-    105952.4999999404
+    105952.4999999404,
+    76650.4999999404,
+    76950.89999997616,
+    80889.39999997616,
+    107874.5000000596,
+    76862.20000004768,
+    92525.0000000596,
+    69066.39999991655,
+    76918.90000003576
    ],
    "retries": [
     1,
@@ -498,7 +834,15 @@
     2,
     0,
     0,
-    1
+    1,
+    0,
+    0,
+    1,
+    2,
+    0,
+    1,
+    0,
+    0
    ],
    "costUsd": [
     0.0009,
@@ -508,14 +852,22 @@
     0.0009999999999999996,
     0.0009000000000000006,
     0.0005999999999999998,
-    0.0010999999999999994
+    0.0010999999999999994,
+    0.0008,
+    0.0008999999999999999,
+    0.0008000000000000001,
+    0.0012000000000000001,
+    0.0007999999999999995,
+    0.001,
+    0.0008000000000000004,
+    0.0007000000000000001
    ]
   },
   {
    "slot": 12,
    "name": "Crosstown Loop",
    "courseID": "rivals-v1-2134477327",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-crosstown-loop-balanced-312000-10alfii",
     "rec-crosstown-loop-balanced-312001-3ze5rz",
@@ -524,7 +876,15 @@
     "rec-crosstown-loop-balanced-312004-1nf32wg",
     "rec-crosstown-loop-balanced-312005-ln1qgr",
     "rec-crosstown-loop-balanced-312006-gze8uq",
-    "rec-crosstown-loop-balanced-312007-po83a0"
+    "rec-crosstown-loop-balanced-312007-po83a0",
+    "rec-crosstown-loop-balanced-312008-1jxo6p6",
+    "rec-crosstown-loop-balanced-312009-15w4cto",
+    "rec-crosstown-loop-balanced-312010-svedk9",
+    "rec-crosstown-loop-balanced-312011-n065o3",
+    "rec-crosstown-loop-balanced-312012-z8p2ei",
+    "rec-crosstown-loop-balanced-312013-1oymu65",
+    "rec-crosstown-loop-balanced-312014-1nywglo",
+    "rec-crosstown-loop-balanced-312015-1bgeu7c"
    ],
    "elapsedMs": [
     67182.89999997616,
@@ -534,7 +894,15 @@
     69780.0000000596,
     69111.29999995232,
     74816.40000009537,
-    91973.59999996424
+    91973.59999996424,
+    69999.39999997616,
+    77411.19999998808,
+    79748,
+    65134.10000002384,
+    59889.39999991655,
+    72640.20000004768,
+    66911.79999989271,
+    92560.4999999404
    ],
    "retries": [
     0,
@@ -544,7 +912,15 @@
     0,
     0,
     0,
-    2
+    2,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    3
    ],
    "costUsd": [
     0.0007,
@@ -554,14 +930,22 @@
     0.0008000000000000004,
     0.0007999999999999995,
     0.0008000000000000004,
-    0.0011000000000000003
+    0.0011000000000000003,
+    0.0009,
+    0.0007999999999999999,
+    0.0009,
+    0.0009000000000000002,
+    0.0006999999999999997,
+    0.001,
+    0.0009000000000000006,
+    0.0011999999999999997
    ]
   },
   {
    "slot": 13,
    "name": "Dockside Drop",
    "courseID": "rivals-v1-3741482466",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-dockside-drop-balanced-313000-n4e5g",
     "rec-dockside-drop-balanced-313001-9mpcrl",
@@ -570,7 +954,15 @@
     "rec-dockside-drop-balanced-313004-11efpen",
     "rec-dockside-drop-balanced-313005-1tp5pvr",
     "rec-dockside-drop-balanced-313006-m9n5q8",
-    "rec-dockside-drop-balanced-313007-156mprw"
+    "rec-dockside-drop-balanced-313007-156mprw",
+    "rec-dockside-drop-balanced-313008-1t5iko8",
+    "rec-dockside-drop-balanced-313009-9mt6j9",
+    "rec-dockside-drop-balanced-313010-12ybi5",
+    "rec-dockside-drop-balanced-313011-up4dbl",
+    "rec-dockside-drop-balanced-313012-w6rfm1",
+    "rec-dockside-drop-balanced-313013-cprekb",
+    "rec-dockside-drop-balanced-313014-kq2fq5",
+    "rec-dockside-drop-balanced-313015-12drj18"
    ],
    "elapsedMs": [
     100995.79999995232,
@@ -580,7 +972,15 @@
     83189.30000001192,
     125657.30000001192,
     129047.19999998808,
-    119128.90000015497
+    119128.90000015497,
+    119632.69999998808,
+    78174.90000003576,
+    127774.89999991655,
+    116064.69999998808,
+    101434.00000011921,
+    174430.29999995232,
+    141560,
+    119083.70000004768
    ],
    "retries": [
     2,
@@ -590,7 +990,15 @@
     0,
     3,
     4,
-    4
+    4,
+    5,
+    0,
+    5,
+    2,
+    1,
+    8,
+    3,
+    3
    ],
    "costUsd": [
     0.0011,
@@ -600,14 +1008,22 @@
     0.0007999999999999995,
     0.0013000000000000008,
     0.0014000000000000002,
-    0.0014000000000000002
+    0.0014000000000000002,
+    0.0014,
+    0.0006999999999999999,
+    0.0015,
+    0.001,
+    0.0008999999999999998,
+    0.0017000000000000001,
+    0.0014000000000000002,
+    0.0011000000000000003
    ]
   },
   {
    "slot": 14,
    "name": "Brickyard Courts",
    "courseID": "rivals-v1-3233406759",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-brickyard-courts-balanced-314000-j5d6i3",
     "rec-brickyard-courts-balanced-314001-b4aul1",
@@ -616,7 +1032,15 @@
     "rec-brickyard-courts-balanced-314004-16n8p5v",
     "rec-brickyard-courts-balanced-314005-q93at9",
     "rec-brickyard-courts-balanced-314006-1regkec",
-    "rec-brickyard-courts-balanced-314007-buqc5b"
+    "rec-brickyard-courts-balanced-314007-buqc5b",
+    "rec-brickyard-courts-balanced-314008-1alad57",
+    "rec-brickyard-courts-balanced-314009-1j4khko",
+    "rec-brickyard-courts-balanced-314010-i1rla3",
+    "rec-brickyard-courts-balanced-314011-td68xx",
+    "rec-brickyard-courts-balanced-314012-jjoca4",
+    "rec-brickyard-courts-balanced-314013-kxl7w1",
+    "rec-brickyard-courts-balanced-314014-22i6rr",
+    "rec-brickyard-courts-balanced-314015-80yzem"
    ],
    "elapsedMs": [
     116030.90000003576,
@@ -626,7 +1050,15 @@
     93783.79999995232,
     108858.80000001192,
     67231.09999990463,
-    95320.4999999404
+    95320.4999999404,
+    91829.09999996424,
+    83108.30000007153,
+    85574.80000001192,
+    94293.10000002384,
+    77509.40000003576,
+    82132.60000002384,
+    101156.5,
+    90523.49999988079
    ],
    "retries": [
     3,
@@ -636,6 +1068,14 @@
     0,
     1,
     0,
+    2,
+    1,
+    0,
+    1,
+    2,
+    1,
+    1,
+    2,
     2
    ],
    "costUsd": [
@@ -646,6 +1086,14 @@
     0.0008999999999999998,
     0.0009000000000000006,
     0.0007999999999999995,
+    0.001,
+    0.0009,
+    0.0009,
+    0.0007999999999999999,
+    0.001,
+    0.0008000000000000004,
+    0.0007000000000000001,
+    0.0010999999999999994,
     0.001
    ]
   },
@@ -653,7 +1101,7 @@
    "slot": 15,
    "name": "Grid Iron",
    "courseID": "rivals-v1-2004320439",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-grid-iron-balanced-315000-134d0bi",
     "rec-grid-iron-balanced-315001-gn287r",
@@ -662,7 +1110,15 @@
     "rec-grid-iron-balanced-315004-1ivr43d",
     "rec-grid-iron-balanced-315005-lwax0e",
     "rec-grid-iron-balanced-315006-yt8ncy",
-    "rec-grid-iron-balanced-315007-1qw5axf"
+    "rec-grid-iron-balanced-315007-1qw5axf",
+    "rec-grid-iron-balanced-315008-je9was",
+    "rec-grid-iron-balanced-315009-147nm9k",
+    "rec-grid-iron-balanced-315010-1c1ah49",
+    "rec-grid-iron-balanced-315011-vxapqa",
+    "rec-grid-iron-balanced-315012-s0uz6i",
+    "rec-grid-iron-balanced-315013-9txjxk",
+    "rec-grid-iron-balanced-315014-64gmt5",
+    "rec-grid-iron-balanced-315015-1sdhgx2"
    ],
    "elapsedMs": [
     81244.60000002384,
@@ -672,7 +1128,15 @@
     68120.39999997616,
     59519.89999997616,
     94335.30000013113,
-    59698.500000059605
+    59698.500000059605,
+    83925.39999991655,
+    60590.10000008345,
+    63468.90000003576,
+    55480.90000009537,
+    75694.49999988079,
+    116248.19999998808,
+    67152.40000003576,
+    73598.89999991655
    ],
    "retries": [
     1,
@@ -681,6 +1145,14 @@
     0,
     0,
     0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
     1,
     0
    ],
@@ -692,14 +1164,22 @@
     0.0007000000000000001,
     0.0007000000000000001,
     0.001,
-    0.0007000000000000001
+    0.0007000000000000001,
+    0.0008,
+    0.0006,
+    0.0006999999999999999,
+    0.0006000000000000003,
+    0.0007999999999999999,
+    0.0010999999999999998,
+    0.0008000000000000004,
+    0.0007999999999999995
    ]
   },
   {
    "slot": 16,
    "name": "Ember Alley",
    "courseID": "rivals-v1-1710778652",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-ember-alley-balanced-316000-dcb7au",
     "rec-ember-alley-balanced-316001-sq32y2",
@@ -708,7 +1188,15 @@
     "rec-ember-alley-balanced-316004-1xreru",
     "rec-ember-alley-balanced-316005-1ryroyj",
     "rec-ember-alley-balanced-316006-1cgmcxw",
-    "rec-ember-alley-balanced-316007-7hj19w"
+    "rec-ember-alley-balanced-316007-7hj19w",
+    "rec-ember-alley-balanced-316008-1ogty5t",
+    "rec-ember-alley-balanced-316009-r6yxfw",
+    "rec-ember-alley-balanced-316010-1tnoqgs",
+    "rec-ember-alley-balanced-316011-k4wrue",
+    "rec-ember-alley-balanced-316012-1dko4v4",
+    "rec-ember-alley-balanced-316013-moi9om",
+    "rec-ember-alley-balanced-316014-1mhept8",
+    "rec-ember-alley-balanced-316015-1eplh5l"
    ],
    "elapsedMs": [
     90560.0000000596,
@@ -718,7 +1206,15 @@
     80657.59999996424,
     76336.9999999404,
     101747.40000003576,
-    116210.79999995232
+    116210.79999995232,
+    104757.40000003576,
+    94776.39999997616,
+    114695.39999991655,
+    98856.39999997616,
+    74870.4999999404,
+    130194.5,
+    117050.5,
+    93890.60000008345
    ],
    "retries": [
     4,
@@ -728,7 +1224,15 @@
     0,
     1,
     4,
-    5
+    5,
+    2,
+    2,
+    4,
+    2,
+    0,
+    6,
+    3,
+    2
    ],
    "costUsd": [
     0.001,
@@ -738,14 +1242,22 @@
     0.0007000000000000001,
     0.0009000000000000006,
     0.0010999999999999994,
-    0.0013000000000000008
+    0.0013000000000000008,
+    0.0012,
+    0.0012,
+    0.0012000000000000001,
+    0.001,
+    0.0008000000000000004,
+    0.0014999999999999996,
+    0.0011999999999999997,
+    0.0010000000000000009
    ]
   },
   {
    "slot": 17,
    "name": "Neon Terrace",
    "courseID": "rivals-v1-3768736447",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-neon-terrace-balanced-317000-1icyxvc",
     "rec-neon-terrace-balanced-317001-d7m14f",
@@ -754,7 +1266,15 @@
     "rec-neon-terrace-balanced-317004-ujsbsq",
     "rec-neon-terrace-balanced-317005-xijad",
     "rec-neon-terrace-balanced-317006-j67mpe",
-    "rec-neon-terrace-balanced-317007-d3ii6x"
+    "rec-neon-terrace-balanced-317007-d3ii6x",
+    "rec-neon-terrace-balanced-317008-1qnl7vi",
+    "rec-neon-terrace-balanced-317009-1lw4rrp",
+    "rec-neon-terrace-balanced-317010-keuoo7",
+    "rec-neon-terrace-balanced-317011-q4grz0",
+    "rec-neon-terrace-balanced-317012-11xt0s8",
+    "rec-neon-terrace-balanced-317013-o741ty",
+    "rec-neon-terrace-balanced-317014-1eo36lt",
+    "rec-neon-terrace-balanced-317015-d7et6x"
    ],
    "elapsedMs": [
     78347.89999997616,
@@ -764,7 +1284,15 @@
     77955.89999997616,
     85771.60000014305,
     98010.79999995232,
-    103807.80000001192
+    103807.80000001192,
+    76244.80000001192,
+    79337.89999997616,
+    80716.4999999404,
+    74790.40000003576,
+    125059.5,
+    95727.89999997616,
+    128294.59999990463,
+    91688.39999997616
    ],
    "retries": [
     1,
@@ -774,7 +1302,15 @@
     2,
     1,
     3,
-    3
+    3,
+    2,
+    3,
+    1,
+    1,
+    7,
+    3,
+    7,
+    1
    ],
    "costUsd": [
     0.0012,
@@ -784,14 +1320,22 @@
     0.001,
     0.0011000000000000003,
     0.0011999999999999997,
-    0.0013000000000000008
+    0.0013000000000000008,
+    0.0011,
+    0.0012,
+    0.0010999999999999998,
+    0.0010000000000000005,
+    0.0017000000000000001,
+    0.0013,
+    0.0017000000000000001,
+    0.0011999999999999997
    ]
   },
   {
    "slot": 18,
    "name": "Undercroft",
    "courseID": "rivals-v1-3032893508",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-undercroft-balanced-318000-1scigsj",
     "rec-undercroft-balanced-318001-d5oa32",
@@ -800,7 +1344,15 @@
     "rec-undercroft-balanced-318004-y7pj7n",
     "rec-undercroft-balanced-318005-1u6xcd8",
     "rec-undercroft-balanced-318006-18gvuyf",
-    "rec-undercroft-balanced-318007-13s4f2g"
+    "rec-undercroft-balanced-318007-13s4f2g",
+    "rec-undercroft-balanced-318008-rao5l1",
+    "rec-undercroft-balanced-318009-e6f5a0",
+    "rec-undercroft-balanced-318010-qw8k45",
+    "rec-undercroft-balanced-318011-nbuh4",
+    "rec-undercroft-balanced-318012-1mnytge",
+    "rec-undercroft-balanced-318013-9w1t04",
+    "rec-undercroft-balanced-318014-1b7x7kv",
+    "rec-undercroft-balanced-318015-xmh3zn"
    ],
    "elapsedMs": [
     82030.30000007153,
@@ -810,7 +1362,15 @@
     97494.89999991655,
     120596.40000009537,
     88930.19999992847,
-    85250.80000001192
+    85250.80000001192,
+    82946.10000008345,
+    77449.69999986887,
+    76110.40000003576,
+    105923.9999999404,
+    105067.10000002384,
+    107233.10000008345,
+    109401.60000008345,
+    78957.60000002384
    ],
    "retries": [
     0,
@@ -820,7 +1380,15 @@
     1,
     6,
     2,
-    2
+    2,
+    2,
+    0,
+    0,
+    2,
+    2,
+    2,
+    3,
+    0
    ],
    "costUsd": [
     0.0008,
@@ -830,14 +1398,22 @@
     0.0011999999999999997,
     0.0017000000000000001,
     0.0010000000000000009,
-    0.0011999999999999997
+    0.0011999999999999997,
+    0.001,
+    0.0009,
+    0.0009999999999999998,
+    0.0012000000000000005,
+    0.0011999999999999997,
+    0.0011999999999999997,
+    0.001400000000000001,
+    0.0008999999999999998
    ]
   },
   {
    "slot": 19,
    "name": "Harbor Lights",
    "courseID": "rivals-v1-247653485",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-harbor-lights-balanced-319000-1iijuci",
     "rec-harbor-lights-balanced-319001-19b0xz1",
@@ -846,7 +1422,15 @@
     "rec-harbor-lights-balanced-319004-1y9sdlg",
     "rec-harbor-lights-balanced-319005-1gv178s",
     "rec-harbor-lights-balanced-319006-1ov4ev7",
-    "rec-harbor-lights-balanced-319007-ok9mpj"
+    "rec-harbor-lights-balanced-319007-ok9mpj",
+    "rec-harbor-lights-balanced-319008-9054ej",
+    "rec-harbor-lights-balanced-319009-hp2w70",
+    "rec-harbor-lights-balanced-319010-19pwdp6",
+    "rec-harbor-lights-balanced-319011-1hhisqw",
+    "rec-harbor-lights-balanced-319012-1v6uz5m",
+    "rec-harbor-lights-balanced-319013-14ql5wb",
+    "rec-harbor-lights-balanced-319014-161oy3b",
+    "rec-harbor-lights-balanced-319015-1mnoucm"
    ],
    "elapsedMs": [
     124971.90000009537,
@@ -856,7 +1440,15 @@
     77538.80000007153,
     116936.4999999404,
     91275.30000001192,
-    136682
+    136682,
+    92193,
+    110856.90000009537,
+    130775.19999992847,
+    91626.10000002384,
+    189408.9999999404,
+    70692.70000004768,
+    82306.10000008345,
+    124075.90000003576
    ],
    "retries": [
     9,
@@ -866,7 +1458,15 @@
     1,
     8,
     3,
-    10
+    10,
+    4,
+    7,
+    12,
+    2,
+    19,
+    0,
+    1,
+    7
    ],
    "costUsd": [
     0.0019,
@@ -876,14 +1476,22 @@
     0.001,
     0.0015999999999999999,
     0.0011000000000000003,
-    0.0017999999999999995
+    0.0017999999999999995,
+    0.0012,
+    0.0016,
+    0.0021,
+    0.001,
+    0.003,
+    0.0008000000000000004,
+    0.0008999999999999998,
+    0.0017000000000000001
    ]
   },
   {
    "slot": 20,
    "name": "Switchback Stairs",
    "courseID": "rivals-v1-949173954",
-   "opponents": 8,
+   "opponents": 16,
    "recordingIDs": [
     "rec-switchback-stairs-balanced-320000-u2rr4i",
     "rec-switchback-stairs-balanced-320001-1oq6fmv",
@@ -892,7 +1500,15 @@
     "rec-switchback-stairs-balanced-320004-jztafe",
     "rec-switchback-stairs-balanced-320005-1697xma",
     "rec-switchback-stairs-balanced-320006-mkjnjr",
-    "rec-switchback-stairs-balanced-320007-z0y85q"
+    "rec-switchback-stairs-balanced-320007-z0y85q",
+    "rec-switchback-stairs-balanced-320008-7skk6n",
+    "rec-switchback-stairs-balanced-320009-5dvyg8",
+    "rec-switchback-stairs-balanced-320010-pbam42",
+    "rec-switchback-stairs-balanced-320011-6h4qq",
+    "rec-switchback-stairs-balanced-320012-1tw0eg9",
+    "rec-switchback-stairs-balanced-320013-dnjs1o",
+    "rec-switchback-stairs-balanced-320014-1ktvj40",
+    "rec-switchback-stairs-balanced-320015-cjh6wx"
    ],
    "elapsedMs": [
     111103.5000000596,
@@ -902,7 +1518,15 @@
     96176.30000007153,
     190684.2000001073,
     101209.80000007153,
-    123124.2000001669
+    123124.2000001669,
+    116897.59999996424,
+    111178,
+    270631.8000000715,
+    120881.30000001192,
+    186027.30000007153,
+    95572.60000002384,
+    113489.60000002384,
+    164698.40000003576
    ],
    "retries": [
     1,
@@ -912,7 +1536,15 @@
     0,
     8,
     1,
-    2
+    2,
+    1,
+    1,
+    18,
+    3,
+    10,
+    0,
+    1,
+    5
    ],
    "costUsd": [
     0.0009,
@@ -922,7 +1554,15 @@
     0.0008999999999999998,
     0.0020999999999999994,
     0.0008000000000000004,
-    0.0011999999999999997
+    0.0011999999999999997,
+    0.0011,
+    0.0011,
+    0.0029999999999999996,
+    0.0013,
+    0.0021000000000000003,
+    0.0008000000000000004,
+    0.0011000000000000003,
+    0.001599999999999999
    ]
   },
   {

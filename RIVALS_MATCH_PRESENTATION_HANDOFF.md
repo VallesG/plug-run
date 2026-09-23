@@ -170,8 +170,8 @@ rebuilt into `client/dist`; the recording was left running.
   320x568, 360x640, 375x667, 390x844, 844x390; found, no-rival, cancel,
   rotate mid-lobby, double-tapped READY, restart mid-lobby.
 
-`jev-v1` now holds 168 Normal match-rules races (8 per course, all 21
-courses), so an ordinary search finds Jev. Verified in the browser as an
+`jev-v1` now holds 328 Normal match-rules races (at least 8 on every one of
+the 21 courses), so an ordinary search finds Jev. Verified in the browser as an
 ordinary player on the dev server and on a production build: menu → Block
 Rivals → LOOK FOR MATCH → Jev → map and powers → READY → race (every house's
 real bag equals the bag Jev picked up in its recording) → WATCH RIVAL. On the
