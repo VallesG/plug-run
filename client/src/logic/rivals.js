@@ -22,6 +22,19 @@ export function rivalHudLayout(width, height) {
   const segmentYs=Array.from({length:RIVAL_HOUSES},(_,i)=>startY+segmentH/2+i*(segmentH+gap));
   return {leftX:margin+railW/2,rightX:w-margin-railW/2,railW,segmentH,gap,startY,totalH,segmentYs};
 }
+/**
+ * The race's settings button: above the player's HUD rail, in the top-left
+ * corner. On a phone that corner is outer wall (the arena fills the screen);
+ * on wider screens it is margin. Either way it never covers floor a runner
+ * can stand on or the driveway. `pad` and `cell` are the arena's.
+ */
+export function rivalSettingsSpot(hud, pad = { x: 0, y: 0 }, cell = 24) {
+  const x = hud.leftX;
+  // Stay inside the wall column (or the margin) to the left of the floor.
+  const r = Math.max(8, Math.min(11, Math.floor(pad.x + cell - 1 - x)));
+  const y = Math.max(r + 3, Math.round(pad.y + cell / 2));
+  return { x, y, r, hit: { x: 0, y: 0, w: Math.min(44, x + r + 6), h: y + r + 14 } };
+}
 // Existing combat balance is authored at a 24px cell. Race distances must
 // scale with the arena so a narrower viewport does not make bullets faster.
 export function rivalPixels(value, cell) { return value * cell / 24; }
@@ -211,6 +224,21 @@ export function rivalOutcome(playerTimes, rivalTimes, elapsed) {
   if (Math.min(player, rival) > elapsed) return null;
   if (player === rival) return 'draw';
   return player < rival ? 'win' : 'loss';
+}
+/**
+ * The race result, settled only when the player has cleared all seven: a
+ * rival finishing first does not end the race, the player plays it out.
+ * Null until then.
+ */
+export function rivalFinalOutcome(playerTimes, rivalTimes) {
+  if (playerTimes.length !== RIVAL_HOUSES || rivalTimes.length !== RIVAL_HOUSES) return null;
+  const player = playerTimes[RIVAL_HOUSES-1], rival = rivalTimes[RIVAL_HOUSES-1];
+  if (player === rival) return 'draw';
+  return player < rival ? 'win' : 'loss';
+}
+/** Has the rival crossed the line by `elapsed`? */
+export function rivalHasFinished(rivalTimes, elapsed) {
+  return rivalTimes.length === RIVAL_HOUSES && rivalTimes[RIVAL_HOUSES-1] <= elapsed;
 }
 export function recordRivalClear(race, house, elapsed) {
   if (race.status !== 'racing' || house !== race.clearTimes.length + 1 ||
