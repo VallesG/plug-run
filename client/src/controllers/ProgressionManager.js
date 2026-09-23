@@ -660,8 +660,8 @@ export default class ProgressionManager {
     if (!this._analyticsBlockReported) {
       this._analyticsBlockReported=true;
       trackScene(this.scene,'block_completed');
-      // This is the third-block milestone, not a claim about legacy-save unlock state.
-      if(this.scene.runKind==='journey' && this.scene.blockIndex===3) trackScene(this.scene,'rivals_unlock_milestone');
+      // First completed block opens Rivals; legacy-save eligibility is checked separately.
+      if(this.scene.runKind==='journey' && this.scene.blockIndex===1) trackScene(this.scene,'rivals_unlock_milestone');
     }
     const scene = this.scene;
     // The two-contact curtain call comes before the revealed block/result.

@@ -1,7 +1,7 @@
 // Is Block Rivals open yet, and what does the locked row say?
 //
-// Three complete campaign blocks — forty-five extracted stashes — not three
-// blocks opened and not reaching house three. Two sources are consulted: the
+// One complete campaign block — fifteen extracted stashes — not merely
+// opening the first block. Two sources are consulted: the
 // timing evidence this build records, and the campaign's own long-standing
 // stash count, so a save that finished blocks before any of this existed still
 // qualifies. Never the other way round: a stash count alone cannot fake blocks

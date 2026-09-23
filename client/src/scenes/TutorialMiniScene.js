@@ -1009,6 +1009,8 @@ export class TutorialMiniScene extends Phaser.Scene {
 
     if (!this._quickAimBound){
       const setDir = (x, y) => {
+        if (this.pausedForModal || this._mobileGuide?.blocksKeys) return;
+        if (this._mobileGuide?.waitingSwipe && !this._mobileGuide.key({ x, y })) return;
         const len = Math.hypot(x, y) || 1;
         const nx = x / len;
         const ny = y / len;
@@ -1483,7 +1485,7 @@ export class TutorialMiniScene extends Phaser.Scene {
 
   showStageModal(idx){
     const lesson = tutorialLesson(idx, this.sys.game.device.os.desktop);
-    if (!this.sys.game.device.os.desktop && idx <= 3) {
+    if (idx <= 3) {
       this.pausedForModal = false;
       this.resumeFromModal();
       if (idx === 3) this.showPowerSelectionModal();
@@ -1493,12 +1495,12 @@ export class TutorialMiniScene extends Phaser.Scene {
     this.showModal(lesson.title, lesson.lines, lesson.choosePowers ? 'CHOOSE POWERS' : lesson.stage===1 ? 'START TRAINING' : 'RUN THIS LESSON', () => {
       this.resumeFromModal();
       if (lesson.choosePowers) this.showPowerSelectionModal();
-      else if (!this.sys.game.device.os.desktop && idx === 4) this.startMobileGuide(4);
+      else if (idx === 4) this.startMobileGuide(4);
     }, { showReplay:lesson.stage>1 });
   }
   startMobileGuide(stage){
     this._mobileGuide?.destroy();
-    this._mobileGuide=createMobileTutorialGuide(this,stage);
+    this._mobileGuide=createMobileTutorialGuide(this,stage,{desktop:!!this.sys.game.device.os.desktop});
   }
 
   showCharacterPreview(role){
@@ -1585,7 +1587,7 @@ export class TutorialMiniScene extends Phaser.Scene {
       this.pausedForModal = false;
       this.input.keyboard.enabled = true;
       this._ignoreNextPowerClick = true;
-      if (!this.sys.game.device.os.desktop && this.stageIdx === 3) this.startMobileGuide(3);
+      if (this.stageIdx === 3) this.startMobileGuide(3);
       onStart?.();
     };
     const primary = { label:btn, variant:'primary', onClick:begin };
@@ -1658,7 +1660,7 @@ export class TutorialMiniScene extends Phaser.Scene {
     this._tutorialModal = showRunnerLoadout(this.gameUI, () => {
       this.pausedForModal = false;
       this._ignoreNextPowerClick = true;
-      if (!this.sys.game.device.os.desktop && this.stageIdx === 3) this.startMobileGuide(3);
+      if (this.stageIdx === 3) this.startMobileGuide(3);
     }, {
       title:'TUTORIAL / LOADOUT',startLabel:'START LESSON',
       allowReplay:false,showAccount:false

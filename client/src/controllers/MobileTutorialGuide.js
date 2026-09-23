@@ -1,5 +1,5 @@
 // Mobile-only walkthrough. All overlays are decorative: gestures reach the game.
-export function createMobileTutorialGuide(scene, stage) {
+export function createMobileTutorialGuide(scene, stage, { desktop = false } = {}) {
   const W=scene.scale.width,H=scene.scale.height,cam=scene.cameras?.main;
   const hud=scene.add.container(0,0).setDepth(20020).setScrollFactor(0);
   const ink=scene.add.graphics(),ring=scene.add.graphics().setDepth(20019);
@@ -9,6 +9,12 @@ export function createMobileTutorialGuide(scene, stage) {
   }).setOrigin(0.5,0.5);
   const gestureLabel=scene.add.text(W/2,H/2,'',{fontFamily:'Arial, sans-serif',fontSize:'13px',fontStyle:'bold',color:'#9bcdfb',stroke:'#080e16',strokeThickness:4}).setOrigin(0.5);
   hud.add([ink,copy,gestureLabel]);
+  const keycaps=desktop?[['↑',0,-1],['←',-1,0],['↓',0,0],['→',1,0]].map(([label,dx,dy])=>{
+    const key=scene.add.text(W/2+dx*38,H*0.83+dy*38,label,{
+      fontFamily:'Arial, sans-serif',fontSize:'21px',fontStyle:'bold',color:'#d8ecff'
+    }).setOrigin(0.5).setVisible(false);
+    hud.add(key);return key;
+  }):[];
   const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
   // Only the opening reveals are on a clock — the player cannot act during a
   // camera move, so there is no action to tie them to. Hold them long enough
@@ -17,7 +23,7 @@ export function createMobileTutorialGuide(scene, stage) {
   const readMs=text=>Math.max(2200,Math.min(6000,String(text).trim().split(/\s+/).length*300+1200));
   const original={zoom:cam?.zoom||1,x:cam?.scrollX||0,y:cam?.scrollY||0,bounds:cam?.useBounds};
   if(cam && (stage===1||stage===2)) cam.useBounds=false;
-  const guide={stage,phase:stage===1?'intro':stage===2?'bagsIntro':'swipe',elapsed:0,turns:0,
+  const guide={stage,phase:stage===1?'intro':stage===2?'bagsIntro':'swipe',elapsed:0,turns:0,lastDirection:null,
     acceptAfter:performance.now()+300,done:false};
   // keepMoving: drop the finger's gesture bookkeeping but leave the runner
   // travelling. Stopping it dead between lesson beats reads as the game
@@ -82,11 +88,14 @@ export function createMobileTutorialGuide(scene, stage) {
   };
   Object.defineProperties(guide,{
     waitingSwipe:{get:()=>guide.phase==='swipe'},
-    blocksGestures:{get:()=>['intro','reveal','bagsIntro','bagsReveal'].includes(guide.phase)||performance.now()<guide.acceptAfter}
+    blocksKeys:{get:()=>['intro','reveal','bagsIntro','bagsReveal'].includes(guide.phase)},
+    blocksGestures:{get:()=>['intro','reveal','bagsIntro','bagsReveal'].includes(guide.phase)||(desktop&&guide.phase==='swipe')||performance.now()<guide.acceptAfter}
   });
-  guide.swipe=(direction,distance)=>{
+  guide.move=(direction,distance)=>{
     if(guide.phase!=='swipe')return true;
     if(distance<32||Math.abs(direction.x)+Math.abs(direction.y)!==1)return false;
+    if(desktop&&guide.lastDirection&&direction.x===guide.lastDirection.x&&direction.y===guide.lastDirection.y)return false;
+    guide.lastDirection={...direction};
     guide.turns++;guide.elapsed=0;
     // Each beat hands straight to the next prompt, which waits on the player.
     // resetTouch keeps the runner travelling so the handoff is not a lurch.
@@ -94,11 +103,14 @@ export function createMobileTutorialGuide(scene, stage) {
     guide.phase=stage===1?(guide.turns>=2?'free':'swipe'):stage===2?'stash':stage===3?'power':'free';
     return true;
   };
+  guide.swipe=guide.move;
+  guide.key=direction=>guide.move(direction,32);
   guide.tick=(delta)=>{
     if(guide.done)return false;
     if(scene._transitioning||scene._carDeparting){ink.clear();ring.clear();copy.setText('');gestureLabel.setText('');restoreCamera();return false;}
     guide.elapsed+=Math.min(100,Math.max(0,delta));
     ink.clear();ring.clear();gestureLabel.setText('');
+    for(const key of keycaps)key.setVisible(guide.phase==='swipe');
     if(guide.phase==='intro'||guide.phase==='reveal'){
       const revealing=guide.phase==='reveal';
       const p=revealing?Math.min(1,guide.elapsed/(reduced?1:700)):0;
@@ -140,17 +152,28 @@ export function createMobileTutorialGuide(scene, stage) {
       // travelling and let the scene's own update drive movement and
       // objectives, so the direction hint never stops the player mid-stride.
       if(!moving)scene.playerDrift=null;
-      floatCopy(moving?'Swipe again to change direction.':'Swipe anywhere, in any direction.');
-      const p=reduced?0.5:(guide.elapsed%1200)/1200;
-      const x=W/2,y=H*0.85;
-      const d=moving?{x:0,y:1}:{x:1,y:0};
-      ink.lineStyle(3,0x9bcdfb,0.8);ink.lineBetween(x-d.x*28,y-d.y*28,x+d.x*28,y+d.y*28);
-      ink.fillStyle(0x9bcdfb,0.9);ink.fillCircle(x+d.x*(-28+p*56),y+d.y*(-28+p*56),6);
+      floatCopy(desktop?(moving?'Press a different arrow key to turn.':'Use the arrow keys or WASD to move.'):
+        (moving?'Swipe again to change direction.':'Swipe anywhere, in any direction.'));
+      if(desktop){
+        const cx=W/2,cy=H*0.83,step=38,size=32;
+        const keys=[[0,-1],[-1,0],[0,0],[1,0]];
+        for(const [dx,dy] of keys){
+          const x=cx+dx*step,y=cy+dy*step;
+          ink.fillStyle(0x101d2b,0.94);ink.fillRoundedRect(x-size/2,y-size/2,size,size,5);
+          ink.lineStyle(2,0x9bcdfb,0.9);ink.strokeRoundedRect(x-size/2,y-size/2,size,size,5);
+        }
+      }else{
+        const p=reduced?0.5:(guide.elapsed%1200)/1200;
+        const x=W/2,y=H*0.85;
+        const d=moving?{x:0,y:1}:{x:1,y:0};
+        ink.lineStyle(3,0x9bcdfb,0.8);ink.lineBetween(x-d.x*28,y-d.y*28,x+d.x*28,y+d.y*28);
+        ink.fillStyle(0x9bcdfb,0.9);ink.fillCircle(x+d.x*(-28+p*56),y+d.y*(-28+p*56),6);
+      }
       return !moving;
     }
     if(stage===4){copy.setText('');return false;}
     if(stage===1){
-      targets=[scene.car];floatCopy('Reach the lit getaway car.\nSwipe anywhere to turn.',targets);
+      targets=[scene.car];floatCopy(desktop?'Reach the lit getaway car.\nUse the arrow keys to turn.':'Reach the lit getaway car.\nSwipe anywhere to turn.',targets);
     }else if(stage===2){
       targets=scene.hasPackage?[scene.car]:scene.bunkStash?[scene.stash,scene.bunkStash]:[scene.stash];
       floatCopy(scene.hasPackage?'That is the real stash. Bring it to the car.':
@@ -161,7 +184,7 @@ export function createMobileTutorialGuide(scene, stage) {
       if(used<2){
         scene.playerDrift=null;
         const powers=scene.runnerPowersSelected||[];
-        const y=floatCopy('Double-tap anywhere to use '+(powers[used]||'a power')+'.'+(used?'\nNow try your second power.':''));
+        const y=floatCopy((desktop?'Click to use ':'Double-tap anywhere to use ')+(powers[used]||'a power')+'.'+(used?'\nNow try your second power.':''));
         const beat=guide.elapsed%1400;
         const press=!reduced&&((beat>120&&beat<240)||(beat>380&&beat<500));
         const cy=Math.min(H-105,y+70),scale=press?0.88:1;
@@ -174,7 +197,7 @@ export function createMobileTutorialGuide(scene, stage) {
           const a=outline[i-1],b=outline[i];
           ink.lineBetween(cx+a[0]*scale,cy+a[1]*scale,cx+b[0]*scale,cy+b[1]*scale);
         }
-        gestureLabel.setPosition?.(cx,cy+45);gestureLabel.setText('TAP · TAP');
+        gestureLabel.setPosition?.(cx,cy+45);gestureLabel.setText(desktop?'CLICK':'TAP · TAP');
       }else{
         targets=[scene.hasPackage?scene.car:scene.stash];
         floatCopy(scene.hasPackage?'Both powers used. Bring the stash to the car.':'Both powers used. Find the real stash, then escape.',targets);

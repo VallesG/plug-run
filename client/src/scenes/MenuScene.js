@@ -451,7 +451,7 @@ export class MenuScene extends Phaser.Scene {
     cont._startText = start._text;
     this._titlePrimary = start;
     this.focusTitleOption(start);
-    // Block Rivals opens after three complete blocks. The row is always
+    // Block Rivals opens after the first complete block. The row is always
     // visible so the player knows it exists; it simply is not theirs yet.
     const unlock = rivalsMenuState();
     const rivals = this.makeTitleOption('Block Rivals',

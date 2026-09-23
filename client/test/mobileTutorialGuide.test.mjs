@@ -5,8 +5,8 @@ let checks=0;
 const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
 function fixture(){
  const texts=[],circles=[],rectangles=[];
- const item=()=>({setDepth(){return this;},setScrollFactor(){return this;},setOrigin(){return this;},setScale(){return this;},setPosition(x,y){this.x=x;this.y=y;return this;},add(){},destroy(){this.destroyed=true;},setText(t){texts.push(t);}});
- const graphics=()=>Object.assign(item(),{clear(){},lineStyle(){},strokeCircle(x,y){circles.push([x,y]);},fillStyle(){},fillCircle(){},fillRect(...r){rectangles.push(r);},lineBetween(){}});
+ const item=()=>({setDepth(){return this;},setScrollFactor(){return this;},setOrigin(){return this;},setScale(){return this;},setVisible(v){this.visible=v;return this;},setPosition(x,y){this.x=x;this.y=y;return this;},add(){},destroy(){this.destroyed=true;},setText(t){texts.push(t);}});
+ const graphics=()=>Object.assign(item(),{clear(){},lineStyle(){},strokeCircle(x,y){circles.push([x,y]);},fillStyle(){},fillCircle(){},fillRect(...r){rectangles.push(r);},fillRoundedRect(...r){rectangles.push(r);},strokeRoundedRect(){},lineBetween(){}});
  const camera={zoom:1,scrollX:0,scrollY:0,useBounds:true,setZoom(z){this.zoom=z;},setScroll(x,y){this.scrollX=x;this.scrollY=y;}};
  return {texts,circles,rectangles,cameras:{main:camera},scale:{width:390,height:844},cell:24,add:{container:item,graphics,rectangle(){throw Error('No blocking instruction panels allowed');},text:item},
  handleMovement(){this.moves=(this.moves||0)+1;},runner:{x:24,y:24},car:{x:100,y:200},
@@ -83,6 +83,22 @@ p.destroy();
 const finalScene=fixture(),finalGuide=createMobileTutorialGuide(finalScene,4);
 eq(finalGuide.tick(16),true);eq(finalGuide.waitingSwipe,true);
 eq(finalGuide.swipe({x:1,y:0},80),true);eq(finalGuide.tick(16),false);eq(finalScene.texts.at(-1),'');finalGuide.destroy();
+const desktop=fixture(),keys=createMobileTutorialGuide(desktop,1,{desktop:true});
+eq(keys.blocksKeys,true);
+for(let i=0;i<36;i++)keys.tick(100);
+eq(keys.waitingSwipe,true);eq(keys.blocksKeys,false);eq(keys.blocksGestures,true);
+keys.tick(16);eq(desktop.texts.at(-1),'Use the arrow keys or WASD to move.');
+eq(desktop.rectangles.length>=4,true);
+eq(keys.key({x:1,y:0}),true);eq(keys.phase,'swipe');
+keys.tick(16);eq(desktop.texts.at(-1),'Press a different arrow key to turn.');
+eq(keys.key({x:1,y:0}),false);eq(keys.phase,'swipe');
+eq(keys.key({x:0,y:-1}),true);eq(keys.phase,'free');keys.destroy();
+const desktopBags=fixture(),bagKeys=createMobileTutorialGuide(desktopBags,2,{desktop:true});
+for(let i=0;i<52;i++)bagKeys.tick(100);
+eq(bagKeys.waitingSwipe,true);eq(bagKeys.key({x:0,y:1}),true);eq(bagKeys.phase,'stash');bagKeys.destroy();
+const desktopPowers=fixture(),powerKeys=createMobileTutorialGuide(desktopPowers,3,{desktop:true});
+powerKeys.tick(16);eq(powerKeys.key({x:1,y:0}),true);powerKeys.tick(16);
+eq(desktopPowers.texts.some(t=>t.includes('Click to use dash')),true);powerKeys.destroy();
 // Execute the actual stage-two pickup branch with both possible first contacts.
 const sceneText=readFileSync(new URL('../src/scenes/TutorialMiniScene.js',import.meta.url),'utf8');
 const clearBody=sceneText.split('    if (idx === 1) {')[1].split('    this.grid = arena.grid;')[0];
@@ -114,7 +130,7 @@ for(const desktop of [false,true]){
  const state={gameUI:{},sys:{game:{device:{os:{desktop}}}},stageIdx:3,startMobileGuide(n){this.started=n;}};
  openPicker.call(state,(_ui,onDone)=>{finish=onDone;return {};},class {});
  eq(state.pausedForModal,true);finish();eq(state.pausedForModal,false);
- eq(state.started,desktop?undefined:3);eq(state._ignoreNextPowerClick,true);
+ eq(state.started,3);eq(state._ignoreNextPowerClick,true);
 }
 eq(sceneText.includes('Grab the stash. Lose the Plug. Make it to the car.'),false);
 eq(sceneText.includes('Next stop: The Window. Meet Auntie Ro, join a crew'),true);

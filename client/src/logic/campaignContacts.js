@@ -138,15 +138,15 @@ const exchanges={
 };
 const invitations={
   "afterlight": [
-    "Three blocks behind you. Take Afterlight into Block Rivals and put our name in front of another runner.",
+    "Once you claim this block, you can race other runners in Block Rivals. Put Afterlight's name out there.",
     "Seven houses in a race. Pick your powers, rep the crew, and come back with something I can brag about."
   ],
   "crossline": [
-    "Three blocks done. Time to represent Crossline in Block Rivals.",
+    "Claim this block and Block Rivals opens up. Then you can race other runners for Crossline.",
     "Seven houses, another runner, your choice of powers. Let's see what your route looks like under race pressure."
   ],
   "iron-row": [
-    "Three blocks cleared. Go represent Iron Row in Block Rivals.",
+    "Once you claim this block, you can race other runners in Block Rivals. Give Iron Row a good showing.",
     "Seven houses to race. Choose your powers and bring the Row a win. I'll handle the bragging."
   ]
 };
@@ -155,6 +155,15 @@ export function campaignContactCue(gangID, options={}) {
   const story=seasonChapter(gangID,options.chapter);
   const arc=crewSeason(gangID);
   if(!story||!arc)return cue;
+  // Introduce the unlock at the first door, before the player claims block 1.
+  // Keep the authored cue identity so an existing save never replays it.
+  if(options.chapter===0&&options.blockIndex===1&&options.house===1&&cue){
+    const invite=invitations[gangID];
+    if(invite){
+      const pages=[...cue.pages,{speaker:arc.primary,text:invite[0]},{speaker:arc.secondary,text:invite[1]}];
+      return {...cue,pages};
+    }
+  }
   if(options.house===15){
     const block=Number.isSafeInteger(options.blockIndex)&&options.blockIndex>0?options.blockIndex:1;
     const warnings={
@@ -199,9 +208,5 @@ export function campaignContactCue(gangID, options={}) {
     praiseKey:null,lineID:null,banterID:gangID+'/chapter-'+story.number};
 }
 export function campaignContactFinish(gangID,chapter=0,cityName) {
-  const pages=seasonFinish(gangID,chapter,cityName);
-  const arc=crewSeason(gangID),invite=invitations[gangID];
-  if(!pages||chapter!==2||!arc||!invite)return pages;
-  // Invitation, not an unlock mutation: actual 45-stash gate stays authoritative.
-  return [...pages,{speaker:arc.primary,text:invite[0]},{speaker:arc.secondary,text:invite[1]}];
+  return seasonFinish(gangID,chapter,cityName);
 }

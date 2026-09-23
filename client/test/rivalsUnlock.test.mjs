@@ -1,5 +1,5 @@
 // The unlock, against the real menu helper: legacy saves, partial progress and
-// the difference between opening three blocks and finishing them.
+// the difference between opening the first block and finishing it.
 import { readFileSync } from 'node:fs';
 import { rivalsUnlocked, rivalsUnlockProgress } from '../src/logic/rivalSkill.js';
 import { createSkillEvidence, recordHouseObservation, skillCoverage } from '../src/logic/skillEvidence.js';
@@ -33,41 +33,38 @@ const full = blocks => {
 
 // A brand new account.
 check('a new player sees a locked row', mod.rivalsMenuState().unlocked === false);
-check('and is told how far along they are', mod.rivalsMenuState().progressText === '0 of 3 blocks run');
+check('and is told how far along they are', mod.rivalsMenuState().progressText === '0 of 1 block run');
 check('the row copy is short and in-world',
   mod.rivalsMenuState().progressText.length <= 20 && !/unlock|require|complete the/i.test(mod.rivalsMenuState().progressText));
 
 // Partway through.
-journey = { blockIndex: 2, pveRound: 5 };
+journey = { blockIndex: 1, pveRound: 5 };
+coverage = full(0);
+check('partial first block is still locked', mod.rivalsMenuState().unlocked === false);
+check('progress stays at zero until the claim', mod.rivalsMenuState().progressText === '0 of 1 block run');
+check('stashes are counted from the campaign', mod.campaignStashes() === 4);
+
+// Reaching the last house of block one is not finishing it.
+journey = { blockIndex: 1, pveRound: 15 };
+check('opening house fifteen does not unlock', mod.rivalsMenuState().unlocked === false);
+
+// First block claimed.
+journey = { blockIndex: 2, pveRound: 1 };
 coverage = full(1);
-check('one block done is still locked', mod.rivalsMenuState().unlocked === false);
-check('progress counts the finished block', mod.rivalsMenuState().progressText === '1 of 3 blocks run');
-check('stashes are counted from the campaign', mod.campaignStashes() === 19);
-
-// Opening the third block is not finishing it.
-journey = { blockIndex: 3, pveRound: 1 };
-coverage = full(2);
-check('opening block three does not unlock', mod.rivalsMenuState().unlocked === false);
-check('reaching house three of block three does not either',
-  (journey = { blockIndex: 3, pveRound: 3 }, mod.rivalsMenuState().unlocked === false));
-
-// Three complete blocks.
-journey = { blockIndex: 4, pveRound: 1 };
-coverage = full(3);
-check('three complete blocks unlock it', mod.rivalsMenuState().unlocked === true);
-check('and forty-five stashes agree', mod.campaignStashes() === 45);
+check('one complete block unlocks it', mod.rivalsMenuState().unlocked === true);
+check('and fifteen stashes agree', mod.campaignStashes() === 15);
 
 // A legacy save: real completion, no timing evidence at all.
 coverage = skillCoverage(createSkillEvidence());
-journey = { blockIndex: 4, pveRound: 1 };
+journey = { blockIndex: 2, pveRound: 1 };
 check('a legacy save with proven completion qualifies', mod.rivalsMenuState().unlocked === true);
 check('its coverage is honestly empty', mod.rivalsMenuState().coverage.observations === 0);
-journey = { blockIndex: 3, pveRound: 15 };
-check('a legacy save one house short does not', mod.rivalsMenuState().unlocked === false && mod.campaignStashes() === 44);
+journey = { blockIndex: 1, pveRound: 15 };
+check('a legacy save one house short does not', mod.rivalsMenuState().unlocked === false && mod.campaignStashes() === 14);
 
 // Storage failure must not hand out or withhold the unlock wrongly.
 coverageThrows = true;
-journey = { blockIndex: 4, pveRound: 1 };
+journey = { blockIndex: 2, pveRound: 1 };
 check('lost evidence still honours a proven campaign', mod.rivalsMenuState().unlocked === true);
 journey = { blockIndex: 1, pveRound: 1 };
 check('lost evidence does not invent progress', mod.rivalsMenuState().unlocked === false);

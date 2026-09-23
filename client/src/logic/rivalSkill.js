@@ -16,8 +16,8 @@
 // Race elapsed time is NOT used for this: it includes transitions and retries,
 // which are not a measure of how fast someone clears a house.
 export const RIVAL_SKILL_VERSION = 1;
-export const RIVAL_UNLOCK_BLOCKS = 3;
-export const RIVAL_UNLOCK_STASHES = 45;         // three complete 15-house blocks
+export const RIVAL_UNLOCK_BLOCKS = 1;
+export const RIVAL_UNLOCK_STASHES = 15;         // one complete 15-house block
 export const RIVAL_MIN_OBSERVATIONS = 8;        // below this the estimate is provisional
 
 const finite = v => Number.isFinite(v) ? v : null;
@@ -195,13 +195,13 @@ export function adaptSkill(currentMs, { opponentMs, result, weight = 0.25 } = {}
   return currentMs;
 }
 
-/** Has the player finished three complete campaign blocks? */
+/** Has the player finished their first complete campaign block? */
 export function rivalsUnlocked(coverage, { stashes = null } = {}) {
   const blocks = Number.isSafeInteger(coverage?.blocksCompleted) ? coverage.blocksCompleted : 0;
   if (blocks >= RIVAL_UNLOCK_BLOCKS) return true;
   // A save from before this record existed can still prove completion through
   // the count the campaign has always kept. Never the other way round: a big
-  // stash count with no completed blocks is not three blocks.
+  // A partial first block cannot count as a completed one.
   return Number.isSafeInteger(stashes) && stashes >= RIVAL_UNLOCK_STASHES;
 }
 
@@ -212,5 +212,5 @@ export function rivalsUnlockProgress(coverage, { stashes = null } = {}) {
     Number.isSafeInteger(stashes) ? Math.floor(stashes / 15) : 0
   );
   const done = Math.min(RIVAL_UNLOCK_BLOCKS, blocks);
-  return { blocks: done, needed: RIVAL_UNLOCK_BLOCKS, text: done + ' of ' + RIVAL_UNLOCK_BLOCKS + ' blocks run' };
+  return { blocks: done, needed: RIVAL_UNLOCK_BLOCKS, text: done + ' of 1 block run' };
 }

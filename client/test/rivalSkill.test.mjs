@@ -125,15 +125,15 @@ check('an unknown estimate stays unknown', adaptSkill(null, { opponentMs: 1, res
 
 // --- the unlock ------------------------------------------------------------
 const cov = blocks => ({ blocksCompleted: blocks });
-check('three complete blocks unlock it', rivalsUnlocked(cov(3)) && rivalsUnlocked(cov(9)));
-check('two do not', !rivalsUnlocked(cov(2)) && !rivalsUnlocked(cov(0)));
-check('opening three blocks is not finishing three', !rivalsUnlocked(cov(2), { stashes: 44 }));
-check('a legacy save with 45 stashes qualifies', rivalsUnlocked(cov(0), { stashes: RIVAL_UNLOCK_STASHES }));
-check('a legacy save short of 45 does not', !rivalsUnlocked(cov(0), { stashes: 44 }));
-check('forty-five is three fifteen-house blocks', RIVAL_UNLOCK_STASHES === RIVAL_UNLOCK_BLOCKS * 15);
+check('one complete block unlocks it', rivalsUnlocked(cov(1)) && rivalsUnlocked(cov(9)));
+check('no complete block stays locked', !rivalsUnlocked(cov(0)));
+check('opening block one is not finishing it', !rivalsUnlocked(cov(0), { stashes: 14 }));
+check('a legacy save with 15 stashes qualifies', rivalsUnlocked(cov(0), { stashes: RIVAL_UNLOCK_STASHES }));
+check('a legacy save short of 15 does not', !rivalsUnlocked(cov(0), { stashes: 14 }));
+check('fifteen is one complete block', RIVAL_UNLOCK_STASHES === RIVAL_UNLOCK_BLOCKS * 15);
 check('garbage does not unlock it', !rivalsUnlocked(null) && !rivalsUnlocked({}, { stashes: 'lots' }));
 check('progress text is short and honest',
-  rivalsUnlockProgress(cov(1)).text === '1 of 3 blocks run' && rivalsUnlockProgress(cov(0)).blocks === 0);
-check('progress never overstates', rivalsUnlockProgress(cov(9)).blocks === 3);
-check('a legacy stash count shows as progress too', rivalsUnlockProgress(cov(0), { stashes: 30 }).blocks === 2);
+  rivalsUnlockProgress(cov(1)).text === '1 of 1 block run' && rivalsUnlockProgress(cov(0)).blocks === 0);
+check('progress never overstates', rivalsUnlockProgress(cov(9)).blocks === 1);
+check('a legacy stash count shows as progress too', rivalsUnlockProgress(cov(0), { stashes: 15 }).blocks === 1);
 console.log(passed + ' rival skill assertions passed');

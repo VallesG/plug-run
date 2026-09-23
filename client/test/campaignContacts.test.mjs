@@ -19,14 +19,19 @@ for(const gangID of ['crossline','iron-row','afterlight']){
     check('banter is not measured praise',cue.praiseKey===null&&cue.lineID===null);
     check('both crew voices',cue.pages[0].speaker===arc.primary&&cue.pages[1].speaker===arc.secondary);
     check('tease preserved verbatim',JSON.stringify(cue.pages.slice(2))===JSON.stringify(base.pages.slice(1)));
+   } else if(chapter===0&&house===1){
+    check('first block opening keeps authored pages and adds the invitation',
+      JSON.stringify(cue.pages.slice(0,base.pages.length))===JSON.stringify(base.pages)&&cue.pages.length===base.pages.length+2);
+    check('both contacts explain the first-block unlock before the claim',
+      cue.pages.at(-2).text.includes('Block Rivals')&&cue.pages.at(-2).text.includes('this block')&&
+      cue.pages.at(-1).text.includes('Seven houses')&&cue.pages.at(-2).speaker===arc.primary&&cue.pages.at(-1).speaker===arc.secondary);
    } else check('other authored slots unchanged',JSON.stringify(cue)===JSON.stringify(base));
    if(house===9)check('mandatory briefing unchanged',JSON.stringify(cue)===JSON.stringify(base));
   }
   check('one exchange per chapter',exchanges===1);
   const finish=campaignContactFinish(gangID,chapter,'Duskport'),baseFinish=seasonFinish(gangID,chapter,'Duskport');
   check('finish story retained',JSON.stringify(finish.slice(0,baseFinish.length))===JSON.stringify(baseFinish));
-  check('only third finish adds invitation',finish.length===baseFinish.length+(chapter===2?2:0));
-  if(chapter===2)check('both contacts invite to race',finish.at(-2).text.includes('Block Rivals')&&finish.at(-1).text.includes('Seven houses'));
+  check('no late invitation at the third finish',JSON.stringify(finish)===JSON.stringify(baseFinish));
  }
  check('ten distinct banter identities',ids.size===10);
  check('postseason unchanged',campaignContactCue(gangID,{chapter:10,house:4})===null&&campaignContactFinish(gangID,10)===null);
