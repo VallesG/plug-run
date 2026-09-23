@@ -69,7 +69,8 @@ export function jevConfig() {
       gatewayId: window.__JEV_GATEWAY || fromSession('gateway'),
       timeoutMs: num('jevTimeoutMs', undefined),
       // `rival` is the legacy name used by the first completed Hard batch.
-      profile: ['rival', 'rival-hard'].includes(p.get('jevProfile')) ? 'rival-hard' : 'apex'
+      profile: p.get('jevProfile') === 'normal' ? 'normal'
+        : ['rival', 'rival-hard'].includes(p.get('jevProfile')) ? 'rival-hard' : 'apex'
     };
   } catch { return null; }
 }
@@ -94,6 +95,13 @@ export function makeJevStrategist(cfg = jevConfig()) {
   if (cfg.profile === 'rival-hard') {
     opts.openingDelayMinMs = 400;
     opts.openingDelayMaxMs = 650;
+  } else if (cfg.profile === 'normal') {
+    opts.openingDelayMinMs = 850;
+    opts.openingDelayMaxMs = 1200;
+    opts.correctionDelayMinMs = 500;
+    opts.correctionDelayMaxMs = 750;
+    opts.threatReactionMs = 220;
+    opts.steerCadenceMs = 90;
   }
   // Total budget across HTTP retries: a little under the strategist's own
   // timeout, so a retry has somewhere to happen but cannot outlive the
