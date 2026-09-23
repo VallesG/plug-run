@@ -594,7 +594,13 @@ export function rivalsRecordConfig() {
       indexBase: Math.max(1, Math.round(Number(p.get('opponentIndex') || 1))),
       // Opt-in driver behaviour, recorded in driverConfig so a bank entry
       // always says whether it was driven with an opening Decoy.
-      openingDecoy: p.get('openingDecoy') === '1'
+      openingDecoy: p.get('openingDecoy') === '1',
+      // stashSeeds=a,b,c: race N of this page is a match on stash seed N
+      // (tools/rivals-variant-plan.mjs picks one seed per seven-house answer
+      // pattern). Absent: every match draws a fresh random seed, as a
+      // player's does.
+      stashSeeds: (p.get('stashSeeds') || '').split(',').map((x) => x.trim()).filter(Boolean)
+        .map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 0xffffffff)
     };
   } catch { return null; }
 }
@@ -628,6 +634,17 @@ function installRivalsRecorder(rec, cfg, jev = null) {
     config: { ...rec, driver: { ...DEFAULTS, ...cfg }, jev: jev ? jevProvenance(jev) : null },
     course: entry, races: [], done: false });
 
+  // The planned stash seed for the next race this page records, if any.
+  const nextStashSeed = () => rec.stashSeeds?.length ? rec.stashSeeds[store.races.length % rec.stashSeeds.length] : undefined;
+  // New Race (pressed by the auto-clicker after each finish) carries the
+  // recording options; with a plan it also carries the next race's seed.
+  const origRestartData = RivalsRace.prototype.harnessRestartData;
+  RivalsRace.prototype.harnessRestartData = function () {
+    const data = origRestartData.call(this);
+    const seed = nextStashSeed();
+    return data.rivalRecording && seed !== undefined ? { ...data, rivalStashSeed: seed } : data;
+  };
+
   // Straight into the race: no menu tap, no picker (fixed loadout), and the
   // placeholder opponent cannot finish before the hard limit.
   const origCreate = MenuScene.prototype.create;
@@ -640,7 +657,8 @@ function installRivalsRecorder(rec, cfg, jev = null) {
     // A found opponent keeps its own recorded loadout; the bot uses rec.powers.
     this.scene.start('RUNNER', rec.mode === 'play'
       ? { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers }
-      : { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers, rivalHardLimitMs: rec.hardLimitMs, rivalRecording: true });
+      : { mode: 'pve', role: 'runner', runKind: 'rivals', rivalSlot: rec.slot, rivalPowers: rec.powers, rivalHardLimitMs: rec.hardLimitMs, rivalRecording: true,
+          ...(nextStashSeed() !== undefined ? { rivalStashSeed: nextStashSeed() } : {}) });
   };
 
   // The Rivals entrance now opens the real loadout picker even for a fixed
@@ -662,14 +680,15 @@ function installRivalsRecorder(rec, cfg, jev = null) {
     this.armCountdown();
   };
 
-  // Export after every finish. The auto-clicker then presses REMATCH (the
+  // Export after every finish. The auto-clicker then presses NEW RACE (the
   // first actionable button; WATCH buttons are keepOpen and skipped), which
-  // carries the recording options through harnessRestartData().
+  // carries the recording options — same course, fresh match stash seed —
+  // through harnessRestartData().
   const origFinish = RivalsRace.prototype.finish;
   RivalsRace.prototype.finish = function (result, now) {
     const already = this.race.status === 'finished';
     // Decide "done" before the result modal is built inside origFinish, or
-    // the auto-clicker presses REMATCH on the final race and records one more.
+    // the auto-clicker presses NEW RACE on the final race and records one more.
     if (!already && store.races.length + 1 >= rec.runs) store.done = true;
     origFinish.call(this, result, now);
     if (already) return;

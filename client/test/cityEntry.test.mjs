@@ -15,7 +15,8 @@ const bindings={BaseGameScene:{GRID_COLS:16,GRID_ROWS:35},
  getJourneyProgress:()=>stored,getSessionState:()=>null,getCurrentUser:()=>({username:'test',isGuest:true}),
  getWindowState:()=>({gangID:owner}),startCityBlock:(checkpoint,id)=>{starts++;const result=beginCityBlock(atlas,checkpoint.blockIndex,id,checkpoint);atlas=result.state;return result.gangID;},
  getCurrentRouteID:()=>1,getRouteSeed:()=>123,createSeededRNG:()=>()=>.5,cleanupOldRoutes:()=>{},
- createRivalSession:()=>({clearTimes:[],course:{id:'test',seeds:[999],scales:[.6]}})};
+ createRivalSession:()=>({clearTimes:[],course:{id:'test',seeds:[999],scales:[.6],cols:16,rows:35}}),
+ rivalHouseMazeOptions:(course,i)=>({cols:course.cols,rows:course.rows,clusterScale:course.scales[i],layout:course.layouts?.[i]??null})};
 const Host=new Function(...Object.keys(bindings),'class Host { '+source.slice(start,end)+' } return Host;')(...Object.values(bindings));
 function init(data){const host=new Host();host.scene={settings:{data:{}},key:'RUNNER'};host.init(data);return host;}
 const entry=init({mode:'pve',role:'runner',runKind:'journey'});

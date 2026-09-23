@@ -1,5 +1,8 @@
-// Race decisions only: no Phaser, storage, clocks or imports.
+// Race decisions only: no Phaser, storage or clocks; the one import is pure
+// course data (rivalCourseDesigns.js).
 // Bump RULES_VERSION whenever geometry, powers or defender rules change.
+import { RIVAL_COURSE_DESIGNS } from './rivalCourseDesigns.js';
+
 export const RIVAL_RULES_VERSION = 'rivals-v1';
 export const RIVAL_HOUSES = 7;
 export const RIVAL_COUNTDOWN_MS = 3000;
@@ -101,12 +104,48 @@ export function rivalHash(value) {
 }
 export function rivalCourse(seed) {
   const id = Number.isFinite(seed) ? seed >>> 0 : 1;
-  return {
+  const course = {
     version: RIVAL_RULES_VERSION, id: RIVAL_RULES_VERSION + '-' + id, seed: id,
     cols: 16, rows: 35,
     seeds: Array.from({length:RIVAL_HOUSES}, (_,i) => rivalHash(RIVAL_RULES_VERSION + '/' + id + '/house/' + (i+1))),
     scales: [0.6, 0.75, 0.9, 0.95, 1, 1, 1]
   };
+  // A designed course (slots 8+) carries its own board size, scales and a
+  // layout per house. The original seven carry none and are unchanged.
+  const design = designForSeed(id);
+  return design ? { ...course, cols: design.cols, rows: design.rows, scales: design.scales.slice(),
+    layouts: design.houses.slice(), designed: true } : course;
+}
+
+// The layout options generateSquareMaze needs for house i of a course; null
+// layout = the legacy generator. Everything that regenerates a Rivals house
+// (the scene, the replay player, the simulated pace, the tests and tools)
+// goes through this or rivalHouseDesign so they cannot disagree.
+export function rivalHouseMazeOptions(course, i) {
+  return { cols: course.cols, rows: course.rows, clusterScale: course.scales[i], layout: course.layouts?.[i] ?? null };
+}
+
+// For a replay segment, which knows only its house seed: the designed
+// layout that seed was built with, or null for an original-seven house.
+let designByHouseSeed = null;
+export function rivalHouseDesign(houseSeed) {
+  if (!designByHouseSeed) {
+    designByHouseSeed = new Map();
+    for (const [, seed] of POOL_DESIGNED) {
+      const c = rivalCourse(seed);
+      if (!c.designed) continue;
+      c.seeds.forEach((s, i) => designByHouseSeed.set(s, { cols: c.cols, rows: c.rows, scale: c.scales[i], layout: c.layouts[i], courseID: c.id, house: i + 1 }));
+    }
+  }
+  return designByHouseSeed.get(houseSeed >>> 0) || null;
+}
+let designBySeed = null;
+function designForSeed(seed) {
+  if (!designBySeed) {
+    designBySeed = new Map();
+    for (const [name, s] of POOL_DESIGNED) if (RIVAL_COURSE_DESIGNS[rivalSlug(name)]) designBySeed.set(s, RIVAL_COURSE_DESIGNS[rivalSlug(name)]);
+  }
+  return designBySeed.get(seed >>> 0) || null;
 }
 // FIXED COURSE POOL. One course is one complete seven-house race, never seven
 // alternate seeds for a single house. Root seeds are rivalHash(DOMAIN + slug)
@@ -121,9 +160,19 @@ const POOL_V1 = [
   ['Afterglow Mile', 2476136539], ['Switchyard Seven', 2143714553], ['Lastlight Loop', 2077357177],
   ['Blacktop Crown', 2334749748]
 ];
-export const RIVAL_COURSE_POOL = Object.freeze(POOL_V1.map(([name, seed], i) => Object.freeze({
+// Slots 8-21: designed courses, each with its own board and a layout per
+// house (logic/rivalCourseDesigns.js, RIVALS_COURSES.md). Same seed rule.
+const POOL_DESIGNED = [
+  ['Canal Street', 2222013742], ['Rooftop Relay', 2425999850], ['Market Square', 2192743687],
+  ['Tunnel Nine', 1463392172], ['Crosstown Loop', 2134477327], ['Dockside Drop', 3741482466],
+  ['Brickyard Courts', 3233406759], ['Grid Iron', 2004320439], ['Ember Alley', 1710778652],
+  ['Neon Terrace', 3768736447], ['Undercroft', 3032893508], ['Harbor Lights', 247653485],
+  ['Switchback Stairs', 949173954], ['Last Call Heights', 4051534186]
+];
+export const RIVAL_COURSE_POOL = Object.freeze([...POOL_V1, ...POOL_DESIGNED].map(([name, seed], i) => Object.freeze({
   slot: i + 1, name, slug: rivalSlug(name), seed, courseID: RIVAL_RULES_VERSION + '-' + seed,
-  rulesVersion: RIVAL_RULES_VERSION, enabled: true
+  rulesVersion: RIVAL_RULES_VERSION, enabled: true,
+  ...(RIVAL_COURSE_DESIGNS[rivalSlug(name)] ? { designed: true } : {})
 })));
 export function enabledRivalCourses(pool = RIVAL_COURSE_POOL) { return pool.filter(c => c.enabled); }
 export function rivalPoolEntry(slot, pool = RIVAL_COURSE_POOL) {

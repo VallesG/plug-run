@@ -16,7 +16,7 @@ import { T, THEMES, generateSquareMaze } from '../utils/mazeGenerator.js';
 import { createSeededRNG } from '../utils/seededRandom.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import { PALETTE } from '../logic/palette.js';
-import { rivalTimeLabel, rivalArenaLayout, rivalHudLayout, rivalFloorClock } from '../logic/rivals.js';
+import { rivalTimeLabel, rivalArenaLayout, rivalHudLayout, rivalFloorClock, rivalHouseDesign } from '../logic/rivals.js';
 import {
   raceReplayTimeline, timelineCursor, replayStateAt, replayEventsBetween, replayStashesAt, unpackFlags, replayCardLabel
 } from '../logic/rivalReplay.js';
@@ -48,9 +48,11 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     fontFamily:'monospace',fontSize:size+'px',color,stroke:'#071018',strokeThickness:2
   }).setOrigin(...origin).setDepth(DEPTH+901));
   const rail=rivalHudLayout(W,H);
+  // The same name the race HUD used (RIVAL unless a short handle fits).
+  const who=String(opponentName||'RIVAL').toUpperCase();
   const clock=hudText(W/2,34,'0:00.0','#bbc4b9',12);
-  const label=hudText(W/2,H-57,'RIVAL REPLAY','#dec386',10);
-  const rivalLabel=hudText(W-7,rail.startY-20,'RIVAL 0/7','#dec386',9,[1,.5]);
+  const label=hudText(W/2,H-57,who+' REPLAY','#dec386',10);
+  const rivalLabel=hudText(W-7,rail.startY-20,who+' 0/7','#dec386',9,[1,.5]);
   const houseBars=rail.segmentYs.map(y=>mk(scene.add.rectangle(rail.rightX,y,rail.railW,rail.segmentH,0x23313a)
     .setStrokeStyle(1,0x3a4c58).setDepth(DEPTH+901)));
   const playerLabel=hudText(7,rail.startY-20,'YOU 0/7','#9bcae5',9,[0,.5]);
@@ -83,7 +85,10 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     const { theme, floorKeySingle } = themeForSeed(rep.houseSeed);
     let grid = null, egress=null;
     try {
-      const arena=generateSquareMaze(cols, rows, { rng: createSeededRNG(rep.houseSeed), role: 'runner', clusterScale: rep.scale });
+      // A designed course's house is rebuilt with its layout, found by the
+      // segment's house seed; an original-seven house has none.
+      const layout=rivalHouseDesign(rep.houseSeed)?.layout ?? null;
+      const arena=generateSquareMaze(cols, rows, { rng: createSeededRNG(rep.houseSeed), role: 'runner', clusterScale: rep.scale, layout });
       grid=arena.grid;egress=arena.egress;
     } catch { grid = null; }
     if(!grid)throw Error('Replay course regeneration failed');
@@ -176,7 +181,10 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     const t = mk(scene.add.text(x, y - house.cell * 0.65, text, { fontSize: Math.max(14, Math.floor(house.cell * 0.6)) + 'px', color, fontStyle: 'bold' }).setOrigin(0.5).setDepth(DEPTH + 13));
     scene.tweens.add({ targets: t, y: t.y - house.cell * 0.55, alpha: 0, duration: 950, onComplete: () => t.destroy() });
   };
-  const sfx = (key, volume = 0.7) => { try { scene.audio?.play?.(key, { volume }); } catch {} };
+  const sfx = (key, volume = 0.7, extra = {}) => { try { scene.audio?.play?.(key, { volume, ...extra }); } catch {} };
+  // The same cues, at the same settings, as the live game's power activation
+  // (BaseGameScene): a watcher hears exactly what the rival heard.
+  const POWER_SFX = { phase: [0.7, {}], dash: [0.2, { rate: 2.5 }], decoy: [0.4, {}] };
   const applyEvent = (e) => {
     const { rep, wx, wy } = house;
     if (e.k === 'shot') sfx('gun_fire', 0.6);
@@ -184,7 +192,16 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     else if (e.k === 'death') { sfx('ouch', 0.7); puff(house.runner.x, house.runner.y, PALETTE.dust, 10); ring(house.runner.x, house.runner.y, PALETTE.runner); house.hidden = true; }
     else if (e.k === 'pickup') { sfx('pickup', 0.8); sfx('spickup', 0.7); house.carry.setVisible(true); }
     else if (e.k === 'bunk') { sfx('pickup', 0.8); sfx('bpickup', 0.7); const d = house.duffels[e.i]; if (d) { toast(d.x, d.y, 'BUNK!', '#f87171'); scene.tweens.add({ targets: d, alpha: 0, scale: 0.82, duration: 680 }); } }
-    else if (e.k === 'power') { sfx(e.power || 'phase', 0.5); if (e.power) toast(house.runner.x, house.runner.y, e.power.toUpperCase(), '#9ad1ff'); }
+    else if (e.k === 'power') {
+      // A dash or a phase moves the rival through space or a wall in an
+      // instant; the cue, the burst and the label say it was a power.
+      const [vol, extra] = POWER_SFX[e.power] || POWER_SFX.phase;
+      sfx(e.power || 'phase', vol, extra);
+      if (e.power) {
+        toast(house.runner.x, house.runner.y, e.power.toUpperCase(), '#9ad1ff');
+        if (e.power !== 'decoy') ring(house.runner.x, house.runner.y, 0x9ad1ff);
+      }
+    }
     else if (e.k === 'extract') { ring(wx(rep.car.x), wy(rep.car.y), 0x86efac); }
   };
   const drawSegment = (local, dt) => {
@@ -261,7 +278,7 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
       clock.setText(rivalTimeLabel((segment.startedMs || 0) + local));
       const done = bundle.segments.filter((s, i) => s.outcome === 'extracted' && (i < cur.item.index || (i === cur.item.index && cur.item.kind === 'segment' && local >= (s.replay?.durationMs ?? 0)))).length;
       houseBars.forEach((b, j) => b.setFillStyle(j < done ? 0xc6ac70 : 0x23313a));
-      rivalLabel.setText('RIVAL '+done+'/7');
+      rivalLabel.setText(who+' '+done+'/7');
       const playerDone=playerTimes.filter(t=>t<=(segment.startedMs||0)+local).length;
       playerLabel.setText('YOU '+playerDone+'/7');
       playerBars.forEach((b,j)=>b.setFillStyle(j<playerDone?0x86bad5:0x23313a));

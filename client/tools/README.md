@@ -35,7 +35,7 @@ node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3 \
 
 | flag | default | meaning |
 | --- | --- | --- |
-| `--slot` | – | pinned course slot, 1-7 |
+| `--slot` | – | pinned course slot, 1-21 (see `RIVALS_COURSES.md`) |
 | `--style` | – | driver style from `RIVAL_DRIVER_STYLES` |
 | `--powers` | – | ordered mix, e.g. `phase,dash`, `dash,dash`, `decoy,phase` |
 | `--runs` | 1 | races per job |
@@ -45,12 +45,12 @@ node tools/rivals-record.mjs --plan tools/rivals-plan.json --parallel 3 \
 | `--out` | `tools/recordings` | output directory |
 | `--width` / `--height` | 390 / 844 | viewport — full-height phone layout |
 | `--hardLimitMs` | per style | give-up point for one race |
-| `--resume` | off | skip jobs whose output already exists in `--out` |
+| `--resume` | off | skip only complete, valid jobs already captured in `--out` |
 
-A multi-hour batch will be interrupted. `--resume` reads `--out`, treats any
-job with a matching output file as done, and records only what is left.
-Recording a job twice is harmless — more races is more coverage — so this only
-saves time, never correctness.
+A long batch may be interrupted. `--resume` reads `--out` and skips a job only
+when a matching capture finished every planned race successfully with Jev still
+active. Partial, aborted and malformed captures are retried. Recording a job
+twice is harmless: the bank assembler deduplicates recordings.
 
 **Renderer.** Chromium Canvas (`--disable-gpu`). WebGL through swiftshader ran
 at 9-18fps in this container, which changes what the bot can do; Canvas holds
@@ -98,6 +98,9 @@ the slow ones, where it belongs. Change the bank and the bands move with it.
 | --- | --- |
 | `tools/rivals-record.mjs` | drives the harness, writes raw captures |
 | `tools/rivals-plan.json` | the job list: slots x styles x power mixes |
+| `tools/rivals-variant-plan.mjs` | writes the variant plans in `tools/plans/` (many opponents per course, all 21 courses, any profile) |
+| `tools/rivals-bank-report.mjs` | per course, per bank: matchable variants against target, distinct stash seeds and patterns, loadouts, time spread, duplicates |
+| `tools/rivals-course-report.mjs` | every course, house by house: board, structure, run length, chokes, alternatives, lanes, phase shortcuts, plug pressure |
 | `tools/rivals-assemble.mjs` | validates, reports coverage, writes the bank |
 | `tools/recordings/` | raw captures (git-ignored, intermediate) |
 | `public/rivals/v2/` | the shipped bank |
@@ -115,3 +118,32 @@ original metadata in `client/rivals-bank-archive/`, never public/ or dist.
 No captured payload is rewritten. Re-running on the curated bank is a no-op.
 Assembly can re-import redundant raw captures: prune after assembly, then run
 `npm run verify`. See RIVALS_BANK_RECORDING_HANDOFF.md for recovery instructions.
+# Normal Jev calibration (raw captures, no bank write)
+
+`node tools/rivals-normal-report.mjs --in tools/recordings/jev/normal-pilot`
+prints valid races, median/range, retries and how many land in the 110-120s
+target for each course. Run this after a small Normal-profile plan, before
+assembling `jev-v1`. A single race cannot establish a course's difficulty.
+
+## Full fresh Jev variant banks
+
+The three plans in `tools/plans/` cover 128 stash-answer patterns on each of
+21 courses, or 2,688 races per profile and 8,064 in total. Each eight-race job
+gets its own planned stash seeds. A stash answer remains fixed on retry within
+one race, while a new match can select a different answer pattern. Normal,
+Apex and Rival Hard record into separate raw folders and banks.
+
+After building and starting a server, run `tools/run-jev-variant-banks.ps1`
+from PowerShell with `TYPESAFE_API_KEY` set. It records Normal, Apex and Rival
+Hard sequentially, resumes only complete jobs, retries incomplete jobs up to
+three passes, and assembles a bank only after all 2,688 planned races for that
+profile are present and accepted. It does not record MP4s for every race; the
+replay traces are the bank data. Raw captures and logs stay git-ignored under
+`tools/recordings/jev/fresh-*`.
+
+Check progress without touching the running recorder:
+
+`node tools/rivals-variant-progress.mjs --plan tools/plans/jev-v1.json --out tools/recordings/jev/fresh-normal-v1`
+
+If a batch stops, run the same launcher again; `--resume` retains completed
+jobs. The existing ordinary `public/rivals/v2` bank is never modified.

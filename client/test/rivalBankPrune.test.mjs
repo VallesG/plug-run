@@ -15,7 +15,11 @@ check('exact replay bytes saved',plan.beforeBytes-plan.afterBytes===17962603);
 check('idempotent on curated bank',pruneRivalBank(report.rows.filter(r=>plan.retainedIDs.includes(r.id))).removedIDs.length===0);
 const manifest=JSON.parse(readFileSync(new URL('manifest.json',root),'utf8'));
 let savedBytes=0,liveBytes=0;
-for(const course of RIVAL_COURSE_POOL){
+// The September prune covered the seven original courses; the designed
+// courses (slots 8+) were added later and are not in that archive.
+const pruned=RIVAL_COURSE_POOL.filter(c=>c.slot<=7);
+check('the prune archive covers exactly the original seven courses',pruned.length===7&&pruned.every(c=>!c.designed));
+for(const course of pruned){
  const path='courses/'+course.courseID+'/opponents.json';
  const old=JSON.parse(readFileSync(new URL(path,archive),'utf8')).opponents;
  const live=JSON.parse(readFileSync(new URL(path,root),'utf8')).opponents;

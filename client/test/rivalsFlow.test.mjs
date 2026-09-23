@@ -10,6 +10,21 @@ import { playExtraction } from '../src/controllers/extractionAnimation.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
+// The match screen is presentation only; the stub records what it was told
+// to show and hands back the callbacks a player's taps would call.
+let matchResolver=()=>Promise.resolve(null), searchPlanMs=3000, realApply=null;
+const screens=[];
+class StubMatchScreen{
+  constructor(scene,opts){this.scene=scene;this.opts=opts;this.calls=[];this.destroyed=false;screens.push(this);}
+  note(kind,o){this.calls.push(kind);this.last=kind;this[kind]=o;}
+  showSearching(o){this.note('searching',o);}
+  showUnavailable(o){this.note('unavailable',o);}
+  showFound(o){this.note('found',o);}
+  showLobby(o){this.note('lobby',o);}
+  setCourse(slot){this.calls.push('course:'+slot);}
+  tick(){}
+  destroy(){this.destroyed=true;}
+}
 const source=readFileSync(new URL('../src/controllers/RivalsRace.js',import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\s*/gm,'').replace('export default class','class');
 const bindings={
@@ -23,6 +38,8 @@ const bindings={
   showRunnerLoadout:(ui,done,options)=>{loadouts++;lastPicker={ui,done,options};},
   drawPowerIcon:()=>node(), AudioManager:{get:()=>({isMusicMuted:()=>false,isMuted:()=>false,setMusicMute(){},setMute(){}})},
   ReplaySystem:{finalize(){}},
+  RivalMatchScreen:StubMatchScreen, findRivalMatch:(race)=>matchResolver(race), applyRivalOffer:(...a)=>realApply(...a),
+  planMatchSearch:()=>({band:'steady',revealMs:searchPlanMs}),
   // Real module: with no car in these stub scenes it fires its callback
   // immediately, so the flow assertions below stay synchronous.
   playExtraction
@@ -115,9 +132,9 @@ check('own race exported in the shared record format',saved.at(-1).runRecord && 
 check('own record clears equal race clock',JSON.stringify(saved.at(-1).runRecord.clearTimes)===JSON.stringify(state.clearTimes) && saved.at(-1).runRecord.retries===0);
 check('capture holds one segment per attempt',state.capture.segments.length===7 && state.capture.attempts.every(a=>a.outcome==='extracted'));
 check('result names the rival',run.modals.at(-1).title==='YOU WIN' && run.modals.at(-1).lines.some(l=>l.startsWith('Rival:')));
+check('no rematch is offered',!run.modals.at(-1).buttons.some(b=>/rematch/i.test(b.label||'')));
 run.modals.at(-1).buttons[0].onClick();
-check('rematch keeps seed, drops old clock',run.restarts.at(-1).rivalSeed===77 && !run.restarts.at(-1).rivalRace);
-run.modals.at(-1).buttons[1].onClick();
+check('new race is the primary choice and drops the old clock',run.modals.at(-1).buttons[0].label==='NEW RACE' && !run.restarts.at(-1).rivalRace);
 check('new race has no pinned seed',run.restarts.at(-1).rivalSeed===undefined);
 check('new race lets matchmaking choose a random course',run.restarts.at(-1).rivalSlot===undefined);
 
@@ -177,8 +194,15 @@ result.buttons[0].onClick(fakeModal);
 check('second tap while watching ignored',played.length===1);
 played[0].onDone();
 check('leaving the replay restores the modal and the result',vis.join()==='false,true' && state.result==='loss' && state.status==='finished');
-check('rematch carries the opponent id',(result.buttons[1].onClick(),run.restarts.at(-1).rivalOpponentID==='rec-x' && run.restarts.at(-1).rivalSeed===77));
-check('new race drops the opponent id',(result.buttons[2].onClick(),run.restarts.at(-1).rivalOpponentID===undefined && run.restarts.at(-1).rivalRecording===undefined));
+check('no rematch next to the replay either',!result.buttons.some(b=>/rematch/i.test(b.label||'')));
+check('new race drops the opponent id',(result.buttons[1].onClick(),run.restarts.at(-1).rivalOpponentID===undefined && run.restarts.at(-1).rivalRecording===undefined));
+// A recording batch stays on its course but starts every race as a new
+// match: no stash seed is carried, so each variant draws its own answers.
+state.recording=true;state.fixedPowers=['phase','dash'];state.hardLimitMs=60000;
+const again=run.controller.harnessRestartData();
+check('a recording restart keeps its course and options',again.rivalRecording===true&&again.rivalSeed===state.course.seed&&again.rivalPowers.join()==='phase,dash');
+check('and carries no stash seed or rival id',!('stashSeed' in again)&&!('rivalStashSeed' in again)&&again.rivalOpponentID===undefined);
+state.recording=false;
 // resize while the lookup is pending does not double-open
 state=rules.newRivalRace(course,splits);state.opponentResolved=true;run=setup(state);
 check('already-resolved race opens the picker at once',loadouts>0 && run.modals.length===0);
@@ -334,11 +358,11 @@ check('the player estimate is reported, not the opponent pace',
 check('calibration does not decorate the bank', JSON.stringify(bank) === bankSnapshot2);
 check('calibration never locks the human pair', paired.fixedPowers == null);
 
-// A rematch is the same race, every time.
-const again = { ...rules.newRivalRace(course, splits), wantRecordingID: paired.opponent.recordingID };
-await calibrated(again);
-check('a rematch returns the same recording', again.opponent.recordingID === paired.opponent.recordingID);
-check('a rematch keeps the same recorded times', again.rivalTimes.join() === paired.rivalTimes.join());
+// A named recording (tools and tests; players have no rematch) is the same race, every time.
+const named = { ...rules.newRivalRace(course, splits), wantRecordingID: paired.opponent.recordingID };
+await calibrated(named);
+check('a named recording is returned', named.opponent.recordingID === paired.opponent.recordingID);
+check('with its recorded times', named.rivalTimes.join() === paired.rivalTimes.join());
 
 // Repeated searches rotate rather than serving one opponent forever.
 const seen = new Set();
@@ -371,41 +395,171 @@ check('no rival means no opponent is invented',
 
 console.log(passed+' total rival flow assertions passed');
 
+// ---------------------------------------------------------------------------
+// Block Rivals match flow: block -> searching -> found -> selecting -> ready
+// -> countdown -> racing. The rival comes first; the map and powers after;
+// READY starts the countdown at once and races exactly what was shown.
+// ---------------------------------------------------------------------------
+{
+  const sb={...chooseBindings,matchQuality:matchmaking.matchQuality};
+  realApply=new Function(...Object.keys(sb),sessionSource+'\nreturn applyRivalOffer;')(...Object.values(sb));
+}
+const courseOne=rules.rivalPoolCourse(1),courseTwo=rules.rivalPoolCourse(2);
+const lobbyRecord=(course,id,seed,powers)=>({stashSeed:seed,stashRules:'match-v1',recordingID:id,courseID:course.id,
+  clearTimes:[9000,18000,27000,36000,45000,54000,63000],retries:0,elapsedMs:63000,orderedPowers:powers,
+  attempts:Array.from({length:7},(_,i)=>({house:i+1,outcome:'extracted',startedMs:i*9000,endedMs:i*9000+8000})),
+  opponent:{kind:'bot',displayName:'BOT · Ace',skillPreset:'ace',driverVersion:'botdriver-v2'},driverConfig:{driver:'jev-strategist',jev:{}}});
+const makeMatch=()=>({id:'m1',pool:'ordinary',identity:{key:'jev@/rivals/jev-v1/',displayName:'Jev',kind:'jev'},playerSkill:null,offers:[
+  {slot:1,courseID:courseOne.id,name:courseOne.name,course:courseOne,entry:{record:lobbyRecord(courseOne,'rec-one',111,['phase','dash']),replay:'replays/rec-one.json',root:'/rivals/jev-v1/'},orderedPowers:['phase','dash'],quality:null},
+  {slot:2,courseID:courseTwo.id,name:courseTwo.name,course:courseTwo,entry:{record:lobbyRecord(courseTwo,'rec-two',222,['decoy','phase']),replay:'replays/rec-two.json',root:'/rivals/jev-v1/'},orderedPowers:['decoy','phase'],quality:null}]});
+const cityRace=(extra={})=>({...rules.newRivalRace(courseOne,splits),rivalCityIndex:1,territoryIndex:1,territorySlot:1,pool:'ordinary',...extra});
+let lookups=0,settle=null;
+const pendingLookup=()=>{lookups++;return new Promise(r=>{settle=r;});};
+const tick=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
+
 now=1000;
-const entry={...rules.newRivalRace(rules.rivalPoolCourse(1),splits),rivalCityIndex:1,territoryIndex:1};
+const entry=cityRace();
 const oldLoadouts=loadouts, city=setup(entry);
-check('normal rivalry opens city before picker',city.scene.cityOptions.view.index===1&&loadouts===oldLoadouts);
+check('normal rivalry opens the city first',city.scene.cityOptions.view.index===1&&loadouts===oldLoadouts);
 check('city presentation claimed on race before resize',entry.cityIntroShown&&entry.entryStage==='block');
 city.scene.cityOptions.onDone();
-check('city lands on seven-house district',city.scene.districtDraws===1&&city.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
-check('no opponent selection until look-for-match',loadouts===oldLoadouts);
-city.modals.at(-1).buttons[0].onClick();
-check('mix chosen before the opponent carousel',loadouts===oldLoadouts+1&&lastPicker.options.startLabel==='LOOK FOR MATCH');
-city.scene.runnerPowersSelected=['dash','decoy'];lastPicker.done();
-await Promise.resolve();await Promise.resolve();
-check('search does not start race clock',entry.status==='ready'&&entry.startedAt===null&&entry.entryStage==='search');
-// The search runs a varied minimum (2.4-4.2s) before landing, so the clock
-// moves with each scheduled step here.
-const shownDuringSearch=[];
-for(let i=0;i<80&&entry.status!=='countdown';i++){
-  const card=city.controller.searchCard;if(card?.text)shownDuringSearch.push(card.text);
-  now+=city.events.at(-1).delay||100;city.events.at(-1).fn();
-}
-check('opponent reveal starts countdown automatically',entry.status==='countdown'&&loadouts===oldLoadouts+1&&entry.powers.join()==='dash,decoy');
-check('the search ran its minimum before landing',now-1000>=2400);
-check('the found card names the rival the race is against',
-  shownDuringSearch.some(t=>t.startsWith(city.controller.rivalDisplayName(entry.opponent?.displayName||'PACE TRIAL'))||t.startsWith('PACE TRIAL')));
+check('city lands on the seven-house block',city.scene.districtDraws===1&&city.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
+check('nothing chosen and no search before LOOK FOR MATCH',loadouts===oldLoadouts&&!entry.matchSearch&&screens.length===0);
+matchResolver=pendingLookup;searchPlanMs=3000;
+const blockModal=city.modals.at(-1);
+blockModal.buttons[0].onClick();
+check('LOOK FOR MATCH starts searching at once',entry.entryStage==='searching'&&screens.length===1&&screens[0].last==='searching'&&lookups===1);
+check('no map or power picker before a rival is found',loadouts===oldLoadouts&&!screens[0].lobby&&!screens[0].found);
+check('the block screen closes behind the search',blockModal.destroyed===true);
+check('search does not start the race clock',entry.status==='ready'&&entry.startedAt===null);
 check('search keeps movement frozen',city.scene.roundPausedForMenu&&!city.scene.input.keyboard.enabled);
+city.controller.startSearch();blockModal.buttons[0].onClick();
+check('a second tap cannot start a second search',lookups===1&&screens.length===1&&screens[0].calls.filter(c=>c==='searching').length===1);
+settle(makeMatch());await tick();
+now=1000+2999;city.controller.update();
+check('a rival found early still waits for the planned moment',entry.entryStage==='searching');
+now=1000+3000;city.controller.update();
+check('the rival is revealed at the planned moment',entry.entryStage==='found'&&screens[0].found?.name==='Jev');
+check('nothing is raced yet',entry.status==='ready'&&!entry.opponentRecord&&entry.opponentKind==='simulated-ai');
+city.controller.update();
+check('the reveal happens once',screens[0].calls.filter(c=>c==='found').length===1);
+screens[0].found.onDone();
+check('then one lobby: the rival, their courses and your powers',entry.entryStage==='selecting'&&screens[0].lobby.state.name==='Jev'&&
+  screens[0].lobby.state.offers.map(o=>o.slot).join()==='1,2'&&screens[0].lobby.state.rivalReady===true&&screens.length===1);
+screens[0].found.onDone();
+check('a late second reveal callback cannot reopen the lobby',screens[0].calls.filter(c=>c==='lobby').length===1);
+screens[0].lobby.onReady(['phase']);
+check('READY needs two powers',entry.status==='ready'&&entry.entryStage==='selecting');
+screens[0].lobby.onCourse(99);
+check('a course the rival never raced cannot be chosen',entry.lobby.slot===1);
+screens[0].lobby.onCourse(2);screens[0].lobby.onPowers(['dash','decoy']);
+check('choices are kept on the race',entry.lobby.slot===2&&entry.lobby.powers.join()==='dash,decoy'&&screens[0].calls.includes('course:2'));
+// A phone rotating mid-lobby: the same lobby, no new search, no second reveal.
+city.controller.resize();
+const lobbyRestart=city.restarts.at(-1);
+check('resize in the lobby restarts with the same race',lobbyRestart.rivalRace===entry&&entry.status==='ready');
 city.controller.dispose();
-check('search timer removed on shutdown',city.events.at(-1).removed);
-const canceled=setup({...rules.newRivalRace(rules.rivalPoolCourse(2),splits),rivalCityIndex:2});
-const callbacks=canceled.scene.cityOptions;
-canceled.controller.dispose();callbacks.onDone();
-check('canceled city callback cannot open block',!canceled.scene.districtDraws&&canceled.scene.cityDestroyed);
-const resumed=setup({...rules.newRivalRace(rules.rivalPoolCourse(1),splits),rivalCityIndex:1,cityIntroShown:true,entryStage:'block'});
-check('resized block entrance skips city and keeps match button',!resumed.scene.cityOptions&&resumed.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
-resumed.controller.dispose();
-console.log('Rivals district entry: '+passed+' total assertions passed');
+check('the old screen is closed on shutdown',screens[0].destroyed);
+const reopened=setup(lobbyRestart.rivalRace);
+check('the lobby reopens where it was',lookups===1&&screens.length===2&&screens[1].last==='lobby'&&screens[1].lobby.animate===false&&
+  screens[1].lobby.state.slot===2&&screens[1].lobby.state.powers.join()==='dash,decoy'&&!screens[1].found);
+now=20000;
+screens[1].lobby.onReady(['dash','decoy']);
+const raced=reopened.restarts.at(-1)?.rivalRace;
+check('READY on another course builds that course',!!raced&&raced.course.id===courseTwo.id&&reopened.restarts.at(-1).pveRound===1&&reopened.restarts.at(-1).runKind==='rivals');
+check('the countdown starts at once: no waiting for the rival',raced.status==='countdown'&&raced.countdownEndsAt===20000+rules.RIVAL_COUNTDOWN_MS);
+check('the race runs exactly the offered record',raced.opponentRecord.recordingID==='rec-two'&&raced.rivalTimes.join()===raced.opponentRecord.clearTimes.join());
+check('with its stash seed and its replay',raced.stashSeed===222&&raced.opponent.replayURL==='/rivals/jev-v1/replays/rec-two.json');
+check('under the name the lobby showed',raced.opponent.displayName==='Jev'&&raced.opponent.identityKey==='jev@/rivals/jev-v1/');
+check('with the chosen powers',raced.powers.join()==='dash,decoy'&&reopened.scene.runnerPowersSelected.join()==='dash,decoy');
+check('and this block still the one being claimed',raced.territoryIndex===1&&raced.rivalCityIndex===1&&raced.territorySlot===1);
+check('the stages walked in order',raced.entryStage==='countdown');
+check('the lobby closed',screens[1].destroyed);
+screens[1].lobby.onReady(['dash','decoy']);
+check('a second READY does nothing',reopened.restarts.length===1);
+const go=setup(raced);
+check('the countdown survives the restart with no screen over it',screens.length===2&&raced.status==='countdown');
+now=20000+rules.RIVAL_COUNTDOWN_MS;go.controller.update();
+check('GO: racing',raced.status==='racing'&&raced.entryStage==='racing'&&go.starts()===1);
+check('the HUD names the rival',go.controller.rows[1].label.text.startsWith('JEV '));
+go.controller.dispose();
+
+// The same course: the countdown starts in place, on the rival's stash seed.
+now=30000;
+{
+  const race=cityRace({cityIntroShown:true,entryStage:'block'}),run=setup(race);
+  const seedBefore=race.stashSeed;
+  run.modals.at(-1).buttons[0].onClick();settle(makeMatch());await tick();
+  now=33000;run.controller.update();screens.at(-1).found.onDone();
+  now=34000;screens.at(-1).lobby.onReady(['phase','phase']);
+  check('same course: no restart',run.restarts.length===0&&run.scene.rivalRace===race);
+  check('same course: countdown now',race.status==='countdown'&&race.countdownEndsAt===34000+rules.RIVAL_COUNTDOWN_MS);
+  check('same course: the offered record and its stash seed',race.opponentRecord.recordingID==='rec-one'&&race.stashSeed===111&&seedBefore!==111);
+  check('same course: screen closed, world still frozen for the countdown',screens.at(-1).destroyed&&run.scene.roundPausedForMenu&&!run.scene.input.keyboard.enabled);
+  run.controller.dispose();
+}
+
+// CANCEL mid-search: back to the block, and a late answer never lands.
+{
+  now=40000;const race=cityRace({cityIntroShown:true,entryStage:'block'}),run=setup(race);
+  run.modals.at(-1).buttons[0].onClick();const screen=screens.at(-1);
+  screen.searching.onCancel();
+  check('cancel returns to the block',race.entryStage==='block'&&!race.matchSearch&&screen.destroyed&&run.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
+  settle(makeMatch());await tick();now=60000;run.controller.update();
+  check('a late answer after cancel does nothing',race.entryStage==='block'&&!race.match&&race.status==='ready');
+  const before=lookups;run.modals.at(-1).buttons[0].onClick();
+  check('and searching reopened is a new search',race.entryStage==='searching'&&lookups===before+1);
+  run.controller.dispose();
+}
+
+// A resize mid-search keeps the same search: same start, one lookup.
+{
+  now=70000;const race=cityRace({cityIntroShown:true,entryStage:'block'}),run=setup(race);
+  run.modals.at(-1).buttons[0].onClick();const before=lookups,started=race.matchSearch.startedAt;
+  now=71000;run.controller.resize();run.controller.dispose();
+  const back=setup(race);
+  check('resize mid-search resumes the same search',race.entryStage==='searching'&&screens.at(-1).last==='searching'&&screens.at(-1).searching.startedAt===started&&lookups===before);
+  settle(makeMatch());await tick();now=73000;back.controller.update();
+  check('and it lands on schedule after the restart',race.entryStage==='found');
+  back.controller.resize();back.controller.dispose();
+  const mid=setup(race);
+  check('a restart during the reveal goes straight to the lobby',race.entryStage==='selecting'&&screens.at(-1).last==='lobby'&&!screens.at(-1).found);
+  mid.controller.dispose();
+}
+
+// Nobody eligible: a clean way on, never a stand-in rival.
+{
+  now=80000;const race=cityRace({cityIntroShown:true,entryStage:'block'}),run=setup(race);
+  searchPlanMs=700;run.modals.at(-1).buttons[0].onClick();settle(null);await tick();
+  now=80000+matchmaking.MATCH_EMPTY_MIN_MS-1;run.controller.update();
+  check('an empty search still looks for a while',race.entryStage==='searching');
+  now=80000+matchmaking.MATCH_EMPTY_MIN_MS;run.controller.update();
+  check('then says nobody was found',race.entryStage==='unavailable'&&screens.at(-1).last==='unavailable'&&!race.opponentRecord&&race.status==='ready');
+  const before=lookups;screens.at(-1).unavailable.onRetry();
+  check('SEARCH AGAIN searches reopened',race.entryStage==='searching'&&lookups===before+1);
+  settle(null);await tick();now+=10000;run.controller.update();screens.at(-1).unavailable.onBack();
+  check('BACK returns to the block',race.entryStage==='block'&&run.modals.at(-1).buttons[0].label==='LOOK FOR MATCH');
+  // A lookup that never answers ends at the cap; a late answer is ignored.
+  searchPlanMs=3000;now=100000;run.modals.at(-1).buttons[0].onClick();
+  now=100000+matchmaking.MATCH_SEARCH_CAP_MS-1;run.controller.update();
+  check('a hung lookup keeps searching up to the cap',race.entryStage==='searching');
+  now=100000+matchmaking.MATCH_SEARCH_CAP_MS;run.controller.update();
+  check('and gives up at ten seconds',race.entryStage==='unavailable');
+  settle(makeMatch());await tick();now+=5000;run.controller.update();
+  check('an answer after the cap is ignored',race.entryStage==='unavailable'&&!race.match);
+  run.controller.dispose();
+}
+
+// LEAVE from the lobby lets the rival go.
+{
+  now=120000;searchPlanMs=1000;const race=cityRace({cityIntroShown:true,entryStage:'block'}),run=setup(race);
+  run.modals.at(-1).buttons[0].onClick();settle(makeMatch());await tick();now=121000;run.controller.update();screens.at(-1).found.onDone();
+  screens.at(-1).lobby.onLeave();
+  check('LEAVE returns to the block and drops the match',race.entryStage==='block'&&!race.match&&!race.lobby&&screens.at(-1).destroyed&&race.status==='ready');
+  screens.at(-1).lobby.onReady(['phase','dash']);
+  check('a READY after leaving does nothing',race.status==='ready'&&!race.opponentRecord);
+}
+console.log('Rivals match flow: '+passed+' total assertions passed');
 
 // One request per bank (the style bots and Jev); both must settle.
 const pendingFetches=[];let requests=0;

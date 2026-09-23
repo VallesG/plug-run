@@ -198,6 +198,8 @@ export default class BotDriver {
     this._borrowed = null;   // lazily-built AIController for the borrowed AI
     this._progressionApplied = false;
     this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
+    this._threatSeenAt = null;
+    this._nextSteerAt = 0;
     this._nextCoverAt = 0;
     this._coverDir = null;
     this._nextPhaseAt = 0;
@@ -245,6 +247,8 @@ export default class BotDriver {
     // Evasion commitment state — cleared per round so a dodge can't carry
     // across a restart.
     this._dodge = { dir: null, until: 0, since: 0, suppressUntil: 0 };
+    this._threatSeenAt = null;
+    this._nextSteerAt = 0;
     this._nextCoverAt = 0;
     this._coverDir = null;
     this._nextPhaseAt = 0;
@@ -324,6 +328,10 @@ export default class BotDriver {
       if (this._plan.openingWaiting) {
         this._countDrive('openingDelay');
         return this._driveOpeningReflex(me, this._plan.objective?.cell);
+      }
+      if (this._plan.correctionWaiting) {
+        this._countDrive('correctionDelay');
+        return this._driveOrCoast(me, null);
       }
       // Never null in the hybrid: with no objective at all (a transient,
       // e.g. both bags mid-change) the AI holds where it is rather than
@@ -470,7 +478,16 @@ export default class BotDriver {
     //
     // Committed, not per-frame: see planDodge. Two plugs make the naive
     // version oscillate until the round timer ends the run.
-    const risk = this.firingLaneRisk(me);
+    let risk = this.firingLaneRisk(me);
+    // Normal Jev sees the same threat, but its dodge reflex has a human-scale
+    // onset. Once it reacts, all of the existing committed dodge logic stays.
+    if (hybrid && this.strategist.cfg.threatReactionMs > 0) {
+      if (!risk) this._threatSeenAt = null;
+      else {
+        if (this._threatSeenAt == null) this._threatSeenAt = now;
+        if (now - this._threatSeenAt < this.strategist.cfg.threatReactionMs) risk = null;
+      }
+    }
     const candidate = risk
       ? this.dodge(me, risk, this.currentGoal() || { x: me.x, y: me.y })
       : null;
@@ -1173,6 +1190,13 @@ export default class BotDriver {
    */
   _driveOrCoast(me, dir) {
     const s = this.scene;
+    // Normal samples steering like a fast human thumb rather than correcting
+    // its heading every render frame. Phase crossings retain precise control.
+    const cadence = this.strategist?.cfg?.steerCadenceMs || 0;
+    if (cadence > 0 && !s.runnerIsPhasing?.() && this._lastDir) {
+      if ((this._now || 0) < (this._nextSteerAt || 0)) dir = this._lastDir;
+      else this._nextSteerAt = (this._now || 0) + cadence;
+    }
 
     if (dir && s.intent.driveMove(dir.x, dir.y)) {
       const len = Math.hypot(dir.x, dir.y);

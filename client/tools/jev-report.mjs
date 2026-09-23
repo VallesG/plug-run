@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { bankEntries } from './rivals-replay-video.mjs';
 import { FRAME } from '../src/logic/rivalReplay.js';
+import { rivalHouseDesign } from '../src/logic/rivals.js';
 import { generateSquareMaze } from '../src/utils/mazeGenerator.js';
 import { createSeededRNG } from '../src/utils/seededRandom.js';
 
@@ -63,7 +64,7 @@ export function runMetrics(bundle, report = null) {
     }
     const first = r.events.find((e) => e.k === 'pickup' || e.k === 'bunk');
     if (!first) continue;
-    const arena = generateSquareMaze(r.cols, r.rows, { rng: createSeededRNG(r.houseSeed), role: 'runner', clusterScale: r.scale });
+    const arena = generateSquareMaze(r.cols, r.rows, { rng: createSeededRNG(r.houseSeed), role: 'runner', clusterScale: r.scale, layout: rivalHouseDesign(r.houseSeed)?.layout ?? null });
     const fromSpawn = bfs(arena.grid, cellOf(r.spawn.r));
     const dist = r.stashes.map((p) => fromSpawn[cellOf(p).y][cellOf(p).x]);
     // Which bag was reached first: the one nearest the runner at that moment.

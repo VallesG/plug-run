@@ -108,6 +108,12 @@ export const DEFAULTS = Object.freeze({
   // small per-attempt human reaction delay before the motor may move.
   openingDelayMinMs: 0,
   openingDelayMaxMs: 0,
+  // Normal Jev alone takes a short moment to correct course when the visible
+  // objective changes. Apex and Rival Hard keep their existing instant turn.
+  correctionDelayMinMs: 0,
+  correctionDelayMaxMs: 0,
+  threatReactionMs: 0,
+  steerCadenceMs: 0,
 
   // SAFETY CEILINGS. Past either the strategist stops asking for the rest of
   // the session; the runner AI keeps playing on the fallback objective, so a
@@ -308,6 +314,15 @@ export default class JevStrategist {
     } else if (!target || target.source !== 'jev') {
       target = this._target(view, dist, now);
     }
+    if (!recovering && target?.cell) {
+      const key = `${target.cell.x},${target.cell.y}`;
+      if (this._lastObjectiveKey && key !== this._lastObjectiveKey) {
+        const lo = Math.max(0, Number(this.cfg.correctionDelayMinMs) || 0);
+        const hi = Math.max(lo, Number(this.cfg.correctionDelayMaxMs) || lo);
+        this._correctionReadyAt = now + lo + this.rng() * (hi - lo);
+      }
+      this._lastObjectiveKey = key;
+    }
     const mode = recovering ? 'recovery' : ['jev', 'learned'].includes(target?.source) ? 'jev' : 'fallback';
     this.time[mode + 'Ms'] += dt;
     const h = this.houses[this.houses.length - 1];
@@ -351,6 +366,7 @@ export default class JevStrategist {
       // Internal motor-only reference; do not clone whole routes every frame.
       failedRoutes: this.failedRoutes,
       openingWaiting: this.now() < this._openingReadyAt,
+      correctionWaiting: !recovering && this.now() < (this._correctionReadyAt || 0),
       explore: this.exploring && !recovering };
   }
 
@@ -381,6 +397,8 @@ export default class JevStrategist {
     const lo = Math.max(0, Number(this.cfg.openingDelayMinMs) || 0);
     const hi = Math.max(lo, Number(this.cfg.openingDelayMaxMs) || lo);
     this._openingReadyAt = now + lo + this.rng() * (hi - lo);
+    this._correctionReadyAt = 0;
+    this._lastObjectiveKey = null;
     this._distKey = null;
     if (isRecovering(this.watchdog, now)) this.watchdog.stats.recoveryMs += now - this.watchdog.recoveryStartedAt;
     this.watchdog.recoveringUntil = 0;

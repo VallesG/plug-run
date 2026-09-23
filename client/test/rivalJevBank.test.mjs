@@ -13,8 +13,8 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  selectJevBank, validateRecordAndBundle, traceErrors, assignmentErrors, jevEligibilityError,
-  JEV_BANK_ID, JEV_BANK_ROOT, ORDINARY_BANK_ROOT
+  selectJevBank, validateRecordAndBundle, traceErrors, assignmentErrors, jevEligibilityError, jevRaceReport,
+  JEV_BANK_ID, JEV_BANK_ROOT, ORDINARY_BANK_ROOT, JEV_APEX_BANK_ID, JEV_APEX_BANK_ROOT, JEV_RIVAL_HARD_BANK_ID, JEV_RIVAL_HARD_BANK_ROOT
 } from '../tools/lib/jevBank.mjs';
 import { readJevBank } from '../tools/rivals-assemble-jev.mjs';
 import { validateRivalRunRecord, validateRivalReplayBundle, rivalRecordMatchesCourse } from '../src/logic/rivalRecords.js';
@@ -76,6 +76,7 @@ const REQUIRED = [
   ['no raw movement', (p) => p.rawMovementActions === 0]
 ];
 
+function checkEntries(entries) {
 for (const e of entries) {
   const id = e.record.recordingID, p = e.provenance || {};
   const course = rivalPoolCourse(e.record.courseSlot);
@@ -97,6 +98,8 @@ for (const e of entries) {
   const blob = JSON.stringify(e);
   check(`${id}: no credential-shaped value`, !/Bearer|authorization|api[_-]?key|jevKey|sk-[A-Za-z0-9]/i.test(blob));
 }
+}
+checkEntries(entries);
 
 // Separate from the ordinary bank, and not wired into the game.
 {
@@ -124,7 +127,70 @@ for (const e of entries) {
     srcHits.length === 1 && /utils[\\/]rivalSession\.js$/.test(srcHits[0]) && session.includes("'/rivals/jev-v1/'"), srcHits.join(', '));
 }
 
+/* ---------------- the challenge banks: Apex and Rival Hard ---------------- */
+
+// Same record, replay and provenance rules as jev-v1, one profile per bank,
+// no recording shared with any other bank, and never read by the game: the
+// challenge ghosts stay outside ordinary matchmaking.
+const pathOf = (rel) => decodeURIComponent(new URL('../' + rel + '/', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
+const challenge = {};
+for (const [bankId, rel, profiles] of [[JEV_APEX_BANK_ID, JEV_APEX_BANK_ROOT, [null, 'apex']], [JEV_RIVAL_HARD_BANK_ID, JEV_RIVAL_HARD_BANK_ROOT, ['rival', 'rival-hard']]]) {
+  const dir = pathOf(rel);
+  check(`the ${bankId} bank exists`, existsSync(join(dir, 'manifest.json')));
+  const m = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
+  check(`${bankId}: manifest names its bank`, m.bank === bankId && m.rulesVersion === RIVAL_RULES_VERSION);
+  const es = readJevBank(dir);
+  challenge[bankId] = es;
+  check(`${bankId}: every original course has an opponent`, [1, 2, 3, 4, 5, 6, 7].every((slot) => es.some((e) => e.record.courseSlot === slot)));
+  check(`${bankId}: the manifest lists exactly the banked recordings`,
+    JSON.stringify(m.courses.flatMap((c) => c.recordingIDs).sort()) === JSON.stringify(es.map((e) => e.record.recordingID).sort()));
+  checkEntries(es);
+  for (const e of es) {
+    const profile = e.record.driverConfig?.jev?.profile ?? null;
+    check(`${bankId} ${e.record.recordingID}: recorded with this bank's profile`, profiles.includes(profile), String(profile));
+    check(`${bankId} ${e.record.recordingID}: match stash rules, so it can be raced`, e.record.stashRules === 'match-v1' && Number.isInteger(e.record.stashSeed));
+  }
+  check(`${bankId}: recording IDs unique`, new Set(es.map((e) => e.record.recordingID)).size === es.length);
+}
+{
+  const ids = (es) => new Set(es.map((e) => e.record.recordingID));
+  const a = ids(challenge[JEV_APEX_BANK_ID]), h = ids(challenge[JEV_RIVAL_HARD_BANK_ID]), n = ids(entries);
+  check('no recording is in two Jev banks', [...a].every((x) => !h.has(x) && !n.has(x)) && [...h].every((x) => !n.has(x)));
+  const hits = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    const p = join(d, f.name);
+    if (f.isDirectory()) walk(p); else if (/\.(js|mjs)$/.test(f.name) && /jev-apex-v1|jev-rival-hard-v1/.test(readFileSync(p, 'utf8'))) hits.push(p);
+  } };
+  walk(pathOf('src'));
+  // A challenge bank is its own pool: named in one place, selectable only by
+  // that name, and never part of ordinary matchmaking.
+  check('challenge banks are named only in the opponent pool table',
+    hits.length === 1 && /utils[\\/]rivalSession\.js$/.test(hits[0]), hits.join(', '));
+  const { RIVAL_OPPONENT_POOLS, rivalPoolName } = await import('../src/utils/rivalSession.js');
+  const roots = (name) => RIVAL_OPPONENT_POOLS[name].map((b) => b.root).join();
+  check('ordinary matchmaking never reads a challenge bank (outside ordinary matchmaking)',
+    !/jev-apex-v1|jev-rival-hard-v1/.test(roots('ordinary')), roots('ordinary'));
+  check('each challenge bank is a pool of its own',
+    roots('apex') === '/rivals/jev-apex-v1/' && roots('rival-hard') === '/rivals/jev-rival-hard-v1/');
+  check('only an exact pool name selects a challenge bank',
+    rivalPoolName(undefined) === 'ordinary' && rivalPoolName('Apex') === 'ordinary' && rivalPoolName('constructor') === 'ordinary' && rivalPoolName('apex') === 'apex');
+}
+
 /* ---------------- admission rules, on the banked races ---------------- */
+
+{
+  const first = { jev: { report: { logicalRequests: 10, answers: 10, tokensBilled: 1000, costUsd: 0.01,
+    powers: { activated: 2 }, http: { attempts: 10, statuses: { 200: 10 } },
+    houses: [{ house: 1 }, { house: 7 }], strategies: { adopted: 10 }, time: { jevMs: 5000 } } } };
+  const second = { jev: { report: { logicalRequests: 17, answers: 17, tokensBilled: 1700, costUsd: 0.017,
+    powers: { activated: 5 }, http: { attempts: 17, statuses: { 200: 17 } },
+    houses: [...first.jev.report.houses, { house: 1 }, { house: 7 }],
+    strategies: { adopted: 17 }, time: { jevMs: 8500 } } } };
+  const delta = jevRaceReport({ races: [first, second] }, second);
+  check('planned job race two uses only its own API, power and house counts',
+    delta.logicalRequests === 7 && delta.tokensBilled === 700 && delta.powers.activated === 3 &&
+    delta.http.statuses[200] === 7 && delta.houses.length === 2 && delta.strategies.adopted === 7);
+}
 
 // A raw capture reconstructed from a banked entry: the shape the recorder
 // writes, with intent traces that match the record.
@@ -196,6 +262,17 @@ if (entries.length) {
   const extraPower = captureOf(e); extraPower.payload.races[0].traces[0].events.push([99, 'p', 0, 0]);
   check('refused: trace power events that disagree with the strategist',
     /power events/.test(selectJevBank([], [extraPower]).rejected[0]?.reason || ''));
+  // Profiles never cross banks.
+  const hard = challenge[JEV_RIVAL_HARD_BANK_ID][0];
+  if (hard) {
+    const cap = captureOf(hard);
+    check('refused: a Rival Hard race offered to the normal Jev bank', /never enters the normal Jev bank/.test(selectJevBank([], [cap], JEV_BANK_ID).rejected[0]?.reason || ''));
+    check('refused: a Rival Hard race offered to the Apex bank', /not a Jev Apex capture/.test(selectJevBank([], [cap], JEV_APEX_BANK_ID).rejected[0]?.reason || ''));
+    const apexCap = captureOf(hard);
+    apexCap.payload.races[0].record = { ...hard.record, driverConfig: { ...hard.record.driverConfig, jev: { ...hard.record.driverConfig.jev, profile: 'apex' } } };
+    check('refused: an Apex race offered to the Rival Hard bank', /not a Jev Rival Hard capture/.test(selectJevBank([], [apexCap], JEV_RIVAL_HARD_BANK_ID).rejected[0]?.reason || ''));
+    check('refused: an Apex race offered to the normal Jev bank', /never enters the normal Jev bank/.test(selectJevBank([], [apexCap], JEV_BANK_ID).rejected[0]?.reason || ''));
+  }
   check('traceErrors is quiet on a matching set', traceErrors(good.payload.races[0].traces, e.record, rivalPoolCourse(e.record.courseSlot), e.provenance.powers.activated).length === 0);
 
   // Duplicates: the same race under a second file is refused.

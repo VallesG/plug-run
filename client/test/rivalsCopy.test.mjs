@@ -12,7 +12,10 @@ const shown = source => (source.match(/'[^'\n]{3,90}'|"[^"\n]{3,90}"/g) || [])
   // Sentence-like strings only: an identifier such as 'recorded-bot' or a
   // style key is internal data, not something a player reads.
   .filter(s => /[A-Za-z]/.test(s) && /\s/.test(s) && !s.includes('/') && !s.startsWith('#'));
-const raceCopy = shown(race);
+// The match screen draws what RivalsRace tells it; scan both so a string
+// added to either is held to the same rules.
+const screen = readFileSync(new URL('../src/controllers/RivalMatchScreen.js', import.meta.url), 'utf8');
+const raceCopy = [...shown(race), ...shown(screen)];
 
 for (const word of ['BLOCK RIVALS', 'LOOK FOR MATCH', 'FINDING RIVAL', 'RIVAL FOUND', 'WATCH RIVAL']) {
   check('the product vocabulary is used: ' + word, raceCopy.some(s => s.includes(word)));

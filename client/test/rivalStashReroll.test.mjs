@@ -55,7 +55,7 @@ for (const seed of houseSeeds) {
   check('house ' + seed + ': recomputing gives the same sequence',
     seq.every((p, i) => p === rivalGenuinePocket(seed, i + 1)));
 }
-check('every one of the 49 pool houses rerolls', housesWithBoth === houseSeeds.length && houseSeeds.length === 49);
+check('every one of the ' + RIVAL_COURSE_POOL.length * RIVAL_HOUSES + ' pool houses rerolls', housesWithBoth === houseSeeds.length && houseSeeds.length === RIVAL_COURSE_POOL.length * RIVAL_HOUSES);
 check('the split is fair overall (45-55% secondary pocket)', ones / total > 0.45 && ones / total < 0.55, (ones / total).toFixed(3));
 check('not forced alternation: consecutive repeats happen (35-65% of steps)',
   repeats / pairs > 0.35 && repeats / pairs < 0.65, (repeats / pairs).toFixed(3));
@@ -219,7 +219,7 @@ check('another house is counted separately', rivalUpcomingAttempt({ capture: { h
   while (rivalRecordMatchesStashes({ ...record, stashSeed: other }, race)) other++;
   check('different assignment is not a fair opponent', !rivalRecordMatchesStashes({ ...record, stashSeed: other }, race));
   check('legacy per-retry bank cannot impersonate a match recording', !rivalRecordMatchesStashes({}, race));
-  check('random course selection can reach all seven slots', new Set(Array.from({ length: 7 }, (_, i) => randomRivalSlot(() => (i + 0.5) / 7))).size === 7);
+  check('random course selection can reach every slot', new Set(Array.from({ length: RIVAL_COURSE_POOL.length }, (_, i) => randomRivalSlot(() => (i + 0.5) / RIVAL_COURSE_POOL.length))).size === RIVAL_COURSE_POOL.length);
 
   // Exercise capture on a real generated house with several deaths. Every
   // segment carries the same session seed and agrees on pickup identity.

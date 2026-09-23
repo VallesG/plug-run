@@ -12,12 +12,17 @@ const root = new URL('../public/rivals/v2/', import.meta.url);
 if (!existsSync(root)) { console.log('rival bank: none present, nothing to check'); process.exit(0); }
 const manifest = JSON.parse(readFileSync(new URL('manifest.json', root), 'utf8'));
 check('manifest rules version', manifest.schemaVersion === 1 && manifest.rulesVersion === RIVAL_RULES_VERSION);
-check('manifest lists the pool', manifest.courses.length === RIVAL_COURSE_POOL.length);
+// The bank covers the courses it has recordings for; a newer course may
+// have none yet (it simply has no opponents file and no manifest row).
+check('manifest lists only pool courses', manifest.courses.every(m => RIVAL_COURSE_POOL.some(c => c.slot === m.slot && c.courseID === m.courseID)));
+check('manifest covers every original course', [1, 2, 3, 4, 5, 6, 7].every(s => manifest.courses.some(m => m.slot === s)));
 const ids = new Set();
 let total = 0;
 for (const c of RIVAL_COURSE_POOL) {
   const file = new URL('courses/' + c.courseID + '/opponents.json', root);
-  check(c.name + ' has an opponents file', existsSync(file));
+  const listed = manifest.courses.some(m => m.courseID === c.courseID);
+  check(c.name + ' has an opponents file exactly when the manifest lists it', existsSync(file) === listed);
+  if (!listed) continue;
   const data = JSON.parse(readFileSync(file, 'utf8'));
   check(c.name + ' file identifies its course', data.courseID === c.courseID && data.rulesVersion === RIVAL_RULES_VERSION);
   const course = rivalPoolCourse(c.slot);

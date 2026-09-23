@@ -91,6 +91,69 @@ export function assignmentErrors(bundle) {
   return errors;
 }
 
+// The strategist lives for the recorder's entire page. A planned job can
+// contain several races, so each finish snapshot contains session-to-date
+// counters. Bank validation and provenance must use this race's delta.
+export function jevRaceReport(payload, race) {
+  const current = race?.jev?.report;
+  if (!current) return null;
+  const index = payload?.races?.indexOf(race) ?? -1;
+  const previous = index > 0 ? payload.races[index - 1]?.jev?.report : null;
+  if (!previous) return current;
+  const subtract = (a, b) => Math.max(0, (Number(a) || 0) - (Number(b) || 0));
+  const subtractMap = (a = {}, b = {}) => Object.fromEntries(
+    Object.keys(a || {}).map(k => [k, subtract(a[k], b?.[k])]).filter(([, n]) => n > 0));
+  const time = { ...current.time,
+    jevMs: subtract(current.time?.jevMs, previous.time?.jevMs),
+    fallbackMs: subtract(current.time?.fallbackMs, previous.time?.fallbackMs),
+    recoveryMs: subtract(current.time?.recoveryMs, previous.time?.recoveryMs) };
+  const live = time.jevMs + time.fallbackMs + time.recoveryMs;
+  time.strategyActiveShare = live ? time.jevMs / live : 0;
+  time.fallbackShare = live ? time.fallbackMs / live : 0;
+  return { ...current,
+    logicalRequests: subtract(current.logicalRequests, previous.logicalRequests),
+    answers: subtract(current.answers, previous.answers),
+    invalid: subtract(current.invalid, previous.invalid),
+    errors: subtract(current.errors, previous.errors),
+    timeouts: subtract(current.timeouts, previous.timeouts),
+    obsolete: subtract(current.obsolete, previous.obsolete),
+    tokensBilled: subtract(current.tokensBilled, previous.tokensBilled),
+    costUsd: subtract(current.costUsd, previous.costUsd),
+    http: { ...current.http,
+      attempts: subtract(current.http?.attempts, previous.http?.attempts),
+      retries: subtract(current.http?.retries, previous.http?.retries),
+      statuses: subtractMap(current.http?.statuses, previous.http?.statuses) },
+    triggers: { ...current.triggers,
+      requested: subtractMap(current.triggers?.requested, previous.triggers?.requested),
+      coalesced: subtract(current.triggers?.coalesced, previous.triggers?.coalesced) },
+    strategies: { ...current.strategies,
+      adopted: subtract(current.strategies?.adopted, previous.strategies?.adopted),
+      objectiveHeld: subtract(current.strategies?.objectiveHeld, previous.strategies?.objectiveHeld),
+      switches: subtract(current.strategies?.switches, previous.strategies?.switches),
+      invalidated: subtract(current.strategies?.invalidated, previous.strategies?.invalidated),
+      rejected: subtractMap(current.strategies?.rejected, previous.strategies?.rejected) },
+    powers: { ...current.powers,
+      requested: subtract(current.powers?.requested, previous.powers?.requested),
+      accepted: subtract(current.powers?.accepted, previous.powers?.accepted),
+      activated: subtract(current.powers?.activated, previous.powers?.activated),
+      expiredUnused: subtract(current.powers?.expiredUnused, previous.powers?.expiredUnused),
+      saved: subtract(current.powers?.saved, previous.powers?.saved),
+      unarmedActivations: subtract(current.powers?.unarmedActivations, previous.powers?.unarmedActivations),
+      rejected: subtractMap(current.powers?.rejected, previous.powers?.rejected),
+      byName: subtractMap(current.powers?.byName, previous.powers?.byName) },
+    watchdog: { ...current.watchdog,
+      stalls: subtract(current.watchdog?.stalls, previous.watchdog?.stalls),
+      recoveries: subtract(current.watchdog?.recoveries, previous.watchdog?.recoveries),
+      recoveryMs: subtract(current.watchdog?.recoveryMs, previous.watchdog?.recoveryMs),
+      restored: subtract(current.watchdog?.restored, previous.watchdog?.restored),
+      notRestored: subtract(current.watchdog?.notRestored, previous.watchdog?.notRestored),
+      watchdogRequests: subtract(current.watchdog?.watchdogRequests, previous.watchdog?.watchdogRequests) },
+    time,
+    houses: (current.houses || []).slice((previous.houses || []).length),
+    driveSources: subtractMap(current.driveSources, previous.driveSources)
+  };
+}
+
 /** Why this race may not enter the Jev bank, or null if it may. */
 export function jevEligibilityError(payload, race) {
   if (payload?.aborted || payload?.diagnosticOnly) return 'aborted or diagnostic-only recording';
@@ -104,7 +167,7 @@ export function jevEligibilityError(payload, race) {
   if (race.houses !== RIVAL_HOUSES) return `incomplete: ${race.houses}/7`;
   if (race.result === 'forfeit') return 'forfeited';
   if (cfg?.driver !== 'jev-strategist' || !cfg.jev) return 'record does not name the Jev strategist';
-  const at = race.jev?.report, end = jev.report;
+  const at = jevRaceReport(payload, race), end = jev.report;
   if (!at || !end) return 'no Jev report';
   // Active through the finish: no ceiling tripped before the race ended, and
   // Jev was still being asked in the last house.
@@ -119,7 +182,7 @@ export function jevEligibilityError(payload, race) {
   // Paid, and billed: real usage from the API, not an estimate.
   if (typeof at.model !== 'string' || /^mock/i.test(at.model)) return 'no real Jev model answered';
   if (at.tokenSource !== 'api' || !(at.tokensBilled > 0) || !(at.costUsd > 0)) return 'tokens were not billed by the API';
-  if (!(jev.relay?.requests > 0) || jev.relay.directBlocked) return 'relay did not carry the traffic';
+  if (!(jev.relay?.requests > 0) || !(at.http?.attempts > 0) || jev.relay.directBlocked) return 'relay did not carry the traffic';
   return null;
 }
 
@@ -148,7 +211,7 @@ export function validateJevRace(payload, race) {
   const err = validateRecordAndBundle(race.record, race.bundle);
   if (err) return err;
   const course = rivalPoolCourse(race.record.courseSlot);
-  const tr = traceErrors(race.traces, race.record, course, race.jev?.report?.powers?.activated ?? null);
+  const tr = traceErrors(race.traces, race.record, course, jevRaceReport(payload, race)?.powers?.activated ?? null);
   if (tr.length) return 'traces: ' + tr[0];
   return null;
 }
@@ -159,10 +222,13 @@ export function validateJevRace(payload, race) {
  */
 export function jevProvenance(payload, race, sourceFile = null, bankId = JEV_BANK_ID) {
   const record = race.record, cfg = record.driverConfig, jev = payload.jev;
-  const r = race.jev.report;               // snapshotted at the finish
+  const r = jevRaceReport(payload, race);  // this race, from finish snapshots
   const final = jev.report;                 // the session's, after the finish
   return {
     kind: record.opponent.kind,
+    // Which Jev: apex, rival-hard (legacy 'rival'), or null for a race
+    // recorded before profiles existed.
+    profile: cfg.jev?.profile || r.profile || final?.profile || null,
     driver: 'jev-strategist',
     motor: 'runner-ai',
     route: jev.route,
@@ -177,8 +243,8 @@ export function jevProvenance(payload, race, sourceFile = null, bankId = JEV_BAN
       httpAttempts: r.http?.attempts ?? null,
       httpRetries: r.http?.retries ?? null,
       httpStatuses: { ...(r.http?.statuses || {}) },
-      relayForwarded: jev.relay?.requests ?? null,
-      relayStatuses: { ...(jev.relay?.statuses || {}) },
+      relayForwarded: r.http?.attempts ?? null,
+      relayStatuses: { ...(r.http?.statuses || {}) },
       answers: r.answers, invalid: r.invalid, errors: r.errors, timeouts: r.timeouts, obsolete: r.obsolete
     },
     ceilings: { maxRequests: r.requestLimit, maxInputTokens: r.tokenLimit, budgetStopped: r.budgetStopped },
@@ -211,7 +277,7 @@ export function jevProvenance(payload, race, sourceFile = null, bankId = JEV_BAN
       recoveryMs: r.watchdog?.recoveryMs ?? 0, restored: r.watchdog?.restored ?? 0,
       notRestored: r.watchdog?.notRestored ?? 0, requestsCaused: r.watchdog?.watchdogRequests ?? 0
     },
-    driveSources: { ...(final?.driveSources || {}) },
+    driveSources: { ...(r.driveSources || final?.driveSources || {}) },
     rawMovementActions: r.rawMovementActions,
     recordedAt: record.recordedAt,
     versions: {
@@ -271,6 +337,14 @@ export function selectJevBank(existing, captures, bankId = JEV_BANK_ID) {
       }
       if (bankId === JEV_APEX_BANK_ID && capturedProfile && capturedProfile !== 'apex') {
         rejected.push({ tag, file, reason: 'not a Jev Apex capture' }); continue;
+      }
+      // Historical entries may lack a profile, but new match-rules captures
+      // in ordinary matchmaking must explicitly use the normal profile.
+      if (bankId === JEV_BANK_ID && ['apex', 'rival', 'rival-hard'].includes(capturedProfile)) {
+        rejected.push({ tag, file, reason: 'a ' + capturedProfile + ' capture never enters the normal Jev bank' }); continue;
+      }
+      if (bankId === JEV_BANK_ID && race?.record?.stashRules === 'match-v1' && capturedProfile !== 'normal') {
+        rejected.push({ tag, file, reason: 'a match-rules capture needs the normal Jev profile' }); continue;
       }
       const why = jevEligibilityError(payload, race) || validateJevRace(payload, race);
       if (why) { rejected.push({ tag, file, reason: why }); continue; }

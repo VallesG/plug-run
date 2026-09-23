@@ -1,0 +1,6386 @@
+[
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 201000,
+  "stashSeeds": [
+   3940523469,
+   2742735545,
+   3654532539,
+   3154479093,
+   1896413285,
+   3053395310,
+   1152546886,
+   609009721
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 202000,
+  "stashSeeds": [
+   3407626959,
+   866364952,
+   1055673934,
+   3343463816,
+   1930665246,
+   1628326695,
+   1125449365,
+   1173343650
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 203000,
+  "stashSeeds": [
+   2452500966,
+   739698542,
+   427610851,
+   927563950,
+   2817413834,
+   3895234245,
+   3692045141,
+   2687762931
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 204000,
+  "stashSeeds": [
+   2916293575,
+   1031817176,
+   226325111,
+   3323672671,
+   3978704880,
+   2335602391,
+   1835698242,
+   1139088768
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 205000,
+  "stashSeeds": [
+   2358438308,
+   615670408,
+   2181438511,
+   787512170,
+   466702517,
+   2757151983,
+   2906198885,
+   356440787
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 206000,
+  "stashSeeds": [
+   974621537,
+   4003754174,
+   3288095195,
+   82009809,
+   2037773088,
+   3736916347,
+   2890743924,
+   4001179098
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 207000,
+  "stashSeeds": [
+   3483992950,
+   430184929,
+   2696483828,
+   2616955791,
+   260851685,
+   1676911518,
+   2765618950,
+   1292408206
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 208000,
+  "stashSeeds": [
+   1869783035,
+   257725713,
+   275682720,
+   669366429,
+   2453642070,
+   3741057103,
+   968441083,
+   1362195761
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 209000,
+  "stashSeeds": [
+   3618263127,
+   4096636843,
+   1702309773,
+   2900082736,
+   125090789,
+   625052076,
+   2504110575,
+   802079756
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 210000,
+  "stashSeeds": [
+   3192220083,
+   2740604646,
+   3810165967,
+   797395256,
+   755464177,
+   1176421480,
+   2376829256,
+   759294937
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 211000,
+  "stashSeeds": [
+   3377842430,
+   2493445882,
+   1036660244,
+   948123473,
+   2652615271,
+   2840391639,
+   1334797820,
+   2449111592
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 212000,
+  "stashSeeds": [
+   764057340,
+   3823119729,
+   3104962326,
+   4245545880,
+   1390461541,
+   45706524,
+   2292214225,
+   3323952353
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 213000,
+  "stashSeeds": [
+   4177229739,
+   1014497297,
+   3803861563,
+   2854206042,
+   716431669,
+   1957637002,
+   670334696,
+   2511204722
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 214000,
+  "stashSeeds": [
+   3443865973,
+   1289574532,
+   2318206002,
+   774390461,
+   1366836393,
+   3420379493,
+   459062399,
+   310624334
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 215000,
+  "stashSeeds": [
+   3863966199,
+   1115471989,
+   3773993534,
+   1723223446,
+   3575145589,
+   2222172556,
+   62654316,
+   3113458706
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 216000,
+  "stashSeeds": [
+   3817962126,
+   363815370,
+   495746161,
+   3549536198,
+   3257136439,
+   3531048292,
+   2725348796,
+   3817053406
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 217000,
+  "stashSeeds": [
+   3461648147,
+   61858749,
+   1044190897,
+   4032351558,
+   1242981488,
+   1265700005,
+   2160945911,
+   3666581708
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 218000,
+  "stashSeeds": [
+   971543898,
+   51667952,
+   1284713038,
+   2261713818,
+   2983218141,
+   2237776285,
+   3405481129,
+   3248536952
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 219000,
+  "stashSeeds": [
+   3947910895,
+   2753112575,
+   772821770,
+   275560052,
+   1740105926,
+   1962339255,
+   4015637478,
+   3627249852
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 220000,
+  "stashSeeds": [
+   3919991269,
+   501155831,
+   1398998495,
+   3681372566,
+   2257610228,
+   3966312309,
+   1255991395,
+   1467749067
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 221000,
+  "stashSeeds": [
+   1757996867,
+   2260719585,
+   1472064779,
+   2661419236,
+   1175157600,
+   282554094,
+   1869554122,
+   3583112550
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 201008,
+  "stashSeeds": [
+   1138393869,
+   3537899349,
+   3688063956,
+   1173891753,
+   316716878,
+   1552534740,
+   2810071251,
+   1286082979
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 202008,
+  "stashSeeds": [
+   4013178839,
+   986946264,
+   1343880351,
+   2132865752,
+   1286690936,
+   1813766960,
+   1665291020,
+   3698111390
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 203008,
+  "stashSeeds": [
+   616210,
+   1885047357,
+   3512549324,
+   3192186037,
+   381018568,
+   540570908,
+   3387380468,
+   2936497870
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 204008,
+  "stashSeeds": [
+   2851906363,
+   1469439458,
+   218393874,
+   233608264,
+   2706161503,
+   344764386,
+   3330657022,
+   2429812584
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 205008,
+  "stashSeeds": [
+   3894808948,
+   1105526895,
+   923995629,
+   429503431,
+   3673711622,
+   2557974443,
+   602168439,
+   2418426534
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 206008,
+  "stashSeeds": [
+   4059551210,
+   2183264044,
+   607741235,
+   2151423684,
+   3476943899,
+   1445069653,
+   3992180561,
+   1240821209
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 207008,
+  "stashSeeds": [
+   3231204626,
+   1048473439,
+   3344647801,
+   2533898415,
+   1679737458,
+   1446097573,
+   4200019549,
+   3345627222
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 208008,
+  "stashSeeds": [
+   704221588,
+   3299922258,
+   3441471563,
+   1851429938,
+   3079274142,
+   2197596511,
+   2902122714,
+   1312050115
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 209008,
+  "stashSeeds": [
+   948595036,
+   140335489,
+   3988367173,
+   2392814170,
+   2611892661,
+   2812242054,
+   1941286069,
+   2384078366
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 210008,
+  "stashSeeds": [
+   1655585742,
+   49050032,
+   2408222584,
+   2137124390,
+   3194663,
+   2152244608,
+   1663183821,
+   4042207799
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 211008,
+  "stashSeeds": [
+   1303272016,
+   1490176559,
+   2731429779,
+   2412777025,
+   3664587087,
+   349217912,
+   4054532433,
+   3126334701
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 212008,
+  "stashSeeds": [
+   623486594,
+   3159471547,
+   1441146832,
+   3028467453,
+   1236796990,
+   3609171408,
+   2089476589,
+   79496108
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 213008,
+  "stashSeeds": [
+   3076844957,
+   1033402046,
+   2071796379,
+   3187979704,
+   254388689,
+   2133477584,
+   1314709308,
+   827092926
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 214008,
+  "stashSeeds": [
+   3520908478,
+   1977194037,
+   3463131434,
+   1175074269,
+   408288870,
+   1597734793,
+   1059108042,
+   2957236945
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 215008,
+  "stashSeeds": [
+   1259163801,
+   2107989230,
+   1543540280,
+   3242795774,
+   2042406366,
+   863821044,
+   470026828,
+   2867009471
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 216008,
+  "stashSeeds": [
+   100306946,
+   2663380385,
+   2852397629,
+   608618637,
+   4202144329,
+   1456332532,
+   405948279,
+   1257470011
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 217008,
+  "stashSeeds": [
+   3319350960,
+   3604021579,
+   1871495217,
+   2107252015,
+   37277854,
+   3902956287,
+   2934632530,
+   1775238120
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 218008,
+  "stashSeeds": [
+   2595165007,
+   3855386554,
+   1862079156,
+   3651452038,
+   1450495817,
+   4155272517,
+   3938352780,
+   3046054764
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 219008,
+  "stashSeeds": [
+   2126717363,
+   931844770,
+   3031427125,
+   3874683609,
+   3721338727,
+   1403115411,
+   3505194269,
+   1274856227
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 220008,
+  "stashSeeds": [
+   2387397802,
+   1800570238,
+   822198063,
+   275906528,
+   4007859899,
+   3007361875,
+   2461070020,
+   569609845
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 221008,
+  "stashSeeds": [
+   1681660002,
+   680155888,
+   3798727215,
+   3609229959,
+   2154388061,
+   4145266434,
+   3258303623,
+   67120977
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 201016,
+  "stashSeeds": [
+   3110700280,
+   1401600527,
+   3212443678,
+   3191784210,
+   2508280567,
+   46042505,
+   833499594,
+   255709256
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 202016,
+  "stashSeeds": [
+   759011260,
+   3955511770,
+   4185671609,
+   2126830843,
+   165907259,
+   1803044740,
+   1946086490,
+   2873800192
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 203016,
+  "stashSeeds": [
+   2741258509,
+   1505533928,
+   2630099415,
+   740274617,
+   2675964512,
+   3376040712,
+   1022843462,
+   1604109187
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 204016,
+  "stashSeeds": [
+   1893833922,
+   2344817395,
+   2409853355,
+   2569397745,
+   526832220,
+   75918614,
+   3908515862,
+   2672769112
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 205016,
+  "stashSeeds": [
+   1716950037,
+   4132859093,
+   1393391176,
+   898860635,
+   3810089232,
+   3565993508,
+   3961495236,
+   2568348747
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 206016,
+  "stashSeeds": [
+   1978306787,
+   1080174449,
+   4282053167,
+   418199052,
+   1030239918,
+   3127475121,
+   2940757058,
+   4056720841
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 207016,
+  "stashSeeds": [
+   2600465391,
+   1517908712,
+   3574099543,
+   3073144486,
+   428188632,
+   688805202,
+   147707430,
+   4052391633
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 208016,
+  "stashSeeds": [
+   3891584441,
+   3097334545,
+   2319317384,
+   1230664475,
+   553647654,
+   72874155,
+   3787643916,
+   1911248378
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 209016,
+  "stashSeeds": [
+   1143875648,
+   2971197949,
+   1295126197,
+   3561211815,
+   1384914283,
+   1470799521,
+   417979567,
+   1009132082
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 210016,
+  "stashSeeds": [
+   2593942157,
+   1407297006,
+   779176905,
+   1331395319,
+   1812267730,
+   805287081,
+   2005719559,
+   3298594878
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 211016,
+  "stashSeeds": [
+   3876905144,
+   823222071,
+   2008253852,
+   2121408344,
+   844783480,
+   3791898443,
+   912307223,
+   4273874406
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 212016,
+  "stashSeeds": [
+   1907029535,
+   594734029,
+   445627229,
+   3978551006,
+   1475507544,
+   482264897,
+   3887503153,
+   1661604851
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 213016,
+  "stashSeeds": [
+   2880643789,
+   1594755980,
+   2615369034,
+   1521252538,
+   1164438139,
+   3772527804,
+   323773980,
+   2106107865
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 214016,
+  "stashSeeds": [
+   2364650776,
+   1642436029,
+   1535698768,
+   977013190,
+   2142106039,
+   438415880,
+   99132587,
+   2506898579
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 215016,
+  "stashSeeds": [
+   3083640441,
+   1883326618,
+   1402410671,
+   4235184491,
+   1074083732,
+   464983974,
+   4276373126,
+   1897426122
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 216016,
+  "stashSeeds": [
+   3848105816,
+   3893070526,
+   1098497469,
+   3942637489,
+   3050153299,
+   2149745854,
+   3546655486,
+   2670554319
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 217016,
+  "stashSeeds": [
+   860605148,
+   1270297950,
+   634065460,
+   2797275701,
+   3430769363,
+   3889925159,
+   2234137066,
+   3216623316
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 218016,
+  "stashSeeds": [
+   3417944885,
+   1936701468,
+   3618064985,
+   1158424927,
+   1449815585,
+   440076733,
+   204802432,
+   3489934538
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 219016,
+  "stashSeeds": [
+   3235409381,
+   1964155593,
+   2409510238,
+   353306153,
+   4269265213,
+   4123457140,
+   564303006,
+   2773896554
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 220016,
+  "stashSeeds": [
+   2923028248,
+   3127749485,
+   1763675649,
+   3304600037,
+   4262349094,
+   4265614811,
+   808651653,
+   3047294716
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 221016,
+  "stashSeeds": [
+   2079735031,
+   3990333648,
+   3445631239,
+   953274456,
+   3132413341,
+   1163451709,
+   2862857677,
+   2484288574
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 201024,
+  "stashSeeds": [
+   3331318268,
+   3010949408,
+   1411369184,
+   3321249743,
+   262178838,
+   3291393676,
+   2074643713,
+   3827897109
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 202024,
+  "stashSeeds": [
+   912995574,
+   1503268076,
+   2222718663,
+   1804554072,
+   168153781,
+   2919270722,
+   498128265,
+   2453629039
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 203024,
+  "stashSeeds": [
+   3458502254,
+   2598525043,
+   2065810244,
+   366680656,
+   3510292415,
+   2288215572,
+   3620339498,
+   3079279307
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 204024,
+  "stashSeeds": [
+   1000860802,
+   658745313,
+   1915385350,
+   3527630070,
+   482082463,
+   2358252451,
+   1351101967,
+   2595161627
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 205024,
+  "stashSeeds": [
+   2987535584,
+   1114069225,
+   2965822770,
+   1421857990,
+   2358024532,
+   955079747,
+   2397915788,
+   456211273
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 206024,
+  "stashSeeds": [
+   1864428226,
+   3874262911,
+   2379533695,
+   2187514416,
+   3965232651,
+   124385667,
+   1627317743,
+   3876958890
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 207024,
+  "stashSeeds": [
+   3859077003,
+   2516507723,
+   848951907,
+   695049308,
+   4242173005,
+   2217240590,
+   1474734687,
+   2971029336
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 208024,
+  "stashSeeds": [
+   3588764203,
+   1393971635,
+   2940543049,
+   2920561921,
+   613443462,
+   2558086105,
+   3891737321,
+   2337120886
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 209024,
+  "stashSeeds": [
+   3136466156,
+   1151949400,
+   3862417592,
+   1892090937,
+   2117809928,
+   4130571052,
+   1811526360,
+   3788859714
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 210024,
+  "stashSeeds": [
+   204044959,
+   1398941583,
+   484512289,
+   3783283195,
+   1904351241,
+   1115809763,
+   1691420323,
+   365292656
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 211024,
+  "stashSeeds": [
+   3084421851,
+   3895383157,
+   122659101,
+   3244325510,
+   3881601403,
+   220192917,
+   3469885876,
+   419017167
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 212024,
+  "stashSeeds": [
+   3758840028,
+   1479172717,
+   4077896311,
+   3966671356,
+   177402464,
+   598277925,
+   3783893958,
+   3368064155
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 213024,
+  "stashSeeds": [
+   52556293,
+   1118532882,
+   1165776893,
+   3325579386,
+   3561221582,
+   728352924,
+   4179958321,
+   39914063
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 214024,
+  "stashSeeds": [
+   1153013109,
+   3257012205,
+   197949817,
+   969117448,
+   2117785458,
+   1914602465,
+   2452652407,
+   4028913
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 215024,
+  "stashSeeds": [
+   2792500418,
+   2200099054,
+   3793064442,
+   1609086400,
+   2289922907,
+   2498395086,
+   1291296926,
+   582450452
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 216024,
+  "stashSeeds": [
+   3369509498,
+   618534926,
+   4241666391,
+   1542316570,
+   482644791,
+   682834667,
+   1122834615,
+   410792850
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 217024,
+  "stashSeeds": [
+   1431290793,
+   2675192714,
+   1369115598,
+   2613082784,
+   2725217680,
+   1440347096,
+   2571380162,
+   1629285649
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 218024,
+  "stashSeeds": [
+   387267506,
+   4261208469,
+   1181888048,
+   2347769398,
+   449785749,
+   3446312972,
+   2256804515,
+   3269441476
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 219024,
+  "stashSeeds": [
+   535247395,
+   1846959274,
+   3815902999,
+   117768953,
+   2980482823,
+   300233579,
+   646258733,
+   1481495190
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 220024,
+  "stashSeeds": [
+   2633221432,
+   3551961490,
+   443764833,
+   193827572,
+   2598986440,
+   1155877218,
+   323438564,
+   718849173
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 221024,
+  "stashSeeds": [
+   3281598701,
+   571224587,
+   3712199735,
+   4030772303,
+   2440778174,
+   2899627076,
+   731764287,
+   3283620570
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 201032,
+  "stashSeeds": [
+   2164001665,
+   278653709,
+   1480592245,
+   1975267062,
+   2479699665,
+   1824286793,
+   4017059375,
+   1780350221
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 202032,
+  "stashSeeds": [
+   3495340522,
+   785048302,
+   282485722,
+   1790791678,
+   4154524665,
+   1444155078,
+   1076387704,
+   1435653929
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 203032,
+  "stashSeeds": [
+   4124473307,
+   3812500080,
+   3603955330,
+   3324515026,
+   3358553070,
+   3313371425,
+   188893441,
+   4192406050
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 204032,
+  "stashSeeds": [
+   2340241972,
+   1792470846,
+   3691474070,
+   1430738015,
+   515838342,
+   3125387602,
+   1995594459,
+   844273540
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 205032,
+  "stashSeeds": [
+   405060135,
+   1049474625,
+   28748484,
+   1231821761,
+   3180681502,
+   88738609,
+   1204659150,
+   3356361012
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 206032,
+  "stashSeeds": [
+   1826058250,
+   1470997622,
+   2319841478,
+   4262816968,
+   4104624347,
+   3739736055,
+   3229774386,
+   985707411
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 207032,
+  "stashSeeds": [
+   1792492914,
+   2835950073,
+   667976635,
+   2162767419,
+   964846608,
+   508961057,
+   1654813467,
+   337119967
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 208032,
+  "stashSeeds": [
+   3238955475,
+   4131065910,
+   1312803129,
+   2842822752,
+   901040320,
+   554794409,
+   2106657497,
+   55908791
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 209032,
+  "stashSeeds": [
+   1021319604,
+   690480390,
+   3046374711,
+   1613883325,
+   2266502948,
+   1293127637,
+   3452745830,
+   4002671957
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 210032,
+  "stashSeeds": [
+   2162662596,
+   2071100771,
+   973135321,
+   315227982,
+   114794741,
+   1039066412,
+   32025791,
+   1065640805
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 211032,
+  "stashSeeds": [
+   399290839,
+   1556034760,
+   707029928,
+   77883441,
+   624170442,
+   2783542522,
+   3785046100,
+   103110601
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 212032,
+  "stashSeeds": [
+   4265908066,
+   1495725975,
+   1868950055,
+   3355332659,
+   1348257783,
+   2974235708,
+   3258956517,
+   2259725879
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 213032,
+  "stashSeeds": [
+   2653630503,
+   3554258776,
+   1375215456,
+   3071625798,
+   49066069,
+   2339619920,
+   3927034546,
+   4124353041
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 214032,
+  "stashSeeds": [
+   433236327,
+   884165215,
+   1188887641,
+   1457281811,
+   2919016964,
+   332672373,
+   3161025865,
+   3322050853
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 215032,
+  "stashSeeds": [
+   1783058990,
+   3269411185,
+   2766760147,
+   3653039505,
+   3272944969,
+   668740525,
+   3156661288,
+   270239254
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 216032,
+  "stashSeeds": [
+   4077630237,
+   2034435305,
+   3912740716,
+   3583686657,
+   1159852622,
+   1703642709,
+   3963764897,
+   2436369151
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 217032,
+  "stashSeeds": [
+   896349877,
+   3328658665,
+   3784949186,
+   1295537657,
+   2007893250,
+   636397513,
+   1130907706,
+   1326017013
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 218032,
+  "stashSeeds": [
+   4162005642,
+   2972550439,
+   3505206676,
+   3775364225,
+   1179624541,
+   310034887,
+   3718082498,
+   86369317
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 219032,
+  "stashSeeds": [
+   1024867257,
+   3963922328,
+   2898322104,
+   1248641568,
+   3989034343,
+   2663159301,
+   2932752482,
+   3601889892
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 220032,
+  "stashSeeds": [
+   3483702444,
+   3698053026,
+   1121287324,
+   3875164311,
+   2840441822,
+   4084425621,
+   3927871995,
+   1563722558
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 221032,
+  "stashSeeds": [
+   189356724,
+   3876242573,
+   3692327835,
+   2124492021,
+   785042562,
+   1723757021,
+   3959746779,
+   1652503219
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 201040,
+  "stashSeeds": [
+   1444984817,
+   194455669,
+   2782093206,
+   799420712,
+   765243990,
+   2326603305,
+   436678804,
+   1113616350
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 202040,
+  "stashSeeds": [
+   2998330959,
+   2759702332,
+   2063360251,
+   2295682276,
+   2798227392,
+   1295257575,
+   1133565563,
+   306526690
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 203040,
+  "stashSeeds": [
+   4038816935,
+   979570127,
+   1849410226,
+   1442176282,
+   3536154444,
+   420956665,
+   3988330400,
+   3599439238
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 204040,
+  "stashSeeds": [
+   3878680512,
+   1844303037,
+   1438016616,
+   1573044932,
+   3658971622,
+   1084717633,
+   2238733875,
+   602581033
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 205040,
+  "stashSeeds": [
+   799523085,
+   1013451459,
+   2846347869,
+   3038414742,
+   1753634227,
+   677499726,
+   950967074,
+   2191114348
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 206040,
+  "stashSeeds": [
+   3199139859,
+   2361256893,
+   3584984967,
+   1493638925,
+   170151559,
+   2434999097,
+   430452214,
+   1068981277
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 207040,
+  "stashSeeds": [
+   1842691827,
+   1920888719,
+   1315036415,
+   3209286202,
+   3424754153,
+   2641221887,
+   1154662115,
+   562069844
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 208040,
+  "stashSeeds": [
+   4071248523,
+   1322885965,
+   1072759445,
+   2263946617,
+   4211084481,
+   1982533364,
+   1407883937,
+   4183653495
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 209040,
+  "stashSeeds": [
+   3153803450,
+   2470339365,
+   1328394687,
+   3239094253,
+   1812565798,
+   4171712582,
+   4241003304,
+   843953426
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 210040,
+  "stashSeeds": [
+   3088856260,
+   4114889432,
+   2225186877,
+   3032758459,
+   435495069,
+   2840507967,
+   2483643518,
+   2106695363
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 211040,
+  "stashSeeds": [
+   259556831,
+   3288842713,
+   2747442183,
+   678795081,
+   3926021150,
+   1131639864,
+   851084972,
+   4273066484
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 212040,
+  "stashSeeds": [
+   4258898287,
+   2627493408,
+   3203672002,
+   1605437648,
+   1583473086,
+   2386310267,
+   3488530268,
+   2198404884
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 213040,
+  "stashSeeds": [
+   1950990370,
+   3058734375,
+   1465986200,
+   665723892,
+   1775087052,
+   2558545839,
+   1237742273,
+   4073064709
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 214040,
+  "stashSeeds": [
+   802669557,
+   364231030,
+   2455515697,
+   3980649602,
+   120227036,
+   2299195315,
+   2145140638,
+   69077769
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 215040,
+  "stashSeeds": [
+   1176256987,
+   4153660759,
+   1451367577,
+   3055031151,
+   342079273,
+   777763385,
+   4183142937,
+   2590178639
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 216040,
+  "stashSeeds": [
+   3881698150,
+   1130576273,
+   1873266001,
+   2687692905,
+   4173884474,
+   1004732653,
+   3564573095,
+   3211795469
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 217040,
+  "stashSeeds": [
+   3044283213,
+   3292469937,
+   2309984862,
+   2946134424,
+   356884905,
+   3015368430,
+   3865339219,
+   738225545
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 218040,
+  "stashSeeds": [
+   1676412968,
+   4182429818,
+   1510325309,
+   778209647,
+   3301742363,
+   2884751462,
+   4234144097,
+   2210402558
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 219040,
+  "stashSeeds": [
+   3086713136,
+   888540620,
+   1206253476,
+   1357320798,
+   450052849,
+   1125544399,
+   2016916958,
+   1546682523
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 220040,
+  "stashSeeds": [
+   3488739779,
+   3224461664,
+   1763085268,
+   1759850446,
+   183798225,
+   1833982562,
+   4052698882,
+   2540923309
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 221040,
+  "stashSeeds": [
+   3299972877,
+   1240865139,
+   3731578948,
+   2882776267,
+   2951741559,
+   3520172562,
+   1270435376,
+   2717674100
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 201048,
+  "stashSeeds": [
+   4216362218,
+   1361616413,
+   2480208605,
+   2176293654,
+   1856160352,
+   963322623,
+   585444775,
+   4050855805
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 202048,
+  "stashSeeds": [
+   824941848,
+   297587349,
+   1901288714,
+   3401565110,
+   208605573,
+   3879558784,
+   1171871589,
+   769799827
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 203048,
+  "stashSeeds": [
+   2456195495,
+   1650523677,
+   859264446,
+   1318379537,
+   3896688248,
+   646955146,
+   1669016692,
+   3302890149
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 204048,
+  "stashSeeds": [
+   3423275287,
+   2964129693,
+   1196943454,
+   2427207553,
+   2382613187,
+   1888402722,
+   2786550765,
+   1858635584
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 205048,
+  "stashSeeds": [
+   3365844405,
+   1402440220,
+   1725468279,
+   862771013,
+   278308210,
+   3879382988,
+   2771762580,
+   843119975
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 206048,
+  "stashSeeds": [
+   3138489568,
+   3767936368,
+   2810226751,
+   2968325229,
+   2425610679,
+   873620999,
+   1899755334,
+   3563989462
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 207048,
+  "stashSeeds": [
+   1871596495,
+   1456421829,
+   3632687588,
+   1929645392,
+   2321104820,
+   3278876411,
+   1773338901,
+   1466806351
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 208048,
+  "stashSeeds": [
+   4026229898,
+   1787456701,
+   297310502,
+   4089830106,
+   690964738,
+   138974626,
+   3124834990,
+   1798227220
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 209048,
+  "stashSeeds": [
+   3093649712,
+   2694240032,
+   2288010607,
+   4028210993,
+   2220085563,
+   2063435477,
+   87172513,
+   2835741355
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 210048,
+  "stashSeeds": [
+   516368932,
+   975443291,
+   1361656293,
+   1288121735,
+   1105671061,
+   4162111319,
+   1468363591,
+   317079011
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 211048,
+  "stashSeeds": [
+   1976802509,
+   3897213958,
+   184007112,
+   2807980877,
+   1061329028,
+   4079736900,
+   3085134050,
+   3362879866
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 212048,
+  "stashSeeds": [
+   106786250,
+   103114175,
+   1990105722,
+   2638875917,
+   24011096,
+   2749128726,
+   969779305,
+   129152164
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 213048,
+  "stashSeeds": [
+   1798620329,
+   914135373,
+   3958072259,
+   1967151100,
+   320967331,
+   1207913192,
+   357845231,
+   3051766242
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 214048,
+  "stashSeeds": [
+   3837736887,
+   2248955038,
+   2782162689,
+   1673276188,
+   3954473676,
+   3444747271,
+   3437213271,
+   3909793668
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 215048,
+  "stashSeeds": [
+   2060577457,
+   2854000393,
+   3068358259,
+   2852129276,
+   147336721,
+   3242171904,
+   1234841802,
+   3511346148
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 216048,
+  "stashSeeds": [
+   3008113595,
+   2707862447,
+   4243511349,
+   1227918322,
+   3508902084,
+   1614548583,
+   2354547692,
+   3203648026
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 217048,
+  "stashSeeds": [
+   2630861723,
+   957862773,
+   2594977833,
+   3607594574,
+   3747923787,
+   2580274693,
+   682142870,
+   1682521062
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 218048,
+  "stashSeeds": [
+   1960427790,
+   2852859947,
+   2377201502,
+   369926104,
+   461205098,
+   2029485324,
+   2927275845,
+   226286302
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 219048,
+  "stashSeeds": [
+   390109383,
+   3100552673,
+   1338882235,
+   2438635559,
+   1505374502,
+   712497546,
+   3442152684,
+   2805285589
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 220048,
+  "stashSeeds": [
+   4147332309,
+   3566275135,
+   3428548400,
+   1066995598,
+   209811697,
+   4258034113,
+   850132934,
+   4039173375
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 221048,
+  "stashSeeds": [
+   477258214,
+   4225702296,
+   1717370712,
+   3133113518,
+   3098307427,
+   859792126,
+   1129396813,
+   1628629184
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 201056,
+  "stashSeeds": [
+   3896662172,
+   2020002826,
+   1908377738,
+   3017742878,
+   3561311916,
+   2634471117,
+   113313818,
+   1418740007
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 202056,
+  "stashSeeds": [
+   155236789,
+   4129901617,
+   3234614956,
+   1718188773,
+   1769632217,
+   1983778764,
+   1566311302,
+   3832524733
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 203056,
+  "stashSeeds": [
+   1361373881,
+   3429926461,
+   1702214503,
+   3031066478,
+   1654201509,
+   3635563427,
+   2620472383,
+   885280474
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 204056,
+  "stashSeeds": [
+   1012174650,
+   3150434937,
+   1868172290,
+   612394166,
+   2447664563,
+   1047959755,
+   121066496,
+   3979375317
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 205056,
+  "stashSeeds": [
+   2529846802,
+   1335013923,
+   727268166,
+   834491789,
+   1361756098,
+   252384766,
+   3696049794,
+   1390071227
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 206056,
+  "stashSeeds": [
+   2669439676,
+   1321848679,
+   3200865956,
+   446870094,
+   1301088353,
+   2133527790,
+   2290108458,
+   3831135304
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 207056,
+  "stashSeeds": [
+   1280429046,
+   3447044074,
+   3255019809,
+   2024033207,
+   1221548158,
+   2908254013,
+   1510673892,
+   689194048
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 208056,
+  "stashSeeds": [
+   3339313423,
+   1871785825,
+   2252193512,
+   510541487,
+   1158127592,
+   3217151540,
+   16140172,
+   4157315587
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 209056,
+  "stashSeeds": [
+   1370884510,
+   2622912200,
+   1130765104,
+   598441289,
+   4268905075,
+   1800469881,
+   3387745388,
+   288014830
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 210056,
+  "stashSeeds": [
+   2681215804,
+   1288716391,
+   1532510788,
+   1785378936,
+   3413568429,
+   4004691206,
+   2545448775,
+   911831264
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 211056,
+  "stashSeeds": [
+   2965681555,
+   1949021392,
+   864807629,
+   1697281312,
+   4168971546,
+   2933063435,
+   1078834333,
+   2537157676
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 212056,
+  "stashSeeds": [
+   1188801127,
+   3479231032,
+   3066172261,
+   3603674745,
+   116536754,
+   2727595592,
+   4159644825,
+   509506989
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 213056,
+  "stashSeeds": [
+   3621209683,
+   1596572658,
+   3910045292,
+   500208478,
+   3194096674,
+   2736871868,
+   1823735192,
+   4220272538
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 214056,
+  "stashSeeds": [
+   2190710659,
+   3620455591,
+   1715282534,
+   234173296,
+   2642280270,
+   3832016208,
+   26371478,
+   3698321657
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 215056,
+  "stashSeeds": [
+   3706154808,
+   1045224137,
+   2024776189,
+   1533983850,
+   1750806614,
+   863876689,
+   4054845739,
+   3037156621
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 216056,
+  "stashSeeds": [
+   4049658302,
+   2432418429,
+   3497699240,
+   4253562499,
+   561932370,
+   3285926500,
+   1067908152,
+   3866849742
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 217056,
+  "stashSeeds": [
+   2430892846,
+   1230603177,
+   3170840538,
+   160672814,
+   179890214,
+   3851759075,
+   841624569,
+   3455275710
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 218056,
+  "stashSeeds": [
+   1514104301,
+   1920398616,
+   3232561997,
+   4030907318,
+   3793640476,
+   2516268675,
+   233888417,
+   3365450852
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 219056,
+  "stashSeeds": [
+   3805595585,
+   2651391972,
+   287653700,
+   286450099,
+   3702963879,
+   865624142,
+   4246737687,
+   2812404745
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 220056,
+  "stashSeeds": [
+   595963889,
+   3633441203,
+   2403057373,
+   2158387143,
+   1609074834,
+   1235281438,
+   1841838290,
+   3058680429
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 221056,
+  "stashSeeds": [
+   782467616,
+   3359090318,
+   3232332276,
+   1160865568,
+   698872527,
+   35216771,
+   1666136433,
+   3412230817
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 201064,
+  "stashSeeds": [
+   1134137135,
+   2669214319,
+   945639081,
+   1974837876,
+   3175147620,
+   216862406,
+   2114976507,
+   2308207105
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 202064,
+  "stashSeeds": [
+   1965853887,
+   3162461609,
+   3923991621,
+   1337894058,
+   2884277550,
+   2390874036,
+   838892614,
+   4089142030
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 203064,
+  "stashSeeds": [
+   2126563413,
+   2703401403,
+   1628486695,
+   3899589087,
+   3358617158,
+   2960366781,
+   1439127699,
+   3245626249
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 204064,
+  "stashSeeds": [
+   2015969550,
+   3100941634,
+   3715342704,
+   2776414960,
+   2464684780,
+   2456313382,
+   51294166,
+   464272798
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 205064,
+  "stashSeeds": [
+   2405400698,
+   3109478719,
+   4230780297,
+   1127073983,
+   42238442,
+   334654386,
+   407157942,
+   3450059872
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 206064,
+  "stashSeeds": [
+   2672607649,
+   1079838890,
+   1846718248,
+   232165134,
+   4138534855,
+   3639704529,
+   1943634496,
+   438015934
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 207064,
+  "stashSeeds": [
+   1108479209,
+   1150530077,
+   3223157666,
+   3832175269,
+   124701908,
+   2485737158,
+   3299714772,
+   1096304018
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 208064,
+  "stashSeeds": [
+   3964252233,
+   1571839179,
+   1398372684,
+   674025602,
+   2759448451,
+   3657217467,
+   1777333451,
+   1813438131
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 209064,
+  "stashSeeds": [
+   2536595477,
+   3939238954,
+   1700595041,
+   1352795610,
+   4106854744,
+   1993046746,
+   2283478786,
+   3657969576
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 210064,
+  "stashSeeds": [
+   1272933216,
+   3432739465,
+   2214377973,
+   3468907854,
+   1922409602,
+   2604253275,
+   2296707352,
+   2627181912
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 211064,
+  "stashSeeds": [
+   2295674515,
+   4199069378,
+   822410579,
+   1937128121,
+   1902063781,
+   4112198157,
+   1053023976,
+   1954878278
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 212064,
+  "stashSeeds": [
+   3263326269,
+   4241761422,
+   2003121541,
+   1933113102,
+   1275189889,
+   3680047177,
+   2247504683,
+   3525913846
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 213064,
+  "stashSeeds": [
+   1630123762,
+   3398696166,
+   3672203550,
+   23638331,
+   2731158939,
+   1247385686,
+   499382072,
+   1108535218
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 214064,
+  "stashSeeds": [
+   364758196,
+   143281810,
+   883183073,
+   3112161120,
+   2233158595,
+   3591714313,
+   2009497262,
+   817326370
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 215064,
+  "stashSeeds": [
+   1025251084,
+   3740605996,
+   1730632685,
+   1469895571,
+   731109203,
+   1153682236,
+   3745427782,
+   151599985
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 216064,
+  "stashSeeds": [
+   3733472117,
+   374651104,
+   3487444045,
+   1951924274,
+   1478128914,
+   4075730359,
+   765598260,
+   3071327679
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 217064,
+  "stashSeeds": [
+   4116959749,
+   699771741,
+   856599876,
+   2069043807,
+   64621973,
+   3139493601,
+   2144543207,
+   1394953200
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 218064,
+  "stashSeeds": [
+   2403608238,
+   324838334,
+   2015928015,
+   3048531398,
+   821230299,
+   2629525009,
+   845282131,
+   358278351
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 219064,
+  "stashSeeds": [
+   102002007,
+   1736748882,
+   4083948423,
+   850465393,
+   2712915082,
+   3515228675,
+   486946682,
+   1372764275
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 220064,
+  "stashSeeds": [
+   1913598442,
+   1327699543,
+   3196767339,
+   2087479063,
+   3454990823,
+   3992200360,
+   2489383491,
+   2276438257
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 221064,
+  "stashSeeds": [
+   3956106401,
+   548176947,
+   2519894046,
+   3640180045,
+   2799477045,
+   2678253274,
+   4166227001,
+   3310870741
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 201072,
+  "stashSeeds": [
+   658431839,
+   1746070452,
+   4022973419,
+   4139227677,
+   2590436307,
+   2533274509,
+   223061008,
+   2235787476
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 202072,
+  "stashSeeds": [
+   3942689574,
+   761368122,
+   648381857,
+   347406728,
+   2711713297,
+   1471608095,
+   37016444,
+   3722852952
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 203072,
+  "stashSeeds": [
+   2732854763,
+   1249315699,
+   234157262,
+   2150107287,
+   889887948,
+   546422710,
+   4195613423,
+   3008681963
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 204072,
+  "stashSeeds": [
+   1885591859,
+   2119227868,
+   484680757,
+   2324512887,
+   3824626529,
+   2469154201,
+   2231834993,
+   1072296381
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 205072,
+  "stashSeeds": [
+   1216116728,
+   1589259606,
+   569762300,
+   1357236851,
+   3819971377,
+   4057065256,
+   3636026178,
+   20735014
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 206072,
+  "stashSeeds": [
+   1707498232,
+   2161225267,
+   223620324,
+   106575514,
+   407969745,
+   2703963580,
+   99531527,
+   3190011380
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 207072,
+  "stashSeeds": [
+   3673249910,
+   1085708716,
+   569363302,
+   4234249987,
+   570438254,
+   304128862,
+   3406915689,
+   4024619967
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 208072,
+  "stashSeeds": [
+   2516503659,
+   2241530094,
+   1989528211,
+   3241901053,
+   4153741092,
+   2505649043,
+   1022008150,
+   643449505
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 209072,
+  "stashSeeds": [
+   634483846,
+   206457102,
+   1003366593,
+   4167258298,
+   2287192622,
+   2941959036,
+   3775590569,
+   3985423462
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 210072,
+  "stashSeeds": [
+   2154341064,
+   2722847696,
+   1580317023,
+   2933485482,
+   2472997623,
+   497519857,
+   561378613,
+   2102454549
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 211072,
+  "stashSeeds": [
+   1934761383,
+   3938014721,
+   967554054,
+   2590048407,
+   3667367441,
+   4017614742,
+   267851921,
+   3417045498
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 212072,
+  "stashSeeds": [
+   3031060554,
+   1420181493,
+   1030285467,
+   1506214,
+   3405475504,
+   1576640861,
+   3341199636,
+   999115758
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 213072,
+  "stashSeeds": [
+   3809435704,
+   1871107657,
+   2473543307,
+   1397179238,
+   292238084,
+   1999688347,
+   926840371,
+   1391339737
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 214072,
+  "stashSeeds": [
+   946709842,
+   1792865470,
+   4252759343,
+   1501475748,
+   2494113615,
+   1940142475,
+   790743589,
+   607729938
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 215072,
+  "stashSeeds": [
+   3201656539,
+   4166640167,
+   1470228422,
+   3672927774,
+   3942728242,
+   2451142064,
+   872234487,
+   288717770
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 216072,
+  "stashSeeds": [
+   2892949282,
+   790765483,
+   2751693411,
+   2288143967,
+   3750132141,
+   1717459562,
+   3179513317,
+   1357501405
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 217072,
+  "stashSeeds": [
+   88193639,
+   1000071262,
+   1537377079,
+   3936860368,
+   2311771193,
+   3159331281,
+   1269378342,
+   274917822
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 218072,
+  "stashSeeds": [
+   917107726,
+   174188920,
+   1537926528,
+   2219912833,
+   485797750,
+   2305010587,
+   654662945,
+   1938385226
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 219072,
+  "stashSeeds": [
+   1813863824,
+   3604551364,
+   299503687,
+   3620258158,
+   1069054865,
+   1205805722,
+   1960111247,
+   1729353851
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 220072,
+  "stashSeeds": [
+   3163404026,
+   3667766949,
+   3321016289,
+   2669864070,
+   3247823884,
+   1088429055,
+   4081217804,
+   494069695
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 221072,
+  "stashSeeds": [
+   1035387350,
+   3693957483,
+   2847919816,
+   1886309304,
+   2946944897,
+   1281730066,
+   255077671,
+   3096313121
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 201080,
+  "stashSeeds": [
+   2924708536,
+   327321446,
+   2069239124,
+   2762985655,
+   3303877555,
+   342467398,
+   1462656390,
+   4262343121
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 202080,
+  "stashSeeds": [
+   2185624155,
+   1243382411,
+   875226237,
+   1934301659,
+   2090846153,
+   1544550608,
+   278711884,
+   287464576
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 203080,
+  "stashSeeds": [
+   1962418252,
+   51895620,
+   93278591,
+   1278358202,
+   2546376021,
+   3628132374,
+   1745649543,
+   163749000
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 204080,
+  "stashSeeds": [
+   3479978106,
+   3338424807,
+   3504933567,
+   3670764069,
+   3336130646,
+   3304541753,
+   1204674769,
+   196234266
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 205080,
+  "stashSeeds": [
+   3120706535,
+   3533114151,
+   543659687,
+   1032779502,
+   3697061544,
+   3773208945,
+   937939285,
+   2750342731
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 206080,
+  "stashSeeds": [
+   679809469,
+   3450364271,
+   696517915,
+   3895304338,
+   3738613749,
+   2802661984,
+   314640804,
+   3014031385
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 207080,
+  "stashSeeds": [
+   2233965298,
+   2720200419,
+   2215997122,
+   305356030,
+   2847575780,
+   4084047326,
+   2894585560,
+   2373755084
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 208080,
+  "stashSeeds": [
+   1143338089,
+   3197884066,
+   1265549529,
+   42280961,
+   2568816081,
+   2798988146,
+   3036202763,
+   1811568888
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 209080,
+  "stashSeeds": [
+   1645448208,
+   4202496086,
+   4170092609,
+   110802601,
+   3965121591,
+   3087150675,
+   822519879,
+   940504952
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 210080,
+  "stashSeeds": [
+   46141452,
+   376850506,
+   2092355729,
+   3275265216,
+   1518943666,
+   1457433040,
+   1328332989,
+   1461678808
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 211080,
+  "stashSeeds": [
+   1156144872,
+   947581791,
+   477271537,
+   1808271528,
+   4251461029,
+   1786296444,
+   941524749,
+   190912607
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 212080,
+  "stashSeeds": [
+   4112900349,
+   3261848769,
+   2024672219,
+   1589602788,
+   3951074406,
+   4269246941,
+   3775676948,
+   3237724972
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 213080,
+  "stashSeeds": [
+   3089055606,
+   3109255172,
+   3235454439,
+   484500122,
+   3790394999,
+   4244032036,
+   3489693634,
+   242919420
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 214080,
+  "stashSeeds": [
+   3565375759,
+   92332868,
+   2154639818,
+   3739114230,
+   287620969,
+   2482660193,
+   3691333667,
+   449451554
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 215080,
+  "stashSeeds": [
+   573406675,
+   866809612,
+   3821037106,
+   1256812260,
+   129235219,
+   1641445735,
+   4000477002,
+   1699214690
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 216080,
+  "stashSeeds": [
+   1688392318,
+   4159835727,
+   479566560,
+   635837530,
+   3222955456,
+   1701132529,
+   3453288146,
+   997762455
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 217080,
+  "stashSeeds": [
+   2794433773,
+   750916877,
+   1321126247,
+   690952571,
+   121743719,
+   3231917483,
+   3851835762,
+   518846630
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 218080,
+  "stashSeeds": [
+   453723585,
+   4102089527,
+   1002067910,
+   1638977332,
+   3442811001,
+   2967325034,
+   2847979247,
+   3004948154
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 219080,
+  "stashSeeds": [
+   26225643,
+   2470419598,
+   1257065202,
+   963967299,
+   2374781080,
+   3287946119,
+   3499597411,
+   2387776846
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 220080,
+  "stashSeeds": [
+   3861169187,
+   2179863086,
+   3868775938,
+   1897061893,
+   3497849589,
+   1822332718,
+   3178129995,
+   543997673
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 221080,
+  "stashSeeds": [
+   1426358483,
+   3261104110,
+   2475220923,
+   3563905537,
+   358230242,
+   1048946134,
+   2101740711,
+   4073470114
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 201088,
+  "stashSeeds": [
+   1551714422,
+   2030335961,
+   366701393,
+   1433916300,
+   2374326228,
+   1822257032,
+   3021855473,
+   1663212763
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 202088,
+  "stashSeeds": [
+   9631685,
+   923606213,
+   690607575,
+   1934609715,
+   4046334684,
+   1000923305,
+   1543080212,
+   2787094322
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 203088,
+  "stashSeeds": [
+   3349344793,
+   2338711099,
+   2335043374,
+   325045739,
+   650768626,
+   238481414,
+   3341217242,
+   3104609637
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 204088,
+  "stashSeeds": [
+   2755974422,
+   574111963,
+   250374517,
+   2452536034,
+   1535751722,
+   2645109174,
+   2610645346,
+   209843143
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 205088,
+  "stashSeeds": [
+   3530165927,
+   825924734,
+   4187974379,
+   2353570751,
+   1951627578,
+   3190257206,
+   1077967485,
+   1475652040
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 206088,
+  "stashSeeds": [
+   3669562181,
+   2030644260,
+   328957604,
+   4232797522,
+   386214726,
+   3063893916,
+   304445281,
+   1139263666
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 207088,
+  "stashSeeds": [
+   2392774386,
+   3879126934,
+   611564878,
+   1463318359,
+   314740522,
+   158434091,
+   2281341753,
+   3801525611
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 208088,
+  "stashSeeds": [
+   2603563487,
+   4152673094,
+   1135537881,
+   3523681427,
+   1749698725,
+   2645839184,
+   3292287887,
+   3060832179
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 209088,
+  "stashSeeds": [
+   654443287,
+   2201298902,
+   2498282590,
+   2824685357,
+   336652130,
+   2950625566,
+   3340626727,
+   156362073
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 210088,
+  "stashSeeds": [
+   2894074392,
+   4240622665,
+   137702854,
+   2072539513,
+   3328371098,
+   1743741178,
+   3620766573,
+   3872718238
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 211088,
+  "stashSeeds": [
+   3503381877,
+   1514460248,
+   1046383879,
+   2201027545,
+   3133488926,
+   3943701619,
+   4110484888,
+   1018717787
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 212088,
+  "stashSeeds": [
+   3773457778,
+   2222276209,
+   933035814,
+   1952552681,
+   2778733731,
+   2707987526,
+   3119659429,
+   1348617978
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 213088,
+  "stashSeeds": [
+   2049985734,
+   2469268821,
+   972732980,
+   1950451388,
+   3881283427,
+   1976071512,
+   3165644967,
+   3789288256
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 214088,
+  "stashSeeds": [
+   3203316224,
+   1287972118,
+   2136777593,
+   54213558,
+   757046203,
+   1974927014,
+   2762676119,
+   1323151351
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 215088,
+  "stashSeeds": [
+   73857425,
+   881812699,
+   643804752,
+   1958742329,
+   510611547,
+   2352937330,
+   2473936494,
+   2513259939
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 216088,
+  "stashSeeds": [
+   4188872285,
+   2288710241,
+   3060954319,
+   2816564742,
+   1639514964,
+   970473148,
+   409816274,
+   316207290
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 217088,
+  "stashSeeds": [
+   968913858,
+   3538435348,
+   1818256560,
+   2919977814,
+   4232089575,
+   206845819,
+   3088186940,
+   1503643437
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 218088,
+  "stashSeeds": [
+   3187860672,
+   93317519,
+   1079853043,
+   1579839806,
+   1114296065,
+   2769753846,
+   4250118853,
+   2276271796
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 219088,
+  "stashSeeds": [
+   3971205261,
+   1476909272,
+   2460511354,
+   3315809321,
+   1226993782,
+   3981008077,
+   2071447841,
+   2615371994
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 220088,
+  "stashSeeds": [
+   2575796878,
+   564882937,
+   1874410867,
+   232586898,
+   843895309,
+   362123673,
+   2028691748,
+   981884063
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 221088,
+  "stashSeeds": [
+   80612459,
+   1760212211,
+   315565755,
+   1401877558,
+   245071607,
+   814432901,
+   1024923315,
+   4117648161
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 201096,
+  "stashSeeds": [
+   31823959,
+   4252580082,
+   397468287,
+   460555699,
+   1125381426,
+   3440517464,
+   2500468635,
+   2208008993
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 202096,
+  "stashSeeds": [
+   3078563409,
+   3119778505,
+   1461549090,
+   3647348082,
+   2553740092,
+   319586062,
+   2508546621,
+   4111002953
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 203096,
+  "stashSeeds": [
+   1904137213,
+   409537190,
+   2489858882,
+   775465359,
+   3247128441,
+   3718545677,
+   1275543217,
+   2272373264
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 204096,
+  "stashSeeds": [
+   286359464,
+   1951369574,
+   581201286,
+   106533921,
+   3770470369,
+   2964468701,
+   3858408151,
+   3463161267
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 205096,
+  "stashSeeds": [
+   3353580070,
+   2760499030,
+   1770793011,
+   1145637815,
+   2272609459,
+   4294691007,
+   2663494903,
+   2690050718
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 206096,
+  "stashSeeds": [
+   3291860016,
+   245556741,
+   882923716,
+   3557706176,
+   1561226643,
+   2458957426,
+   845913245,
+   1350296818
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 207096,
+  "stashSeeds": [
+   2102264979,
+   4000395574,
+   2889962784,
+   2098495643,
+   2395962657,
+   2002612861,
+   3711045571,
+   2280811188
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 208096,
+  "stashSeeds": [
+   3507603331,
+   1690416543,
+   3859877147,
+   4002903075,
+   1314361563,
+   3478446195,
+   4197989877,
+   1695215769
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 209096,
+  "stashSeeds": [
+   2333171235,
+   1485921926,
+   2404562998,
+   2166999210,
+   923252601,
+   3379921317,
+   2663049522,
+   3512311872
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 210096,
+  "stashSeeds": [
+   1869528842,
+   2505770009,
+   2203555122,
+   2207257048,
+   2698892204,
+   3731814725,
+   731059872,
+   2220750851
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 211096,
+  "stashSeeds": [
+   93500469,
+   396168638,
+   3802347757,
+   1857994917,
+   1848286669,
+   794944741,
+   1861900312,
+   2038934849
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 212096,
+  "stashSeeds": [
+   2068834502,
+   3912772170,
+   2078106907,
+   3829062394,
+   432199050,
+   2283486114,
+   837575147,
+   876781553
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 213096,
+  "stashSeeds": [
+   2841937166,
+   3149262897,
+   2695571567,
+   2634013947,
+   1482657879,
+   1461895125,
+   569191040,
+   529444168
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 214096,
+  "stashSeeds": [
+   4012568301,
+   2700249471,
+   3309825224,
+   2768895610,
+   4150030682,
+   1943682232,
+   3655662183,
+   1803875374
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 215096,
+  "stashSeeds": [
+   974893,
+   3078581765,
+   1093421949,
+   276238735,
+   1929499372,
+   3378746922,
+   760450055,
+   2932985970
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 216096,
+  "stashSeeds": [
+   69958120,
+   1547082679,
+   1439861584,
+   3337985365,
+   127943433,
+   1280643892,
+   341184906,
+   2749093952
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 217096,
+  "stashSeeds": [
+   1018481669,
+   564843546,
+   1984153983,
+   2304595752,
+   403763200,
+   1906956606,
+   3115465540,
+   3368592746
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 218096,
+  "stashSeeds": [
+   2900087390,
+   342722670,
+   444603508,
+   2901391094,
+   3641488332,
+   1196124480,
+   2499940557,
+   3030289814
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 219096,
+  "stashSeeds": [
+   230734084,
+   3487259654,
+   1117665153,
+   3949718278,
+   2426307974,
+   3952074027,
+   155858993,
+   3270966397
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 220096,
+  "stashSeeds": [
+   2909265008,
+   886746596,
+   738125277,
+   304659731,
+   1299087353,
+   474392499,
+   995225682,
+   451619768
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 221096,
+  "stashSeeds": [
+   1093448751,
+   1833604022,
+   3340845081,
+   245154888,
+   392208533,
+   411887694,
+   3613975898,
+   4125434962
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 201104,
+  "stashSeeds": [
+   3041440667,
+   577826757,
+   628752797,
+   1804185638,
+   105414785,
+   4086608603,
+   2899383195,
+   182160478
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 202104,
+  "stashSeeds": [
+   2413320871,
+   3007877932,
+   177002855,
+   3937994362,
+   3524846020,
+   4104751829,
+   8513556,
+   217487337
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 203104,
+  "stashSeeds": [
+   140963895,
+   2175480487,
+   1313076736,
+   526730523,
+   2773709886,
+   584456340,
+   1037613736,
+   603602242
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 204104,
+  "stashSeeds": [
+   2574917440,
+   3230262811,
+   928696766,
+   1340111296,
+   2014671939,
+   3290790912,
+   527717848,
+   3981002711
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 205104,
+  "stashSeeds": [
+   199471922,
+   1576974060,
+   4044226226,
+   2421293685,
+   3355232710,
+   4218933933,
+   3804744229,
+   1776789876
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 206104,
+  "stashSeeds": [
+   882741485,
+   841623780,
+   3090103533,
+   3158985997,
+   160586871,
+   1700765108,
+   3182894434,
+   2799839075
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 207104,
+  "stashSeeds": [
+   3018229144,
+   175731113,
+   3973273999,
+   1790467625,
+   3146082423,
+   930212771,
+   1232950044,
+   1604188743
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 208104,
+  "stashSeeds": [
+   110893814,
+   3836482779,
+   4274735455,
+   1117764211,
+   3280219074,
+   4171258956,
+   3466860645,
+   3224700958
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 209104,
+  "stashSeeds": [
+   3537360398,
+   1285936436,
+   2703943124,
+   2516686560,
+   3008392880,
+   3755571335,
+   2702876917,
+   635961098
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 210104,
+  "stashSeeds": [
+   27614754,
+   3244828646,
+   2047806429,
+   2548272792,
+   4070538611,
+   2382260091,
+   3091633522,
+   2866700527
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 211104,
+  "stashSeeds": [
+   4215197114,
+   1802813345,
+   1025012338,
+   4029584461,
+   3153869334,
+   4285067800,
+   3918218773,
+   2270753740
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 212104,
+  "stashSeeds": [
+   2909414254,
+   1719946650,
+   3796343227,
+   3009960302,
+   584916035,
+   2747078659,
+   4045771708,
+   703757595
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 213104,
+  "stashSeeds": [
+   320304917,
+   1171182964,
+   665741861,
+   4061924494,
+   3906740587,
+   2011969081,
+   3987375245,
+   976666652
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 214104,
+  "stashSeeds": [
+   2380045142,
+   3529166102,
+   2628536369,
+   3066440851,
+   4012990431,
+   2139485970,
+   1948583404,
+   947103192
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 215104,
+  "stashSeeds": [
+   2240378039,
+   415619623,
+   1166943686,
+   832896052,
+   994836276,
+   1632715444,
+   3227298731,
+   3436173782
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 216104,
+  "stashSeeds": [
+   2151374328,
+   4128484615,
+   3635523881,
+   2325936691,
+   3423915328,
+   2438929255,
+   551053041,
+   417386887
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 217104,
+  "stashSeeds": [
+   1328955250,
+   2848248834,
+   58937076,
+   2104436416,
+   3030770734,
+   2603226928,
+   278862459,
+   321666240
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 218104,
+  "stashSeeds": [
+   448143670,
+   3540254123,
+   96721407,
+   825819637,
+   2283504071,
+   4090395907,
+   926503633,
+   1944109676
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 219104,
+  "stashSeeds": [
+   783051801,
+   365031412,
+   4087916673,
+   2904478245,
+   690114134,
+   732278120,
+   559825155,
+   753704607
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 220104,
+  "stashSeeds": [
+   3510868403,
+   639011030,
+   2899488864,
+   2021757041,
+   3671445375,
+   2317668806,
+   917129774,
+   1209499330
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 221104,
+  "stashSeeds": [
+   3437189254,
+   1106095930,
+   865721033,
+   3241010345,
+   139507718,
+   4052362813,
+   1244220468,
+   2853111929
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 201112,
+  "stashSeeds": [
+   975680168,
+   3842270611,
+   2561675070,
+   2155609359,
+   3234494641,
+   3626011165,
+   975245695,
+   865416333
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 202112,
+  "stashSeeds": [
+   1644842986,
+   1987884400,
+   3109395852,
+   462101531,
+   2633191268,
+   3225359138,
+   641844724,
+   1832975897
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 203112,
+  "stashSeeds": [
+   1611433181,
+   505699041,
+   1781491430,
+   863857546,
+   3712016628,
+   301563676,
+   60255647,
+   3603685751
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 204112,
+  "stashSeeds": [
+   561992203,
+   2876909058,
+   185235309,
+   2755286329,
+   962376850,
+   2438964842,
+   159504119,
+   722948658
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 205112,
+  "stashSeeds": [
+   1462417543,
+   615019125,
+   3058336351,
+   4150920653,
+   3554089209,
+   4108490665,
+   3635707003,
+   1722391051
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 206112,
+  "stashSeeds": [
+   1642011548,
+   3556801516,
+   142664085,
+   3844634951,
+   3572291784,
+   4070446572,
+   1697586693,
+   1376520265
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 207112,
+  "stashSeeds": [
+   719946725,
+   209257605,
+   3643948965,
+   546701513,
+   2829217834,
+   3527938482,
+   3717000450,
+   2015077901
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 208112,
+  "stashSeeds": [
+   1426898999,
+   1405893350,
+   757321545,
+   332905612,
+   442577280,
+   1737692739,
+   79083636,
+   4232275981
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 209112,
+  "stashSeeds": [
+   3005409851,
+   3110059681,
+   274076007,
+   1760169903,
+   2306402620,
+   2572291343,
+   2194288258,
+   750935988
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 210112,
+  "stashSeeds": [
+   1145536425,
+   2471260168,
+   2660564450,
+   1286420787,
+   3714721081,
+   2541750392,
+   1172834946,
+   1078055199
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 211112,
+  "stashSeeds": [
+   1137158999,
+   2474944511,
+   671414290,
+   599977373,
+   1305317070,
+   1310376171,
+   4077983003,
+   3757056720
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 212112,
+  "stashSeeds": [
+   3149098702,
+   529193465,
+   3193982200,
+   362223697,
+   208472098,
+   1122411289,
+   3599819701,
+   2745586154
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 213112,
+  "stashSeeds": [
+   2415019362,
+   4109895091,
+   1877050197,
+   2787783512,
+   1883891396,
+   959772362,
+   3920761776,
+   3725720015
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 214112,
+  "stashSeeds": [
+   2414273583,
+   2884450423,
+   1307729442,
+   3746587046,
+   902476579,
+   1550769486,
+   3546922003,
+   1472693445
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 215112,
+  "stashSeeds": [
+   3244147413,
+   3028275835,
+   4070218116,
+   969019353,
+   1210809392,
+   871321396,
+   309620294,
+   3235445669
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 216112,
+  "stashSeeds": [
+   2414568172,
+   1177648735,
+   3409564138,
+   2428473109,
+   1875249016,
+   3697092260,
+   2569744126,
+   3852183995
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 217112,
+  "stashSeeds": [
+   1194813596,
+   2853591284,
+   3518867608,
+   3756814544,
+   575144056,
+   1601108609,
+   3236727920,
+   3899097850
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 218112,
+  "stashSeeds": [
+   44047779,
+   461150500,
+   418673370,
+   3712701680,
+   4034195208,
+   3910876504,
+   3659461371,
+   1808736576
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 219112,
+  "stashSeeds": [
+   2341384580,
+   3690737778,
+   1849151840,
+   3897401745,
+   1374837249,
+   2275799655,
+   1999022830,
+   2494050217
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 220112,
+  "stashSeeds": [
+   805888158,
+   877514448,
+   556879870,
+   1912357434,
+   3019034921,
+   747506810,
+   3782864245,
+   3928102393
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 221112,
+  "stashSeeds": [
+   178651077,
+   2758241787,
+   4116813728,
+   2399879517,
+   1522805389,
+   1398134701,
+   609859857,
+   2366742110
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 1,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 201120,
+  "stashSeeds": [
+   1089944451,
+   1390681111,
+   1210179046,
+   2155892072,
+   2110491072,
+   2715382530,
+   2935120539,
+   928257307
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 2,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 202120,
+  "stashSeeds": [
+   3167606173,
+   1979038719,
+   1617924315,
+   2673263297,
+   1124057674,
+   2640336325,
+   510216143,
+   438093205
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 3,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 203120,
+  "stashSeeds": [
+   1335880612,
+   3568024603,
+   384292177,
+   1397859997,
+   1831630540,
+   2364806258,
+   1274648929,
+   2981637486
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 4,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 204120,
+  "stashSeeds": [
+   3680101039,
+   1301083813,
+   2730643513,
+   3350942760,
+   4265405247,
+   2383295411,
+   3349003211,
+   1760813563
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 5,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 205120,
+  "stashSeeds": [
+   1159531686,
+   1573104150,
+   2735857679,
+   4250992413,
+   3964090320,
+   152905140,
+   532607295,
+   1600464030
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 6,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 206120,
+  "stashSeeds": [
+   3422012429,
+   3478099805,
+   3482924983,
+   2167805511,
+   1617481984,
+   181437614,
+   3520298738,
+   2146623976
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 7,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 207120,
+  "stashSeeds": [
+   1235552087,
+   4050874481,
+   2155051386,
+   1158682215,
+   2744842833,
+   3962290551,
+   16823641,
+   3796913635
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 8,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 208120,
+  "stashSeeds": [
+   1783756038,
+   4011225385,
+   1018528197,
+   1283382108,
+   1423610017,
+   1945739391,
+   2999378782,
+   1151349622
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 9,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 209120,
+  "stashSeeds": [
+   1148368438,
+   2694391768,
+   673205372,
+   1571367081,
+   1833164649,
+   1260232200,
+   131150610,
+   4209903526
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 10,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 210120,
+  "stashSeeds": [
+   2943986606,
+   2804537451,
+   3950779616,
+   1411431249,
+   2027880597,
+   931167647,
+   3243305181,
+   329692168
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 11,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 211120,
+  "stashSeeds": [
+   452582122,
+   1490480953,
+   2551769215,
+   3926115277,
+   464269028,
+   2006439129,
+   1184899599,
+   1639149910
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 12,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 212120,
+  "stashSeeds": [
+   719629452,
+   256717339,
+   252884739,
+   374414015,
+   2567181148,
+   784759637,
+   3488141788,
+   2364767375
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 13,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 213120,
+  "stashSeeds": [
+   4022029300,
+   1200018351,
+   2174470473,
+   1025276621,
+   3381710973,
+   3911469739,
+   3459375537,
+   2948133649
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 14,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 214120,
+  "stashSeeds": [
+   2866083824,
+   4243727777,
+   877821347,
+   2251686545,
+   1451823363,
+   1174899138,
+   3920509532,
+   1355647442
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 15,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 215120,
+  "stashSeeds": [
+   3551860402,
+   2220680665,
+   2931959526,
+   1321128958,
+   2926128607,
+   1829845400,
+   3683576535,
+   3385496564
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 16,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 216120,
+  "stashSeeds": [
+   127594031,
+   593462968,
+   973584612,
+   2528370754,
+   1480503035,
+   2995640250,
+   1520105638,
+   1603980131
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 17,
+  "style": "ace",
+  "powers": "phase,decoy",
+  "runs": 8,
+  "indexBase": 217120,
+  "stashSeeds": [
+   1137749900,
+   2459471688,
+   2688618774,
+   3901127077,
+   1011259650,
+   4292489029,
+   1803764899,
+   2320422872
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 18,
+  "style": "ace",
+  "powers": "dash,decoy",
+  "runs": 8,
+  "indexBase": 218120,
+  "stashSeeds": [
+   917108090,
+   2174007279,
+   1129494425,
+   3936345705,
+   30939459,
+   1069385406,
+   3351045959,
+   1942711594
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 19,
+  "style": "ace",
+  "powers": "decoy,phase",
+  "runs": 8,
+  "indexBase": 219120,
+  "stashSeeds": [
+   785602016,
+   3944923331,
+   3758636168,
+   361646198,
+   2994580554,
+   1203635805,
+   3831109272,
+   2509758531
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 20,
+  "style": "ace",
+  "powers": "phase,dash",
+  "runs": 8,
+  "indexBase": 220120,
+  "stashSeeds": [
+   4161960898,
+   2883262926,
+   1765356609,
+   2850272880,
+   1655028986,
+   4202246932,
+   3465244524,
+   2121617269
+  ]
+ },
+ {
+  "profile": "rival-hard",
+  "bank": "jev-rival-hard-v1",
+  "slot": 21,
+  "style": "ace",
+  "powers": "dash,phase",
+  "runs": 8,
+  "indexBase": 221120,
+  "stashSeeds": [
+   3912036154,
+   4098360873,
+   449367155,
+   4292954350,
+   3997962861,
+   1546122656,
+   93710225,
+   3768710863
+  ]
+ }
+]

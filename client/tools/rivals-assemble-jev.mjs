@@ -128,13 +128,16 @@ export function writeJevBank(root, accepted, bankId = JEV_BANK_ID) {
 function main() {
   const IN = arg('in', 'tools/recordings');
   const wanted = arg('profile', 'rival');
-  const PROFILE = wanted === 'apex' ? 'apex' : ['hard', 'rival-hard'].includes(wanted) ? 'rival-hard' : 'rival';
+  const PROFILE = wanted === 'apex' ? 'apex' : ['hard', 'rival-hard'].includes(wanted) ? 'rival-hard'
+    : ['normal', 'rival'].includes(wanted) ? 'normal' : null;
+  if (!PROFILE) { console.error(`unknown Jev bank profile: ${wanted}`); process.exit(2); }
   const BANK_ID = PROFILE === 'apex' ? JEV_APEX_BANK_ID
     : PROFILE === 'rival-hard' ? JEV_RIVAL_HARD_BANK_ID : JEV_BANK_ID;
   const ROOT = arg('root', PROFILE === 'apex' ? JEV_APEX_BANK_ROOT
     : PROFILE === 'rival-hard' ? JEV_RIVAL_HARD_BANK_ROOT : JEV_BANK_ROOT);
   const DRY = !!arg('dry', false);
   const FRESH = !!arg('fresh', false);
+  const REQUIRED = Number(arg('require', 0));
   const v2 = resolve(ORDINARY_BANK_ROOT);
   const root = resolve(ROOT);
   if (root === v2 || root.startsWith(v2 + sep) || v2.startsWith(root + sep)) {
@@ -148,6 +151,11 @@ function main() {
   // --in was, so a bank built from a subfolder still points at its files.
   const captures = readCaptures(IN).map((c) => ({ ...c, file: relative('tools/recordings', join(IN, c.file)).split(sep).join('/') }));
   const { accepted, rejected, reimported } = selectJevBank(existing, captures, BANK_ID);
+  if (REQUIRED && accepted.length < REQUIRED) {
+    console.error(`refusing to write ${BANK_ID}: ${accepted.length}/${REQUIRED} required races accepted`);
+    process.exitCode = 1;
+    return;
+  }
   const kept = new Set(accepted.map((a) => a.record.recordingID));
   const report = {
     bank: BANK_ID, profile: PROFILE, root: ROOT, dry: DRY, fresh: FRESH, capturesExamined: captures.length,
