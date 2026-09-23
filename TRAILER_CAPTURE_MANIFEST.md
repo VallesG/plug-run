@@ -222,3 +222,11 @@ Replaces v2 (its overlay text is gone). Same style as the first vertical cut: ha
 - **Block Rivals:** the real entrance on a fresh profile (entered with the scene start the menu button uses once it unlocks): finding rival, Jev found, lobby picks and READY, countdown.
 - **Jev:** three of Jev's shipped runs played in the game's own rival replay viewer (`playRivalReplay`, what WATCH RIVAL opens), recorded with `jev-take.mjs`: `jev-v1/rec-undercroft-balanced-318015-xmh3zn` (decoy), `jev-v1/rec-switchback-stairs-balanced-320004-jztafe` (decoy and phase), `jev-rival-hard-v1/rec-low-end-rush-ace-9701-153bicc` (dash and phase). The DECOY / DASH / PHASE / BUNK! callouts are the viewer's own. Close-ups follow Jev's recorded position at 1.7x; the cold open and the catch follow the runner at 1.4x.
 - **Near misses:** runner 0.21 and 0.93 cells, Jev 0.83 cells, each with no hit in the next second.
+
+## Vertical cut v4 - 47.1s (`promo/trailers/plug-run-vertical-v4.mp4`) - current
+
+v3 with the Jev section replaced and one music bed (`gameplay_beat6`); built from `plan-v4.json`.
+
+- The four v3 Jev shots came from the replay viewer played on the menu scene, which never loads the wall and floor art, so walls drew as Phaser's missing-texture boxes. They are gone.
+- In their place: four moments from the Jev recording sessions' own videos of Jev playing the game as the runner (`client/tools/recordings/jev/rival-v1/video/`, git-ignored; the Rival Hard bank's sessions). Chosen at `jev-power-activated` events with no damage in the following 1.5s; each framed on the action at 1.35x and scaled up from 390x844. Their SFX are rebuilt from the same session's event log (power, pickup, damage). These clips have no per-frame telemetry, so the twitch screen does not apply to them.
+- `jev-take.mjs` now loads the race scene before playing a replay, so any future replay-viewer footage draws the real walls.

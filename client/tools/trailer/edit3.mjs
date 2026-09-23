@@ -83,7 +83,7 @@ function follow(sg) {
 mkdirSync(S + '/seg3', { recursive: true });
 const report = [];
 let bad = 0;
-for (const sg of plan.segments) if (sg.src) {
+for (const sg of plan.segments) if (sg.src && !sg.video) {
   const r = screen(sg);
   report.push({ note: sg.note, src: sg.src, from: sg.from, to: sg.to, seconds: +((sg.to - sg.from) / FPS).toFixed(2), ...r });
   if (r.fail) { bad++; console.log('REJECT', sg.note, '-', r.fail); }
@@ -97,7 +97,17 @@ let clock = 0;
 plan.segments.forEach((sg, i) => {
   const file = `${S}/seg3/${String(i).padStart(2, '0')}.mp4`;
   let D, input, vf = [];
-  if (sg.image) {
+  if (sg.video) {
+    // A Jev recording session's own video of Jev playing the game as the
+    // runner (phone-size, variable frame rate). Framed on the action and
+    // scaled up; its SFX are rebuilt from that session's event log.
+    D = sg.dur; input = ['-ss', sg.start.toFixed(3), '-t', D.toFixed(3), '-i', sg.video];
+    const vw = sg.vw || 390, vh = sg.vh || 844, z = sg.zoom || 1;
+    const cw = Math.round(vw / z / 2) * 2, ch = Math.round(cw * H / W / 2) * 2;
+    const x = Math.max(0, Math.min(vw - cw, Math.round(sg.cx * vw - cw / 2))), y = Math.max(0, Math.min(vh - ch, Math.round(sg.cy * vh - ch / 2)));
+    vf.push('fps=' + FPS, `crop=${cw}:${ch}:${x}:${y}`, `scale=${W}:${H}:flags=lanczos`);
+    for (const a of sg.sfx || []) if (a.t >= 0 && a.t < D * 1000) sfxEvents.push({ key: a.key, vol: a.vol, t: a.t + clock * 1000 });
+  } else if (sg.image) {
     D = sg.seconds; input = ['-loop', '1', '-framerate', String(FPS), '-t', String(D), '-i', sg.image];
     vf.push(`scale=${W}:${H}:force_original_aspect_ratio=increase`, `crop=${W}:${H}`, 'fade=t=in:st=0:d=0.35');
   } else {

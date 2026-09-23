@@ -13,6 +13,15 @@ const p = await b.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFa
 await p.goto('http://127.0.0.1:4178/', { waitUntil: 'load', timeout: 90000 });
 await p.waitForFunction(() => window.__plugRunGame?.scene?.getScene('MENU')?.sys?.isActive(), null, { timeout: 90000 });
 await p.waitForTimeout(2000);
+// The viewer draws each house with the game's wall and floor textures, which
+// the race scene loads. Load it once (as WATCH RIVAL always has it loaded),
+// then return to the quiet menu to play the replay on.
+await p.evaluate(() => window.__plugRunGame.scene.getScene('MENU').scene.start('RUNNER', { mode: 'pve', role: 'runner', runKind: 'journey' }));
+await p.waitForFunction(() => window.__plugRunGame.scene.getScene('RUNNER')?.sys?.isActive(), null, { timeout: 60000 });
+await p.waitForTimeout(3000);
+await p.evaluate(() => window.__plugRunGame.scene.getScene('RUNNER').scene.start('MENU'));
+await p.waitForFunction(() => window.__plugRunGame.scene.getScene('MENU')?.sys?.isActive(), null, { timeout: 60000 });
+await p.waitForTimeout(1500);
 const info = await p.evaluate(async ({ bank, rec, course }) => {
   const opp = await (await fetch(`/rivals/${bank}/courses/${course}/opponents.json`)).json();
   const list = Array.isArray(opp) ? opp : (opp.opponents || []);

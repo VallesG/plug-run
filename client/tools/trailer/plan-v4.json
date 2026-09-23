@@ -1,5 +1,5 @@
 {
- "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat5.wav",
+ "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat6.wav",
  "musicDb": -7,
  "segments": [
   {
@@ -121,36 +121,93 @@
    "note": "countdown into the race"
   },
   {
-   "src": "v3-jev-undercroft",
-   "from": 460,
-   "to": 541,
-   "follow": "jev",
-   "zoom": 1.7,
-   "note": "Jev decoy, close-up"
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/rival-v1/video/slot2-ace-phasedash-jev-1790062496610.mp4",
+   "start": 12.353,
+   "dur": 2.4,
+   "cx": 0.26,
+   "cy": 0.31,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 548,
+     "key": "ouch",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev dashes out from beside the Plug (Jev recording session slot2-ace-phasedash-jev-1790062496610)"
   },
   {
-   "src": "v3-jev-ace",
-   "from": 530,
-   "to": 599,
-   "follow": "jev",
-   "zoom": 1.7,
-   "note": "Jev dash, close-up"
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/rival-v1/video/slot1-ace-phasedash-jev-1790063064584.mp4",
+   "start": 33.293,
+   "dur": 2.4,
+   "cx": 0.59,
+   "cy": 0.71,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 1300,
+     "key": "phase",
+     "vol": 0.7
+    },
+    {
+     "t": 2216,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 2216,
+     "key": "spickup",
+     "vol": 0.7
+    }
+   ],
+   "note": "Jev phases past the Plug at a stash (Jev recording session slot1-ace-phasedash-jev-1790063064584)"
   },
   {
-   "src": "v3-jev-switchback",
-   "from": 195,
-   "to": 264,
-   "follow": "jev",
-   "zoom": 1.7,
-   "note": "Jev near miss 0.83 cells, close-up"
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/rival-v1/video/slot1-ace-phasedash-jev-1790062414679.mp4",
+   "start": 39.822,
+   "dur": 2.4,
+   "cx": 0.65,
+   "cy": 0.47,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev dash through the house (Jev recording session slot1-ace-phasedash-jev-1790062414679)"
   },
   {
-   "src": "v3-jev-ace",
-   "from": 970,
-   "to": 1036,
-   "follow": "jev",
-   "zoom": 1.7,
-   "note": "Jev phase, close-up"
+   "video": "C:/dev/plug-run/client/tools/recordings/jev/rival-v1/video/slot3-ace-phasedash-jev-1790062648954.mp4",
+   "start": 7.998,
+   "dur": 2.4,
+   "cx": 0.59,
+   "cy": 0.31,
+   "zoom": 1.35,
+   "sfx": [
+    {
+     "t": 1511,
+     "key": "pickup",
+     "vol": 0.8
+    },
+    {
+     "t": 1511,
+     "key": "spickup",
+     "vol": 0.7
+    },
+    {
+     "t": 1300,
+     "key": "dash",
+     "vol": 0.45
+    }
+   ],
+   "note": "Jev dashes onto a stash (Jev recording session slot3-ace-phasedash-jev-1790062648954)"
   },
   {
    "src": "v3-story-crossline",
