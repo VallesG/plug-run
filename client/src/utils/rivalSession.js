@@ -151,6 +151,11 @@ async function fetchJSON(url, { timeoutMs = FETCH_TIMEOUT_MS, maxBytes = 512 * 1
     const res = await fetch(url, { signal: ctrl?.signal, cache: 'default' });
     if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
     const text = await res.text();
+    // The site's SPA fallback (netlify.toml, and Vite in development) answers
+    // a missing file with index.html and a 200. That is a missing file.
+    if (/text\/html/i.test(res.headers?.get?.('content-type') || '') || /^\s*</.test(text)) {
+      const e = new Error('not found (HTML fallback)'); e.status = 404; throw e;
+    }
     if (text.length > maxBytes) throw new Error('payload too large');
     return JSON.parse(text);
   } finally { clearTimeout(timer); }

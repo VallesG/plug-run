@@ -34,7 +34,7 @@ export const BANK_TARGETS = Object.freeze({ 'jev-apex-v1': 128, 'jev-rival-hard-
 const BANK_NOTES = {
   'jev-apex-v1': 'Jev Apex — challenge only, outside ordinary matchmaking',
   'jev-rival-hard-v1': 'Jev Rival Hard — challenge only, outside ordinary matchmaking',
-  'jev-v1': 'normal Jev — ordinary matchmaking (reserved for the softer profile)',
+  'jev-v1': 'Normal Jev — ordinary matchmaking',
   v2: 'ordinary style bots (legacy, no longer recorded) — ordinary matchmaking'
 };
 

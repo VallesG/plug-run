@@ -303,6 +303,24 @@ const E = (record, replay = 'replays/' + record.recordingID + '.json') => ({ rec
   check('ordinary matchmaking never reads a challenge bank', fetched.every((u) => !/jev-rival-hard|jev-apex/.test(u)) && o.offers[0].entry.record.recordingID === 'normal-1');
   check('an unknown pool name is ordinary', s.rivalPoolName('Rival-Hard') === 'ordinary' && s.rivalPoolName('__proto__') === 'ordinary');
 
+  // The site's SPA fallback answers a missing bank file with index.html and a
+  // 200 (netlify.toml, and Vite in development). That is a missing file: no
+  // warning, no stand-in, and it is not asked again every search.
+  {
+    let htmlCalls = 0;
+    const warned = [];
+    const spa = load({}, { console: { warn: (...a) => warned.push(a.join(' ')) }, fetch: async (url) => {
+      htmlCalls++;
+      if (url.startsWith('/rivals/jev-v1/')) return { ok: true, headers: { get: () => 'application/json' },
+        text: async () => JSON.stringify({ schemaVersion: 1, rulesVersion: rules.RIVAL_RULES_VERSION, opponents: [E(rec('spa-1', true))] }) };
+      return { ok: true, status: 200, headers: { get: () => 'text/html; charset=utf-8' }, text: async () => '<!doctype html><html></html>' };
+    } });
+    const entries = await spa.loadRivalOpponents(courseA);
+    const again = await spa.loadRivalOpponents(courseA);
+    check('an HTML fallback for a missing bank file counts as no file', entries.map((e) => e.record.recordingID).join() === 'spa-1' && warned.length === 0, warned[0]);
+    check('and the answer is kept for the session', again === entries || (again.length === 1 && htmlCalls === 2));
+  }
+
   // A network failure is not cached: the next search asks again.
   let fail = true, calls = 0;
   const flaky = load({}, { fetch: async (url) => { calls++; if (fail) throw new Error('offline');
