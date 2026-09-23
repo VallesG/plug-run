@@ -1,0 +1,138 @@
+{
+ "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat6.wav",
+ "musicDb": -7,
+ "segments": [
+  {
+   "src": "v5-al1-d4",
+   "from": 792,
+   "to": 866,
+   "note": "cold open: dash"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 215,
+   "to": 254,
+   "screen": true,
+   "note": "YOU RUN WITH AFTERLIGHT"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 455,
+   "to": 489,
+   "screen": true,
+   "note": "Vee: clean line in, clean line out"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 497,
+   "to": 545,
+   "screen": true,
+   "note": "Sol: timing curb splits"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 637,
+   "to": 695,
+   "screen": true,
+   "note": "Sol: Sol-id"
+  },
+  {
+   "src": "v5-al1-d4",
+   "from": 364,
+   "to": 430,
+   "note": "phase"
+  },
+  {
+   "src": "v5-al1-d4",
+   "from": 77,
+   "to": 123,
+   "screen": true,
+   "note": "Sol: runner is cooking"
+  },
+  {
+   "src": "v5-al1-d4",
+   "from": 147,
+   "to": 201,
+   "screen": true,
+   "note": "Vee: do not call people cooking on comms"
+  },
+  {
+   "src": "v5-al1-d4",
+   "from": 217,
+   "to": 277,
+   "screen": true,
+   "note": "Sol: performing above thermal expectations"
+  },
+  {
+   "src": "v3-story-afterlight",
+   "from": 1100,
+   "to": 1172,
+   "note": "escape to the car"
+  },
+  {
+   "src": "v5-al6-d9",
+   "from": 10,
+   "to": 72,
+   "screen": true,
+   "note": "Sol: all glow, no weight"
+  },
+  {
+   "src": "v5-al6-d9",
+   "from": 217,
+   "to": 277,
+   "screen": true,
+   "note": "Vee: making it a shirt"
+  },
+  {
+   "src": "v5-al6-d9",
+   "from": 287,
+   "to": 329,
+   "screen": true,
+   "note": "Sol: diabolical"
+  },
+  {
+   "src": "v5-al10-d9",
+   "from": 806,
+   "to": 872,
+   "note": "phase"
+  },
+  {
+   "src": "v5-al10-d9",
+   "from": 357,
+   "to": 417,
+   "screen": true,
+   "note": "Sol: CONNECT APPROVED"
+  },
+  {
+   "src": "v5-al10-d9",
+   "from": 497,
+   "to": 563,
+   "screen": true,
+   "note": "Sol: the Connect"
+  },
+  {
+   "src": "v5-al10-d9",
+   "from": 707,
+   "to": 761,
+   "screen": true,
+   "note": "Vee: do not compliment the monopoly"
+  },
+  {
+   "src": "v5-al10-d15",
+   "from": 10,
+   "to": 72,
+   "screen": true,
+   "note": "Vee: two Plugs behind this door"
+  },
+  {
+   "src": "v5-al10-d15",
+   "from": 203,
+   "to": 278,
+   "note": "house 15, two Plugs"
+  },
+  {
+   "image": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/promo/plug-run-poster-1080x1920.png",
+   "seconds": 3
+  }
+ ]
+}

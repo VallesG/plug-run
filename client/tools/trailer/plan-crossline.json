@@ -1,0 +1,145 @@
+{
+ "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat6.wav",
+ "musicDb": -7,
+ "segments": [
+  {
+   "src": "v5-cl10-d15",
+   "from": 178,
+   "to": 246,
+   "note": "cold open: phase in house 15, two Plugs"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 213,
+   "to": 254,
+   "screen": true,
+   "note": "YOU RUN WITH CROSSLINE"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 455,
+   "to": 489,
+   "screen": true,
+   "note": "Switch: bag, curb, car"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 495,
+   "to": 551,
+   "screen": true,
+   "note": "Mags: ghosts do not have this much aura"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 1512,
+   "to": 1584,
+   "note": "escape to the car"
+  },
+  {
+   "src": "v5-cl1-d9",
+   "from": 10,
+   "to": 72,
+   "screen": true,
+   "note": "Mags: violet case, beat-up scanner"
+  },
+  {
+   "src": "v5-cl1-d9",
+   "from": 77,
+   "to": 125,
+   "screen": true,
+   "note": "Switch: that channel has been dead for years"
+  },
+  {
+   "src": "v5-cl1-d9",
+   "from": 147,
+   "to": 199,
+   "screen": true,
+   "note": "Mags: it just said our street name"
+  },
+  {
+   "src": "v5-cl1-d9",
+   "from": 217,
+   "to": 257,
+   "screen": true,
+   "note": "Switch: bring it out. Now."
+  },
+  {
+   "src": "v5-cl1-d9",
+   "from": 374,
+   "to": 440,
+   "note": "phase"
+  },
+  {
+   "src": "v5-cl3-d10",
+   "from": 217,
+   "to": 265,
+   "screen": true,
+   "note": "Mags: it has no battery"
+  },
+  {
+   "src": "v5-cl3-d10",
+   "from": 287,
+   "to": 327,
+   "screen": true,
+   "note": "Switch: I know"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 2158,
+   "to": 2224,
+   "note": "dash"
+  },
+  {
+   "src": "v3-story-crossline",
+   "from": 1652,
+   "to": 1706,
+   "screen": true,
+   "note": "Mags: the runner is lowkey eating"
+  },
+  {
+   "src": "v5-cl10-d9",
+   "from": 10,
+   "to": 60,
+   "screen": true,
+   "note": "Mags: relay log, destination Copper Bay"
+  },
+  {
+   "src": "v5-cl10-d9",
+   "from": 77,
+   "to": 117,
+   "screen": true,
+   "note": "Switch: they do not know us"
+  },
+  {
+   "src": "v5-cl10-d9",
+   "from": 147,
+   "to": 199,
+   "screen": true,
+   "note": "Mags: page one says CROSSLINE"
+  },
+  {
+   "src": "v5-cl10-d9",
+   "from": 217,
+   "to": 261,
+   "screen": true,
+   "note": "Switch: I withdraw the statement"
+  },
+  {
+   "src": "v5-cl10-d15",
+   "from": 10,
+   "to": 72,
+   "screen": true,
+   "note": "Switch: house 15 has two Plugs"
+  },
+  {
+   "src": "v5-cl10-d15",
+   "from": 625,
+   "to": 695,
+   "note": "decoy in house 15"
+  },
+  {
+   "image": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/promo/plug-run-poster-1080x1920.png",
+   "seconds": 3
+  }
+ ]
+}

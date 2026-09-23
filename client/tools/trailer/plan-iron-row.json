@@ -1,0 +1,152 @@
+{
+ "music": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/client/public/audio/gameplay_beat6.wav",
+ "musicDb": -7,
+ "segments": [
+  {
+   "src": "v5-ir10-d15",
+   "from": 2090,
+   "to": 2160,
+   "note": "cold open: bullet 0.18 cells, house 15"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 213,
+   "to": 254,
+   "screen": true,
+   "note": "YOU RUN WITH IRON ROW"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 455,
+   "to": 489,
+   "screen": true,
+   "note": "Brick: bag to trunk"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 490,
+   "to": 544,
+   "screen": true,
+   "note": "Rook: good luck, in her special little way"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 575,
+   "to": 611,
+   "screen": true,
+   "note": "Brick: I did not"
+  },
+  {
+   "src": "v3-story-ironrow",
+   "from": 1206,
+   "to": 1276,
+   "note": "escape to the car"
+  },
+  {
+   "src": "v5-ir1-d9",
+   "from": 147,
+   "to": 205,
+   "screen": true,
+   "note": "Rook: do not let Brick-"
+  },
+  {
+   "src": "v5-ir1-d9",
+   "from": 217,
+   "to": 247,
+   "screen": true,
+   "note": "Brick: cute"
+  },
+  {
+   "src": "v5-ir1-d9",
+   "from": 287,
+   "to": 345,
+   "screen": true,
+   "note": "Rook: that is your scary voice"
+  },
+  {
+   "src": "v5-ir4-d9",
+   "from": 523,
+   "to": 589,
+   "note": "phase"
+  },
+  {
+   "src": "v5-ir4-d9",
+   "from": 147,
+   "to": 199,
+   "screen": true,
+   "note": "Rook: suddenly feel underpaid"
+  },
+  {
+   "src": "v5-ir4-d9",
+   "from": 217,
+   "to": 257,
+   "screen": true,
+   "note": "Brick: you are underpaid"
+  },
+  {
+   "src": "v5-ir4-d9",
+   "from": 287,
+   "to": 317,
+   "screen": true,
+   "note": "Rook: thank you"
+  },
+  {
+   "src": "v5-ir4-d9",
+   "from": 357,
+   "to": 403,
+   "screen": true,
+   "note": "Brick: because you work for me"
+  },
+  {
+   "src": "v5-ir9-d13",
+   "from": 680,
+   "to": 750,
+   "note": "escape"
+  },
+  {
+   "src": "v5-ir9-d13",
+   "from": 217,
+   "to": 279,
+   "screen": true,
+   "note": "Brick: crime should look like crime"
+  },
+  {
+   "src": "v5-ir10-d9",
+   "from": 147,
+   "to": 205,
+   "screen": true,
+   "note": "Rook: ready for Copper Bay work"
+  },
+  {
+   "src": "v5-ir10-d9",
+   "from": 287,
+   "to": 325,
+   "screen": true,
+   "note": "Rook: I asked his budget"
+  },
+  {
+   "src": "v5-ir10-d9",
+   "from": 357,
+   "to": 395,
+   "screen": true,
+   "note": "Brick: of course you did"
+  },
+  {
+   "src": "v5-ir10-d15",
+   "from": 10,
+   "to": 72,
+   "screen": true,
+   "note": "Brick: two Plugs in house 15"
+  },
+  {
+   "src": "v5-ir10-d15",
+   "from": 1858,
+   "to": 1930,
+   "note": "escape from house 15"
+  },
+  {
+   "image": "C:/Users/GilValles/AppData/Local/Temp/claude/C--dev-plug-run/e704c0bf-7361-41c1-8936-be1d1b4545ab/scratchpad/wt-trailer/promo/plug-run-poster-1080x1920.png",
+   "seconds": 3
+  }
+ ]
+}

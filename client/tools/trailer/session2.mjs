@@ -16,7 +16,7 @@ const EXE = process.env.CHROMIUM;
 // CALM: the same bot, deciding less often and committing to dodges longer, so
 // it moves like a person rather than dithering. Bot settings only.
 const CALM = 'bot=1&replanMs=260&wrongTurnChance=0.02&hesitateChance=0.01&dodgeCommitMs=450&dodgeRestMs=900';
-const QUERY = { story: CALM, deaths: 'bot=1&dangerCells=2&laneToleranceCells=0.25&wrongTurnChance=0.18', rivals: CALM, watch: CALM }[TAKE];
+const QUERY = { story: CALM, deaths: 'bot=1&dangerCells=2&laneToleranceCells=0.25&wrongTurnChance=0.18', rivals: CALM, watch: CALM, result: CALM + '&modalDelayMs=4000' }[TAKE];
 const NAME = process.env.NAME || TAKE;
 const CREW = process.env.CREW ? new RegExp(process.env.CREW, 'i') : null;
 const COURSE_SHIFT = Number(process.env.COURSE_SHIFT || 0);
@@ -70,17 +70,20 @@ if (TAKE === 'story') {
   await p.evaluate(INSTALL_AUDIO_LOG).catch(() => {});
   take = await captureTake(p, { seconds: Number(process.env.GS || 120), out: S + '/v2-deaths.mp4', w: 1080, h: 1920, label: 'deaths',
     tick: gateTick(40, /RETRY|AGAIN|TRY|LISTEN|NEXT|>>|CONTINUE|VIEW|RUN|START|SWAP/i) });
-} else if (TAKE === 'watch') {
+} else if (TAKE === 'watch' || TAKE === 'result') {
   // Race in real time, off camera; film the result and Jev's WATCH RIVAL replay.
   await p.evaluate(() => window.__plugRunGame.scene.getScene('MENU').scene.start('RUNNER', { mode: 'pve', role: 'runner', runKind: 'rivals' }));
   let shifts = 0, polls = 0;
   for (;;) {
-    await p.waitForTimeout(1200);
+    await p.waitForTimeout(TAKE === 'result' ? 250 : 1200);
     const st = await state();
     if (st.result) break;
     if (st.stage === 'block') await click(/LOOK|FIND|RACE|SEARCH|START|BLOCK/i);
     if (st.stage === 'selecting') {
       if (shifts < COURSE_SHIFT) { await click(/^›$/); shifts++; continue; }
+      // The result take films the scoreboard; a scratch profile has no player
+      // identity, so untick SHARE MY RUN (a player's choice) rather than show a failed share.
+      if (TAKE === 'result' && await p.evaluate(() => window.__plugRunGame.scene.getScene('RUNNER')?.rivals?.race?.lobby?.share === true)) { await click(/SHARE MY RUN|✓/); continue; }
       const have = await p.evaluate(() => window.__plugRunGame.scene.getScene('RUNNER')?.rivals?.race?.lobby?.powers || []);
       await click(have.length >= 2 ? /READY/ : !have.includes('dash') ? /^DASH$/ : /^DECOY$/);
     }
@@ -88,18 +91,18 @@ if (TAKE === 'story') {
     // A bot wedged on one house can race forever. After ~3 minutes, do what a
     // player would: settings gear, QUIT RACE. Once the rival has finished that
     // is scored as a loss and the normal result, with WATCH RIVAL, appears.
-    if (st.status === 'racing' && polls >= 150 && polls % 10 === 0) {
+    if (st.status === 'racing' && polls >= (TAKE === 'result' ? 720 : 150) && polls % 10 === 0) {
       const r = await probe();
       const q = (r.hits || []).find(x => /QUIT RACE/.test(x.label));
       if (q) { await p.mouse.click(q.x, q.y); console.log('quit race'); continue; }
       const gear = (r.hits || []).find(x => x.x < 70 && x.y < 70);
       if (gear) { await p.mouse.click(gear.x, gear.y); await p.waitForTimeout(600); const r2 = await probe(); const q2 = (r2.hits || []).find(x => /QUIT RACE/.test(x.label)); if (q2) { await p.mouse.click(q2.x, q2.y); console.log('quit race via gear'); } }
     }
-    if (polls > 600) throw new Error('race never finished');
+    if (polls > (TAKE === 'result' ? 2400 : 600)) throw new Error('race never finished');
   }
   console.log('race over', JSON.stringify(await state()));
-  await p.waitForTimeout(1500);
-  let pressed = null;
+  if (TAKE !== 'result') await p.waitForTimeout(1500);
+  let pressed = TAKE === 'result' ? true : null;
   take = await captureTake(p, { seconds: Number(process.env.GS || 110), out: S + '/v3-' + NAME + '.mp4', w: 1080, h: 1920, label: 'watch',
     tick: async (i) => {
       if (i % 30 === 0) await p.evaluate(INSTALL_AUDIO_LOG).catch(() => {});
