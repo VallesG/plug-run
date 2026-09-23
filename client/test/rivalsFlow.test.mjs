@@ -742,7 +742,7 @@ console.log('rival result scoreboard: '+passed+' total assertions passed');
   sharedRuns.length=0;
   const shared=race7(true);
   check('a finished race the player opted to share is sent once',sharedRuns.length===1&&shared.st.result==='win');
-  check('with its seven clears and full replay',sharedRuns[0].record.clearTimes.length===7&&sharedRuns[0].bundle.segments.length===7&&sharedRuns[0].userIds.join()==='user-1,local-1');
+  check('with its seven clears and full replay',sharedRuns[0].record.clearTimes.length===7&&sharedRuns[0].bundle.segments.length===7&&sharedRuns[0].userIds.join()==='local-1,user-1'&&sharedRuns[0].localId==='local-1');
   check('the result says it is being shared',shared.st.shareStatus==='sending');
   await Promise.resolve();await Promise.resolve();await Promise.resolve();
   check('then that it was',shared.st.shareStatus==='shared');

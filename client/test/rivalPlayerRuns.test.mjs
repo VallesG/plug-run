@@ -214,6 +214,37 @@ const body = (run, extra = {}) => JSON.stringify({ userId: 'user-1', token: 'tok
   check('the submission only ever stores pending runs, never files', fn.includes('submitPlayerRun') && !/node:fs|writeFile/.test(fn));
 }
 
+/* ---------------- the game's side: getting an identity to share with ---------------- */
+{
+  const apiSource = readFileSync(new URL('../src/utils/api.js', import.meta.url), 'utf8').replace(/^export /gm, '');
+  const makeApi = (answers, stored = {}) => {
+    const calls = [], ls = { ...stored };
+    const fetch = async (url, opts) => {
+      calls.push({ url, body: opts?.body ? JSON.parse(opts.body) : null });
+      const a = answers.shift();
+      return { ok: a.status === 200, status: a.status, json: async () => a.body, text: async () => JSON.stringify(a.body) };
+    };
+    const localStorage = { getItem: (k) => ls[k] ?? null, setItem: (k, v) => { ls[k] = v; } };
+    const api = new Function('fetch', 'localStorage', 'AbortController', 'setTimeout', 'clearTimeout',
+      apiSource + '\nreturn { submitRivalRun };')(fetch, localStorage, AbortController, setTimeout, clearTimeout);
+    return { api, calls, ls };
+  };
+  const payload = { userIds: ['local-9', 'old-9'], localId: 'local-9', record: { r: 1 }, bundle: { b: 1 } };
+  // No token on this browser: fetch the identity, then send once.
+  let w = makeApi([{ status: 200, body: { userId: 'local-9', username: 'NeonFox', token: 'tok-9' } }, { status: 200, body: { ok: true } }]);
+  let r = await w.api.submitRivalRun(payload);
+  check('a browser with no token gets its identity, then shares', r.ok && w.calls.length === 2 && /action=provision/.test(w.calls[0].url) &&
+    w.calls[0].body.seedUserId === 'local-9' && w.calls[1].body.token === 'tok-9' && w.ls.pr_lb_token === 'tok-9');
+  // A stale token the server does not know: refresh once, then retry.
+  w = makeApi([{ status: 403, body: { ok: false } }, { status: 200, body: { userId: 'local-9', token: 'tok-new' } }, { status: 200, body: { ok: true } }], { pr_lb_token: 'stale' });
+  r = await w.api.submitRivalRun(payload);
+  check('a stale token is refreshed once and the share retried', r.ok && w.calls.length === 3 && w.calls[2].body.token === 'tok-new');
+  // A run that fails the checks is not retried.
+  w = makeApi([{ status: 422, body: { ok: false, error: 'bad' } }], { pr_lb_token: 'tok' });
+  r = await w.api.submitRivalRun(payload);
+  check('a run that fails the checks is not retried', !r.ok && w.calls.length === 1 && /422/.test(r.error));
+}
+
 console.log = quiet;
 console.log('');
 if (failures.length) { console.log(`rival player runs: ${passed} passed, ${failures.length} FAILED`); failures.forEach((f) => console.log('  - ' + f)); process.exit(1); }

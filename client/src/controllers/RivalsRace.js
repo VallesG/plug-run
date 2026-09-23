@@ -767,7 +767,7 @@ export default class RivalsRace {
     const race=this.race;
     race.shareStatus='sending';
     let local=null;try{local=getCurrentUserSync()?.id;}catch{}
-    Promise.resolve(submitRivalRun({userIds:[getUserID(),local],record:own.record,bundle:own.bundle}))
+    Promise.resolve(submitRivalRun({userIds:[local,getUserID()],localId:local,record:own.record,bundle:own.bundle}))
       .catch(()=>({ok:false}))
       .then(res=>{
         race.shareStatus=res?.ok?'shared':'failed';

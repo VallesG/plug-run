@@ -107,18 +107,33 @@ export async function restoreIdentity(recoveryCode) {
  * server checks it, names it by the player's display name, and holds it for
  * review. Resolves { ok, error? }; never throws.
  */
-export async function submitRivalRun({ userIds, record, bundle }) {
-  const token = getToken();
+export async function submitRivalRun({ userIds, localId = null, record, bundle }) {
   const ids = [...new Set(userIds || [])].filter(Boolean);
-  if (!ids.length || !token) return { ok: false, error: 'no identity' };
+  const send = async () => {
+    const token = getToken();
+    if (!ids.length || !token) return { ok: false, error: 'no identity' };
+    try {
+      return await tryFetch('/.netlify/functions/rivals-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: ids[0], userIds: ids.slice(0, 2), token, consent: true, record, bundle }),
+        keepalive: false
+      }, 15000);
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e).slice(0, 120) };
+    }
+  };
+  const first = await send();
+  // No token on this browser, or one the server does not know: fetch this
+  // browser's leaderboard identity (the same idempotent setup the menu uses,
+  // which returns the existing token for this id) and try once more.
+  if (first.ok || !localId || !/no identity|HTTP 40[13]/.test(String(first.error || ''))) return first;
   try {
-    return await tryFetch('/.netlify/functions/rivals-run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: ids[0], userIds: ids, token, consent: true, record, bundle }),
-      keepalive: false
-    }, 15000);
+    const identity = await provisionIdentity({ seedUserId: localId });
+    if (identity?.userId) ids.unshift(identity.userId);
   } catch (e) {
-    return { ok: false, error: String(e?.message || e).slice(0, 120) };
+    return { ok: false, error: 'no identity (' + String(e?.message || e).slice(0, 60) + ')' };
   }
+  ids.splice(0, ids.length, ...[...new Set(ids)]);
+  return send();
 }
