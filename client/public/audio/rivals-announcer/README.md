@@ -10,6 +10,8 @@
 `client/tools/prepare-rivals-announcer.mjs` maps the original filenames to these assets.
 It trims boundary silence, targets -18 LUFS / -1.5 dB true peak, and exports mono
 44.1 kHz, 128 kbps MP3. Original Downloads files are left intact.
+The countdown "Two" has its quiet consonant-to-vowel gap shortened, its delivery
+sped up by 8%, and an additional -4 dB gain adjustment after normalization.
 
 Runtime: `logic/rivalAnnouncer.js` tracks announcements on the race so retries and
 house changes do not repeat them. It selects variants without repeating the

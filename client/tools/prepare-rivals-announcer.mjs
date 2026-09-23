@@ -1,10 +1,10 @@
-// Offline asset preparation. Usage: node tools/prepare-rivals-announcer.mjs <source-folder> <ffmpeg-path>
+// Offline asset preparation. Usage: node tools/prepare-rivals-announcer.mjs <source-folder> <ffmpeg-path> [clip-key]
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-const [source, ffmpeg = 'ffmpeg'] = process.argv.slice(2);
+const [source, ffmpeg = 'ffmpeg', only] = process.argv.slice(2);
 if (!source) throw new Error('Provide the folder containing the original voice clips.');
 const output = fileURLToPath(new URL('../public/audio/rivals-announcer/', import.meta.url));
 const clips = {
@@ -33,10 +33,16 @@ const clips = {
 };
 mkdirSync(output, { recursive: true });
 for (const [key, name] of Object.entries(clips)) {
+  if (only && only !== key) continue;
   const target = resolve(output, key + '.mp3');
+  let filter = 'silenceremove=start_periods=1:start_duration=0.01:start_threshold=-45dB:start_silence=0.015,areverse,silenceremove=start_periods=1:start_duration=0.01:start_threshold=-45dB:start_silence=0.06,areverse,loudnorm=I=-18:TP=-1.5:LRA=7';
+  // Preserve the opening T, shorten the quiet gap before its vowel, and tame
+  // this take's stronger swell. Apply gain AFTER normalization so it sticks.
+  filter += key === 'br_countdown_2'
+    ? ',asplit=2[head][body];[head]atrim=end=0.035,asetpts=PTS-STARTPTS[h];[body]atrim=start=0.070,asetpts=PTS-STARTPTS[b];[h][b]acrossfade=d=0.004:c1=tri:c2=tri,atempo=1.08,volume=-4dB[out]'
+    : '[out]';
   const result = spawnSync(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y',
-    '-i', resolve(source, name), '-af',
-    'silenceremove=start_periods=1:start_duration=0.01:start_threshold=-45dB:start_silence=0.015,areverse,silenceremove=start_periods=1:start_duration=0.01:start_threshold=-45dB:start_silence=0.06,areverse,loudnorm=I=-18:TP=-1.5:LRA=7',
+    '-i', resolve(source, name), '-filter_complex', filter, '-map', '[out]',
     '-ac', '1', '-ar', '44100', '-c:a', 'libmp3lame', '-b:a', '128k', '-map_metadata', '-1', target], { encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr || result.error?.message);
   const probe = spawnSync(ffmpeg, ['-hide_banner', '-i', target], { encoding: 'utf8' });
