@@ -90,6 +90,15 @@ for(const gangID of ['iron-row','crossline','afterlight']){
  }
 }
 
+// A steady playstyle never hears the same reactive line twice in a season,
+// and no crew borrows another crew's line word for word.
+for(const gangID of ['crossline','iron-row','afterlight'])for(const key of [...SEASON_PRIORITY,'neutral'])for(const start of [1,5]){
+ const ids=crewSeason(gangID).chapters.map((st,ch)=>{const house=Number(Object.keys(st.beats).find(h=>st.beats[h].reactive));
+  return seasonCue(gangID,{chapter:ch,house,blockIndex:ch*2+start,earnedPraise:key==='neutral'?[]:[key],telemetryComplete:key!=='neutral'}).lineID;});
+ check('no repeated reactive line in a season '+gangID+key,new Set(ids).size===ids.length);
+}
+const texts=['crossline','iron-row','afterlight'].flatMap(g=>crewSeason(g).bank.map(l=>l.text.replace(/Crossline|Iron Row|Afterlight/g,'X')));
+check('no bank line shared across crews',new Set(texts).size===texts.length);
 // Brick is a woman; Mags too. Nothing the crews say may say otherwise.
 const allText=[...['crossline','iron-row','afterlight'].flatMap(g=>[...crewSeason(g).bank.map(l=>l.text),
   ...crewSeason(g).chapters.flatMap(c=>[c.jobName,c.reason,...Object.values(c.beats).flatMap(b=>b.pages.map(p=>p.text)),...c.finish.map(p=>p.text)])]),

@@ -409,7 +409,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_04"
+        "fallback": "CL_SWT_NEUT_01"
       }
     },
     "finish": [
@@ -510,7 +510,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_05"
+        "fallback": "CL_SWT_NEUT_02"
       }
     },
     "finish": [
@@ -615,7 +615,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_06"
+        "fallback": "CL_SWT_NEUT_03"
       }
     },
     "finish": [
@@ -729,7 +729,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_07"
+        "fallback": "CL_SWT_NEUT_04"
       }
     },
     "finish": [
@@ -813,7 +813,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_MAG_NEUT_08"
+        "fallback": "CL_MAG_NEUT_04"
       },
       "13": {
         "label": "CHECK-IN",
@@ -964,7 +964,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_SWT_NEUT_01"
+        "fallback": "CL_SWT_NEUT_05"
       }
     },
     "finish": [
@@ -1069,7 +1069,7 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "CL_MAG_NEUT_02"
+        "fallback": "CL_MAG_NEUT_05"
       }
     },
     "finish": [

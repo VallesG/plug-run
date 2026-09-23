@@ -418,7 +418,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_04"
+        "fallback": "IR_BRK_NEUT_01"
       }
     },
     "finish": [
@@ -511,7 +511,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_ROK_NEUT_05"
+        "fallback": "IR_ROK_NEUT_04"
       }
     },
     "finish": [
@@ -617,7 +617,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_06"
+        "fallback": "IR_BRK_NEUT_02"
       }
     },
     "finish": [
@@ -734,7 +734,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_07"
+        "fallback": "IR_BRK_NEUT_03"
       }
     },
     "finish": [
@@ -835,7 +835,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_08"
+        "fallback": "IR_BRK_NEUT_04"
       },
       "13": {
         "label": "CHECK-IN",
@@ -953,7 +953,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_BRK_NEUT_01"
+        "fallback": "IR_BRK_NEUT_05"
       }
     },
     "finish": [
@@ -1078,7 +1078,7 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "IR_ROK_NEUT_02"
+        "fallback": "IR_ROK_NEUT_05"
       }
     },
     "finish": [
@@ -1711,42 +1711,42 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Keep your stride measured and your head down. Bring the next bag to the car."
+    "text": "Head down. Bag to the car."
   },
   {
     "id": "IR_BRK_NEUT_02",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Next door is waiting. Find the stash and get to the car."
+    "text": "Next door. Stash, car, done."
   },
   {
     "id": "IR_BRK_NEUT_03",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Keep your weight centered and your boots moving. Don't linger once your hands touch the bag."
+    "text": "Hands on the bag, not the furniture. Keep moving."
   },
   {
     "id": "IR_BRK_NEUT_04",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Focus on the door right in front of you. One clear at a time puts iron on the map."
+    "text": "One door at a time. That is how a garage gets built."
   },
   {
     "id": "IR_BRK_NEUT_05",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Stay focused. Get in and get out."
+    "text": "In and out. No souvenirs."
   },
   {
     "id": "IR_BRK_NEUT_06",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "brick",
     "minChapter": 1,
-    "text": "Check yourself before the next door. Iron Row needs every bag accounted for."
+    "text": "Count your bags. I will be counting them too."
   },
   {
     "id": "IR_BRK_NEUT_07",
@@ -1774,7 +1774,7 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Another house on the block. Grab the bag clean and don't trip over the doormat."
+    "text": "Another house, another bag. Honestly, we are so back."
   },
   {
     "id": "IR_ROK_NEUT_03",
@@ -1788,34 +1788,34 @@ export const IRON_ROW_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Step up to the door, find the goods, and hit the pavement. Let's keep moving."
+    "text": "Door, goods, pavement. Easiest recipe I know, and I burn toast."
   },
   {
     "id": "IR_ROK_NEUT_05",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Keep pulling bags. The sooner we clear these houses, the sooner I get back to my workbench."
+    "text": "Keep pulling bags. The sooner we finish, the sooner I get back to my snack drawer."
   },
   {
     "id": "IR_ROK_NEUT_06",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Keep your line moving forward. Don't get tangled up inside; grab the stash and go."
+    "text": "Grab the stash and go. Do not start a side quest in there."
   },
   {
     "id": "IR_ROK_NEUT_07",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Another porch ready to crack. Keep your hands ready and your sprint straight to the car."
+    "text": "Next door is ready. Bag out, car loaded, vibes immaculate."
   },
   {
     "id": "IR_ROK_NEUT_08",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "rook",
     "minChapter": 1,
-    "text": "Stay on task out there. Scoop the stash and let’s keep the tally rolling."
+    "text": "Keep the tally rolling. I told Brick we would. She did not react. That means she is proud."
   }
 ].map(line => Object.freeze(line)));

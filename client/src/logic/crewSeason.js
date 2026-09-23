@@ -18,6 +18,9 @@ const LEGACY_BEATS={1:'open',4:'checkin-1',7:'tease',9:'brief',10:'debrief',13:'
 const safeChapter=v=>Number.isSafeInteger(v)&&v>=0?v:0;
 const safeBlock=v=>Number.isSafeInteger(v)&&v>0?v:1;
 const render=(text,cityName)=>String(text).replaceAll('{city}',cityName||'this city');
+/** How many earlier chapters this speaker opened the reactive beat of. */
+const speakerTurn=(arc,number,speaker)=>arc.chapters.slice(0,number-1)
+  .filter(c=>Object.values(c.beats).some(b=>b.reactive&&b.pages[0].speaker===speaker)).length;
 export function crewSeason(gangID){return Object.prototype.hasOwnProperty.call(arcs,gangID)?arcs[gangID]:null;}
 export function seasonChapter(gangID,chapter=0){return crewSeason(gangID)?.chapters[safeChapter(chapter)]||null;}
 /** Does this beat play in this block? The Block Rivals tease only before Rivals opens. */
@@ -50,7 +53,9 @@ export function seasonCue(gangID,{chapter=0,house,blockIndex=1,cityName,earnedPr
     const candidates=key?arc.bank.filter(l=>l.speaker===speaker&&l.category===categories[key]&&l.minChapter<=story.number):[];
     let line=null;
     if(candidates.length){
-      line=candidates[(safeBlock(blockIndex)*17+house*7+story.number*13)%candidates.length];
+      // Rotate: each chapter this speaker opens gets the next line, so a steady
+      // playstyle does not hear the same compliment twice in a season.
+      line=candidates[speakerTurn(arc,story.number,speaker)%candidates.length];
       praiseKey=key;
     }else if(usedPraise.length===0)line=arc.bank.find(l=>l.id===beat.fallback);
     if(line){pages=[{speaker,text:line.text},...pages];lineID=line.id;}

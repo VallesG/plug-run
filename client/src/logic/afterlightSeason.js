@@ -219,7 +219,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_VEE_NEUT_02"
+        "fallback": "AL_VEE_NEUT_01"
       }
     },
     "finish": [
@@ -303,7 +303,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_SOL_NEUT_03"
+        "fallback": "AL_SOL_NEUT_02"
       },
       "13": {
         "label": "CHECK-IN",
@@ -426,7 +426,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_SOL_NEUT_04"
+        "fallback": "AL_SOL_NEUT_03"
       }
     },
     "finish": [
@@ -531,7 +531,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_SOL_NEUT_05"
+        "fallback": "AL_SOL_NEUT_04"
       }
     },
     "finish": [
@@ -637,7 +637,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_VEE_NEUT_06"
+        "fallback": "AL_VEE_NEUT_02"
       }
     },
     "finish": [
@@ -738,7 +738,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_SOL_NEUT_07"
+        "fallback": "AL_SOL_NEUT_05"
       }
     },
     "finish": [
@@ -826,7 +826,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_SOL_NEUT_08"
+        "fallback": "AL_SOL_NEUT_06"
       },
       "13": {
         "label": "CHECK-IN",
@@ -973,7 +973,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_VEE_NEUT_01"
+        "fallback": "AL_VEE_NEUT_03"
       }
     },
     "finish": [
@@ -1110,7 +1110,7 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ],
         "reactive": true,
-        "fallback": "AL_SOL_NEUT_02"
+        "fallback": "AL_SOL_NEUT_07"
       }
     },
     "finish": [
@@ -1227,6 +1227,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "text": "Still standing without a death! That’s pure high-velocity hustle right there."
   },
   {
+    "id": "AL_SOL_ZDEATH_07",
+    "category": "ZERO_DEATHS",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "Zero deaths this block! Your respawn button is collecting dust."
+  },
+  {
     "id": "AL_VEE_UNTOUCH_01",
     "category": "FLAWLESS",
     "speaker": "vee",
@@ -1302,6 +1309,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "speaker": "sol",
     "minChapter": 1,
     "text": "On your successful clears, untouched by gunfire and still on your feet! That makes timing your splits a thrill."
+  },
+  {
+    "id": "AL_SOL_UNTOUCH_07",
+    "category": "FLAWLESS",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "On your successful clears, zero hits, zero drops! You are not even sweating. Are you real? Blink twice."
   },
   {
     "id": "AL_SOL_UNTOUCH_06",
@@ -1386,6 +1400,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "speaker": "sol",
     "minChapter": 1,
     "text": "More than a couple bad landings this block. Grab the next bag and leave those wiped attempts in the dust."
+  },
+  {
+    "id": "AL_SOL_COMEBACK_07",
+    "category": "COMEBACK",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "Some rough attempts back there, but the comeback arc is SO real. Put that in the trailer."
   },
   {
     "id": "AL_SOL_COMEBACK_06",
@@ -1479,6 +1500,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "text": "On your successful clears, no powers burned across those clears! Pure raw throttle from the porch to the trunk."
   },
   {
+    "id": "AL_SOL_NOPOW_07",
+    "category": "NO_POWERS",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "On your successful clears, no powers! Raw talent, no filter. Straight to the timeline."
+  },
+  {
     "id": "AL_VEE_PHASE_01",
     "category": "POWER_PHASE",
     "speaker": "vee",
@@ -1554,6 +1582,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "speaker": "sol",
     "minChapter": 1,
     "text": "On your clears, triggering Phase more than anything else this block! Killer move, just keep your eyes on the curb."
+  },
+  {
+    "id": "AL_SOL_PHASE_07",
+    "category": "POWER_PHASE",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "On your clears, Phase again! You are more ghost than runner at this point. Ghost-runner. Ghostie."
   },
   {
     "id": "AL_SOL_PHASE_06",
@@ -1647,6 +1682,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "text": "On your clears, dash leads the board this block! Move that fast at our street showcase and everyone’s jaw will hit the floor."
   },
   {
+    "id": "AL_SOL_DASH_07",
+    "category": "POWER_DASH",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "On your clears, Dash again! You are speedrunning the whole block and I am living for it."
+  },
+  {
     "id": "AL_VEE_DECOY_01",
     "category": "POWER_DECOY",
     "speaker": "vee",
@@ -1724,6 +1766,13 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "text": "On your clears, dropping Decoys everywhere this block! Your clone is getting more screen time than you!"
   },
   {
+    "id": "AL_SOL_DECOY_07",
+    "category": "POWER_DECOY",
+    "speaker": "sol",
+    "minChapter": 1,
+    "text": "On your clears, Decoy again! Two of you, zero chill. Double the drip."
+  },
+  {
     "id": "AL_SOL_DECOY_06",
     "category": "POWER_DECOY",
     "speaker": "sol",
@@ -1749,28 +1798,28 @@ export const AFTERLIGHT_DIALOGUE_BANK = Object.freeze([
     "category": "NEUTRAL_FALLBACK",
     "speaker": "vee",
     "minChapter": 1,
-    "text": "Keep your weight centered and your boots moving. Don't linger once your hands touch the bag."
+    "text": "Composure first. Grab the bag and do not pose on the way out."
   },
   {
     "id": "AL_VEE_NEUT_04",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "vee",
     "minChapter": 1,
-    "text": "Focus on the door right in front of you. One clear at a time puts Afterlight on the map."
+    "text": "Focus on the door in front of you. One clear at a time puts Afterlight in the gallery."
   },
   {
     "id": "AL_VEE_NEUT_05",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "vee",
     "minChapter": 1,
-    "text": "Stay focused. Get in and get out."
+    "text": "In, out, iconic. That is the whole brief."
   },
   {
     "id": "AL_VEE_NEUT_06",
     "category": "NEUTRAL_FALLBACK",
     "speaker": "vee",
     "minChapter": 1,
-    "text": "Check yourself before the next door. Afterlight needs every bag accounted for."
+    "text": "Every bag accounted for. Details are the difference between art and a mess."
   },
   {
     "id": "AL_VEE_NEUT_07",
