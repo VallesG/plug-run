@@ -18,6 +18,8 @@ import ReplaySystem from './ReplaySystem.js';
 import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
+import { submitRivalRun } from '../utils/api.js';
+import { getUserID } from '../utils/userManager.js';
 
 // This session only, never saved: the last few search lengths (so the next
 // search does not repeat them) and the last mix taken into a race (the lobby
@@ -108,7 +110,7 @@ export default class RivalsRace {
     if(!this.screen||this.screen.destroyed)this.screen=new RivalMatchScreen(this.scene,{home:this.race.course,gangID:this.race.territoryGang,labels:{
       overline:'BLOCK RIVALS',you:'YOU',vs:'VS',rival:'RIVAL',ready:'READY',notReady:'NOT READY',
       finding:'FINDING RIVAL',found:'RIVAL FOUND',none:'NO RIVAL FOUND',cancel:'CANCEL',back:'BACK',retry:'SEARCH AGAIN',
-      leave:'LEAVE',yours:'YOUR POWERS',empty:'EMPTY',pick:'PICK TWO POWERS'}});
+      leave:'LEAVE',yours:'YOUR POWERS',share:'SHARE MY RUN',empty:'EMPTY',pick:'PICK TWO POWERS'}});
     return this.screen;
   }
   closeMatchScreen(){this.screen?.destroy();this.screen=null;}
@@ -182,12 +184,14 @@ export default class RivalsRace {
       // A recorded rival is ready the moment it is found; a live one would
       // report here when it is.
       state:{name:this.rivalDisplayName(match.identity.displayName),offers:match.offers,slot:lobby.slot,
-        powers:lobby.powers,rivalReady:true},
+        powers:lobby.powers,rivalReady:true,share:!!lobby.share},
       onCourse:slot=>{
         if(this.disposed||race.entryStage!=='selecting'||!match.offers.some(o=>o.slot===slot))return;
         lobby.slot=slot;this.screen?.setCourse(slot);
       },
       onPowers:powers=>{if(race.entryStage==='selecting')lobby.powers=powers.slice();},
+      // Sharing is asked per race, and is off until the player turns it on.
+      onShare:on=>{if(race.entryStage==='selecting')lobby.share=!!on;},
       onReady:powers=>this.lockIn(powers),
       onLeave:()=>this.backToBlock()
     });
@@ -219,6 +223,7 @@ export default class RivalsRace {
     advanceMatch(target,'countdown');
     lastLobbyPowers=powers.slice();
     target.powers=powers.slice();
+    target.shareRun=lobby?.share===true;
     this.scene.runnerPowersSelected=powers.slice();this.scene.runnerPowersConsumed=[false,false];
     trackScene(this.scene,'rivals_match_ready',{course_slot:offer.slot,power_1:powers[0],power_2:powers[1]});
     target.status='countdown';target.countdownEndsAt=performance.now()+RIVAL_COUNTDOWN_MS;
@@ -620,6 +625,11 @@ export default class RivalsRace {
       opponent:{ id:'local-player', displayName:'You', kind:'human' },
       recordingID:'local-'+this.race.course.id+'-'+Math.round(this.race.finishedMs)
     });
+    // Opted in for this race: send it. Only a complete seven-house race with
+    // no abandoned attempt exports at all; anything else is simply not sent.
+    if(this.race.shareRun&&!this.race.recording&&!this.race.shareStatus){
+      if(own.ok)this.shareOwnRun(own);else this.race.shareStatus='unfinished';
+    }
     this.territory=completeRivalDistrict(this.race);
     this.race.territoryClaim=this.territory;
     this.saved=saveRivalResult({
@@ -730,8 +740,27 @@ export default class RivalsRace {
       text(area.x+area.width/2,y,'BLOCK CLAIMED',{size:12,color:'#eee3c7'});
       y+=22;
     }
+    if(r.shareRun&&r.shareStatus){
+      this.shareLine=text(area.x+area.width/2,y,this.shareLabel(),{size:10,color:'#8ca7aa',spacing:1});
+      y+=18;
+    }
     const used=y+6-area.y;
     area.y+=used;area.height=Math.max(0,area.height-used);
+  }
+  shareLabel(){
+    return ({sending:'SHARING YOUR RUN…',shared:'RUN SHARED',failed:'RUN NOT SHARED',unfinished:'RUN NOT SHARED · UNFINISHED'})[this.race.shareStatus]||'';
+  }
+  /** Send the finished race the player opted to share; the result shows how it went. */
+  shareOwnRun(own){
+    const race=this.race;
+    race.shareStatus='sending';
+    Promise.resolve(submitRivalRun({userId:getUserID(),record:own.record,bundle:own.bundle}))
+      .catch(()=>({ok:false}))
+      .then(res=>{
+        race.shareStatus=res?.ok?'shared':'failed';
+        trackScene(this.scene,'rivals_run_shared',{course_slot:race.course.slot,ok:!!res?.ok});
+        if(!this.disposed&&this.race===race)this.shareLine?.setText(this.shareLabel());
+      });
   }
   /**
    * Recording-mode options survive New Race; a normal race carries none. A

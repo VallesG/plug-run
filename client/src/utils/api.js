@@ -101,3 +101,23 @@ export async function restoreIdentity(recoveryCode) {
   if (data?.token) setToken(data.token);
   return data;
 }
+/**
+ * Share a finished Block Rivals race (the player opted in for this race).
+ * Sends the race's own record and replay with this device's identity; the
+ * server checks it, names it by the player's display name, and holds it for
+ * review. Resolves { ok, error? }; never throws.
+ */
+export async function submitRivalRun({ userId, record, bundle }) {
+  const token = getToken();
+  if (!userId || !token) return { ok: false, error: 'no identity' };
+  try {
+    return await tryFetch('/.netlify/functions/rivals-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, token, consent: true, record, bundle }),
+      keepalive: false
+    }, 15000);
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e).slice(0, 120) };
+  }
+}

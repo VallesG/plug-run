@@ -333,12 +333,12 @@ export class RivalMatchScreen {
    * handlers report every choice back to RivalsRace, which keeps it on the
    * race so a restart reopens the same lobby.
    */
-  showLobby({ state, onCourse, onPowers, onReady, onLeave, animate = false, now = null } = {}) {
+  showLobby({ state, onCourse, onPowers, onReady, onLeave, onShare = null, animate = false, now = null } = {}) {
     now = now ?? performance.now();
     this.cars = null;
     if (this.block) this.block.traffic.clear();
     this.state = state;
-    this.handlers = { onCourse, onPowers, onReady, onLeave };
+    this.handlers = { onCourse, onPowers, onReady, onLeave, onShare };
     if (!this.groups.rival.some((o) => o.text === state.name)) this.fillRival(state.name, { ready: !!state.rivalReady });
     this.youChip.set(this.labels.notReady, false);
     this.youChip.t.setVisible(true); this.youChip.bg.setVisible(true);
@@ -372,6 +372,21 @@ export class RivalMatchScreen {
     const T = (...a) => { const t = this.text('zone', ...a); made.push(t); return t; };
     const R = (...a) => { const r = this.rect('zone', ...a); made.push(r); return r; };
     T(p.x, p.y + 6, lb.yours, { size: 10, color: C.faint, font: MONO, spacing: 2, origin: [0, 0.5] });
+    // Opt in, per race, to sharing this run. Off until tapped.
+    if (this.handlers?.onShare && lb.share) {
+      const label = T(p.x + p.w, p.y + 6, lb.share, { size: 10, color: C.muted, font: MONO, spacing: 1, origin: [1, 0.5] });
+      const box = R(p.x + p.w - label.width - 12, p.y + 6, 11, 11, 0x0e161c, 1, 0x5b6b74, 1, Z + 5);
+      const tick = T(box.x, p.y + 6, '✓', { size: 11, color: C.youCss, origin: [0.5, 0.5] });
+      const hit = R(p.x + p.w - (label.width + 24) / 2, p.y + 6, label.width + 36, 28, 0x000000, 0.001, null, 1, Z + 8);
+      const paint = () => {
+        const on = !!this.state?.share;
+        tick.setVisible(on);
+        box.setStrokeStyle(1, on ? C.you : 0x5b6b74, 1);
+        label.setColor(on ? C.youCss : C.muted);
+      };
+      this.tap(hit, () => { if (!this.state) return; this.state.share = !this.state.share; paint(); this.handlers.onShare(this.state.share); });
+      paint();
+    }
     const gap = 8, slotH = 32, cardY = p.y + 18, cardH = Math.max(44, p.h - 18 - gap - slotH);
     const cardW = (p.w - gap * 2) / 3;
     this.cards = RUNNER_POWERS.map((power, i) => {

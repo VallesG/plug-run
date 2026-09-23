@@ -147,3 +147,24 @@ Check progress without touching the running recorder:
 
 If a batch stops, run the same launcher again; `--resume` retains completed
 jobs. The existing ordinary `public/rivals/v2` bank is never modified.
+
+## Players' shared races (players-v1)
+
+A player can tick SHARE MY RUN in the Block Rivals lobby, per race. A
+finished seven-house race is then sent to `netlify/functions/rivals-run.mjs`,
+which checks it (`src/logic/rivalPlayerRuns.js`: the bank validators, the
+course's own houses rebuilt from their seeds, the match's one stash seed,
+genuine pickups, walking pace, dash-sized bursts only at a dash, no standing
+in walls without phasing, powers once per slot) and holds it as pending in
+the site's Netlify Blobs store under the player's display name. Nothing is
+published by the submission.
+
+    node tools/rivals-assemble-players.mjs --pull tools/recordings/players/pending
+    node tools/rivals-assemble-players.mjs --in tools/recordings/players/pending --dry
+    node tools/rivals-assemble-players.mjs --in tools/recordings/players/pending
+    node tools/rivals-assemble-players.mjs --report
+
+`--pull` needs `NETLIFY_SITE_ID` and `NETLIFY_AUTH_TOKEN`. Review the
+downloads, then bank and commit `client/public/rivals/players-v1/`. The bank
+keeps the newest three runs per player per course, writes nothing else, and
+is in no matchmaking pool until it holds 500 runs.

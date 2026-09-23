@@ -13,6 +13,8 @@ let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, re
 // The match screen is presentation only; the stub records what it was told
 // to show and hands back the callbacks a player's taps would call.
 let matchResolver=()=>Promise.resolve(null), searchPlanMs=3000, realApply=null;
+// Shared runs go here instead of the network.
+const sharedRuns=[];let shareAnswer=()=>Promise.resolve({ok:true});
 const screens=[];
 class StubMatchScreen{
   constructor(scene,opts){this.scene=scene;this.opts=opts;this.calls=[];this.destroyed=false;screens.push(this);}
@@ -42,7 +44,8 @@ const bindings={
   planMatchSearch:()=>({band:'steady',revealMs:searchPlanMs}),
   // Real module: with no car in these stub scenes it fires its callback
   // immediately, so the flow assertions below stay synchronous.
-  playExtraction
+  playExtraction,
+  submitRivalRun:(p)=>{sharedRuns.push(p);return shareAnswer(p);}, getUserID:()=>'user-1'
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -469,7 +472,11 @@ const lobbyRestart=city.restarts.at(-1);
 check('resize in the lobby restarts with the same race',lobbyRestart.rivalRace===entry&&entry.status==='ready');
 city.controller.dispose();
 check('the old screen is closed on shutdown',screens[0].destroyed);
+check('sharing the run starts off in every lobby',screens[0].lobby.state.share===false&&!entry.lobby.share);
+screens[0].lobby.onShare(true);
+check('the player can opt in for this race',entry.lobby.share===true);
 const reopened=setup(lobbyRestart.rivalRace);
+check('the choice survives a restart',screens[1].lobby.state.share===true);
 check('the lobby reopens where it was',lookups===1&&screens.length===2&&screens[1].last==='lobby'&&screens[1].lobby.animate===false&&
   screens[1].lobby.state.slot===2&&screens[1].lobby.state.powers.join()==='dash,decoy'&&!screens[1].found);
 now=20000;
@@ -483,6 +490,7 @@ check('under the name the lobby showed',raced.opponent.displayName==='Jev'&&race
 check('with the chosen powers',raced.powers.join()==='dash,decoy'&&reopened.scene.runnerPowersSelected.join()==='dash,decoy');
 check('and this block still the one being claimed',raced.territoryIndex===1&&raced.rivalCityIndex===1&&raced.territorySlot===1);
 check('the stages walked in order',raced.entryStage==='countdown');
+check('the opt-in rides READY into the race',raced.shareRun===true);
 check('the lobby closed',screens[1].destroyed);
 screens[1].lobby.onReady(['dash','decoy']);
 check('a second READY does nothing',reopened.restarts.length===1);
@@ -719,4 +727,37 @@ console.log('rivals getaway animation: assertions passed');
   check('scoreboard: a played-out loss shows your time and the rival margin in its gold',!!playedOut.find('1:22.0')&&playedOut.find('JEV BY 12.0s')?.style.color==='#dec386');
 }
 console.log('rival result scoreboard: '+passed+' total assertions passed');
+
+// Sharing a finished race: only when opted in, only a complete race.
+{
+  const race7=(share)=>{
+    now=1000;let st={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],shareRun:share,rivalCityIndex:1};
+    let r=setup(st);
+    for(let house=1;house<=7;house++){
+      now=house*9000;r.controller.clearHouse();st=r.scene.rivalRace;
+      if(house<7){r.events[0].fn();const d=r.restarts[0];now+=180;r=setup(d.rivalRace,d.pveRound);}
+    }
+    return {st,r};
+  };
+  sharedRuns.length=0;
+  const shared=race7(true);
+  check('a finished race the player opted to share is sent once',sharedRuns.length===1&&shared.st.result==='win');
+  check('with its seven clears and full replay',sharedRuns[0].record.clearTimes.length===7&&sharedRuns[0].bundle.segments.length===7&&sharedRuns[0].userId==='user-1');
+  check('the result says it is being shared',shared.st.shareStatus==='sending');
+  await Promise.resolve();await Promise.resolve();await Promise.resolve();
+  check('then that it was',shared.st.shareStatus==='shared');
+  sharedRuns.length=0;
+  race7(false);
+  check('a race the player did not opt in for is never sent',sharedRuns.length===0);
+  sharedRuns.length=0;
+  now=1000;const quit={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],shareRun:true,rivalCityIndex:1};
+  const q=setup(quit);q.controller.finish('forfeit',5000);
+  check('an unfinished race is not sent, and the result says so',sharedRuns.length===0&&quit.shareStatus==='unfinished');
+  shareAnswer=()=>Promise.resolve({ok:false,error:'identity not recognised'});
+  const refused=race7(true);
+  await Promise.resolve();await Promise.resolve();await Promise.resolve();
+  check('a refused share is reported as not shared',refused.st.shareStatus==='failed');
+  shareAnswer=()=>Promise.resolve({ok:true});
+}
+console.log('rival run sharing: '+passed+' total assertions passed');
 
