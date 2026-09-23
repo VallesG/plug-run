@@ -27,19 +27,29 @@ This handoff preserves the current work so another LLM can record more opponents
 - Behavior: the same routing, powers, dodging, and retry learning as Apex, but every attempt begins with a legal 400–650 ms reflex swipe that is deliberately not the already-perfect route. It then corrects toward its objective.
 - Purpose: difficult but more human-looking challenge ghosts.
 - Matchmaking: kept outside ordinary random matchmaking.
-- Current bank: not assembled yet. The first seven-course batch was recorded locally by the user under `client/tools/recordings/jev/rival-v1/` and must be pushed before another machine or LLM can assemble it.
+- Current bank: seven validated recordings, one per original course (slots 1–7), assembled from the user's local captures in `client/tools/recordings/jev/rival-v1/`. Those captures are git-ignored; the bank JSON is committed. Totals: 466.8 s of racing, 16 retries, 183 requests, $0.0075. Every call returned 200, with no budget stops and no unarmed activations.
 
-### Reserved normal Jev Rival
+### Normal Jev Rival
 
 - Bank ID: `jev-v1`
 - Bank directory: `client/public/rivals/jev-v1/`
-- Purpose: a future softer profile suitable for ordinary matchmaking.
+- CLI: `--jevProfile normal`
+- Behavior: the same fair routing, power timing and retry learning as the challenge profiles, with an 850-1200 ms imperfect opening swipe and a 500-750 ms course-correction beat after a visible objective changes. Apex and Rival Hard are unchanged.
+- Normal also takes 220 ms to begin a dodge after a new firing threat appears; once it reacts, the existing safe dodge logic is unchanged. This can produce natural catches without scripted deaths.
+- Normal retains the same covered route planner as Hard and Apex, but samples steering every 90 ms instead of correcting direction every render frame. It does not script wrong turns or deaths; power-driven phase crossings still keep precise control.
+- The Normal recording plan uses the Balanced motor and never pairs phase with dash; it rotates single-mobility/decoy loadouts. No deaths or bad routes are scripted.
+- Purpose: the profile ordinary Block Rivals players meet.
 - Do not put Apex or Rival Hard captures into this bank.
-- The directory currently contains older historical Jev races; it has not yet been rebuilt from a new softer profile.
+- Current bank: 168 races, 8 on each of the 21 courses, from the first 21 sealed jobs of the fresh Normal plan (`tools/plans/jev-v1.json`, recorded into `client/tools/recordings/jev/fresh-normal-v1/`, git-ignored). Every race has match stash rules. The 7 older historical races (no match rules) were retired by `--fresh`. The plan continues toward 128 per course; re-assemble with `--fresh` from the same folder.
+
+## Courses
+
+Block Rivals now has 21 courses. Slots 1–7 are the originals and byte-identical; slots 8–21 are designed courses with their own board sizes and per-house layouts. See `RIVALS_COURSES.md` for the course table, city circuit, variant banks and recording plans.
 
 ## Important gameplay rules
 
 - A stash assignment is random per Block Rivals session/map, but remains stable across retries within that session. A player who discovers the bunk can remember it until the next block/session.
+- A match adopts its chosen recorded rival's stash seed before the first house starts, so both race the same answers and every match-rules recording in the pool is eligible. There is no rematch: each New Race / Next Block meets a freshly chosen rival.
 - Jev may remember visible information from the current match, including the revealed stash pocket and where/along which route it died.
 - Jev must never receive hidden real-versus-bunk identity before it is revealed.
 - The strategist must never output movement directions. Raw movement is owned by `BotDriver` and validated by tests.
@@ -57,7 +67,7 @@ This handoff preserves the current work so another LLM can record more opponents
   - Actual movement motor.
   - Committed cell-center routes, dodge behavior, phase/dash execution, opening reflex swipe, and repeated-route penalties.
 - `client/src/controllers/makeJevStrategist.js`
-  - Parses `jevProfile` and constructs Apex or Rival Hard.
+  - Parses `jevProfile` and constructs Apex, Rival Hard or Normal.
 - `client/tools/rivals-record.mjs`
   - Paid recorder, Node-side key relay, headed browser, MP4 diagnostics, and capture output.
 - `client/tools/lib/jevBank.mjs`
@@ -69,39 +79,33 @@ This handoff preserves the current work so another LLM can record more opponents
 
 ## Recording setup
 
-From `C:\dev\plug-run\client`, start the live Vite server:
+Record large variant batches from the plans in `client/tools/plans/` (one
+job per course and loadout; every race is a new match with its own stash
+seed). `RIVALS_COURSES.md` has the full commands. Record from a fixed build,
+not the live dev server: an edit mid-batch reloads the page.
 
 ```powershell
-npx vite --host 127.0.0.1 --port 4173
+cd C:\dev\plug-run\client
+npm run build
+npx vite preview --host 127.0.0.1 --port 4174 --strictPort
 ```
 
-In a second PowerShell window, set `TYPESAFE_API_KEY` and record all seven Rival Hard courses:
+In a second PowerShell window, set `TYPESAFE_API_KEY` and run a plan:
 
 ```powershell
-1..7 | ForEach-Object {
-  node tools/rivals-record.mjs `
-    --slot $_ `
-    --powers phase,dash `
-    --runs 1 `
-    --opponentIndex (9700 + $_) `
-    --jev `
-    --jevProfile rival-hard `
-    --jevMaxRequests 2000 `
-    --jevMaxInputTokens 4000000 `
-    --jevTimeoutMs 15000 `
-    --headed `
-    --video `
-    --videoDir tools/recordings/jev/rival-hard-v1/video `
-    --url http://127.0.0.1:4173 `
-    --out tools/recordings/jev/rival-hard-v1
-}
+node tools/rivals-record.mjs --plan tools/plans/jev-rival-hard-v1.json --jev --jevProfile rival-hard `
+  --jevMaxRequests 2000 --jevMaxInputTokens 4000000 --jevTimeoutMs 15000 --headed --video `
+  --videoDir tools/recordings/jev/rival-hard-v1/video --url http://127.0.0.1:4174 `
+  --out tools/recordings/jev/rival-hard-v1 --resume
 ```
 
-Replace `rival-hard` with `apex` and use a separate output directory to record Apex.
+Use `--jevProfile apex`, `tools/plans/jev-apex-v1.json` and a separate
+output directory for Apex. `node tools/rivals-variant-plan.mjs` regenerates a plan
+(`--profile`, `--per-course`, `--slots`).
 
 Successful real API output must show:
 
-- `profile: "rival-hard"` or `profile: "apex"`;
+- `profile: "normal"`, `"rival-hard"` or `"apex"`;
 - model `jev-1.13.0` (or the real returned successor);
 - HTTP status 200 responses;
 - `tokenSource: "api"` and positive billed tokens/cost;
@@ -170,12 +174,9 @@ npm run build
 
 ## Next work
 
-1. Push the user's completed `tools/recordings/jev/rival-v1/` captures.
-2. Dry-run them into `jev-rival-hard-v1`. The assembler accepts the legacy recorded profile name `rival` as Rival Hard.
-3. Review the seven summaries and assemble the initial Hard bank.
-4. Record many additional variants per course before production exposure.
-5. Design a softer normal `Jev Rival` profile separately. Prefer small response latency after objective changes over random bad routes; retain the good routing, power timing, and retry learning.
-6. Add a deliberate UI entry point for Apex/Hard challenge banks before exposing them. They are intentionally not part of ordinary matchmaking today.
+1. Let the Normal plan finish (`tools/plans/jev-v1.json`, 2,688 races) and re-assemble `jev-v1` with `--fresh`; then run the Apex and Rival Hard plans (2,688 each). `tools/run-jev-variant-banks.ps1` does all three in order. Check `node tools/rivals-bank-report.mjs`.
+2. Opponents are Jev only; ordinary style bots are no longer recorded. None of the 140 legacy `v2` bot recordings can be matched (no match stash rules).
+3. Add a deliberate UI entry point for Apex/Hard challenge banks before exposing them. They are separate pools (`rivalPool`), never part of ordinary matchmaking.
 
 ## Safety and provenance
 
