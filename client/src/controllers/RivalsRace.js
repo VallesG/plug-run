@@ -156,7 +156,7 @@ export default class RivalsRace {
     if(search.match&&settle!=null){
       if(!advanceMatch(race,'found'))return;
       race.match=search.match;
-      race.lobby={slot:search.match.offers[0].slot,powers:validRivalPowers(lastLobbyPowers)?lastLobbyPowers.slice():[]};
+      race.lobby={slot:search.match.offers[0].slot,powers:validRivalPowers(lastLobbyPowers)?lastLobbyPowers.slice():[],share:true};
       trackScene(this.scene,'rivals_match_found',{course_slot:race.course.slot,courses:search.match.offers.length});
       this.showFound(true);
     }else if(advanceMatch(race,'unavailable')){
@@ -189,7 +189,7 @@ export default class RivalsRace {
   }
   showLobby(animate){
     const race=this.race,match=race.match;
-    const lobby=race.lobby||(race.lobby={slot:match.offers[0].slot,powers:[]});
+    const lobby=race.lobby||(race.lobby={slot:match.offers[0].slot,powers:[],share:true});
     if(!match.offers.some(o=>o.slot===lobby.slot))lobby.slot=match.offers[0].slot;
     this.matchScreen().showLobby({animate,
       // A recorded rival is ready the moment it is found; a live one would

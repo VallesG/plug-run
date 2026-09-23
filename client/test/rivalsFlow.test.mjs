@@ -472,11 +472,11 @@ const lobbyRestart=city.restarts.at(-1);
 check('resize in the lobby restarts with the same race',lobbyRestart.rivalRace===entry&&entry.status==='ready');
 city.controller.dispose();
 check('the old screen is closed on shutdown',screens[0].destroyed);
-check('sharing the run starts off in every lobby',screens[0].lobby.state.share===false&&!entry.lobby.share);
-screens[0].lobby.onShare(true);
-check('the player can opt in for this race',entry.lobby.share===true);
+check('sharing the run starts on in every lobby',screens[0].lobby.state.share===true&&entry.lobby.share===true);
+screens[0].lobby.onShare(false);
+check('the player can opt out for this race',entry.lobby.share===false);
 const reopened=setup(lobbyRestart.rivalRace);
-check('the choice survives a restart',screens[1].lobby.state.share===true);
+check('the choice survives a restart',screens[1].lobby.state.share===false);
 check('the lobby reopens where it was',lookups===1&&screens.length===2&&screens[1].last==='lobby'&&screens[1].lobby.animate===false&&
   screens[1].lobby.state.slot===2&&screens[1].lobby.state.powers.join()==='dash,decoy'&&!screens[1].found);
 now=20000;
@@ -490,7 +490,7 @@ check('under the name the lobby showed',raced.opponent.displayName==='Jev'&&race
 check('with the chosen powers',raced.powers.join()==='dash,decoy'&&reopened.scene.runnerPowersSelected.join()==='dash,decoy');
 check('and this block still the one being claimed',raced.territoryIndex===1&&raced.rivalCityIndex===1&&raced.territorySlot===1);
 check('the stages walked in order',raced.entryStage==='countdown');
-check('the opt-in rides READY into the race',raced.shareRun===true);
+check('the opt-out rides READY into the race',raced.shareRun===false);
 check('the lobby closed',screens[1].destroyed);
 screens[1].lobby.onReady(['dash','decoy']);
 check('a second READY does nothing',reopened.restarts.length===1);

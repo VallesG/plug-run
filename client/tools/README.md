@@ -150,8 +150,8 @@ jobs. The existing ordinary `public/rivals/v2` bank is never modified.
 
 ## Players' shared races (players-v1)
 
-A player can tick SHARE MY RUN in the Block Rivals lobby, per race. A
-finished seven-house race is then sent to `netlify/functions/rivals-run.mjs`,
+SHARE MY RUN is ticked by default in the Block Rivals lobby; a player can
+untick it for any race. A finished seven-house race is then sent to `netlify/functions/rivals-run.mjs`,
 which checks it (`src/logic/rivalPlayerRuns.js`: the bank validators, the
 course's own houses rebuilt from their seeds, the match's one stash seed,
 genuine pickups, walking pace, dash-sized bursts only at a dash, no standing
