@@ -1,14 +1,15 @@
 // The getaway car, drawn once per paint job into a canvas texture.
 //
 // Top-down, nose up (angle 0 faces north), in the car's true proportions:
-// 1.4 cells wide by 2.6 long. Cosmetic only: where the car parks, the
-// extraction pad and every recorded replay stay exactly as they were; this
-// is how the car is drawn, never where it is.
+// 1.08 cells wide by 2 long. It parks nose to the street in the driveway
+// mouth, sucks the runner in and drives straight out, as it always has.
+// Cosmetic only: the extraction pad, collision and AI targets are unchanged,
+// and recorded replays are drawn with it, never re-recorded.
 import { gangSkin } from '../logic/gangSkins.js';
 import { selectedGangSkin } from './GangSkinTextures.js';
 
-export const CAR_WIDTH_CELLS = 1.4;
-export const CAR_LENGTH_CELLS = 2.6;
+export const CAR_WIDTH_CELLS = 1.08;
+export const CAR_LENGTH_CELLS = 2.0;
 /** Jev, and anyone who has not picked a crew, drive the classic blue. */
 export const DEFAULT_CAR_PAINT = Object.freeze({ paint: 0x2f6fb7, stripe: 0xf1f5f9 });
 
@@ -125,21 +126,26 @@ export function ensureCarTexture(scene, { paint, stripe } = DEFAULT_CAR_PAINT) {
 }
 
 /**
- * Park a car, broadside across the driveway, facing along the curb so it can
- * peel away down the street. `out` is the direction of the street. Draws the
- * shadow, the ink outline and the car; returns the car image, with
- * `_outline` and `_shadow` for the departure tween and `_heading` for the
- * direction it drives off in.
+ * Park a car nose to the street at a parking spot (`x`, `y`), pulled in
+ * just far enough that the whole car stays on screen: there are only about
+ * 1.6 cells between the pad and the edge. `out` is the direction of the
+ * street. Draws the shadow, the ink outline and the car; returns the car
+ * image, with `_outline` and `_shadow` for the departure tween and
+ * `_heading` for the direction it drives off in.
  */
 export function drawParkedCar(scene, x, y, out, cell, { paint = DEFAULT_CAR_PAINT, depth = 9, ink = 0x0b0f12, register = (o) => o } = {}) {
   const key = ensureCarTexture(scene, paint);
   if (!key) return null;
-  // Facing along the curb: the street direction turned a quarter clockwise.
-  const heading = { x: -out.y, y: out.x };
+  // Nose to the street; it drives straight out that way.
+  const heading = { x: out.x, y: out.y };
   const angle = Math.atan2(heading.y, heading.x) * 180 / Math.PI + 90;
   const w = cell * CAR_WIDTH_CELLS, len = cell * CAR_LENGTH_CELLS;
-  // Footprint on screen: long along the curb, 1.4 cells deep toward the street.
-  const fw = out.x ? w : len, fh = out.x ? len : w;
+  // Footprint on screen: long toward the street, narrow across the driveway.
+  const fw = out.x ? len : w, fh = out.x ? w : len;
+  const edge = Math.max(2, Math.round(cell * 0.09)) + 1;
+  const view = scene.scale?.gameSize;
+  const keep = (v, half, span) => Number.isFinite(span) && span > half * 2 ? Math.max(half, Math.min(span - half, v)) : v;
+  x = keep(x, fw / 2 + edge, view?.width); y = keep(y, fh / 2 + edge, view?.height);
   const shadow = register(scene.add.ellipse(x + cell * 0.10, y + cell * 0.16, fw * 1.02, fh * 0.98, 0x000000, 0.34).setDepth(depth - 1.5));
   const opx = Math.max(2, Math.round(cell * 0.09));
   const outline = [[opx, 0], [-opx, 0], [0, opx], [0, -opx]].map(([ox, oy]) =>

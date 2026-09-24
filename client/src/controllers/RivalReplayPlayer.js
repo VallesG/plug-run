@@ -121,7 +121,8 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     }
     // car at the driveway
     const carAng = { N: 0, S: 180, E: 90, W: -90 }[rep.car?.side] ?? 0;
-    // The rival's car: the same car the game draws, in Jev's blue.
+    // The rival's car: the same car the game draws, in Jev's blue, parked
+    // where the recording says (pulled in if it would leave the screen).
     const carOut = { N: { x: 0, y: -1 }, S: { x: 0, y: 1 }, E: { x: 1, y: 0 }, W: { x: -1, y: 0 } }[rep.car?.side] ?? { x: 0, y: -1 };
     const parked = drawParkedCar(scene, wx(rep.car.x), wy(rep.car.y), carOut, cell,
       { paint: DEFAULT_CAR_PAINT, depth: DEPTH + 6.1, ink: PALETTE.ink, register: (o) => { mk(o); objs.push(o); return o; } });

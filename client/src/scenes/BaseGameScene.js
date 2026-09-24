@@ -1480,8 +1480,7 @@ export class BaseGameScene extends Phaser.Scene {
     cx = parked.x;
     cy = parked.y;
 
-    // The car, in the crew's paint, broadside across the driveway and facing
-    // along the curb. Same footprint as before, so nothing but the look changes.
+    // The car, in the crew's paint, nose to the street in the driveway mouth.
     const drawn = drawParkedCar(this, cx, cy, { x: dx, y: dy }, this.cell, { paint: playerCarPaint(), depth: 9, ink: PALETTE.ink });
     if (drawn) {
       this.car = drawn;

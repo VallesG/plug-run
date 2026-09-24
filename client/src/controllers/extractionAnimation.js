@@ -26,8 +26,7 @@ export function playExtraction(scene, { boardMs = EXTRACTION_BOARD_MS,
   const drive = () => {
     if (!scene.car) { done(); return; }
     const dist = scene.cell * 8;
-    // A car parked along the curb pulls away the way it faces; an older
-    // street-facing car drives straight out.
+    // Straight out, the way the car faces.
     const heading = scene.car._heading || scene.carOutDir;
     const dx = heading?.x || 0;
     const dy = heading?.y || 0;
@@ -47,8 +46,6 @@ export function playExtraction(scene, { boardMs = EXTRACTION_BOARD_MS,
       y: `+=${dy * dist}`,
       duration: driveMs,
       ease: 'Sine.easeIn',
-      // Along the curb the street can be short: fade out as it goes.
-      ...(scene.car._heading ? { alpha: 0 } : {}),
       onComplete: done
     });
   };
