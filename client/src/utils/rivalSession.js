@@ -33,7 +33,8 @@ const historyKey = () => 'pr_rivals_results_v1_' + getUserID();
 
 export function createRivalSession(selection = {}) {
   const district=rivalDistrict(getRivalTerritory().completed+1);
-  const territoryMode=!selection.recording && !selection.powers;
+  // The Daily Race is its own thing: no Rivals city, district or territory claim.
+  const territoryMode=!selection.recording && !selection.powers && !Number.isInteger(selection.daily);
   // A territory match starts on its block's own course; the lobby then offers
   // the maps the found rival has actually raced (findRivalMatch), and a win on
   // any of them claims this block (territorySlot below).

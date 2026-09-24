@@ -24,7 +24,9 @@ import { identityProof, shareChallenge } from '../platform/index.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
 import { saveDailyResult, saveDailyRank } from '../utils/dailyProgress.js';
-import { liveStreak } from '../logic/dailyRace.js';
+import { liveStreak, dailyResult, dailyDateLabel } from '../logic/dailyRace.js';
+import { getDailyState } from '../utils/dailyProgress.js';
+import { drawDailyCard, DAILY_AMBER } from './DailyCard.js';
 
 /** A short reason a run was not shared, from the submission's answer. */
 function shareReason(error){
@@ -117,10 +119,33 @@ export default class RivalsRace {
     const pending = resolveRivalOpponent(this.race);
     if (pending && typeof pending.then === 'function') {
       this.notice?.setText('FINDING RIVAL');
-      pending.catch(() => false).then(() => { if (!this.disposed) { this.notice?.setText(''); this.openLoadout(); } });
+      pending.catch(() => false).then(() => { if (!this.disposed) { this.notice?.setText(''); this.enterLoadout(); } });
       return;
     }
+    this.enterLoadout();
+  }
+  isDaily(){ return Number.isInteger(this.race.daily); }
+  enterLoadout(){
+    if (this.isDaily() && !this.race.dailyIntroShown) { this.showDailyIntro(() => this.openLoadout()); return; }
     this.openLoadout();
+  }
+  /** Today's race, on its own ticket: not the Block Rivals district screen. */
+  showDailyIntro(done){
+    this.race.dailyIntroShown = true;
+    const n = this.race.daily, official = !dailyResult(getDailyState(), n);
+    const modal = this.scene.gameUI.showModal({
+      fullScreen:true, completion:true, accent:DAILY_AMBER,
+      title:"TODAY'S RACE", subtitle:'SEVEN HOUSES · SAME RACE FOR EVERYONE',
+      lines:[],
+      buttons:[
+        {label:official?'START OFFICIAL RUN':'START PRACTICE RUN',variant:'primary',onClick:()=>{ if(!this.disposed) done(); }},
+        {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
+      ]
+    });
+    drawDailyCard(this.scene, modal, {
+      n, dateLabel:dailyDateLabel(n), courseName:this.race.course.name, rivalName:this.rivalLabel(),
+      targetMs:this.race.rivalTimes?.[RIVAL_HOUSES-1], streak:liveStreak(getDailyState(), n), official, mode:'intro'
+    });
   }
   openDistrict(){
     if(this.disposed||this.race.status!=='ready')return;
@@ -306,7 +331,7 @@ export default class RivalsRace {
       this.scene.runnerPowersSelected=this.race.fixedPowers.slice();
       this.race.powers=this.race.fixedPowers.slice();
       showRunnerLoadout(this.scene.gameUI,armCountdown,{
-        title:'BLOCK RIVALS',subtitle:this.opponentSubtitle(),startLabel:'READY TO RACE',
+        title:this.isDaily()?'DAILY RACE #'+this.race.daily:'BLOCK RIVALS',subtitle:this.opponentSubtitle(),startLabel:'READY TO RACE',
         helpText:'Fixed mix. Refills each house.',
         fixedPowers:this.race.fixedPowers,allowReplay:false,showAccount:false
       });
@@ -316,7 +341,7 @@ export default class RivalsRace {
       this.race.powers = this.scene.runnerPowersSelected.slice();
       armCountdown();
     }, {
-      title:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
+      title:this.isDaily()?'DAILY RACE #'+this.race.daily:'BLOCK RIVALS', subtitle:this.opponentSubtitle(),
       startLabel:'READY TO RACE',
       helpText:this.race.opponent?.orderedPowers
         ? 'Rival starts: '+this.race.opponent.orderedPowers.map(id=>id.toUpperCase()).join(' → ')+'\nYour powers refill each house.'
@@ -768,11 +793,12 @@ export default class RivalsRace {
     const recorded = this.race.opponentKind === 'recorded-bot';
     const who = this.rivalLabel();
     const config={
-      fullScreen:!!this.race.rivalCityIndex,
+      fullScreen:!!this.race.rivalCityIndex||this.isDaily(),
       title:({win:'YOU WIN',loss:who.toUpperCase()+' WINS',draw:'PHOTO FINISH',forfeit:'RACE ENDED'})[this.race.result] || 'RACE ENDED',
       // A real opponent gets the plain word. The generated fallback is still
       // never dressed up as one: it says pace trial.
-      subtitle:recorded ? 'RIVAL · SEVEN HOUSES' : 'PACE TRIAL · NO RIVAL FOUND',
+      subtitle:this.isDaily() ? 'DAILY RACE #'+this.race.daily+' · '+dailyDateLabel(this.race.daily)
+        : recorded ? 'RIVAL · SEVEN HOUSES' : 'PACE TRIAL · NO RIVAL FOUND',
       lines:[
         ...(this.race.course.name ? ['Course: '+this.race.course.name] : []),
         'You: '+this.race.clearTimes.length+'/7 houses \u00b7 '+this.race.retries+' retries',
@@ -797,8 +823,8 @@ export default class RivalsRace {
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
     };
-    if(this.race.rivalCityIndex){
-      config.completion=true;config.accent=crewSigil(this.race.territoryGang)?.color;
+    if(this.race.rivalCityIndex||this.isDaily()){
+      config.completion=true;config.accent=this.isDaily()?DAILY_AMBER:crewSigil(this.race.territoryGang)?.color;
       // The times and the block claim are drawn as a scoreboard above the
       // block (drawResultTimes); only a save problem stays a plain line.
       config.lines=[
@@ -808,16 +834,20 @@ export default class RivalsRace {
       const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN'].includes(b.label));
       const watch=config.buttons.find(b=>b.label.includes('WATCH RIVAL'));
       config.buttons=[next,...(watch?[watch]:[]),menu];
+      if(this.isDaily()&&next){
+        // The same race again, as practice: today's official time already stands.
+        const r=this.race;
+        Object.assign(next,{label:'PRACTICE AGAIN',onClick:()=>this.scene.scene.restart({mode:'pve',role:'runner',runKind:'rivals',
+          rivalSlot:r.course.slot,rivalStashSeed:r.stashSeed,rivalOpponentID:r.opponent?.recordingID,rivalPool:r.pool||'ordinary',rivalDaily:r.daily})});
+      }
     }
     // A challenge race says how it went against the friend who sent it.
     const vsFriend=this.challengeLine();
     if(vsFriend&&!this.race.rivalCityIndex)config.lines.unshift(vsFriend);
-    const daily=this.dailyLine();
-    if(daily&&!this.race.rivalCityIndex)config.lines.unshift(daily);
     // Challenge a friend: first, so it is the obvious next move after a finish.
     if(this.canChallenge()){
       let label=null;
-      const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN'].includes(b.label));
+      const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN','PRACTICE AGAIN'].includes(b.label));
       if(next)next.variant='secondary';
       config.buttons.unshift({label:'CHALLENGE A FRIEND',variant:'primary',keepOpen:true,
         bindText:t=>{label=t;},onClick:()=>this.sendChallenge(label)});
@@ -826,6 +856,12 @@ export default class RivalsRace {
     if(this.race.rivalCityIndex){
       this.drawResultTimes(modal);
       drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
+    }else if(this.isDaily()){
+      this.drawResultTimes(modal);
+      const r=this.race;
+      drawDailyCard(this.scene,modal,{n:r.daily,dateLabel:dailyDateLabel(r.daily),courseName:r.course.name,rivalName:this.rivalLabel(),
+        targetMs:r.rivalTimes?.[RIVAL_HOUSES-1],streak:r.dailyStreak||0,official:!!r.dailyOfficial,mode:'result',
+        cleared:r.clearTimes.length,finishedMs:r.finishedMs});
     }
   }
   /**
@@ -870,11 +906,6 @@ export default class RivalsRace {
       const label=margin>0?'YOU BY '+margin.toFixed(1)+'s':margin<0?sides[1].label+' BY '+(-margin).toFixed(1)+'s':'DEAD HEAT';
       text(area.x+area.width/2,y,label,{size:13,color:margin>0?'#9bcae5':margin<0?'#dec386':'#eee3c7'});
       y+=22;
-    }
-    const daily=this.dailyLine();
-    if(daily){
-      text(area.x+area.width/2,y,daily,{size:12,color:'#9bcae5'});
-      y+=20;
     }
     const vsFriend=this.challengeLine();
     if(vsFriend){

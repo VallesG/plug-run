@@ -2,7 +2,7 @@
 // and the server's daily ranking.
 import assert from 'node:assert/strict';
 import {
-  DAILY_EPOCH_MS, dailyNumber, dailySlot, dailyRival, recordDaily, liveStreak, dailyNote, EMPTY_DAILY, raceTimeLabel
+  DAILY_EPOCH_MS, dailyNumber, dailySlot, dailyRival, recordDaily, liveStreak, dailyNote, EMPTY_DAILY, raceTimeLabel, finishMs, dailyDateLabel
 } from '../src/logic/dailyRace.js';
 import { createTelegramHandler } from '../netlify/functions/telegram.mjs';
 import { enabledRivalCourses } from '../src/logic/rivals.js';
@@ -24,11 +24,12 @@ ok(slots.length >= 7, 'there are courses to pick from');
 eq(dailySlot(12, slots), dailySlot(12, [...slots].reverse()), 'course pick ignores list order');
 const picks = new Set(Array.from({ length: 60 }, (_, i) => dailySlot(i + 1, slots)));
 ok(picks.size >= Math.min(12, slots.length), 'two months of dailies visit many courses (' + picks.size + ')');
+const T = (end) => [1, 2, 3, 4, 5, 6, end];
 const entries = [
-  { record: { recordingID: 'b-jev', stashSeed: 2, driverConfig: { driver: 'jev' } } },
-  { record: { recordingID: 'a-bot', stashSeed: 1 } },
-  { record: { recordingID: 'c-jev', stashSeed: 3, driverConfig: { driver: 'jev' } } },
-  { record: { recordingID: 'd-old' } }
+  { record: { recordingID: 'b-jev', stashSeed: 2, clearTimes: T(70000), retries: 0, driverConfig: { driver: 'jev' } } },
+  { record: { recordingID: 'a-bot', stashSeed: 1, clearTimes: T(60000), retries: 0 } },
+  { record: { recordingID: 'c-jev', stashSeed: 3, clearTimes: T(72000), retries: 1, driverConfig: { driver: 'jev' } } },
+  { record: { recordingID: 'd-old', clearTimes: T(50000) } }
 ];
 const isJev = (r) => r.driverConfig?.driver === 'jev';
 const r1 = dailyRival(5, entries, isJev), r2 = dailyRival(5, [...entries].reverse(), isJev);
@@ -96,6 +97,43 @@ eq(raceTimeLabel(64321), '1:04.3', 'time label');
   eq([short.json.rank, short.json.total], [null, 2], 'an unfinished daily is counted as played, not ranked');
   eq(store.get('daily:10:plays'), '4', 'plays are counted');
   eq((await submit({ userId: 'u_c', token: 't_u_c', day: 9, ms: 65000, houses: 7 })).json.rank, 1, 'yesterday is still accepted (a race across midnight)');
+}
+
+// A good challenge: Jev's clean, fast runs only.
+{
+  const many = Array.from({ length: 40 }, (_, i) => ({ record: { recordingID: 'j' + String(i).padStart(2, '0'), stashSeed: i, clearTimes: T(60000 + i * 1000), retries: i % 5 === 0 ? 3 : 0, driverConfig: { driver: 'jev' } } }));
+  many.push({ record: { recordingID: 'stuck', stashSeed: 99, clearTimes: T(467000), retries: 29, driverConfig: { driver: 'jev' } } });
+  const chosen = new Set(Array.from({ length: 200 }, (_, i) => dailyRival(i + 1, many, isJev).record.recordingID));
+  ok(!chosen.has('stuck'), 'a stuck 467 s run is never the daily rival');
+  ok([...chosen].every((id) => many.find((e) => e.record.recordingID === id).record.retries <= 1), 'only runs with at most one retry');
+  ok([...chosen].every((id) => finishMs(many.find((e) => e.record.recordingID === id).record) <= 60000 + 12 * 1000), 'only the fastest quarter of clean runs');
+  ok(chosen.size >= 5, 'still varied day to day (' + chosen.size + ' different rivals)');
+  const messy = [{ record: { recordingID: 'x', stashSeed: 1, clearTimes: T(90000), retries: 4, driverConfig: { driver: 'jev' } } }];
+  eq(dailyRival(1, messy, isJev).record.recordingID, 'x', 'if every run is messy, still a race rather than none');
+  eq(finishMs({ clearTimes: [1, 2, 3] }), null, 'an unfinished race has no finish time');
+  eq(dailyDateLabel(1), 'THU · SEP 24', 'Daily #1 is Thursday, September 24');
+  eq(dailyDateLabel(9), 'FRI · OCT 2', 'dates roll over months');
+}
+
+// Against the real bank: for two months of dailies, every pick is a strong, clean Jev run.
+{
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const dir = new URL('../public/rivals/jev-v1/courses/', import.meta.url);
+  const bySlot = new Map();
+  for (const c of readdirSync(dir)) { const o = JSON.parse(readFileSync(new URL(c + '/opponents.json', dir), 'utf8')); bySlot.set(o.courseSlot, o.opponents); }
+  const realJev = (r) => r?.driverConfig?.driver === 'jev-strategist' && !!r.driverConfig.jev;
+  let worst = 0;
+  for (let n = 1; n <= 60; n++) {
+    const slot = dailySlot(n, [...bySlot.keys()]);
+    const list = bySlot.get(slot);
+    const pick = dailyRival(n, list, realJev);
+    const times = list.map((e) => finishMs(e.record)).filter((t) => t !== null).sort((a, b) => a - b);
+    const median = times[times.length >> 1];
+    ok(pick && pick.record.retries <= 1, 'daily #' + n + ' rival is clean');
+    ok(finishMs(pick.record) <= median, 'daily #' + n + ' rival is faster than the course median');
+    worst = Math.max(worst, finishMs(pick.record));
+  }
+  ok(worst < 150000, 'the slowest daily rival in two months finishes in ' + Math.round(worst / 1000) + ' s');
 }
 
 console.log('dailyRace: ' + checks + ' assertions passed');

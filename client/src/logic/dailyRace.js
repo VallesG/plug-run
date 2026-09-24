@@ -27,18 +27,45 @@ export function dailySlot(n, slots) {
   return list[dailyHash('plugrun-daily-course/' + n) % list.length];
 }
 
+/** A race's finish time, or null when it did not clear all seven houses. */
+export function finishMs(record) {
+  const t = record?.clearTimes;
+  return Array.isArray(t) && t.length === 7 && Number.isFinite(t[6]) ? t[6] : null;
+}
+
+// The day's rival should be a real test: one of Jev's cleanest, fastest runs
+// on the course, never one where he got stuck (the bank holds a few 400 s+
+// races with dozens of retries).
+export const DAILY_MAX_RETRIES = 1;
+export const DAILY_FASTEST_SHARE = 0.25;
+
 /**
  * Today's rival on that course: a Jev race when the course has one (Jev is
- * the name players know), with its own stash layout. entries are
- * { record } with recordingID, stashSeed and (for Jev) driverConfig.
+ * the name players know), with its own stash layout, drawn from the fastest
+ * quarter of his clean runs. entries are { record } with recordingID,
+ * stashSeed, clearTimes, retries and (for Jev) driverConfig.
  */
 export function dailyRival(n, entries, isJev = () => false) {
-  const usable = (entries || []).filter((e) => e?.record && typeof e.record.recordingID === 'string' && Number.isInteger(e.record.stashSeed));
+  const usable = (entries || []).filter((e) => e?.record && typeof e.record.recordingID === 'string'
+    && Number.isInteger(e.record.stashSeed) && finishMs(e.record) !== null);
   const jevTest = typeof isJev === 'function' ? isJev : () => false;
   const jev = usable.filter((e) => jevTest(e.record));
-  const pool = (jev.length ? jev : usable).slice().sort((a, b) => (a.record.recordingID < b.record.recordingID ? -1 : 1));
+  let pool = jev.length ? jev : usable;
+  const clean = pool.filter((e) => !(e.record.retries > DAILY_MAX_RETRIES));
+  if (clean.length) pool = clean;
+  pool = pool.slice().sort((a, b) => finishMs(a.record) - finishMs(b.record)
+    || (a.record.recordingID < b.record.recordingID ? -1 : 1));
   if (!pool.length) return null;
-  return pool[dailyHash('plugrun-daily-rival/' + n) % pool.length];
+  const top = pool.slice(0, Math.max(Math.min(3, pool.length), Math.ceil(pool.length * DAILY_FASTEST_SHARE)));
+  return top[dailyHash('plugrun-daily-rival/' + n) % top.length];
+}
+
+/** "THU · SEP 24" for Daily #n (UTC). */
+export function dailyDateLabel(n) {
+  const d = new Date(DAILY_EPOCH_MS + (n - 1) * DAY_MS);
+  const day = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][d.getUTCDay()];
+  const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][d.getUTCMonth()];
+  return day + ' · ' + mon + ' ' + d.getUTCDate();
 }
 
 export const EMPTY_DAILY = Object.freeze({ days: {}, streak: 0, best: 0, last: 0 });

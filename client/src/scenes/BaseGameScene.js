@@ -176,7 +176,7 @@ export class BaseGameScene extends Phaser.Scene {
 
     // PvE session tracking
     this.runKind = ['journey','rivals'].includes(initData?.runKind) ? initData.runKind : 'daily';
-    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID, stashSeed: initData?.rivalStashSeed, pool: initData?.rivalPool ?? globalThis.__plugRunRivalPool })) : null;
+    this.rivalRace = this.runKind === 'rivals' ? (initData?.rivalRace ?? createRivalSession({ seed: initData?.rivalSeed, slot: initData?.rivalSlot, powers: initData?.rivalPowers, hardLimitMs: initData?.rivalHardLimitMs, recording: initData?.rivalRecording, recordingID: initData?.rivalOpponentID, stashSeed: initData?.rivalStashSeed, pool: initData?.rivalPool ?? globalThis.__plugRunRivalPool, daily: initData?.rivalDaily })) : null;
     // A friend's challenge (src/platform takeLaunchChallenge): rides on the race,
     // so restarts keep it; a NEW RACE builds a fresh race without it.
     if (this.rivalRace && initData?.rivalChallenge && !this.rivalRace.challenge) this.rivalRace.challenge = initData.rivalChallenge;
