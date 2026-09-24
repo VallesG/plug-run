@@ -7,6 +7,8 @@ import { drawArenaArt, drawArenaPerimeter, neutralizeArenaTextures } from '../co
 import { drawArenaWallInk } from '../controllers/ArenaWallInk.js';
 import { drawTutorialInstructions } from '../controllers/TutorialInstructions.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
+import { drawParkedCar, playerCarPaint, CAR_LENGTH_CELLS } from '../controllers/CarArt.js';
+import { PALETTE } from '../logic/palette.js';
 import GameUI from '../controllers/GameUI.js';
 import { showRunnerLoadout } from '../controllers/RunnerLoadout.js';
 import { tutorialStage, nextTutorialStage, tutorialLesson, TUTORIAL_STAGE_COUNT } from '../logic/tutorial.js';
@@ -1275,14 +1277,21 @@ export class TutorialMiniScene extends Phaser.Scene {
     const cx = ex + dx * forward;
     const cy = ey + dy * forward;
 
-    // Car sprite - match PvpScene size exactly
-    const carLen = this.cell * 2.6;
-    this.car = this.add.image(cx, cy, 'car_blue').setDepth(1200);
-    this.car.setDisplaySize(carLen, this.cell * 1.4).setAngle(ang);
+    // The same getaway car as the game: nose to the street, parked where the
+    // game parks it and pulled in to stay on screen. The old sprite remains
+    // the fallback if a canvas texture cannot be made.
+    this.car = drawParkedCar(this, ex + dx * this.cell * 1.5, ey + dy * this.cell * 1.5, { x: dx, y: dy }, this.cell,
+      { paint: playerCarPaint(), depth: 1200, ink: PALETTE.ink });
+    if (!this.car) {
+      this.car = this.add.image(cx, cy, 'car_blue').setDepth(1200);
+      this.car.setDisplaySize(this.cell * 2.6, this.cell * 1.4).setAngle(ang);
+    }
     this.carOutDir = { x: dx, y: dy };
 
-    // Car lights - created but initially hidden until extraction is available
-    this.carLights = makeCarLights(this, cx, cy, side);
+    // Car lights - created but initially hidden until extraction is available.
+    // They shine from the front bumper.
+    const nose = this.car._heading ? this.cell * CAR_LENGTH_CELLS / 2 : 0;
+    this.carLights = makeCarLights(this, this.car.x + dx * nose, this.car.y + dy * nose, side);
     // Explicitly turn off lights (sets beam alphas to 0)
     this.setCarLights(false);
 
@@ -1901,7 +1910,7 @@ export class TutorialMiniScene extends Phaser.Scene {
         this.runner.setVisible(false);
         // Tween: drive car outward (along with lights and beacon)
         const dist = this.cell * 8;
-        const targets = [this.car];
+        const targets = [this.car, ...(this.car._outline || []), ...(this.car._shadow ? [this.car._shadow] : [])];
         if (this.carLights) targets.push(this.carLights);
         if (this.carBeacon) targets.push(this.carBeacon);
 
