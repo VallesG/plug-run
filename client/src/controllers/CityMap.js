@@ -138,7 +138,7 @@ export function drawCityMap(scene, { view, checkpoint, onDone, autoZoom=true } =
     }, { maps:variant==='rivals'?7:15,cleared:variant==='rivals'?7:block.status==='cleared'?15:current?checkpoint.pveRound-1:0,
       entering:current,animate:false,caption:false,labels:false,
       overview:!current,fog:variant!=='rivals'&&current,marker:variant!=='rivals'&&current,
-      celebration:variant==='rivals' });
+      celebration:variant==='rivals', bake:false }); // the intro zooms into this map
     const shade=scene.add.graphics(); root.add(shade);
     if(!current && block.status!=='cleared') {
       shade.fillStyle(0x07090b,.75).fillRect(node.x-node.w/2,node.y-node.h/2,node.w,node.h);

@@ -859,8 +859,8 @@ console.log('rivals quick start: '+passed+' total assertions passed');
   check('and can still be sent as a challenge, marked daily',first.modal.buttons[0].label==='CHALLENGE A FRIEND');
   const second=run({});await flush();
   check('a second run the same day is a practice run and is not submitted',second.st.dailyOfficial===false&&dailies.submitted.length===1);
-  const again=second.modal.buttons.find(b=>b.label==='PRACTICE AGAIN');
-  check('the result offers the same race again as practice, not a random new race',!!again&&!second.modal.buttons.some(b=>b.label==='NEW RACE'));
+  const again=second.modal.buttons.find(b=>b.label==='RACE AGAIN');
+  check('the result offers the same race again, not a random new race',!!again&&!second.modal.buttons.some(b=>b.label==='NEW RACE'));
   // Entry: the daily opens on its ticket, then the picker titled for it.
   const entry=setup({...rules.newRivalRace(course,splits),daily:12});
   const intro=entry.modals.at(-1);
@@ -870,7 +870,7 @@ console.log('rivals quick start: '+passed+' total assertions passed');
   check('START OFFICIAL RUN goes to the picker, titled for the daily',intro.buttons[0].label==='START OFFICIAL RUN'&&loadouts===beforePick+1&&lastPicker.options.title==='DAILY RACE #12');
   dailies.officialToday=true;
   const later=setup({...rules.newRivalRace(course,splits),daily:12});
-  check('once the official run is done, the ticket offers practice',later.modals.at(-1).buttons[0].label==='START PRACTICE RUN');
+  check('once the official run is done, the button says RACE AGAIN',later.modals.at(-1).buttons[0].label==='RACE AGAIN');
   dailies.officialToday=false;
 }
 console.log('rivals daily race: '+passed+' total assertions passed');

@@ -746,9 +746,11 @@ export class BaseGameScene extends Phaser.Scene {
       }
     }
 
+    const artBefore = new Set(this.children.list);
     this.neutralizeWallTextures();
     this.drawNeonArena();
     this.drawWallInk();
+    this.bakeArenaArt(this.children.list.filter(o => !artBefore.has(o)));
     this.applyFrameVignette();
     this.makeObjectives(this.stashCell, this.extractCell);
     this.placeGetawayCar();
@@ -1572,27 +1574,35 @@ export class BaseGameScene extends Phaser.Scene {
       const sensor = this.add.rectangle(0, 0, w, h, 0x000000, 0.0001);
       // Hard ground shadow, same treatment as the characters.
       const shadow = this.add.ellipse(this.cell * 0.05, h * 0.55, w * 1.05, h * 0.5, PALETTE.ink, 0.45);
-      // Graphics-based rounded rectangle + tape stripe
-      const g = this.add.graphics();
+      // The duffel body: a rounded rectangle, tape stripe and gloss. Drawn once
+      // into a texture per size and shown as an image, because a Graphics
+      // object is re-triangulated by WebGL on every frame it is on screen.
       const tan = 0xC8A97E;    // duffel/package color
-      const tanDark = 0xA9885F; // border color
       const tape = 0x8B7355;   // darker tape stripe
       const gloss = 0xE7D3B5;  // soft highlight
-      // Draw duffel body
-      g.fillStyle(tan, 1);
       // Ink outline, not a darker tan: the duffel reads with the same line
       // weight as the people instead of as a softer object in a harder scene.
-      g.lineStyle(Math.max(2, Math.floor(this.cell * 0.09)), PALETTE.ink, 1);
+      const lw = Math.max(2, Math.floor(this.cell * 0.09));
       const rad = Math.max(4, Math.floor(this.cell * 0.14 * baseScale));
-      g.fillRoundedRect(-w/2, -h/2, w, h, rad);
-      g.strokeRoundedRect(-w/2, -h/2, w, h, rad);
-      // Tape stripe (horizontal band)
-      const stripeH = Math.max(4, Math.floor(h * 0.28));
-      g.fillStyle(tape, 1);
-      g.fillRect(-w/2 + 4, -stripeH/2, w - 8, stripeH);
-      // Subtle top-left gloss highlight
-      g.fillStyle(gloss, 0.10);
-      g.fillRoundedRect(-w/2 + 6, -h/2 + 6, w * 0.35, h * 0.30, rad * 0.6);
+      const texKey = '__duffel_' + Math.round(w * 10) + '_' + Math.round(h * 10) + '_' + lw;
+      if (!this.textures.exists(texKey)) {
+        const padPx = lw + 2, tw = Math.ceil(w + padPx * 2), th = Math.ceil(h + padPx * 2), ox = tw / 2, oy = th / 2;
+        const gt = this.make.graphics({ x: 0, y: 0, add: false });
+        gt.fillStyle(tan, 1);
+        gt.lineStyle(lw, PALETTE.ink, 1);
+        gt.fillRoundedRect(ox - w/2, oy - h/2, w, h, rad);
+        gt.strokeRoundedRect(ox - w/2, oy - h/2, w, h, rad);
+        // Tape stripe (horizontal band)
+        const stripeH = Math.max(4, Math.floor(h * 0.28));
+        gt.fillStyle(tape, 1);
+        gt.fillRect(ox - w/2 + 4, oy - stripeH/2, w - 8, stripeH);
+        // Subtle top-left gloss highlight
+        gt.fillStyle(gloss, 0.10);
+        gt.fillRoundedRect(ox - w/2 + 6, oy - h/2 + 6, w * 0.35, h * 0.30, rad * 0.6);
+        gt.generateTexture(texKey, tw, th);
+        gt.destroy();
+      }
+      const g = this.add.image(0, 0, texKey);
       // Faint marking
       const mark = this.add.text(-w*0.18, -h*0.06, '$', { fontSize: `${Math.max(10, Math.floor(this.cell*0.30*baseScale))}px`, color: '#2b2b2b' })
         .setAlpha(0.25)
@@ -2183,6 +2193,51 @@ export class BaseGameScene extends Phaser.Scene {
    * object, so overlapping tiles composite once instead of stacking darker.
    */
   drawWallInk(){ return drawArenaWallInk.call(this); }
+
+  /**
+   * The house's floor, walls, trim and furniture never change once drawn, but
+   * as ~1,400 separate objects (hundreds of tiles plus vector outlines that
+   * WebGL re-triangulates every frame) they were most of each frame's cost on
+   * a phone. Paint them once into two textures and draw those instead:
+   *   below: depth <= 1 (backdrop and floor), under the movement trails at 1
+   *   above: depth 1-5 (wall trim, walls, edges, furniture), under everything
+   *          that moves (car 7.5+, runner and Plug 9.5+, stash 999+)
+   * Nothing collides with these objects (movement uses the grid), so only the
+   * picture changes, and it is pixel-for-pixel the same.
+   */
+  bakeArenaArt(created){
+    try {
+      const order = new Map(created.map((o, i) => [o, i]));
+      const art = created.filter(o => o.active && o.visible !== false && o.depth <= 5 && !o.body && !o.input
+        && !o.mask && o.scrollFactorX !== 0 && o.renderWebGL)
+        .sort((a, b) => a.depth - b.depth || order.get(a) - order.get(b));
+      if (art.length < 2) return false;
+      const W = Math.ceil(Math.max(this.scale.gameSize.width, this.cols * this.cell + this.pad.x * 2));
+      const H = Math.ceil(Math.max(this.scale.gameSize.height, this.rows * this.cell + this.pad.y * 2));
+      const gen = (BaseGameScene._arenaBakeGen = (BaseGameScene._arenaBakeGen || 0) + 1);
+      const layers = [art.filter(o => o.depth <= 1), art.filter(o => o.depth > 1)];
+      const images = [];
+      layers.forEach((list, i) => {
+        if (!list.length) return;
+        const key = '__arena_' + gen + '_' + i;
+        const rt = this.make.renderTexture({ width: W, height: H }, false);
+        rt.draw(list);
+        rt.saveTexture(key);
+        rt.destroy();
+        images.push(this.add.image(0, 0, key).setOrigin(0, 0).setDepth(i ? list[0].depth : 1));
+      });
+      if (images.length !== layers.filter(l => l.length).length) { images.forEach(im => im.destroy()); return false; }
+      for (const o of art) o.destroy();
+      // Keep this house's and the previous house's pictures (a replay of the
+      // last round may still show it); drop anything older.
+      for (const i of [0, 1]) { const old = '__arena_' + (gen - 2) + '_' + i; if (this.textures.exists(old)) this.textures.remove(old); }
+      this._arenaBaked = { gen, objects: art.length };
+      return true;
+    } catch (e) {
+      console.warn('[Arena] bake skipped', e);
+      return false;
+    }
+  }
 
   /**
    * Darken the frame edges so the eye sits on the board. One line of post-FX,

@@ -137,10 +137,10 @@ export default class RivalsRace {
     const target = this.race.rivalTimes?.[RIVAL_HOUSES-1];
     const modal = this.scene.gameUI.showModal({
       fullScreen:true, palette:'daily', title:(this.race.course.name||'Daily Race').toUpperCase(),
-      subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+' · '+(official?'OFFICIAL RUN':'PRACTICE RUN'),
+      subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+(official?' · OFFICIAL RUN':' · OFFICIAL TIME SET'),
       lines:[(Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:'')].filter(Boolean),
       buttons:[
-        {label:official?'START OFFICIAL RUN':'START PRACTICE RUN',variant:'primary',onClick:()=>{ if(!this.disposed) done(); }},
+        {label:official?'START OFFICIAL RUN':'RACE AGAIN',variant:'primary',onClick:()=>{ if(!this.disposed) done(); }},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
     });
@@ -765,7 +765,7 @@ export default class RivalsRace {
   dailyLine(){
     const n=this.race.daily;
     if(!Number.isInteger(n))return null;
-    if(!this.race.dailyOfficial)return 'DAILY #'+n+' · PRACTICE RUN';
+    if(!this.race.dailyOfficial)return 'DAILY #'+n+' · YOUR OFFICIAL TIME STANDS';
     const streak=this.race.dailyStreak>0?' · STREAK '+this.race.dailyStreak:'';
     return 'DAILY #'+n+' · OFFICIAL'+streak;
   }
@@ -835,9 +835,9 @@ export default class RivalsRace {
       const watch=config.buttons.find(b=>b.label.includes('WATCH RIVAL'));
       config.buttons=[next,...(watch?[watch]:[]),menu];
       if(this.isDaily()&&next){
-        // The same race again, as practice: today's official time already stands.
+        // The same race again: today's official time already stands.
         const r=this.race;
-        Object.assign(next,{label:'PRACTICE AGAIN',onClick:()=>this.scene.scene.restart({mode:'pve',role:'runner',runKind:'rivals',
+        Object.assign(next,{label:'RACE AGAIN',onClick:()=>this.scene.scene.restart({mode:'pve',role:'runner',runKind:'rivals',
           rivalSlot:r.course.slot,rivalStashSeed:r.stashSeed,rivalOpponentID:r.opponent?.recordingID,rivalPool:r.pool||'ordinary',rivalDaily:r.daily})});
       }
     }
@@ -847,7 +847,7 @@ export default class RivalsRace {
     // Challenge a friend: first, so it is the obvious next move after a finish.
     if(this.canChallenge()){
       let label=null;
-      const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN','PRACTICE AGAIN'].includes(b.label));
+      const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN','RACE AGAIN'].includes(b.label));
       if(next)next.variant='secondary';
       config.buttons.unshift({label:'CHALLENGE A FRIEND',variant:'primary',keepOpen:true,
         bindText:t=>{label=t;},onClick:()=>this.sendChallenge(label)});

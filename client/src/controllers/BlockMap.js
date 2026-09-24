@@ -12,7 +12,31 @@ const LAND = [0x424735,0x454a37,0x484d39,0x4a4e3b,0x464b38];
 const WARM = 0xffd78a;
 const ROOFS = [0x675e4e,0x505e60,0x736557,0x5c6150,0x685758];
 
-export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true, caption = true, labels = true, overview = false, fog = true, marker = true, celebration = false, gangID = null }) {
+// A finished layer never changes, but as a Graphics object WebGL re-triangulates
+// every command (tens of thousands here) on every frame it is shown. Copy it
+// into a same-sized render texture once, in the layer's place, and drop the
+// Graphics. The picture is identical because it is drawn at on-screen scale.
+// Not used where the map is later zoomed (the city intro), which would enlarge it.
+const BAKE_MARGIN = 16; // local units around the 200x220 block (lamp glow, marker pin)
+function bakeLayer(scene, modal, gfx) {
+  try {
+    if (!scene?.add?.renderTexture || !gfx?.commandBuffer?.length) return gfx;
+    const s = gfx.scaleX || 1, m = BAKE_MARGIN * s;
+    const w = Math.ceil((200 + BAKE_MARGIN * 2) * s), h = Math.ceil((220 + BAKE_MARGIN * 2) * s);
+    // Whole-pixel texture position; the layer keeps its exact subpixel offset inside it.
+    const rx = Math.floor(gfx.x - m), ry = Math.floor(gfx.y - m);
+    const rt = scene.add.renderTexture(rx, ry, w + 1, h + 1).setOrigin(0, 0)
+      .setScrollFactor(gfx.scrollFactorX, gfx.scrollFactorY).setDepth(gfx.depth).setAlpha(gfx.alpha);
+    rt.draw(gfx, gfx.x - rx, gfx.y - ry);
+    const parent = gfx.parentContainer, at = parent ? parent.getIndex(gfx) : -1;
+    modal.registerExtra(rt);
+    if (parent && at >= 0 && rt.parentContainer === parent) parent.moveTo(rt, at);
+    gfx.destroy();
+    return rt;
+  } catch { return gfx; }
+}
+
+export function drawBlockMap(scene, modal, { cleared, maps, entering = false, animate = true, caption = true, labels = true, overview = false, fog = true, marker = true, celebration = false, gangID = null, bake = true }) {
   if (!modal?.contentBounds || !modal.registerExtra) return null;
   const area = modal.contentBounds;
   const complete = fullBlockReveal({cleared,maps,celebration});
@@ -172,10 +196,11 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
     }
   }
 
+  const base = bake ? bakeLayer(scene, modal, g) : g;
   // Two disjoint opaque masks. Existing exploration never dims again.
   // The newly cleared road and property emerge together over 900ms.
   if(fog && !complete) {
-    const fog=layer(20003), reveal=layer(20003);
+    let fog=layer(20003), reveal=layer(20003);
     fog.fillStyle(BLACK,1);reveal.fillStyle(BLACK,1);
     const tiles=buildFog(block,routeID);
     // Merge adjacent tiles on each row to keep the mask inexpensive.
@@ -190,6 +215,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
         if(type) (type===1?fog:reveal).fillRect(start*2,row*2,(col-start)*2,2);
       }
     }
+    if(bake) { fog=bakeLayer(scene, modal, fog); reveal=bakeLayer(scene, modal, reveal); }
     if(animate) {
       scene.tweens.add({targets:reveal,alpha:0,duration:900,ease:'Sine.easeOut'});
       reveal.once('destroy',()=>scene.tweens.killTweensOf(reveal));
@@ -207,6 +233,7 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
     pin.fillStyle(WARM,1);pin.fillTriangle(x-2.5,y-7,x+2.5,y-7,x,y-1.5);
     pin.fillRect(x-2.5,y-10,5,4);
     pin.fillStyle(PALETTE.ink,1);pin.fillRect(x-0.7,y-9,1.4,2);
+    if(bake) bakeLayer(scene, modal, pin);
   }
   if(caption) {
     const caption=scene.add.text(area.x+area.width/2,area.y+area.height-7,
@@ -216,5 +243,5 @@ export function drawBlockMap(scene, modal, { cleared, maps, entering = false, an
       }).setOrigin(0.5).setDepth(20004).setScrollFactor(0);
     modal.registerExtra(caption);
   }
-  return g;
+  return base;
 }
