@@ -658,7 +658,7 @@ export default class RivalsRace {
     this.race.result=result;
     // The player's own clock: the seventh clear, or when they stopped.
     this.race.finishedMs=rivalElapsed(this.race,now);
-    trackScene(this.scene,'rivals_match_completed',{course_slot:this.race.course.slot,result,elapsed_seconds:Math.round(this.race.finishedMs)/1000,retries:this.race.retries});
+    trackScene(this.scene,'rivals_match_completed',{course_slot:this.race.course.slot,result,elapsed_seconds:Math.round(this.race.finishedMs)/1000,retries:this.race.retries,houses:this.race.clearTimes.length});
     endAttemptCapture(this.scene,this.race,'abandoned',now);
     this.freeze();
     this.pending?.remove?.();

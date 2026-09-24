@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
-import {trackEvent,trackScene,trackRoundComplete,setAnalyticsContext,trackPageView} from '../src/utils/analytics.js';
+import {trackEvent,trackScene,trackRoundComplete,setAnalyticsContext,trackPageView,trackVisit,milestoneFor} from '../src/utils/analytics.js';
+const mem=new Map();globalThis.localStorage={getItem:k=>mem.has(k)?mem.get(k):null,setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)};
 const calls=[];
 globalThis.window={location:{hostname:'plug-run.io'},gtag:(...args)=>calls.push(args)};
 assert.equal(trackEvent('test',{crew:'afterlight',account_id:'secret',house_number:NaN}),true);
 assert.deepEqual(calls.pop(),['event','test',{analytics_version:'2',crew:'afterlight'}]);
 const scene={runKind:'journey',role:'runner',blockGangID:'iron-row',blockIndex:3,pveRound:15};
 trackRoundComplete('runner',15,true,scene);
+assert.equal(calls.pop()[1],'m_first_seven_houses','a first seven-house campaign run is a milestone, sent right after the event');
 assert.deepEqual(calls.pop()[2],{analytics_version:'2',game_mode:'campaign',player_role:'runner',crew:'iron-row',block_number:3,house_number:15,round_number:15,success:true});
 assert.equal(trackScene({rivalRace:{recording:true}},'test'),false);
 // Platform context rides on every event; only allow-listed string fields, and a user property for platform/client.
@@ -22,6 +24,23 @@ assert.deepEqual(calls.pop(),['event','page_view',{analytics_version:'2',platfor
 setAnalyticsContext({});
 trackEvent('test');
 assert.deepEqual(calls.pop()[2],{analytics_version:'2'});
+// Milestones: once per player, in funnel order.
+calls.length=0;
+trackEvent('house_started',{game_mode:'campaign'});
+assert.deepEqual(calls.map(c=>c[1]),['house_started','m_first_house_started']);
+calls.length=0;trackEvent('house_started',{game_mode:'campaign'});
+assert.deepEqual(calls.map(c=>c[1]),['house_started'],'a milestone fires once');
+assert.equal(milestoneFor('round_complete',{success:true,game_mode:'tutorial',round_number:2}),null,'tutorial houses are not the first real house');
+assert.equal(milestoneFor('round_complete',{success:true,game_mode:'rivals',round_number:1}),'m_first_house_cleared');
+assert.equal(milestoneFor('round_complete',{success:false,game_mode:'campaign'}),null);
+assert.equal(milestoneFor('rivals_match_completed',{houses:7}),'m_first_seven_houses');
+assert.equal(milestoneFor('rivals_match_completed',{houses:5}),null);
+assert.equal(milestoneFor('challenge_shared',{result:'declined'}),null,'a cancelled share is not a share');
+calls.length=0;const day=86400000,t0=Date.UTC(2026,8,24,10);
+trackVisit(t0);assert.deepEqual(calls.map(c=>c[1]),['m_first_visit']);
+calls.length=0;trackVisit(t0+3600000);assert.deepEqual(calls,[],'same day: nothing');
+trackVisit(t0+day);assert.equal(calls.pop()[1],'m_returned_day');
+trackVisit(t0+8*day);assert.equal(calls.pop()[1],'m_returned_week');
 window.location.hostname='localhost';
 assert.equal(trackEvent('test'),false);
 window.PLUG_RUN_ANALYTICS_DEBUG=true;

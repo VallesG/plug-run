@@ -4,7 +4,7 @@
 import { isTelegramShell, WEB_CONTEXT, scrubbedUrl, versionAtLeast, startParamKind } from '../logic/telegramLaunch.js';
 import { createCloudBackup } from './cloudBackup.js';
 import { startTelegram, attachTelegramGame } from './telegram.js';
-import { setAnalyticsContext, trackPageView, setAnalyticsClientId } from '../utils/analytics.js';
+import { setAnalyticsContext, trackPageView, setAnalyticsClientId, trackVisit } from '../utils/analytics.js';
 import { signInWithTelegram } from '../utils/userManager.js';
 
 export const platform = { id: 'web', context: WEB_CONTEXT, telegram: null };
@@ -42,6 +42,7 @@ export async function initPlatform(loc = globalThis.location) {
   setAnalyticsContext(platform.context);
   // index.html turns GA's automatic page view off on /tg; send it now the address is clean.
   if (shell) trackPageView();
+  trackVisit();
   return platform;
 }
 
