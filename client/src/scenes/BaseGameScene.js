@@ -655,8 +655,10 @@ export class BaseGameScene extends Phaser.Scene {
     // RESIZE mode: gameSize changes on rotation / window drags, so the
     // maze must be re-laid-out. Debounced restart preserves run state
     // (seed regenerates the identical maze) and ignores tiny viewport
-    // jitter like mobile URL-bar collapse.
-    this.scale.off('resize', this._onResizeCb);
+    // jitter like mobile URL-bar collapse. Guarded: off() with no listener
+    // removes EVERY resize listener, including the renderer's own, and the
+    // canvas then keeps drawing at the first house's size forever.
+    if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
     this._lastLayoutW = this.scale.gameSize.width;
     this._lastLayoutH = this.scale.gameSize.height;
     this._onResizeCb = (gameSize) => {
@@ -690,6 +692,14 @@ export class BaseGameScene extends Phaser.Scene {
       }); }, 250);
     };
     this.scale.on('resize', this._onResizeCb);
+    // The scale manager outlives this scene. Left attached, a resize on the
+    // menu (a phone turning, a Telegram view expanding) would run this
+    // handler and restart the house the player already left.
+    this.events.once('shutdown', () => {
+      clearTimeout(this._resizeTimer);
+      if (this._onResizeCb) this.scale.off('resize', this._onResizeCb);
+      this._onResizeCb = null;
+    });
 
     // arena
     // Early-round openness: fewer wall clusters while new players learn to

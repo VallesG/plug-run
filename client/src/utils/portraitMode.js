@@ -72,8 +72,9 @@ export function createPortraitOverlay(scene) {
   // Initial check
   checkOrientation();
 
-  // Clean up window listeners when scene shuts down
+  // Clean up window and scale listeners when scene shuts down
   scene.events.once('shutdown', () => {
+    scene.scale.off('resize', checkOrientation);
     window.removeEventListener('resize', onWindowResize);
     window.removeEventListener('orientationchange', onWindowResize);
     overlay.destroy();
