@@ -2,7 +2,7 @@
 // Supports guest accounts (localStorage), claimed accounts (Supabase)
 // Falls back to localStorage-only when offline
 
-import { provisionIdentity as apiProvisionIdentity, restoreIdentity as apiRestoreIdentity } from './api.js';
+import { provisionIdentity as apiProvisionIdentity, restoreIdentity as apiRestoreIdentity, telegramSignIn as apiTelegramSignIn } from './api.js';
 import {
   supabase,
   isOnline as supabaseIsOnline,
@@ -484,6 +484,30 @@ export async function restoreFromRecoveryCode(code) {
     return { success: false, error: 'malformed response' };
   } catch (e) {
     return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Sign in with Telegram (src/platform, on /tg only). Adopts the identity the
+ * server linked to this Telegram account and shows the player's Telegram
+ * first name. Never throws; resolves the server answer or null.
+ */
+export async function signInWithTelegram(initData, { timeoutMs = 3500 } = {}) {
+  try {
+    const user = getCurrentUserSync();
+    const res = await apiTelegramSignIn({ initData, userId: user.id }, timeoutMs);
+    if (!res?.userId || !res.username) return null;
+    user.id = res.userId;
+    user.username = res.username;
+    user.isGuest = false;
+    user.telegram = true;
+    saveUser(user);
+    try { if (res.recoveryCode) localStorage.setItem(STORAGE_KEY_RECOVERY, res.recoveryCode); } catch {}
+    try { localStorage.setItem(STORAGE_KEY_PROVISIONED, 'true'); } catch {}
+    return res;
+  } catch (e) {
+    console.warn('[UserManager] Telegram sign-in failed:', e?.message || e);
+    return null;
   }
 }
 

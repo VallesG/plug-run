@@ -101,6 +101,22 @@ export async function restoreIdentity(recoveryCode) {
   if (data?.token) setToken(data.token);
   return data;
 }
+
+/**
+ * Sign in with Telegram: the server checks Telegram's signed initData and
+ * answers with the Plug Run identity linked to that Telegram account. This
+ * device's own identity (userId + stored token) is offered so a player who
+ * already has one keeps it. Resolves { userId, username, token, recoveryCode, isNew }.
+ */
+export async function telegramSignIn({ initData, userId = null }, timeoutMs = 5000) {
+  const data = await tryFetch('/.netlify/functions/telegram?action=auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData, userId, token: getToken() })
+  }, timeoutMs);
+  if (data?.token) setToken(data.token);
+  return data;
+}
 /**
  * Share a finished Block Rivals race (the player opted in for this race).
  * Sends the race's own record and replay with this device's identity; the

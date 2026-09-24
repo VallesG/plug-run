@@ -125,4 +125,67 @@ async function body(res) { return { status: res.status, json: JSON.parse(await r
   eq((await body(await unset(req('https://x/.netlify/functions/telegram?action=ping', 'POST')))).status, 404, 'ping is GET only');
 }
 
+// --- Sign-in: Telegram's signature, then one Plug Run identity per Telegram account.
+{
+  const { createHmac } = await import('node:crypto');
+  const { validateInitData, displayName } = await import('../netlify/functions/telegram.mjs');
+  const BOT = '123456:TEST-bot-token';
+  const NOW = 1_758_600_000;
+  const sign = (fields, bot = BOT) => {
+    const p = new URLSearchParams(fields);
+    const check = [...p].map(([k, v]) => k + '=' + v).sort().join('\n');
+    const secret = createHmac('sha256', 'WebAppData').update(bot).digest();
+    p.set('hash', createHmac('sha256', secret).update(check).digest('hex'));
+    return p.toString();
+  };
+  const tgUser = (id, first_name) => JSON.stringify({ id, first_name, username: 'u' + id, language_code: 'en' });
+  const good = sign({ query_id: 'AAH1', user: tgUser(987654321, 'Sam'), auth_date: String(NOW - 60), signature: 'abc' });
+  ok(validateInitData(good, BOT, { nowSec: NOW })?.user.id === 987654321, 'a correctly signed launch validates (signature field included in the check)');
+  eq(validateInitData(good, '999:other', { nowSec: NOW }), null, 'signed for another bot: refused');
+  eq(validateInitData(good.replace('Sam', 'Max'), BOT, { nowSec: NOW }), null, 'edited user data: refused');
+  eq(validateInitData(good, BOT, { nowSec: NOW + 2 * 86400 }), null, 'older than a day: refused');
+  eq(validateInitData('user=%7B%7D&auth_date=1', BOT, { nowSec: NOW }), null, 'no hash: refused');
+  eq(validateInitData(sign({ user: 'not json', auth_date: String(NOW) }), BOT, { nowSec: NOW }), null, 'broken user: refused');
+
+  eq(displayName('  Sam  '), 'Sam', 'trimmed');
+  eq(displayName('Sa​m‮'), 'Sam', 'zero-width and bidi characters removed');
+  eq(Array.from(displayName('🔥'.repeat(40))).length, 24, 'capped at 24 characters (emoji count as one)');
+  eq(displayName('​​'), null, 'nothing usable left: null');
+  eq(displayName(undefined), null, 'no name: null');
+
+  const store = new Map();
+  const redis = async ([cmd, key, value]) => { if (cmd === 'GET') return store.get(key) ?? null; if (cmd === 'SET') { store.set(key, value); return 'OK'; } throw new Error(cmd); };
+  const handler = createTelegramHandler({ token: () => BOT, redis, nowSec: () => NOW });
+  const auth = async (body) => body_(await handler({ url: 'https://plugrun.io/.netlify/functions/telegram?action=auth', method: 'POST', text: async () => JSON.stringify(body) }));
+  async function body_(res) { return { status: res.status, json: JSON.parse(await res.text()) }; }
+
+  // An existing web player opens the Telegram app: their identity, proven by its token, is kept and renamed.
+  store.set('user:guest_1', JSON.stringify({ username: 'NeonRunr42', token: 'tok-1', recoveryCode: 'AAAA-BBBB-CCCC', lastSubmitAt: 5 }));
+  const linked = await auth({ initData: good, userId: 'guest_1', token: 'tok-1' });
+  eq([linked.status, linked.json.userId, linked.json.username, linked.json.token, linked.json.isNew], [200, 'guest_1', 'Sam', 'tok-1', false], 'existing identity linked and named by Telegram');
+  eq(store.get('tg:987654321'), 'guest_1', 'Telegram account mapped to it');
+  eq(JSON.parse(store.get('user:guest_1')).lastSubmitAt, 5, 'leaderboard record kept');
+
+  // Same Telegram account on another device (fresh storage): the same identity comes back.
+  const again = await auth({ initData: good, userId: 'guest_new', token: null });
+  eq([again.json.userId, again.json.token, again.json.isNew], ['guest_1', 'tok-1', false], 'another device gets the linked identity back');
+
+  // Someone offering another player's id without its token gets nothing of theirs.
+  const other = sign({ user: tgUser(5555, 'Eve'), auth_date: String(NOW) });
+  const stolen = await auth({ initData: other, userId: 'guest_1', token: 'wrong' });
+  ok(stolen.json.userId !== 'guest_1' && stolen.json.isNew === true && stolen.json.username === 'Eve', 'a wrong token cannot claim an identity');
+
+  // A brand-new player with an unusable name gets a readable fallback.
+  const blank = sign({ user: tgUser(424242, '​'), auth_date: String(NOW) });
+  const fresh = await auth({ initData: blank });
+  ok(fresh.json.isNew && fresh.json.username === 'Runner4242' && /^u_/.test(fresh.json.userId) && fresh.json.token, 'new player provisioned with a fallback name');
+  ok(store.get('recovery:' + fresh.json.recoveryCode) === fresh.json.userId, 'new player gets a working recovery code');
+
+  eq((await auth({ initData: good.replace('Sam', 'Max') })).status, 401, 'forged launch: 401');
+  const unset = createTelegramHandler({ token: () => undefined, redis });
+  eq((await body_(await unset({ url: 'https://x/?action=auth', method: 'POST', text: async () => '{}' }))).status, 500, 'no token configured: 500');
+  const broken = createTelegramHandler({ token: () => BOT, redis: async () => { throw new Error('Upstash 503'); }, nowSec: () => NOW });
+  eq((await body_(await broken({ url: 'https://x/?action=auth', method: 'POST', text: async () => JSON.stringify({ initData: good }) }))).status, 500, 'storage down: 500, not a crash');
+}
+
 console.log('telegram: ' + checks + ' assertions passed');

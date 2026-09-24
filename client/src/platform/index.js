@@ -4,6 +4,7 @@
 import { isTelegramShell, WEB_CONTEXT, scrubbedUrl } from '../logic/telegramLaunch.js';
 import { startTelegram, attachTelegramGame } from './telegram.js';
 import { setAnalyticsContext, trackPageView } from '../utils/analytics.js';
+import { signInWithTelegram } from '../utils/userManager.js';
 
 export const platform = { id: 'web', context: WEB_CONTEXT, telegram: null };
 
@@ -12,7 +13,13 @@ export async function initPlatform(loc = globalThis.location) {
   const shell = isTelegramShell(loc?.pathname);
   if (shell) {
     const tg = await startTelegram().catch(() => null);
-    if (tg) Object.assign(platform, { id: 'telegram', context: tg.context, telegram: tg.webApp });
+    if (tg) {
+      Object.assign(platform, { id: 'telegram', context: tg.context, telegram: tg.webApp });
+      // Before the menu draws, so it shows the right name and identity. Bounded:
+      // a slow or failed sign-in leaves the local identity and boots anyway.
+      platform.signIn = await signInWithTelegram(tg.webApp.initData);
+      if (platform.signIn) platform.context = { ...platform.context, player_status: platform.signIn.isNew ? 'new' : 'returning' };
+    }
     // Telegram's signed launch data (user id, name) rides in the #fragment.
     // Telegram's script has read it by now; drop it before analytics sees the address.
     const clean = scrubbedUrl(loc.href);

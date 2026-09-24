@@ -4,7 +4,7 @@ const FIELDS=new Set(['game_mode','player_role','crew','block_number','house_num
  'stage','action','leaderboard_tab','destination','result','reason','course_slot',
  'elapsed_seconds','retries','power_1','power_2','analytics_version',
  // Where the game runs (src/platform): web, or Telegram with its client and launch kind.
- 'platform','client','source','tg_platform','tg_version','start_kind','page_location','page_title']);
+ 'platform','client','source','tg_platform','tg_version','start_kind','player_status','page_location','page_title']);
 // Merged into every event. Set once at boot by src/platform/index.js.
 let context={};
 export function setAnalyticsContext(ctx={}){
