@@ -60,10 +60,7 @@ export class MenuScene extends Phaser.Scene {
       this.load.audio('bg_main',  ['/audio/main_beat.ogg',  '/audio/main_beat.mp3']);
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
-      this.load.audio('bg_beat4', '/audio/gameplay_beat4.wav');
-      this.load.audio('bg_beat5', '/audio/gameplay_beat5.wav');
-      this.load.audio('bg_beat6', '/audio/gameplay_beat6.wav');
-      this.load.audio('bg_beat7', '/audio/gameplay_beat7.wav');
+      // bg_beat4-7 load after the first screen: AudioManager.loadExtraBeats.
       // Street ambience sounds for menu
       this.load.audio('street_ambience', ['/audio/street_ambience.ogg', '/audio/street_ambience.mp3']);
       this.load.audio('cars_pass', ['/audio/cars_pass.ogg', '/audio/cars_pass.mp3']);
@@ -83,6 +80,7 @@ export class MenuScene extends Phaser.Scene {
 
   create(){
     guardSceneEntryFromHeldPointer(this);
+    AudioManager.loadExtraBeats(this);
     // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
     // Approved night-city art sits behind real, interactive menu controls.

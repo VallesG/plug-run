@@ -115,10 +115,7 @@ export class BaseGameScene extends Phaser.Scene {
       this.load.audio('bg_main',  ['/audio/main_beat.ogg',  '/audio/main_beat.mp3']);
       this.load.audio('bg_plug',  ['/audio/plug_beat2.ogg',  '/audio/plug_beat2.mp3']);
       this.load.audio('bg_learn', ['/audio/learn_beat.ogg', '/audio/learn_beat.mp3']);
-      this.load.audio('bg_beat4', '/audio/gameplay_beat4.wav');
-      this.load.audio('bg_beat5', '/audio/gameplay_beat5.wav');
-      this.load.audio('bg_beat6', '/audio/gameplay_beat6.wav');
-      this.load.audio('bg_beat7', '/audio/gameplay_beat7.wav');
+      // bg_beat4-7 load after the first screen: AudioManager.loadExtraBeats.
     } catch {}
   }
 
@@ -550,6 +547,7 @@ export class BaseGameScene extends Phaser.Scene {
       return;
     }
     this._touchSceneClosing=false;
+    AudioManager.loadExtraBeats(this);
     // Interior furniture is drawn in code; no asynchronous texture-loading restart.
     // Characters are the td_* top-down set, animated by texture swap in
     // updateAvatarVisuals. The Kenney and gangster sheets that used to be

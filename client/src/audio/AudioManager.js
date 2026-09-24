@@ -36,6 +36,32 @@ export class AudioManager {
     scene.load.audio('mission_pickup', '/audio/pickup.wav');
   }
 
+  // The four long gameplay beats load after the first screen instead of
+  // holding it up (they were ~21 MB of WAV). Gameplay music only picks from
+  // tracks already in the cache, so each joins the rotation when it lands.
+  static loadExtraBeats(scene) {
+    const load = scene?.load;
+    if (!load || !scene.cache?.audio) return 0;
+    AudioManager._beatsInFlight ??= new Set();
+    const inFlight = AudioManager._beatsInFlight;
+    let queued = 0;
+    for (const n of [4, 5, 6, 7]) {
+      const key = 'bg_beat' + n;
+      if (scene.cache.audio.exists(key) || inFlight.has(key)) continue;
+      load.audio(key, ['/audio/gameplay_beat' + n + '.ogg', '/audio/gameplay_beat' + n + '.mp3']);
+      inFlight.add(key);
+      queued++;
+    }
+    if (!queued) return 0;
+    const done = () => { for (const k of [...inFlight]) if (scene.cache.audio.exists(k)) inFlight.delete(k); };
+    load.on('filecomplete', done);
+    load.once('complete', () => { done(); inFlight.clear(); });
+    // Leaving the scene mid-download: let the next scene queue what is missing.
+    scene.events?.once?.('shutdown', () => inFlight.clear());
+    load.start();
+    return queued;
+  }
+
   static get(scene) {
     if (!AudioManager._instance) {
       console.log('[AudioManager] Creating NEW instance');

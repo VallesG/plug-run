@@ -4,7 +4,7 @@
 import { isTelegramShell, WEB_CONTEXT, scrubbedUrl, versionAtLeast } from '../logic/telegramLaunch.js';
 import { createCloudBackup } from './cloudBackup.js';
 import { startTelegram, attachTelegramGame } from './telegram.js';
-import { setAnalyticsContext, trackPageView } from '../utils/analytics.js';
+import { setAnalyticsContext, trackPageView, setAnalyticsClientId } from '../utils/analytics.js';
 import { signInWithTelegram } from '../utils/userManager.js';
 
 export const platform = { id: 'web', context: WEB_CONTEXT, telegram: null };
@@ -38,6 +38,7 @@ export async function initPlatform(loc = globalThis.location) {
       try { globalThis.history?.replaceState(globalThis.history.state, '', clean); } catch {}
     }
   }
+  if (platform.id === 'telegram') setAnalyticsClientId(analyticsClientId());
   setAnalyticsContext(platform.context);
   // index.html turns GA's automatic page view off on /tg; send it now the address is clean.
   if (shell) trackPageView();
@@ -46,4 +47,16 @@ export async function initPlatform(loc = globalThis.location) {
 
 export function attachGame(game) {
   if (platform.id === 'telegram') attachTelegramGame(game, platform.telegram);
+}
+
+/** A random GA client id kept by the game (and backed up to CloudStorage in Telegram). */
+export function analyticsClientId(storage = globalThis.localStorage) {
+  const KEY = 'pr_analytics_cid';
+  try {
+    const have = storage.getItem(KEY);
+    if (have && /^[0-9]+\.[0-9]+$/.test(have)) return have;
+    const id = Math.floor(Math.random() * 2147483647) + '.' + Math.floor(Date.now() / 1000);
+    storage.setItem(KEY, id);
+    return id;
+  } catch { return null; }
 }

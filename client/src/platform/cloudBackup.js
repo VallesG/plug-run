@@ -14,7 +14,7 @@ const PROGRESS_PREFIXES = [
   'pr_journey_v1_', 'pr_city_v1_', 'pr_window_v1_', 'pr_crew_saves_v1_', 'pr_contacts_v1_',
   'pr_blockrun_v1_', 'pr_rival_city_v1_', 'pr_skill_v1_', 'pr_rival_skill_v1_', 'pr_tutorial_v1_', 'pr_route_'
 ];
-const PROGRESS_KEYS = new Set(['prla_inv_v1', 'pr_music_mute', 'pr_sfx_mute', 'pr_sfx_volume', 'pr_corridor_assist', 'pr_user']);
+const PROGRESS_KEYS = new Set(['prla_inv_v1', 'pr_music_mute', 'pr_sfx_mute', 'pr_sfx_volume', 'pr_corridor_assist', 'pr_user', 'pr_analytics_cid']);
 const CLOUD_PREFIX = 'b_';
 const CHUNK = 4000;          // CloudStorage values are at most 4096 characters
 const MAX_CHUNKS = 16;       // 64 KB per key is far more than any progress key needs

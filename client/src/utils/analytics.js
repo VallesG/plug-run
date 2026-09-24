@@ -16,6 +16,17 @@ export function setAnalyticsContext(ctx={}){
  }catch{}
  return {...context};
 }
+// Telegram's WebView can drop GA's cookie, which would count a returning
+// player as new each visit. There the game keeps its own random id (never the
+// Telegram or Plug Run account id) and hands it to GA.
+export const GA_MEASUREMENT_ID='G-M68K7J4ZZ2';
+export function setAnalyticsClientId(id){
+ try{
+  if(typeof window==='undefined'||typeof window.gtag!=='function'||typeof id!=='string'||!/^[0-9]+\.[0-9]+$/.test(id))return false;
+  window.gtag('config',GA_MEASUREMENT_ID,{client_id:id,send_page_view:false,anonymize_ip:true,cookie_flags:'SameSite=None;Secure'});
+  return true;
+ }catch{return false;}
+}
 export function trackPageView(){
  if(typeof window==='undefined')return false;
  return trackEvent('page_view',{page_location:window.location?.href,page_title:window.document?.title});
