@@ -20,8 +20,10 @@ import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScore
 import { getSessionState, clearSessionState } from '../utils/routeProgress.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation, trackEvent } from '../utils/analytics.js';
-import { takeLaunchChallenge } from '../platform/index.js';
-import { getChallenge } from '../utils/api.js';
+import { takeLaunchChallenge, takeLaunchPrize, prizesHere, identityProof } from '../platform/index.js';
+import { getChallenge, getPrizeStatus, claimPrize } from '../utils/api.js';
+import { showPrizeClaim } from '../platform/prizeClaim.js';
+import { setTodayPrize } from '../utils/prizeState.js';
 import { dailyNumber, dailySlot, dailyRival, dailyNote } from '../logic/dailyRace.js';
 import { getDailyState } from '../utils/dailyProgress.js';
 import { enabledRivalCourses, rivalPoolCourse } from '../logic/rivals.js';
@@ -29,6 +31,8 @@ import { loadRivalOpponents, isJevRecord } from '../utils/rivalSession.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setGlobalTimers, setCurrentMode, getCurrentMode, getExistingSidebars } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
+// A LATER on a prize claim lasts the session: it does not reopen on every menu visit.
+const prizeLater = new Set();
 
 // Palette constants so we can theme later
 const PALETTE = {
@@ -89,6 +93,8 @@ export class MenuScene extends Phaser.Scene {
     AudioManager.loadExtraBeats(this);
     // Opened from a friend's challenge link: straight into that race.
     this.time.delayedCall(0, () => this.openLaunchChallenge());
+    // Telegram: today's Daily Race prize, and a claim for a prize this player won.
+    this.time.delayedCall(0, () => this.checkPrizes());
     // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
     // Approved night-city art sits behind real, interactive menu controls.
@@ -2286,6 +2292,49 @@ export class MenuScene extends Phaser.Scene {
         this.carsPass = null;
       } catch {}
     }
+  }
+
+  /**
+   * Telegram only: the Daily row names today's prize, and a win waiting for a
+   * wallet opens its claim (once a session after LATER, always from the
+   * winner's prize link).
+   */
+  checkPrizes(){
+    if (!prizesHere()) return;
+    const linkDay = takeLaunchPrize();
+    getPrizeStatus({ userId: getUserID() }).then(st => {
+      if (!this.sys.isActive() || !st?.ok) return;
+      setTodayPrize(st.today);
+      const n = dailyNumber(Date.now());
+      if (st.today?.day === n) this.tutorialBtn?._note?.setText?.(dailyNote(getDailyState(), n, st.today.usd));
+      const wins = st.wins || [];
+      const open = wins.find(w => w.status === 'won' && (linkDay == null ? !prizeLater.has(w.day) : w.day === linkDay));
+      if (open) { this.openPrizeClaim(open); return; }
+      const linked = linkDay != null && wins.find(w => w.day === linkDay);
+      if (linked) this.toast(linked.status === 'paid' ? 'Prize sent to ' + (linked.wallet || 'your wallet')
+        : linked.status === 'claimed' ? 'Prize claimed: it is on its way' : 'That prize has expired');
+    }).catch(() => {});
+  }
+
+  openPrizeClaim(win){
+    trackEvent('prize_claim_opened');
+    // The claim and TON Connect's picker are page elements over the canvas:
+    // the menu takes no taps or keys until the claim closes.
+    const input = this.input;
+    input.enabled = false;
+    if (input.keyboard) input.keyboard.enabled = false;
+    const ui = showPrizeClaim(win, {
+      connect: async () => (await import('../platform/tonWallet.js')).connectTonWallet(),
+      claim: (wallet) => claimPrize({ userId: getUserID(), day: win.day, wallet: wallet.address, chain: wallet.chain, initData: identityProof() }),
+      onClose: (state) => {
+        if (this.sys.isActive()) { input.enabled = true; if (input.keyboard) input.keyboard.enabled = true; }
+        if (state === 'claimed') trackEvent('prize_claimed');
+        else prizeLater.add(win.day);
+      }
+    });
+    if (!ui) { input.enabled = true; if (input.keyboard) input.keyboard.enabled = true; return; }
+    // Leaving the menu some other way takes the claim with it.
+    this.events.once('shutdown', () => { if (ui.root.isConnected) ui.root.remove(); });
   }
 
   // MENUSCENE (rexUI): toast helper using rexUI

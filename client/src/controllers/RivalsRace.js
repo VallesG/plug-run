@@ -20,7 +20,8 @@ import AudioManager from '../audio/AudioManager.js';
 import { nextRivalAnnouncement } from '../logic/rivalAnnouncer.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
 import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily, startDaily, getDailyBoard } from '../utils/api.js';
-import { identityProof, shareChallenge } from '../platform/index.js';
+import { identityProof, shareChallenge, prizesHere, askToMessage, openPage } from '../platform/index.js';
+import { todayPrize } from '../utils/prizeState.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
 import { saveDailyResult, saveDailyRank, claimDailyRun } from '../utils/dailyProgress.js';
@@ -134,10 +135,14 @@ export default class RivalsRace {
     const n = this.race.daily, today = dailyResult(getDailyState(), n), official = !today;
     const streak = liveStreak(getDailyState(), n);
     const target = this.race.rivalTimes?.[RIVAL_HOUSES-1];
+    const prize = this.dailyPrize();
     const modal = this.scene.gameUI.showModal({
       fullScreen:true, palette:'daily', title:(this.race.course.name||'Daily Race').toUpperCase(),
       subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+(official?' · OFFICIAL RUN':dailyUnfinished(today)?' · OFFICIAL RUN USED':' · OFFICIAL TIME SET'),
-      lines:[(Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:'')].filter(Boolean),
+      lines:[
+        (Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:''),
+        prize?'$'+prize.usd+' IN TON FOR TODAY\'S FASTEST':''
+      ].filter(Boolean),
       buttons:[
         // The official run is claimed at its GO (claimDaily), not here.
         // Leaving marks the screen seen, so a resize restart shows it again.
@@ -152,14 +157,22 @@ export default class RivalsRace {
     this.entryModal = modal;
     drawRivalDistrictMap(this.scene, modal, this.race);
   }
+  /** Today's prize (Telegram only, and only when the server says there is one). */
+  dailyPrize(){
+    return this.isDaily()&&prizesHere()?todayPrize(this.race.daily):null;
+  }
   /** Today's leaderboard, in the daily's amber: the top ten, then you. */
   showDailyBoard(back){
     const n=this.race.daily,s=this.scene,Z=20002;
+    const prizeDay=this.dailyPrize();
     const modal=s.gameUI.showModal({
       fullScreen:true,palette:'daily',title:'LEADERBOARD',
       subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+' · TOP '+DAILY_BOARD_SIZE,
       lines:[],inputDelay:250,
-      buttons:[{label:'BACK',variant:'secondary',onClick:()=>{ if(!this.disposed) back(); }}]
+      buttons:[
+        ...(prizeDay?[{label:'PRIZE RULES',variant:'secondary',keepOpen:true,onClick:()=>openPage('https://plugrun.io/rules')}]:[]),
+        {label:'BACK',variant:'secondary',onClick:()=>{ if(!this.disposed) back(); }}
+      ]
     });
     this.entryModal=modal;
     const area=modal?.contentBounds,keep=modal?.registerExtra;
@@ -176,15 +189,19 @@ export default class RivalsRace {
       this.boardRows=rows;
       if(!drawn)return;
       status.setText(rows.length?(board.total||rows.length)+' RANKED TODAY':'NO OFFICIAL TIMES YET · SET THE FIRST');
+      // A prize day in Telegram: the prize, and a tag on the run in line for it.
+      const prize=prizesHere()&&board?.prize?.usd>0?board.prize:null;
       const size=area.width<360?13:15;
-      const step=Math.max(20,Math.min(32,(area.height-40)/(DAILY_BOARD_SIZE+2)));
+      const step=Math.max(20,Math.min(32,(area.height-(prize?60:40))/(DAILY_BOARD_SIZE+2)));
       const inset=Math.max(8,(area.width-340)/2),left=area.x+inset,right=area.x+area.width-inset;
       let y=area.y+34;
+      if(prize){text(area.x+area.width/2,y-8,'$'+prize.usd+' IN TON TO THE FASTEST TELEGRAM RUN',{size:12,color:'#ffb54d',origin:.5});y+=20;}
       for(const row of rows){
         if(row.below){text(area.x+area.width/2,y-4,'···',{size,color:'#9c8a6a',origin:.5});y+=step*.7;}
         const color=row.you?'#ffb54d':row.rank<=3?'#f6ead2':'#d8b98a';
         text(left+34,y,String(row.rank),{size,color,origin:1});
         text(left+46,y,row.you?'YOU':row.name,{size,color});
+        if(prize&&prize.leader?.rank===row.rank)text(right-size*5,y,'$'+prize.usd,{size,color:'#ffb54d',origin:1});
         text(right,y,row.time,{size,color,origin:1});
         y+=step;
       }
@@ -818,6 +835,8 @@ export default class RivalsRace {
     this.race.dailyStreak=liveStreak(state,n);
     trackScene(this.scene,'daily_completed',{course_slot:this.race.course.slot,result:houses===RIVAL_HOUSES?'finished':'short',success:official});
     if(!official)return;
+    // On a prize day, ask (once) whether the bot may message this player, so a win can reach them.
+    if(this.dailyPrize())askToMessage();
     // The recording goes with it: only a checked run is ranked.
     const own=this.ownExport?.ok?this.ownExport:null;
     Promise.resolve().then(()=>submitDaily({userId:getUserID(),day:n,houses,retries:this.race.retries,record:own?.record??null,bundle:own?.bundle??null}))

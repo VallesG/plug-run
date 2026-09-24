@@ -142,12 +142,15 @@ export function dailyBoardRows(board) {
   return rows;
 }
 
-/** The menu row's small line: today's result or that it's waiting, plus the streak. */
-export function dailyNote(state, n) {
+/**
+ * The menu row's small line: today's result or that it's waiting, plus the
+ * streak. On a prize day (Telegram) the waiting line names the prize.
+ */
+export function dailyNote(state, n, prizeUsd = null) {
   const today = dailyResult(state, n);
   const streak = liveStreak(state, n);
   const fire = streak > 0 ? '  ·  🔥 ' + streak : '';
-  if (!today) return 'NEW RACE TODAY' + fire;
+  if (!today) return (prizeUsd > 0 ? 'WIN $' + prizeUsd + ' IN TON TODAY' : 'NEW RACE TODAY') + fire;
   if (dailyUnfinished(today)) return 'DID NOT FINISH' + fire;
   const rank = today.rank ? '  ·  #' + today.rank : today.unranked ? '  ·  NOT RANKED' : '';
   return (today.houses === 7 ? '✓ ' + raceTimeLabel(today.ms) : today.houses + '/7') + rank + fire;

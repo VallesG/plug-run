@@ -66,6 +66,40 @@ export function takeLaunchChallenge() {
   return startParamKind(param) === 'challenge' ? param.slice(2) : null;
 }
 
+// The winner's message links to t.me/<bot>/play?startapp=prize_<day>: open
+// that day's claim. Handed out once, like a challenge.
+let prizeTaken = false;
+export function takeLaunchPrize() {
+  if (prizeTaken || platform.id !== 'telegram') return null;
+  prizeTaken = true;
+  const param = platform.telegram?.initDataUnsafe?.start_param;
+  return startParamKind(param) === 'prize' ? Number(param.slice(6)) : null;
+}
+
+/** Daily Race prizes are Telegram-only for now. */
+export const prizesHere = () => platform.id === 'telegram';
+
+// Ask once per launch, after a prize-day race, whether the bot may message
+// this player (so a win can reach them). Telegram shows its own prompt.
+let askedToMessage = false;
+export function askToMessage() {
+  const wa = platform.id === 'telegram' ? platform.telegram : null;
+  if (!wa || askedToMessage || wa.initDataUnsafe?.user?.allows_write_to_pm) return;
+  askedToMessage = true;
+  if (versionAtLeast(wa.version, '6.9') && typeof wa.requestWriteAccess === 'function') {
+    try { wa.requestWriteAccess(() => {}); } catch {}
+  }
+}
+
+/** Open a page of ours outside the game (Telegram's in-app browser in Telegram). */
+export function openPage(url) {
+  const wa = platform.id === 'telegram' ? platform.telegram : null;
+  try {
+    if (wa?.openLink) wa.openLink(url);
+    else globalThis.open?.(url, '_blank', 'noopener');
+  } catch {}
+}
+
 /**
  * Send a challenge. In Telegram: the prepared card through Telegram's own
  * share dialog (Bot API 8.0+), else Telegram's share-link picker. On the web:

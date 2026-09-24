@@ -18,6 +18,7 @@ import { dailyNumber, dailySlot, dailyRival, finishMs, DAILY_EPOCH_MS, DAILY_BOA
 import { enabledRivalCourses, rivalPoolCourse, RIVAL_RULES_VERSION } from '../../src/logic/rivals.js';
 import { validateRivalRunRecord, rivalRecordMatchesCourse } from '../../src/logic/rivalRecords.js';
 import { playerRunErrors, PLAYER_RUN_MAX_BYTES } from '../../src/logic/rivalPlayerRuns.js';
+import { createPrizeDesk } from '../lib/prizeDesk.mjs';
 
 const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
@@ -111,7 +112,9 @@ export function createTelegramHandler({
   redis = upstash,
   nowSec = () => Math.floor(Date.now() / 1000),
   // Loaded when a run is stored, so this module imports without the Blobs SDK (tests).
-  dailyRuns = async () => (await import('@netlify/blobs')).getStore({ name: 'daily-runs', consistency: 'strong' })
+  dailyRuns = async () => (await import('@netlify/blobs')).getStore({ name: 'daily-runs', consistency: 'strong' }),
+  // The owner's Telegram id (the bot's /whoami tells it): prize commands and payout messages.
+  adminId = () => process.env.ADMIN_TELEGRAM_ID
 } = {}) {
   async function ping() {
     const botToken = token();
@@ -276,6 +279,9 @@ export function createTelegramHandler({
     });
     return res.json();
   };
+  // Daily Race prizes (netlify/lib/prizeDesk.mjs).
+  const prize = createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dailyRuns, botName,
+    telegramUser: (initData) => validateInitData(initData, token(), { nowSec: nowSec() })?.user || null });
 
   async function setupWebhook() {
     if (!token()) return json(500, { ok: false, error: 'not configured' });
@@ -294,6 +300,7 @@ export function createTelegramHandler({
     const msg = update?.message;
     const chatId = msg?.chat?.id;
     if (!chatId || msg.chat.type !== 'private' || typeof msg.text !== 'string') return json(200, { ok: true });
+    if (await prize.command(msg)) return json(200, { ok: true });
     if (/^\/privacy\b/.test(msg.text)) {
       await botApi('sendMessage', { chat_id: chatId, text: 'Plug Run privacy policy: ' + SITE + '/privacy' });
     } else {
@@ -404,8 +411,13 @@ export function createTelegramHandler({
     if (since < ms / 1000 - DAILY_TICKET_LAG_S) return refuse('finished faster than the clock allows');
     if (since > ms / 1000 + DAILY_START_GRACE_S) return refuse('sent too long after the start');
 
-    const added = await redis(['ZADD', board, 'NX', String(Math.round(ms)), body.userId]);
+    // Equal times go to the run that arrived first: a sub-millisecond tiebreak
+    // from the time into the day (shown and paid times drop it).
+    const intoDay = Math.max(0, nowSec() - (DAILY_EPOCH_MS / 1000 + (day - 1) * 86400));
+    const score = Math.round(ms) + Math.min(0.999, intoDay / 1e6);
+    const added = await redis(['ZADD', board, 'NX', String(score), body.userId]);
     if (Number(added) !== 1) return answer({ verified: true, duplicate: true });
+    await prize.dayPrize(day, { create: true });
     await redis(['HSET', board + ':names', body.userId, meta.username]);
     // Prize races are Telegram-only: one entry per Telegram account.
     if (meta.telegramId) await redis(['HSET', board + ':telegram', body.userId, meta.telegramId]);
@@ -426,20 +438,37 @@ export function createTelegramHandler({
     const board = 'daily:' + day;
     const flat = (await redis(['ZRANGE', board, '0', String(DAILY_BOARD_SIZE - 1), 'WITHSCORES'])) || [];
     const ids = [], times = [];
-    for (let i = 0; i + 1 < flat.length; i += 2) { ids.push(String(flat[i])); times.push(Number(flat[i + 1])); }
+    for (let i = 0; i + 1 < flat.length; i += 2) { ids.push(String(flat[i])); times.push(Math.floor(Number(flat[i + 1]))); }
     const names = ids.length ? (await redis(['HMGET', board + ':names', ...ids])) || [] : [];
     const userId = url.searchParams.get('userId');
     const top = ids.map((id, i) => ({ rank: i + 1, name: names[i] || 'Runner', ms: times[i], ...(id === userId ? { you: true } : {}) }));
     let you = null;
     if (userId && userId.length <= USERID_MAX_LEN) {
       const rank = await redis(['ZRANK', board, userId]);
-      if (rank !== null && rank !== undefined) you = { rank: Number(rank) + 1, ms: Number(await redis(['ZSCORE', board, userId])) };
+      if (rank !== null && rank !== undefined) you = { rank: Number(rank) + 1, ms: Math.floor(Number(await redis(['ZSCORE', board, userId]))) };
     }
     const total = Number(await redis(['ZCARD', board])) || 0;
-    return json(200, { ok: true, day, total, top, you });
+    // A prize day adds the prize and the Telegram run currently in line for it.
+    const dayPrize = await prize.boardPrize(day);
+    return json(200, { ok: true, day, total, top, you, ...(dayPrize ? { prize: dayPrize } : {}) });
   }
 
-  return async (req) => {
+  // The game asks what the prize is today and whether this player won one.
+  async function prizeStatus(req) {
+    let body = null;
+    try { body = JSON.parse(await req.text()); } catch {}
+    if (!(await signedIn(body))) return json(403, { ok: false, error: 'no identity' });
+    return json(200, { ok: true, ...(await prize.playerStatus(body.userId)) });
+  }
+  async function prizeClaim(req) {
+    let body = null;
+    try { body = JSON.parse(await req.text()); } catch {}
+    if (!(await signedIn(body))) return json(403, { ok: false, error: 'no identity' });
+    const [status, out] = await prize.claim(body.userId, body);
+    return json(status, out);
+  }
+
+  const handler = async (req) => {
     let action = null, url = null;
     try { url = new URL(req.url); action = url.searchParams.get('action'); } catch {}
     try {
@@ -452,6 +481,8 @@ export function createTelegramHandler({
       if (req.method === 'POST' && action === 'daily-submit') return await dailySubmit(req);
       if (req.method === 'POST' && action === 'daily-start') return await dailyStart(req);
       if (req.method === 'GET' && action === 'daily-board') return await dailyBoard(url);
+      if (req.method === 'POST' && action === 'prize-status') return await prizeStatus(req);
+      if (req.method === 'POST' && action === 'prize-claim') return await prizeClaim(req);
       if (req.method === 'GET' && action === 'setup-webhook') return await setupWebhook();
     } catch (e) {
       console.error('[telegram]', action, e?.message ? String(e.message).slice(0, 120) : 'error');
@@ -459,6 +490,9 @@ export function createTelegramHandler({
     }
     return json(404, { ok: false, error: 'unknown action' });
   };
+  // For the scheduled settle (netlify/functions/daily-prize.mjs).
+  handler.settle = () => prize.settleClosed();
+  return handler;
 }
 
 async function upstash(command) {

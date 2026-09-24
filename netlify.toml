@@ -13,6 +13,17 @@
   status = 200
 
 [[redirects]]
+  from = "/rules"
+  to = "/rules.html"
+  status = 200
+
+# Wallet apps fetch this to show who is asking to connect (TON Connect).
+[[headers]]
+  for = "/tonconnect-manifest.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

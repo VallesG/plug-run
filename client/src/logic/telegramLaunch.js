@@ -25,6 +25,7 @@ export function startParamKind(param) {
   if (/^c_./.test(p)) return 'challenge';
   if (/^r_./.test(p)) return 'ref';
   if (/^s_./.test(p)) return 'campaign';
+  if (/^prize_\d{1,6}$/.test(p)) return 'prize';
   return 'other';
 }
 

@@ -153,6 +153,20 @@ export async function getDailyBoard({ day, userId = null }) {
   if (userId) qs.set('userId', userId);
   return await tryFetch(TG + '?' + qs.toString(), { method: 'GET' }, 6000);
 }
+/** Today's Daily Race prize and this player's recent wins: { today: { day, usd } | null, wins: [...] }. */
+export async function getPrizeStatus({ userId }) {
+  return await tryFetch(TG + '?action=prize-status', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, token: getToken() })
+  }, 8000);
+}
+/** Claim a won prize with a connected TON wallet (raw address + chain from TON Connect). */
+export async function claimPrize({ userId, day, wallet, chain, initData }) {
+  return await tryFetch(TG + '?action=prize-claim', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, token: getToken(), day, wallet, chain, initData })
+  }, 12000);
+}
 /** Take today's start ticket at the official run's GO (once per day, server-side). */
 export async function startDaily({ userId, day }) {
   return await tryFetch(TG + '?action=daily-start', {
