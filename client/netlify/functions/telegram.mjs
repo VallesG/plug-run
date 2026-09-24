@@ -59,6 +59,41 @@ export function displayName(first) {
   return chars || null;
 }
 
+const SITE = 'https://plugrun.io';
+export const CHALLENGE_TTL_SEC = 30 * 86400;
+export const CHALLENGES_PER_DAY = 50;
+
+/** The race a challenge replays, checked field by field; null if anything is off. */
+export function challengeSpec(c) {
+  if (!c || typeof c !== 'object') return null;
+  const slot = Number(c.slot), stashSeed = Number(c.stashSeed), ms = Number(c.ms);
+  if (!Number.isInteger(slot) || slot < 0 || slot > 999) return null;
+  if (!Number.isInteger(stashSeed) || stashSeed < 0 || stashSeed > 0xffffffff) return null;
+  if (!Number.isFinite(ms) || ms < 10_000 || ms > 3_600_000) return null;
+  if (typeof c.recordingID !== 'string' || !/^[A-Za-z0-9_.:\/-]{1,160}$/.test(c.recordingID)) return null;
+  const pool = typeof c.pool === 'string' && /^[a-z-]{1,24}$/.test(c.pool) ? c.pool : 'ordinary';
+  const courseName = typeof c.courseName === 'string' ? c.courseName.replace(/[\p{Cc}\p{Cf}]/gu, '').slice(0, 40) : '';
+  const rivalName = typeof c.rivalName === 'string' ? c.rivalName.replace(/[\p{Cc}\p{Cf}]/gu, '').slice(0, 24) : '';
+  return { slot, stashSeed, recordingID: c.recordingID, pool, ms: Math.round(ms), courseName, rivalName };
+}
+
+export function raceTime(ms) {
+  const t = Math.max(0, Math.round(ms / 100));
+  const m = Math.floor(t / 600), s = Math.floor((t % 600) / 10), d = t % 10;
+  return m + ':' + String(s).padStart(2, '0') + '.' + d;
+}
+
+export function challengeText(rec) {
+  const where = rec.courseName ? ' on ' + rec.courseName : '';
+  const vs = rec.rivalName ? ' against ' + rec.rivalName : '';
+  return rec.name + ' ran seven houses' + where + vs + ' in ' + raceTime(rec.ms) + '. Think you can beat it?';
+}
+
+function challengeId() {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  return Array.from(randomBytes(10), (b) => abc[b % abc.length]).join('');
+}
+
 function recoveryCode() {
   const hex = randomBytes(6).toString('hex').toUpperCase();
   return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}`;
@@ -124,12 +159,154 @@ export function createTelegramHandler({
     return json(200, { ok: true, userId, username: meta.username, token: meta.token, recoveryCode: meta.recoveryCode || null, isNew });
   }
 
+  // --- Challenges -------------------------------------------------------------
+  // A challenge is a finished Block Rivals race someone dares a friend to beat:
+  // the same course, stash layout and recorded rival, and the creator's time.
+  // Only an id travels in the link (t.me/<bot>/play?startapp=c_<id>); the race
+  // lives here, so a link can't be edited into a custom race.
+  let botUsername = null;
+  async function botName() {
+    if (botUsername) return botUsername;
+    const res = await fetchImpl('https://api.telegram.org/bot' + token() + '/getMe');
+    const data = await res.json();
+    if (!data?.ok) throw new Error('getMe refused');
+    return (botUsername = data.result.username);
+  }
+  const readUser = async (id) => {
+    if (typeof id !== 'string' || !id || id.length > USERID_MAX_LEN) return null;
+    const raw = await redis(['GET', 'user:' + id]);
+    try { return raw ? JSON.parse(raw) : null; } catch { return null; }
+  };
+  async function signedIn(body) {
+    const meta = await readUser(body?.userId);
+    return meta && typeof body?.token === 'string' && meta.token === body.token ? meta : null;
+  }
+
+  async function createChallenge(req) {
+    let body = null;
+    try { body = JSON.parse(await req.text()); } catch {}
+    const meta = await signedIn(body);
+    if (!meta) return json(403, { ok: false, error: 'no identity' });
+    const spec = challengeSpec(body?.challenge);
+    if (!spec) return json(400, { ok: false, error: 'bad challenge' });
+    const day = new Date(nowSec() * 1000).toISOString().slice(0, 10);
+    const rateKey = 'ch:rate:' + body.userId + ':' + day;
+    const count = Number(await redis(['INCR', rateKey]));
+    if (count === 1) await redis(['EXPIRE', rateKey, String(2 * 86400)]);
+    if (count > CHALLENGES_PER_DAY) return json(429, { ok: false, error: 'too many challenges today' });
+    const id = challengeId();
+    const record = { ...spec, name: meta.username, userId: body.userId, createdAt: nowSec() };
+    await redis(['SET', 'ch:' + id, JSON.stringify(record), 'EX', String(CHALLENGE_TTL_SEC)]);
+    const bot = await botName();
+    const link = 'https://t.me/' + bot + '/play?startapp=c_' + id;
+    const out = { ok: true, id, link, text: challengeText(record), preparedId: null };
+    // In Telegram, a prepared message lets the player send the card to any chat.
+    const launch = validateInitData(body?.initData, token(), { nowSec: nowSec() });
+    if (launch) {
+      try {
+        const res = await fetchImpl('https://api.telegram.org/bot' + token() + '/savePreparedInlineMessage', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: launch.user.id,
+            result: {
+              type: 'photo', id: 'c_' + id,
+              photo_url: SITE + '/share/challenge-card.jpg', thumbnail_url: SITE + '/share/challenge-thumb.jpg',
+              caption: challengeText(record),
+              reply_markup: { inline_keyboard: [[{ text: '🏁 RACE ME', url: link }]] }
+            },
+            allow_user_chats: true, allow_group_chats: true, allow_channel_chats: true
+          })
+        });
+        const data = await res.json();
+        if (data?.ok && typeof data.result?.id === 'string') out.preparedId = data.result.id;
+      } catch {}
+    }
+    return json(200, out);
+  }
+
+  async function getChallenge(url) {
+    const id = url.searchParams.get('id') || '';
+    if (!/^[A-Za-z0-9]{6,20}$/.test(id)) return json(400, { ok: false, error: 'bad id' });
+    const raw = await redis(['GET', 'ch:' + id]);
+    if (!raw) return json(404, { ok: false, error: 'challenge not found' });
+    let rec = null;
+    try { rec = JSON.parse(raw); } catch { return json(404, { ok: false, error: 'challenge not found' }); }
+    await redis(['INCR', 'ch:' + id + ':opens']);
+    const { userId, ...pub } = rec;
+    return json(200, { ok: true, id, ...pub });
+  }
+
+  async function challengeResult(req) {
+    let body = null;
+    try { body = JSON.parse(await req.text()); } catch {}
+    const meta = await signedIn(body);
+    if (!meta) return json(403, { ok: false, error: 'no identity' });
+    const id = typeof body?.id === 'string' && /^[A-Za-z0-9]{6,20}$/.test(body.id) ? body.id : null;
+    const raw = id ? await redis(['GET', 'ch:' + id]) : null;
+    if (!raw) return json(404, { ok: false, error: 'challenge not found' });
+    const rec = JSON.parse(raw);
+    const ms = Number(body.ms), houses = Number(body.houses);
+    if (!Number.isFinite(ms) || ms < 0 || ms > 3_600_000 || !Number.isInteger(houses) || houses < 0 || houses > 7) {
+      return json(400, { ok: false, error: 'bad result' });
+    }
+    const self = body.userId === rec.userId;
+    if (!self) {
+      await redis(['INCR', 'ch:' + id + ':plays']);
+      if (houses === 7 && ms < rec.ms) await redis(['INCR', 'ch:' + id + ':beaten']);
+    }
+    return json(200, { ok: true, beat: houses === 7 && ms < rec.ms, creatorMs: rec.ms, name: rec.name, self });
+  }
+
+  // --- The bot's chat ---------------------------------------------------------
+  // Someone opening @PlugRunBot sees a welcome card with a PLAY button instead
+  // of an empty chat. Telegram delivers messages to ?action=webhook, signed with
+  // a secret derived from the bot token (never stored or shown anywhere).
+  const webhookSecret = () => createHmac('sha256', 'plugrun-webhook').update(String(token())).digest('hex').slice(0, 48);
+  const botApi = async (method, payload) => {
+    const res = await fetchImpl('https://api.telegram.org/bot' + token() + '/' + method, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    return res.json();
+  };
+
+  async function setupWebhook() {
+    if (!token()) return json(500, { ok: false, error: 'not configured' });
+    const hook = await botApi('setWebhook', {
+      url: SITE + '/.netlify/functions/telegram?action=webhook',
+      secret_token: webhookSecret(), allowed_updates: ['message'], drop_pending_updates: true
+    });
+    await botApi('setMyCommands', { commands: [{ command: 'start', description: 'Play Plug Run' }] });
+    return json(hook?.ok ? 200 : 502, { ok: !!hook?.ok, webhook: hook?.ok ? 'set' : 'refused' });
+  }
+
+  async function webhook(req) {
+    if (req.headers?.get?.('x-telegram-bot-api-secret-token') !== webhookSecret()) return json(403, { ok: false });
+    let update = null;
+    try { update = JSON.parse(await req.text()); } catch {}
+    const msg = update?.message;
+    const chatId = msg?.chat?.id;
+    if (!chatId || msg.chat.type !== 'private' || typeof msg.text !== 'string') return json(200, { ok: true });
+    {
+      await botApi('sendPhoto', {
+        chat_id: chatId, photo: SITE + '/share/challenge-card.jpg',
+        caption: 'Plug Run: grab the stash, lose the Plug, make the getaway car.\n\nRun the campaign with your crew, or race Block Rivals head-to-head and challenge your friends to beat your time.',
+        reply_markup: { inline_keyboard: [[{ text: '▶ PLAY', web_app: { url: SITE + '/tg' } }]] }
+      });
+    }
+    return json(200, { ok: true });
+  }
+
   return async (req) => {
-    let action = null;
-    try { action = new URL(req.url).searchParams.get('action'); } catch {}
+    let action = null, url = null;
+    try { url = new URL(req.url); action = url.searchParams.get('action'); } catch {}
     try {
       if (req.method === 'GET' && action === 'ping') return await ping();
       if (req.method === 'POST' && action === 'auth') return await auth(req);
+      if (req.method === 'POST' && action === 'challenge') return await createChallenge(req);
+      if (req.method === 'GET' && action === 'challenge') return await getChallenge(url);
+      if (req.method === 'POST' && action === 'challenge-result') return await challengeResult(req);
+      if (req.method === 'POST' && action === 'webhook') return await webhook(req);
+      if (req.method === 'GET' && action === 'setup-webhook') return await setupWebhook();
     } catch (e) {
       console.error('[telegram]', action, e?.message ? String(e.message).slice(0, 120) : 'error');
       return json(500, { ok: false, error: 'server error' });

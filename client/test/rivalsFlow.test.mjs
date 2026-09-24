@@ -13,6 +13,7 @@ function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
 // The match screen is presentation only; the stub records what it was told
 // to show and hands back the callbacks a player's taps would call.
+const challenges={made:[],shared:[],reported:[]};let shareOutcome='sent';
 let matchResolver=()=>Promise.resolve(null), searchPlanMs=3000, realApply=null;
 // Shared runs go here instead of the network.
 const sharedRuns=[];let shareAnswer=()=>Promise.resolve({ok:true});
@@ -42,12 +43,15 @@ const bindings={
   showRunnerLoadout:(ui,done,options)=>{loadouts++;lastPicker={ui,done,options};},
   drawPowerIcon:()=>node(), AudioManager:{get:()=>({isMusicMuted:()=>false,isMuted:()=>false,setMusicMute(){},setMute(){}})},
   ReplaySystem:{finalize(){}},
-  RivalMatchScreen:StubMatchScreen, findRivalMatch:(race)=>matchResolver(race), applyRivalOffer:(...a)=>realApply(...a),
+  RivalMatchScreen:StubMatchScreen, findRivalMatch:(race,opts)=>{challenges.lastFind=opts;return matchResolver(race);}, applyRivalOffer:(...a)=>realApply(...a),
   planMatchSearch:()=>({band:'steady',revealMs:searchPlanMs}),
   // Real module: with no car in these stub scenes it fires its callback
   // immediately, so the flow assertions below stay synchronous.
   playExtraction,
-  submitRivalRun:(p)=>{sharedRuns.push(p);return shareAnswer(p);}, getUserID:()=>'user-1', getCurrentUserSync:()=>({id:'local-1'})
+  submitRivalRun:(p)=>{sharedRuns.push(p);return shareAnswer(p);}, getUserID:()=>'user-1', getCurrentUserSync:()=>({id:'local-1'}),
+  createChallenge:(p)=>{challenges.made.push(p);return Promise.resolve({ok:true,id:'Ab3xY9kLmN',link:'https://t.me/PlugRunBot/play?startapp=c_Ab3xY9kLmN',text:'t',preparedId:'prep-1'});},
+  shareChallenge:(c)=>{challenges.shared.push(c);return Promise.resolve(shareOutcome);},
+  reportChallengeResult:(p)=>{challenges.reported.push(p);return Promise.resolve({ok:true});}, identityProof:()=>'init-data'
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -771,4 +775,50 @@ console.log('rival result scoreboard: '+passed+' total assertions passed');
   shareAnswer=()=>Promise.resolve({ok:true});
 }
 console.log('rival run sharing: '+passed+' total assertions passed');
+
+// Challenges: a finished race against a recorded rival can be sent to a friend;
+// a challenge race matches only its own course and reads the friend's time.
+{
+  const flush=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
+  const finished=(extra)=>{
+    now=1000;let st={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],opponentKind:'recorded-bot',
+      opponent:{displayName:'Jev',recordingID:'rec-jev-1',retries:0},stashSeed:4242,...extra};
+    let r=setup(st);
+    for(let house=1;house<=7;house++){now=house*9000;r.controller.clearHouse();st=r.scene.rivalRace;
+      if(house<7){r.events[0].fn();const d=r.restarts[0];now+=180;r=setup(d.rivalRace,d.pveRound);}}
+    return {st,r,modal:r.modals.at(-1)};
+  };
+  const a=finished({});
+  const btn=a.modal.buttons[0];
+  check('a finished race offers CHALLENGE A FRIEND first',btn.label==='CHALLENGE A FRIEND'&&btn.variant==='primary'&&btn.keepOpen===true);
+  check('and NEW RACE steps back to secondary',a.modal.buttons.find(b=>b.label==='NEW RACE')?.variant==='secondary');
+  const label={text:'',setText(t){this.text=t;return this;}};btn.bindText(label);
+  btn.onClick(a.modal);btn.onClick(a.modal);
+  check('the button says it is working',label.text==='PREPARING…');
+  await flush();
+  const spec=challenges.made[0]?.challenge;
+  check('one challenge created per tap, with this race',challenges.made.length===1&&spec.slot===course.slot&&spec.stashSeed===4242&&spec.recordingID==='rec-jev-1'&&spec.ms===Math.round(a.st.finishedMs));
+  check('it carries Telegram proof for the share card',challenges.made[0].initData==='init-data'&&challenges.made[0].userId==='user-1');
+  check('then opens the share dialog with the prepared card',challenges.shared[0]?.preparedId==='prep-1');
+  check('and says it went',label.text==='CHALLENGE SENT');
+  const unfinished=setup({...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],opponentKind:'recorded-bot',opponent:{displayName:'Jev',recordingID:'r'}});
+  unfinished.controller.finish('forfeit',5000);
+  check('an unfinished race cannot be sent as a challenge',!unfinished.modals.at(-1).buttons.some(b=>b.label==='CHALLENGE A FRIEND'));
+  const pace=finished({opponentKind:'generated',opponent:null});
+  check('a pace trial (no real rival) cannot be sent',!pace.modal.buttons.some(b=>b.label==='CHALLENGE A FRIEND'));
+  // The friend's side.
+  const ch={id:'Ab3xY9kLmN',name:'Sam',ms:70000,rivalName:'JEV'};
+  const b=finished({challenge:ch});await flush();
+  check('a challenge race reports its result once',challenges.reported.length===1&&challenges.reported[0].id==='Ab3xY9kLmN'&&challenges.reported[0].houses===7);
+  check('and reads against the friend',b.modal.lines[0]==='YOU BEAT SAM BY '+((70000-b.st.finishedMs)/1000).toFixed(1)+'s');
+  const slow=finished({challenge:{...ch,ms:30000}});
+  check('or says the friend still leads',/^SAM STILL LEADS BY /.test(slow.modal.lines[0]));
+  // Matching: a challenge only searches its own course.
+  const m=setup({...rules.newRivalRace(course,splits),challenge:ch});
+  m.scene.rivalRace.entryStage='block';m.controller.startSearch();
+  check('a challenge searches only its course',challenges.lastFind?.courses?.length===1&&challenges.lastFind.courses[0]===course);
+  const n=setup({...rules.newRivalRace(course,splits)});n.scene.rivalRace.entryStage='block';n.controller.startSearch();
+  check('an ordinary race searches as before',challenges.lastFind===undefined);
+}
+console.log('rival challenges: '+passed+' total assertions passed');
 

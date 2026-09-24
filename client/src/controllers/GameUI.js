@@ -148,6 +148,8 @@ export default class GameUI {
       if (b.disabled) t.setAlpha(0.45);
 
       btnObjs.push(bg, t);
+      // Lets a keepOpen button relabel itself (e.g. SHARING… then SENT).
+      try { b.bindText?.(t); } catch {}
       btnCenters.push({ x, y: yPos });
     };
 

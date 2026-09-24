@@ -1,7 +1,7 @@
 // Where the game is running: the plain web or Telegram (and later the iOS
 // app). The one module that decides; everything else asks it, and on the web
 // every answer is "nothing to do".
-import { isTelegramShell, WEB_CONTEXT, scrubbedUrl, versionAtLeast } from '../logic/telegramLaunch.js';
+import { isTelegramShell, WEB_CONTEXT, scrubbedUrl, versionAtLeast, startParamKind } from '../logic/telegramLaunch.js';
 import { createCloudBackup } from './cloudBackup.js';
 import { startTelegram, attachTelegramGame } from './telegram.js';
 import { setAnalyticsContext, trackPageView, setAnalyticsClientId } from '../utils/analytics.js';
@@ -47,6 +47,48 @@ export async function initPlatform(loc = globalThis.location) {
 
 export function attachGame(game) {
   if (platform.id === 'telegram') attachTelegramGame(game, platform.telegram);
+}
+
+/** Telegram's signed launch data, for the server to check; null on the web. */
+export function identityProof() {
+  return platform.id === 'telegram' ? platform.telegram?.initData || null : null;
+}
+
+// A challenge link (t.me/<bot>/play?startapp=c_<id>) opens the game with that
+// id as its start param. Handed out once: returning to the menu later must not
+// start the same challenge again.
+let challengeTaken = false;
+export function takeLaunchChallenge() {
+  if (challengeTaken || platform.id !== 'telegram') return null;
+  challengeTaken = true;
+  const param = platform.telegram?.initDataUnsafe?.start_param;
+  return startParamKind(param) === 'challenge' ? param.slice(2) : null;
+}
+
+/**
+ * Send a challenge. In Telegram: the prepared card through Telegram's own
+ * share dialog (Bot API 8.0+), else Telegram's share-link picker. On the web:
+ * the system share sheet, else the clipboard. Resolves 'sent' | 'declined' |
+ * 'opened' | 'copied' | 'failed'.
+ */
+export function shareChallenge({ link, text, preparedId }) {
+  const wa = platform.id === 'telegram' ? platform.telegram : null;
+  if (wa) {
+    if (preparedId && versionAtLeast(wa.version, '8.0') && typeof wa.shareMessage === 'function') {
+      return new Promise((resolve) => {
+        try { wa.shareMessage(preparedId, (sent) => resolve(sent ? 'sent' : 'declined')); }
+        catch { resolve('failed'); }
+      });
+    }
+    try {
+      wa.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text));
+      return Promise.resolve('opened');
+    } catch { return Promise.resolve('failed'); }
+  }
+  const nav = globalThis.navigator;
+  if (nav?.share) return nav.share({ text, url: link }).then(() => 'sent', (e) => (e?.name === 'AbortError' ? 'declined' : 'failed'));
+  if (nav?.clipboard?.writeText) return nav.clipboard.writeText(text + ' ' + link).then(() => 'copied', () => 'failed');
+  return Promise.resolve('failed');
 }
 
 /** A random GA client id kept by the game (and backed up to CloudStorage in Telegram). */

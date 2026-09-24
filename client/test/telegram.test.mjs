@@ -188,4 +188,93 @@ async function body(res) { return { status: res.status, json: JSON.parse(await r
   eq((await body_(await broken({ url: 'https://x/?action=auth', method: 'POST', text: async () => JSON.stringify({ initData: good }) }))).status, 500, 'storage down: 500, not a crash');
 }
 
+// --- Challenges: create, open, report; the welcome card.
+{
+  const { createHmac } = await import('node:crypto');
+  const { challengeSpec, challengeText, raceTime } = await import('../netlify/functions/telegram.mjs');
+  const BOT = '123456:TEST-bot-token', NOW = 1_758_600_000;
+  const sign = (fields) => {
+    const p = new URLSearchParams(fields);
+    const check = [...p].map(([k, v]) => k + '=' + v).sort().join('\n');
+    const secret = createHmac('sha256', 'WebAppData').update(BOT).digest();
+    p.set('hash', createHmac('sha256', secret).update(check).digest('hex'));
+    return p.toString();
+  };
+  const store = new Map();
+  const redis = async ([cmd, key, value]) => {
+    if (cmd === 'GET') return store.get(key) ?? null;
+    if (cmd === 'SET') { store.set(key, value); return 'OK'; }
+    if (cmd === 'INCR') { const n = Number(store.get(key) || 0) + 1; store.set(key, String(n)); return n; }
+    if (cmd === 'EXPIRE') return 1;
+    throw new Error(cmd);
+  };
+  const tgCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const method = url.split('/').pop();
+    tgCalls.push({ method, body: opts?.body ? JSON.parse(opts.body) : null });
+    if (method === 'getMe') return { json: async () => ({ ok: true, result: { username: 'PlugRunBot' } }) };
+    if (method === 'savePreparedInlineMessage') return { json: async () => ({ ok: true, result: { id: 'prep-1', expiration_date: NOW + 3600 } }) };
+    return { json: async () => ({ ok: true, result: true }) };
+  };
+  const h = createTelegramHandler({ token: () => BOT, redis, fetchImpl, nowSec: () => NOW });
+  const call = async (method, action, body, extra = '', headers = {}) => {
+    const res = await h({ url: 'https://plugrun.io/.netlify/functions/telegram?action=' + action + extra, method,
+      text: async () => (typeof body === 'string' ? body : JSON.stringify(body)), headers: { get: (k) => headers[k] ?? null } });
+    return { status: res.status, json: JSON.parse(await res.text()) };
+  };
+  store.set('user:u_sam', JSON.stringify({ username: 'Sam', token: 'tok-sam' }));
+  store.set('user:u_max', JSON.stringify({ username: 'Max', token: 'tok-max' }));
+  const race = { slot: 4, stashSeed: 123456, recordingID: 'jev-v1/rivals-v1-1463392172/0042', pool: 'ordinary', ms: 66100, courseName: 'Canal Row', rivalName: 'JEV' };
+  eq(challengeSpec({ ...race, extra: 'x' }), race, 'challenge spec keeps only the race fields');
+  eq([challengeSpec({ ...race, ms: 5 }), challengeSpec({ ...race, slot: 'x' }), challengeSpec({ ...race, recordingID: 'bad id!' }), challengeSpec(null)], [null, null, null, null], 'bad specs refused');
+  eq(raceTime(66100), '1:06.1', 'race time label');
+  eq(challengeText({ ...race, name: 'Sam' }), 'Sam ran seven houses on Canal Row against JEV in 1:06.1. Think you can beat it?', 'card caption');
+
+  eq((await call('POST', 'challenge', { userId: 'u_sam', token: 'wrong', challenge: race })).status, 403, 'a challenge needs the player\'s token');
+  const initData = sign({ user: JSON.stringify({ id: 777, first_name: 'Sam' }), auth_date: String(NOW) });
+  const made = await call('POST', 'challenge', { userId: 'u_sam', token: 'tok-sam', challenge: race, initData });
+  ok(made.status === 200 && /^[A-Za-z0-9]{10}$/.test(made.json.id), 'challenge created with a short id');
+  eq(made.json.link, 'https://t.me/PlugRunBot/play?startapp=c_' + made.json.id, 'link opens the direct-link app with the id as start param');
+  ok(('c_' + made.json.id).length <= 64, 'start param within Telegram\'s limit');
+  eq(made.json.preparedId, 'prep-1', 'a prepared Telegram message is returned for the share dialog');
+  const prep = tgCalls.find((c) => c.method === 'savePreparedInlineMessage').body;
+  ok(prep.user_id === 777 && prep.result.type === 'photo' && prep.result.reply_markup.inline_keyboard[0][0].url === made.json.link, 'the card is for this Telegram user and its button is the challenge link');
+  ok(!('web_app' in prep.result.reply_markup.inline_keyboard[0][0]), 'shared cards use a URL button (web_app buttons only work in the bot chat)');
+  const web = await call('POST', 'challenge', { userId: 'u_sam', token: 'tok-sam', challenge: race });
+  ok(web.status === 200 && web.json.preparedId === null, 'outside Telegram: a link, no prepared message');
+
+  const opened = await call('GET', 'challenge', null, '&id=' + made.json.id);
+  ok(opened.status === 200 && opened.json.slot === 4 && opened.json.stashSeed === 123456 && opened.json.recordingID === race.recordingID && opened.json.name === 'Sam', 'the friend gets the same race and the creator\'s name');
+  ok(!('userId' in opened.json), 'the creator\'s account id is not handed out');
+  eq(store.get('ch:' + made.json.id + ':opens'), '1', 'opens are counted');
+  eq((await call('GET', 'challenge', null, '&id=nope')).status, 400, 'malformed id');
+  eq((await call('GET', 'challenge', null, '&id=ZZZZZZZZZZ')).status, 404, 'unknown challenge');
+
+  const beat = await call('POST', 'challenge-result', { id: made.json.id, userId: 'u_max', token: 'tok-max', ms: 60000, houses: 7 });
+  ok(beat.json.beat === true && beat.json.creatorMs === 66100, 'a faster full run beats it');
+  eq([store.get('ch:' + made.json.id + ':plays'), store.get('ch:' + made.json.id + ':beaten')], ['1', '1'], 'plays and beats are counted');
+  const short = await call('POST', 'challenge-result', { id: made.json.id, userId: 'u_max', token: 'tok-max', ms: 50000, houses: 5 });
+  eq(short.json.beat, false, 'an unfinished run never beats it');
+  const own = await call('POST', 'challenge-result', { id: made.json.id, userId: 'u_sam', token: 'tok-sam', ms: 50000, houses: 7 });
+  ok(own.json.self && store.get('ch:' + made.json.id + ':plays') === '2', 'the creator\'s own replay is not counted as a friend playing');
+
+  for (let i = 0; i < 50; i++) await call('POST', 'challenge', { userId: 'u_max', token: 'tok-max', challenge: race });
+  eq((await call('POST', 'challenge', { userId: 'u_max', token: 'tok-max', challenge: race })).status, 429, 'a daily cap on new challenges');
+
+  // Welcome card: only with Telegram's secret header, only in the private bot chat.
+  const setup = await call('GET', 'setup-webhook', null);
+  const hook = tgCalls.find((c) => c.method === 'setWebhook').body;
+  ok(setup.status === 200 && hook.url === 'https://plugrun.io/.netlify/functions/telegram?action=webhook' && /^[0-9a-f]{48}$/.test(hook.secret_token), 'webhook registered with a derived secret');
+  ok(!JSON.stringify(setup.json).includes(hook.secret_token) && !JSON.stringify(hook).includes('TEST-bot-token'), 'the secret and token are never returned');
+  const start = { message: { chat: { id: 42, type: 'private' }, text: '/start' } };
+  eq((await call('POST', 'webhook', start, '', {})).status, 403, 'a webhook call without the secret is refused');
+  tgCalls.length = 0;
+  await call('POST', 'webhook', start, '', { 'x-telegram-bot-api-secret-token': hook.secret_token });
+  const card = tgCalls.find((c) => c.method === 'sendPhoto')?.body;
+  ok(card?.chat_id === 42 && card.reply_markup.inline_keyboard[0][0].web_app.url === 'https://plugrun.io/tg', '/start answers with a PLAY button that opens the game');
+  tgCalls.length = 0;
+  await call('POST', 'webhook', { message: { chat: { id: -5, type: 'group' }, text: '/start' } }, '', { 'x-telegram-bot-api-secret-token': hook.secret_token });
+  eq(tgCalls.length, 0, 'group messages are ignored');
+}
+
 console.log('telegram: ' + checks + ' assertions passed');

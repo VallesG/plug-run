@@ -117,6 +117,27 @@ export async function telegramSignIn({ initData, userId = null }, timeoutMs = 50
   if (data?.token) setToken(data.token);
   return data;
 }
+
+// --- Challenges (netlify/functions/telegram.mjs) ------------------------------
+const TG = '/.netlify/functions/telegram';
+/** Create a challenge from a finished race. Resolves { id, link, text, preparedId } or throws. */
+export async function createChallenge({ userId, challenge, initData = null }) {
+  return await tryFetch(TG + '?action=challenge', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, token: getToken(), challenge, initData })
+  }, 8000);
+}
+/** The race a challenge link points at: { slot, stashSeed, recordingID, pool, ms, name, ... }. */
+export async function getChallenge(id) {
+  return await tryFetch(TG + '?action=challenge&id=' + encodeURIComponent(id), { method: 'GET' }, 6000);
+}
+/** Report how a challenge race went. Resolves { beat, creatorMs, name } or throws. */
+export async function reportChallengeResult({ id, userId, ms, houses }) {
+  return await tryFetch(TG + '?action=challenge-result', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, userId, token: getToken(), ms, houses })
+  }, 6000);
+}
 /**
  * Share a finished Block Rivals race (the player opted in for this race).
  * Sends the race's own record and replay with this device's identity; the

@@ -19,7 +19,9 @@ import { getUsername, getCurrentUser, getCurrentUserSync, isGuestAccount, getUse
 import { getUserRank, getUserScore, getAllTimeRank, getAllTimeScore, getTopScores, getAllTimeTopScores, getLeaderboard, getAllTimeLeaderboard, formatNumber } from '../utils/leaderboardManager.js';
 import { getSessionState, clearSessionState } from '../utils/routeProgress.js';
 import { getCurrentRouteID } from '../utils/seededRandom.js';
-import { trackNavigation } from '../utils/analytics.js';
+import { trackNavigation, trackEvent } from '../utils/analytics.js';
+import { takeLaunchChallenge } from '../platform/index.js';
+import { getChallenge } from '../utils/api.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setGlobalTimers, setCurrentMode, getCurrentMode, getExistingSidebars } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
@@ -81,6 +83,8 @@ export class MenuScene extends Phaser.Scene {
   create(){
     guardSceneEntryFromHeldPointer(this);
     AudioManager.loadExtraBeats(this);
+    // Opened from a friend's challenge link: straight into that race.
+    this.time.delayedCall(0, () => this.openLaunchChallenge());
     // Always show Plug Run's landing page; guidance happens on Play.
     const W = this.scale.width, H = this.scale.height;
     // Approved night-city art sits behind real, interactive menu controls.
@@ -2181,7 +2185,7 @@ export class MenuScene extends Phaser.Scene {
           target: 'RUNNER',
           duration: 250,
           moveBelow: true,
-          data: { mode: 'pve', role: 'runner', runKind: card.runKind || 'journey' }
+          data: { mode: 'pve', role: 'runner', runKind: card.runKind || 'journey', ...(card.data || {}) }
         });
       });
     } else if (k === 'plug'){
@@ -2232,6 +2236,21 @@ export class MenuScene extends Phaser.Scene {
   }
 
   // MENUSCENE (rexUI): toast helper using rexUI
+  /** A challenge link (t.me/<bot>/play?startapp=c_<id>): fetch the race and start it. */
+  openLaunchChallenge(){
+    const id = takeLaunchChallenge();
+    if (!id) return;
+    this.toast('Loading challenge…');
+    getChallenge(id).then(ch => {
+      if (!this.sys.isActive() || !ch?.ok) return;
+      trackEvent('challenge_opened', { course_slot: ch.slot });
+      this.launchCard({ modeKey: 'runner', runKind: 'rivals', data: {
+        rivalSlot: ch.slot, rivalStashSeed: ch.stashSeed, rivalOpponentID: ch.recordingID, rivalPool: ch.pool,
+        rivalChallenge: { id: ch.id, name: ch.name, ms: ch.ms, rivalName: ch.rivalName }
+      } });
+    }).catch(() => { if (this.sys.isActive()) this.toast('That challenge has expired'); });
+  }
+
   toast(msg){
     // Destroy any existing toast to prevent stacking
     if (this._activeToast) {

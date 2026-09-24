@@ -19,7 +19,8 @@ import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { nextRivalAnnouncement } from '../logic/rivalAnnouncer.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
-import { submitRivalRun } from '../utils/api.js';
+import { submitRivalRun, createChallenge, reportChallengeResult } from '../utils/api.js';
+import { identityProof, shareChallenge } from '../platform/index.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
 
 /** A short reason a run was not shared, from the submission's answer. */
@@ -135,7 +136,8 @@ export default class RivalsRace {
     const search={startedAt:performance.now(),revealMs:plan.revealMs,loadedAt:null,match:null};
     race.matchSearch=search;race.match=null;race.lobby=null;
     trackScene(this.scene,'rivals_matchmaking_started',{course_slot:race.course.slot});
-    let task;try{task=findRivalMatch(race);}catch{task=null;}
+    // A challenge races exactly the course it was sent on.
+    let task;try{task=findRivalMatch(race,race.challenge?{courses:[race.course]}:undefined);}catch{task=null;}
     Promise.resolve(task).catch(()=>null).then(match=>{
       // A cancelled or superseded search never lands.
       if(race.matchSearch!==search)return;
@@ -656,7 +658,54 @@ export default class RivalsRace {
       houses:this.race.clearTimes.length,retries:this.race.retries,
       opponentKind:this.race.opponentKind,recordingID:this.race.opponent?.recordingID ?? null
     },record,own.ok ? own.record : null);
+    this.reportChallenge();
     this.showResult();
+  }
+  // --- Challenges -----------------------------------------------------------
+  // A finished seven-house race against a recorded rival can be sent to a
+  // friend: same course, stash layout and rival, and this race's time to beat.
+  canChallenge(){
+    const r=this.race;
+    return !r.recording&&!r.fixedPowers&&r.opponentKind==='recorded-bot'&&!!r.opponent?.recordingID
+      &&r.clearTimes.length===RIVAL_HOUSES&&Number.isFinite(r.finishedMs);
+  }
+  challengeSpec(){
+    const r=this.race;
+    return {slot:r.course.slot,stashSeed:r.stashSeed,recordingID:r.opponent.recordingID,pool:r.pool||'ordinary',
+      ms:Math.round(r.finishedMs),courseName:r.course.name||'',rivalName:this.rivalLabel()};
+  }
+  /** The CHALLENGE A FRIEND button: create the challenge, then open the share dialog. */
+  sendChallenge(label){
+    if(this.challengeBusy)return;
+    this.challengeBusy=true;
+    const say=t=>{try{label?.setText(t);}catch{}};
+    say('PREPARING…');
+    trackScene(this.scene,'challenge_created',{course_slot:this.race.course.slot});
+    Promise.resolve().then(()=>createChallenge({userId:getUserID(),challenge:this.challengeSpec(),initData:identityProof()}))
+      .then(ch=>shareChallenge(ch))
+      .then(outcome=>{
+        trackScene(this.scene,'challenge_shared',{course_slot:this.race.course.slot,result:outcome});
+        say(({sent:'CHALLENGE SENT',copied:'LINK COPIED',opened:'CHALLENGE A FRIEND',declined:'CHALLENGE A FRIEND'})[outcome]||'TRY AGAIN');
+      })
+      .catch(()=>say('TRY AGAIN'))
+      .finally(()=>{this.challengeBusy=false;});
+  }
+  /** A challenge race reports how it went; the result line reads the creator's time either way. */
+  reportChallenge(){
+    const ch=this.race.challenge;
+    if(!ch||this.race.challengeReported)return;
+    this.race.challengeReported=true;
+    const houses=this.race.clearTimes.length,ms=Math.round(this.race.finishedMs);
+    trackScene(this.scene,'challenge_completed',{course_slot:this.race.course.slot,result:houses===RIVAL_HOUSES&&ms<ch.ms?'beat':'short'});
+    Promise.resolve().then(()=>reportChallengeResult({id:ch.id,userId:getUserID(),ms,houses})).catch(()=>{});
+  }
+  challengeLine(){
+    const ch=this.race.challenge;
+    if(!ch)return null;
+    const name=String(ch.name||'FRIEND').toUpperCase();
+    if(this.race.clearTimes.length!==RIVAL_HOUSES)return name+' SET '+rivalTimeLabel(ch.ms);
+    const d=(ch.ms-this.race.finishedMs)/1000;
+    return d>0?'YOU BEAT '+name+' BY '+d.toFixed(1)+'s':d<0?name+' STILL LEADS BY '+(-d).toFixed(1)+'s':'TIED WITH '+name;
   }
   showResult() {
     if (this.race.result === 'win') {
@@ -706,6 +755,17 @@ export default class RivalsRace {
       const watch=config.buttons.find(b=>b.label.includes('WATCH RIVAL'));
       config.buttons=[next,...(watch?[watch]:[]),menu];
     }
+    // A challenge race says how it went against the friend who sent it.
+    const vsFriend=this.challengeLine();
+    if(vsFriend&&!this.race.rivalCityIndex)config.lines.unshift(vsFriend);
+    // Challenge a friend: first, so it is the obvious next move after a finish.
+    if(this.canChallenge()){
+      let label=null;
+      const next=config.buttons.find(b=>['NEW RACE','TRY AGAIN'].includes(b.label));
+      if(next)next.variant='secondary';
+      config.buttons.unshift({label:'CHALLENGE A FRIEND',variant:'primary',keepOpen:true,
+        bindText:t=>{label=t;},onClick:()=>this.sendChallenge(label)});
+    }
     const modal=this.scene.gameUI.showModal(config);
     if(this.race.rivalCityIndex){
       this.drawResultTimes(modal);
@@ -754,6 +814,11 @@ export default class RivalsRace {
       const label=margin>0?'YOU BY '+margin.toFixed(1)+'s':margin<0?sides[1].label+' BY '+(-margin).toFixed(1)+'s':'DEAD HEAT';
       text(area.x+area.width/2,y,label,{size:13,color:margin>0?'#9bcae5':margin<0?'#dec386':'#eee3c7'});
       y+=22;
+    }
+    const vsFriend=this.challengeLine();
+    if(vsFriend){
+      text(area.x+area.width/2,y,vsFriend,{size:12,color:'#f2c14e'});
+      y+=20;
     }
     if(r.territoryClaim?.applied){
       text(area.x+area.width/2,y,'BLOCK CLAIMED',{size:12,color:'#eee3c7'});
