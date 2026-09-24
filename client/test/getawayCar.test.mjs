@@ -97,13 +97,13 @@ check('missing runner and invalid coordinates stay false',!carExtractionOverlap(
   check('rotated to its heading '+JSON.stringify(out),Math.round(car.setAngle[0])===angle);
   check('true proportions, not squashed '+JSON.stringify(out),car.setDisplaySize[0]===cell*CAR_WIDTH_CELLS&&car.setDisplaySize[1]===cell*CAR_LENGTH_CELLS);
   const sh=car._shadow;
-  check('shadow is long toward the street '+JSON.stringify(out),Math.abs(sh.args[out.x?2:3]-cell*2*(out.x?1.02:0.98))<1e-9&&Math.abs(sh.args[out.x?3:2]-cell*1.08*(out.x?0.98:1.02))<1e-9);
+  check('shadow is long toward the street '+JSON.stringify(out),Math.abs(sh.args[out.x?2:3]-cell*CAR_LENGTH_CELLS*(out.x?1.02:0.98))<1e-9&&Math.abs(sh.args[out.x?3:2]-cell*CAR_WIDTH_CELLS*(out.x?0.98:1.02))<1e-9);
   check('four ink copies behind it '+JSON.stringify(out),car._outline.length===4&&car._outline.every(o=>o.setDepth[0]<car.setDepth[0]));
   check('shadow and outline drive off with it',carDepartureTargets({car}).includes(sh)&&car._outline.every(o=>carDepartureTargets({car}).includes(o)));
  }
  // At a screen edge the car is pulled in so its nose stays in view.
  for(const [x,y,out] of [[380,400,{x:1,y:0}],[10,400,{x:-1,y:0}],[200,5,{x:0,y:-1}],[200,840,{x:0,y:1}]]){
-  const car=drawParkedCar(scene,x,y,out,cell),half=cell*1+3;
+  const car=drawParkedCar(scene,x,y,out,cell),half=cell*CAR_LENGTH_CELLS/2+3;
   check('nose stays on screen '+JSON.stringify(out),car.x-(out.x?half:0)>=0&&car.x+(out.x?half:0)<=390&&car.y-(out.y?half:0)>=0&&car.y+(out.y?half:0)<=844);
  }
  check('crew paint on the player car',playerCarPaint('afterlight').paint===carPaintColor(0x68508c)&&playerCarPaint('iron-row').stripe===0xeee3c5);

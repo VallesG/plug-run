@@ -1,15 +1,17 @@
 // The getaway car, drawn once per paint job into a canvas texture.
 //
 // Top-down, nose up (angle 0 faces north), in the car's true proportions:
-// 1.08 cells wide by 2 long. It parks nose to the street in the driveway
+// 1.6 cells wide by 2.4 long. It parks nose to the street in the driveway
 // mouth, sucks the runner in and drives straight out, as it always has.
 // Cosmetic only: the extraction pad, collision and AI targets are unchanged,
 // and recorded replays are drawn with it, never re-recorded.
 import { gangSkin } from '../logic/gangSkins.js';
 import { selectedGangSkin } from './GangSkinTextures.js';
 
-export const CAR_WIDTH_CELLS = 1.08;
-export const CAR_LENGTH_CELLS = 2.0;
+export const CAR_WIDTH_CELLS = 1.6;
+export const CAR_LENGTH_CELLS = 2.4;
+// The art is drawn at the car's own proportions, 312px long.
+const TEX_H = 312, TEX_W = Math.round(TEX_H * CAR_WIDTH_CELLS / CAR_LENGTH_CELLS / 2) * 2;
 /** Jev, and anyone who has not picked a crew, drive the classic blue. */
 export const DEFAULT_CAR_PAINT = Object.freeze({ paint: 0x2f6fb7, stripe: 0xf1f5f9 });
 
@@ -110,12 +112,12 @@ export function drawCar(ctx, W, H, paint, stripe) {
  * sprite in that case.
  */
 export function ensureCarTexture(scene, { paint, stripe } = DEFAULT_CAR_PAINT) {
-  const key = 'getaway_car_v1_' + paint.toString(16) + '_' + stripe.toString(16);
+  const key = 'getaway_car_v1_' + TEX_W + '_' + paint.toString(16) + '_' + stripe.toString(16);
   if (scene.textures.exists(key)) return key;
   let texture = null;
   try {
-    texture = scene.textures.createCanvas(key, 168, 312);
-    drawCar(texture.context, 168, 312, paint, stripe);
+    texture = scene.textures.createCanvas(key, TEX_W, TEX_H);
+    drawCar(texture.context, TEX_W, TEX_H, paint, stripe);
     texture.refresh();
     return key;
   } catch (error) {
