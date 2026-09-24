@@ -5,6 +5,7 @@ import { crewStoryProgress } from '../logic/contactProgress.js';
 import { shouldShowCity, storySeasonComplete } from '../logic/city.js';
 import { startCityBlock, getCityProgress } from '../utils/cityProgress.js';
 import { ensureGangSkin } from '../controllers/GangSkinTextures.js';
+import { drawParkedCar, playerCarPaint } from '../controllers/CarArt.js';
 import { RIVAL_HUD_HEIGHT, rivalPixels, rivalArenaLayout, rivalSessionPocket, rivalUpcomingAttempt, rivalHouseMazeOptions } from '../logic/rivals.js';
 import { createRivalSession } from '../utils/rivalSession.js';
 import RivalsRace from '../controllers/RivalsRace.js';
@@ -1479,7 +1480,16 @@ export class BaseGameScene extends Phaser.Scene {
     cx = parked.x;
     cy = parked.y;
 
-    // Cosmetic paint/stripe textures preserve the original car silhouette.
+    // The car, in the crew's paint, broadside across the driveway and facing
+    // along the curb. Same footprint as before, so nothing but the look changes.
+    const drawn = drawParkedCar(this, cx, cy, { x: dx, y: dy }, this.cell, { paint: playerCarPaint(), depth: 9, ink: PALETTE.ink });
+    if (drawn) {
+      this.car = drawn;
+      this.carOutDir = { x:dx, y:dy };
+      this.hideCarBeacon?.();
+      return;
+    }
+    // Fallback: the original sprite, if a canvas texture could not be made.
     const carKey = ensureGangSkin(this).car;
     const carLen = this.cell*2.6; // larger silhouette
     // Edge clamping can overlap the guard pad: characters (depth 10)

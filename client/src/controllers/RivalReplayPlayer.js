@@ -16,6 +16,7 @@ import { T, THEMES, generateSquareMaze } from '../utils/mazeGenerator.js';
 import { createSeededRNG } from '../utils/seededRandom.js';
 import { makeRunnerSprite, makePlugSprite } from '../utils/spriteFactory.js';
 import { PALETTE } from '../logic/palette.js';
+import { drawParkedCar, DEFAULT_CAR_PAINT } from './CarArt.js';
 import { rivalTimeLabel, rivalArenaLayout, rivalHudLayout, rivalFloorClock, rivalHouseDesign } from '../logic/rivals.js';
 import {
   raceReplayTimeline, timelineCursor, replayStateAt, replayEventsBetween, replayStashesAt, unpackFlags, replayCardLabel
@@ -120,7 +121,11 @@ export function playRivalReplay(scene, { bundle, record = null, opponentName = '
     }
     // car at the driveway
     const carAng = { N: 0, S: 180, E: 90, W: -90 }[rep.car?.side] ?? 0;
-    if (scene.textures.exists('car_blue')) {
+    // The rival's car: the same car the game draws, in Jev's blue.
+    const carOut = { N: { x: 0, y: -1 }, S: { x: 0, y: 1 }, E: { x: 1, y: 0 }, W: { x: -1, y: 0 } }[rep.car?.side] ?? { x: 0, y: -1 };
+    const parked = drawParkedCar(scene, wx(rep.car.x), wy(rep.car.y), carOut, cell,
+      { paint: DEFAULT_CAR_PAINT, depth: DEPTH + 6.1, ink: PALETTE.ink, register: (o) => { mk(o); objs.push(o); return o; } });
+    if (!parked && scene.textures.exists('car_blue')) {
       const cx = wx(rep.car.x), cy = wy(rep.car.y);
       const opx = Math.max(2, Math.round(cell * 0.09));
       for (const [ox, oy] of [[opx, 0], [-opx, 0], [0, opx], [0, -opx]]) add(scene.add.image(cx + ox, cy + oy, 'car_blue').setDisplaySize(cell * 2.6, cell * 1.4).setTint(PALETTE.ink).setAngle(carAng), 6);

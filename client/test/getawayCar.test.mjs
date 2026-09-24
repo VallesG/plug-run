@@ -1,5 +1,6 @@
 import { carParkCenter, carDepartureTargets, carSkidLines, carExtractionOverlap } from '../src/logic/getawayCar.js';
 import { playExtraction } from '../src/controllers/extractionAnimation.js';
+import { drawParkedCar, playerCarPaint, carPaintColor, DEFAULT_CAR_PAINT, CAR_WIDTH_CELLS, CAR_LENGTH_CELLS } from '../src/controllers/CarArt.js';
 import { readFileSync } from 'node:fs';
 let passed = 0;
 function check(name, ok) { if (!ok) throw Error(name); passed++; }
@@ -84,4 +85,26 @@ for(const cell of [16,24,48]) {
  check('center triggers in same pickup frame',carExtractionOverlap({x:100,y:100},pad));
 }
 check('missing runner and invalid coordinates stay false',!carExtractionOverlap(null,{})&&!carExtractionOverlap({x:NaN,y:0},{x:0,y:0}));
+// The new car: true proportions, broadside across the driveway, facing along
+// the curb, in the same footprint the parking geometry reserves.
+{
+ const made=[];const obj=(kind,args)=>{const o={kind,args,x:args[0],y:args[1]};for(const m of ['setDisplaySize','setAngle','setTint','setDepth'])o[m]=(...v)=>{o[m]=v;return o;};made.push(o);return o;};
+ const scene={textures:{exists:()=>true},add:{image:(...a)=>obj('image',a),ellipse:(...a)=>obj('ellipse',a)}};
+ const cell=24;
+ for(const [out,heading,angle] of [[{x:0,y:-1},{x:1,y:0},90],[{x:1,y:0},{x:0,y:1},180],[{x:0,y:1},{x:-1,y:0},270],[{x:-1,y:0},{x:0,y:-1},0]]){
+  made.length=0;
+  const car=drawParkedCar(scene,100,200,out,cell);
+  check('faces along the curb '+JSON.stringify(out),car._heading.x===heading.x&&car._heading.y===heading.y);
+  check('rotated to its heading '+JSON.stringify(out),Math.round(car.setAngle[0])===angle);
+  check('true proportions, not squashed '+JSON.stringify(out),car.setDisplaySize[0]===cell*CAR_WIDTH_CELLS&&car.setDisplaySize[1]===cell*CAR_LENGTH_CELLS);
+  const along=Math.abs(out.x)?'h':'w';
+  const sh=car._shadow;
+  check('shadow fills the reserved footprint '+JSON.stringify(out),Math.abs(sh.args[out.x?3:2]-cell*2.6*(out.x?0.98:1.02))<1e-9&&Math.abs(sh.args[out.x?2:3]-cell*1.4*(out.x?1.02:0.98))<1e-9);
+  check('four ink copies behind it '+JSON.stringify(out),car._outline.length===4&&car._outline.every(o=>o.setDepth[0]<car.setDepth[0]));
+  check('shadow and outline drive off with it',carDepartureTargets({car}).includes(sh)&&car._outline.every(o=>carDepartureTargets({car}).includes(o)));
+ }
+ check('crew paint on the player car',playerCarPaint('afterlight').paint===carPaintColor(0x68508c)&&playerCarPaint('iron-row').stripe===0xeee3c5);
+ check('no crew and Jev drive blue',playerCarPaint(null)===DEFAULT_CAR_PAINT&&DEFAULT_CAR_PAINT.paint===0x2f6fb7);
+ check('no canvas keeps the old sprite',drawParkedCar({textures:{exists:()=>false,createCanvas:()=>{throw Error('no canvas');},remove(){}},add:scene.add},0,0,{x:0,y:-1},cell)===null);
+}
 console.log('getaway car: '+passed+' assertions passed');

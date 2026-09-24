@@ -4,6 +4,7 @@ import * as rules from '../src/logic/rivals.js';
 import * as replay from '../src/logic/rivalReplay.js';
 import {planInterior} from '../src/logic/interior.js';
 import {PALETTE} from '../src/logic/palette.js';
+import {drawParkedCar,DEFAULT_CAR_PAINT} from '../src/controllers/CarArt.js';
 let passed=0;const check=(n,ok)=>{if(!ok)throw Error(n);passed++;};
 const source=path=>readFileSync(new URL(path,import.meta.url),'utf8').replace(/^import[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
 const decor=new Function('planInterior','PALETTE',source('../src/controllers/InteriorDecor.js')+';return drawInteriorDecor;')(planInterior,PALETTE);
@@ -39,7 +40,7 @@ for(const [width,height] of [[280,480],[390,844],[1440,900]]){
  const f=fixture(width,height);
  const makeRunnerSprite=(_,x,y)=>sprite(f,'runner',x,y),makePlugSprite=(_,x,y)=>sprite(f,'plug',x,y);
  const bindings={...rules,...replay,drawRivalReplayArena:arena,Phaser:{},T:{WALL:1},THEMES:[theme],PALETTE,
- createSeededRNG:()=>()=>.2,generateSquareMaze:()=>({grid,egress}),makeRunnerSprite,makePlugSprite};
+ createSeededRNG:()=>()=>.2,generateSquareMaze:()=>({grid,egress}),makeRunnerSprite,makePlugSprite,drawParkedCar,DEFAULT_CAR_PAINT};
  const play=new Function(...Object.keys(bindings),playerSource+';return playRivalReplay;')(...Object.values(bindings));
  const rep=replay.newReplaySegment({house:1,attempt:1,houseSeed:123,cols:16,rows:35,scale:.6,
  stashes:[{x:3.5,y:4.5},{x:12.5,y:30.5}],car:{x:15.5,y:20.5,side:'E'},
@@ -75,7 +76,7 @@ for(const [width,height] of [[280,480],[390,844],[1440,900]]){
  const played=[];f.scene.audio={play:(key,opts)=>played.push({key,...opts})};
  const makeRunnerSprite=(_,x,y)=>sprite(f,'runner',x,y),makePlugSprite=(_,x,y)=>sprite(f,'plug',x,y);
  const bindings={...rules,...replay,drawRivalReplayArena:arena,Phaser:{},T:{WALL:1},THEMES:[theme],PALETTE,
- createSeededRNG:()=>()=>.2,generateSquareMaze:()=>({grid,egress}),makeRunnerSprite,makePlugSprite};
+ createSeededRNG:()=>()=>.2,generateSquareMaze:()=>({grid,egress}),makeRunnerSprite,makePlugSprite,drawParkedCar,DEFAULT_CAR_PAINT};
  const play=new Function(...Object.keys(bindings),playerSource+';return playRivalReplay;')(...Object.values(bindings));
  const rep=replay.newReplaySegment({house:1,attempt:1,houseSeed:123,cols:16,rows:35,scale:.6,
  stashes:[{x:3.5,y:4.5},{x:12.5,y:30.5}],car:{x:15.5,y:20.5,side:'E'},runnerSpawn:{x:2.5,y:20.5},plugSpawn:{x:13.5,y:10.5}});

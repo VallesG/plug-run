@@ -17,7 +17,7 @@ export function carParkCenter(x, y, dir, cell, viewport = null) {
 }
 
 export function carDepartureTargets(scene) {
-  return [...new Set([scene.car, ...(scene.car?._outline || []),
+  return [...new Set([scene.car, ...(scene.car?._outline || []), scene.car?._shadow,
     scene.carLights, scene.vfx?.carBeacon].filter(Boolean))];
 }
 

@@ -26,12 +26,15 @@ export function playExtraction(scene, { boardMs = EXTRACTION_BOARD_MS,
   const drive = () => {
     if (!scene.car) { done(); return; }
     const dist = scene.cell * 8;
-    const dx = scene.carOutDir?.x || 0;
-    const dy = scene.carOutDir?.y || 0;
+    // A car parked along the curb pulls away the way it faces; an older
+    // street-facing car drives straight out.
+    const heading = scene.car._heading || scene.carOutDir;
+    const dx = heading?.x || 0;
+    const dy = heading?.y || 0;
 
     // The ink silhouette is part of the car, not a parked floor decal.
     const targets = carDepartureTargets(scene);
-    const skidLines = carSkidLines(scene.seed, scene.car, scene.carOutDir, scene.cell);
+    const skidLines = carSkidLines(scene.seed, scene.car, heading, scene.cell);
     if (skidLines.length) {
       const marks = scene.add.graphics().setDepth(5);
       marks.lineStyle(Math.max(1, scene.cell * 0.08), 0x080b0c, 0.55);
@@ -44,6 +47,8 @@ export function playExtraction(scene, { boardMs = EXTRACTION_BOARD_MS,
       y: `+=${dy * dist}`,
       duration: driveMs,
       ease: 'Sine.easeIn',
+      // Along the curb the street can be short: fade out as it goes.
+      ...(scene.car._heading ? { alpha: 0 } : {}),
       onComplete: done
     });
   };
