@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {trackEvent,trackScene,trackRoundComplete} from '../src/utils/analytics.js';
+import {trackEvent,trackScene,trackRoundComplete,setAnalyticsContext,trackPageView} from '../src/utils/analytics.js';
 const calls=[];
 globalThis.window={location:{hostname:'plug-run.io'},gtag:(...args)=>calls.push(args)};
 assert.equal(trackEvent('test',{crew:'afterlight',account_id:'secret',house_number:NaN}),true);
@@ -8,6 +8,20 @@ const scene={runKind:'journey',role:'runner',blockGangID:'iron-row',blockIndex:3
 trackRoundComplete('runner',15,true,scene);
 assert.deepEqual(calls.pop()[2],{analytics_version:'2',game_mode:'campaign',player_role:'runner',crew:'iron-row',block_number:3,house_number:15,round_number:15,success:true});
 assert.equal(trackScene({rivalRace:{recording:true}},'test'),false);
+// Platform context rides on every event; only allow-listed string fields, and a user property for platform/client.
+assert.deepEqual(setAnalyticsContext({platform:'telegram',client:'telegram_miniapp',tg_platform:'ios',tg_user_id:'123',start_kind:7}),
+ {platform:'telegram',client:'telegram_miniapp',tg_platform:'ios'});
+assert.deepEqual(calls.pop(),['set','user_properties',{platform:'telegram',client:'telegram_miniapp'}]);
+trackEvent('test',{crew:'crossline'});
+assert.deepEqual(calls.pop()[2],{analytics_version:'2',platform:'telegram',client:'telegram_miniapp',tg_platform:'ios',crew:'crossline'});
+trackEvent('test',{platform:'web'});
+assert.equal(calls.pop()[2].platform,'web','an event can still say where it came from');
+window.location.href='https://plugrun.io/tg?utm_source=telegram';window.document={title:'Plug Run'};
+assert.equal(trackPageView(),true);
+assert.deepEqual(calls.pop(),['event','page_view',{analytics_version:'2',platform:'telegram',client:'telegram_miniapp',tg_platform:'ios',page_location:'https://plugrun.io/tg?utm_source=telegram',page_title:'Plug Run'}]);
+setAnalyticsContext({});
+trackEvent('test');
+assert.deepEqual(calls.pop()[2],{analytics_version:'2'});
 window.location.hostname='localhost';
 assert.equal(trackEvent('test'),false);
 window.PLUG_RUN_ANALYTICS_DEBUG=true;

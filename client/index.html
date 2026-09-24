@@ -24,9 +24,13 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
+      // On /tg (the Telegram Mini App) the address carries Telegram's signed
+      // user data in its #fragment until the game strips it, so the game
+      // sends that page view itself (src/platform/index.js).
       gtag('config', 'G-M68K7J4ZZ2', {
         'anonymize_ip': true,
-        'cookie_flags': 'SameSite=None;Secure'
+        'cookie_flags': 'SameSite=None;Secure',
+        'send_page_view': !/^\/tg(\/|$)/.test(location.pathname)
       });
     </script>
 

@@ -8,6 +8,7 @@ import { WindowScene } from './scenes/WindowScene.js';
 // import { PvpScene } from './scenes/PvpScene.js'; // Future multiplayer
 import rexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
 import { installBotDriver } from './controllers/installBotDriver.js';
+import { initPlatform, attachGame } from './platform/index.js';
 
 // Test harness only. No-ops unless ?bot=1 is in the URL, so players never
 // touch this path. Runs before the game boots so the prototype wrap is in
@@ -46,16 +47,27 @@ const config = {
   scene: [MenuScene, WindowScene, RunnerScene, PlugScene, TutorialMiniScene, LeaderboardScene]
 };
 
-const game = new Phaser.Game(config);
+function boot() {
+  // Measured now: on Telegram, expand() may have grown the view since load.
+  config.width = config.scale.width = window.innerWidth;
+  config.height = config.scale.height = window.innerHeight;
+  const game = new Phaser.Game(config);
+  attachGame(game);
 
-// Development server only (never in a build): a handle for browser checks,
-// and ?rivalPool=rival-hard or ?rivalPool=apex to meet a challenge bank in
-// Block Rivals.
-if (import.meta.env?.DEV) {
-  window.__plugRunGame = game;
-  const pool = new URLSearchParams(window.location.search).get('rivalPool');
-  if (pool) window.__plugRunRivalPool = pool;
+  // Development server only (never in a build): a handle for browser checks,
+  // and ?rivalPool=rival-hard or ?rivalPool=apex to meet a challenge bank in
+  // Block Rivals.
+  if (import.meta.env?.DEV) {
+    window.__plugRunGame = game;
+    const pool = new URLSearchParams(window.location.search).get('rivalPool');
+    if (pool) window.__plugRunRivalPool = pool;
+  }
 }
+
+// Web or Telegram (src/platform). On the plain web this settles at once; on
+// /tg it first loads Telegram's script. Never rejects, and the game boots
+// either way.
+initPlatform().catch(() => null).then(boot);
 
 // Zoom/resize handling: no warning banner needed — every scene rebuilds
 // itself on layout-viewport changes (RESIZE mode + per-scene restart
