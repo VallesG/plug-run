@@ -13,7 +13,7 @@ function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
 // The match screen is presentation only; the stub records what it was told
 // to show and hands back the callbacks a player's taps would call.
-const challenges={made:[],shared:[],reported:[]};let shareOutcome='sent';
+const challenges={made:[],shared:[],reported:[]};let tutorialDone=true;const dailies=[];dailies.submitted=[];let shareOutcome='sent';
 let matchResolver=()=>Promise.resolve(null), searchPlanMs=3000, realApply=null;
 // Shared runs go here instead of the network.
 const sharedRuns=[];let shareAnswer=()=>Promise.resolve({ok:true});
@@ -51,7 +51,9 @@ const bindings={
   submitRivalRun:(p)=>{sharedRuns.push(p);return shareAnswer(p);}, getUserID:()=>'user-1', getCurrentUserSync:()=>({id:'local-1'}),
   createChallenge:(p)=>{challenges.made.push(p);return Promise.resolve({ok:true,id:'Ab3xY9kLmN',link:'https://t.me/PlugRunBot/play?startapp=c_Ab3xY9kLmN',text:'t',preparedId:'prep-1'});},
   shareChallenge:(c)=>{challenges.shared.push(c);return Promise.resolve(shareOutcome);},
-  reportChallengeResult:(p)=>{challenges.reported.push(p);return Promise.resolve({ok:true});}, identityProof:()=>'init-data'
+  reportChallengeResult:(p)=>{challenges.reported.push(p);return Promise.resolve({ok:true});}, identityProof:()=>'init-data', hasCompletedTutorial:()=>tutorialDone,
+  saveDailyResult:(n,r)=>{dailies.push({n,...r});const official=dailies.filter(d=>d.n===n).length===1;return {official,state:{streak:official?3:3,last:n,days:{}}};},
+  saveDailyRank:(n,rank)=>{dailies.rank=rank;}, liveStreak:(st)=>st.streak, submitDaily:(b)=>{dailies.submitted.push(b);return Promise.resolve({ok:true,rank:7,total:90});}
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -821,4 +823,40 @@ console.log('rival run sharing: '+passed+' total assertions passed');
   check('an ordinary race searches as before',challenges.lastFind===undefined);
 }
 console.log('rival challenges: '+passed+' total assertions passed');
+
+// Quick start: a player who never did the tutorial is told how to run, once.
+{
+  tutorialDone=false;const before=loadouts;
+  const q=setup({...rules.newRivalRace(course,splits)});
+  const card=q.modals.at(-1);
+  check('a newcomer gets HOW TO RUN before the race',card?.title==='HOW TO RUN'&&card.lines.length===5&&loadouts===before);
+  check('with touch controls on a phone',/Swipe/.test(card.lines[0])&&/Double-tap/.test(card.lines[3]));
+  card.buttons[0].onClick();
+  check('GOT IT carries on into the race',loadouts===before+1);
+  const again=setup(q.scene.rivalRace);
+  check('never twice in one race',again.modals.every(m=>m.title!=='HOW TO RUN'));
+  tutorialDone=true;
+  const vet=setup({...rules.newRivalRace(course,splits)});
+  check('a player who did the tutorial goes straight in',vet.modals.every(m=>m.title!=='HOW TO RUN'));
+}
+console.log('rivals quick start: '+passed+' total assertions passed');
+
+// Daily Race: the first finish of the day is official, submitted, and says so.
+{
+  const flush=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
+  const run=(extra)=>{
+    now=1000;let st={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],opponentKind:'recorded-bot',opponent:{displayName:'Jev',recordingID:'rec-d'},daily:12,...extra};
+    let r=setup(st);
+    for(let house=1;house<=7;house++){now=house*9000;r.controller.clearHouse();st=r.scene.rivalRace;
+      if(house<7){r.events[0].fn();const d=r.restarts[0];now+=180;r=setup(d.rivalRace,d.pveRound);}}
+    return {st,modal:r.modals.at(-1)};
+  };
+  const first=run({});await flush();
+  check('the first daily finish is official and says the streak',first.modal.lines[0]==='DAILY #12 · OFFICIAL · 🔥 3 DAYS');
+  check('it is submitted once for a rank',dailies.submitted.length===1&&dailies.submitted[0].day===12&&dailies.submitted[0].houses===7&&dailies.rank===7);
+  check('and can still be sent as a challenge, marked daily',first.modal.buttons[0].label==='CHALLENGE A FRIEND');
+  const second=run({});await flush();
+  check('a second run the same day is a practice run and is not submitted',second.modal.lines[0]==='DAILY #12 · PRACTICE RUN'&&dailies.submitted.length===1);
+}
+console.log('rivals daily race: '+passed+' total assertions passed');
 

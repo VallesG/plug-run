@@ -180,6 +180,8 @@ export class BaseGameScene extends Phaser.Scene {
     // A friend's challenge (src/platform takeLaunchChallenge): rides on the race,
     // so restarts keep it; a NEW RACE builds a fresh race without it.
     if (this.rivalRace && initData?.rivalChallenge && !this.rivalRace.challenge) this.rivalRace.challenge = initData.rivalChallenge;
+    // Today's Daily Race (logic/dailyRace.js): same course and rival for everyone.
+    if (this.rivalRace && Number.isInteger(initData?.rivalDaily) && !this.rivalRace.daily) this.rivalRace.daily = initData.rivalDaily;
     this.rivals = null;
     this._blockEntranceShown = false;
     this._showCityOnEntry = false;

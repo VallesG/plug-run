@@ -19,9 +19,12 @@ import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { nextRivalAnnouncement } from '../logic/rivalAnnouncer.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
-import { submitRivalRun, createChallenge, reportChallengeResult } from '../utils/api.js';
+import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily } from '../utils/api.js';
 import { identityProof, shareChallenge } from '../platform/index.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
+import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
+import { saveDailyResult, saveDailyRank } from '../utils/dailyProgress.js';
+import { liveStreak } from '../logic/dailyRace.js';
 
 /** A short reason a run was not shared, from the submission's answer. */
 function shareReason(error){
@@ -66,6 +69,35 @@ export default class RivalsRace {
     this.scene.input.keyboard.enabled = false;
     if (this.race.status === 'countdown') return;
     this.scene.suspendTouchUI?.(true);
+    // Someone arriving straight into a race (a challenge link, Block Rivals from
+    // the first launch) has not played the tutorial: tell them how, once.
+    if (this.needsQuickStart()) { this.showQuickStart(() => this.prepareEntry()); return; }
+    this.prepareEntry();
+  }
+  needsQuickStart(){
+    if (this.race.recording || this.race.fixedPowers || this.race.quickStartShown) return false;
+    let seen = false;
+    try { seen = localStorage.getItem('pr_quickstart_v1') === '1'; } catch {}
+    return !seen && !hasCompletedTutorial();
+  }
+  showQuickStart(done){
+    this.race.quickStartShown = true;
+    try { localStorage.setItem('pr_quickstart_v1', '1'); } catch {}
+    const desktop = !!this.scene.sys?.game?.device?.os?.desktop;
+    trackScene(this.scene,'tutorial_progress',{stage:'rivals_quick_start',action:'shown'});
+    this.scene.gameUI.showModal({
+      title:'HOW TO RUN', subtitle:'BLOCK RIVALS · SEVEN HOUSES',
+      lines:[
+        desktop ? 'Arrow keys or WASD to move.' : 'Swipe to move. Hold and drag to steer.',
+        'Two bags in every house. Grab the real one; the other is bunk.',
+        'The Plug shoots on sight. Break his line of fire.',
+        desktop ? 'Click to fire your powers.' : 'Double-tap to fire your powers.',
+        'Make the getaway car. Seven houses, beat your rival.'
+      ],
+      buttons:[{label:'GOT IT',variant:'primary',onClick:()=>{ if(!this.disposed) done(); }}]
+    });
+  }
+  prepareEntry(){
     if(this.race.rivalCityIndex){
       // A restart mid-match reopens the same stage; it never skips one.
       if(['searching','unavailable','found','selecting'].includes(this.race.entryStage)){this.resumeMatch();return;}
@@ -136,8 +168,8 @@ export default class RivalsRace {
     const search={startedAt:performance.now(),revealMs:plan.revealMs,loadedAt:null,match:null};
     race.matchSearch=search;race.match=null;race.lobby=null;
     trackScene(this.scene,'rivals_matchmaking_started',{course_slot:race.course.slot});
-    // A challenge races exactly the course it was sent on.
-    let task;try{task=findRivalMatch(race,race.challenge?{courses:[race.course]}:undefined);}catch{task=null;}
+    // A challenge or the Daily Race races exactly its own course.
+    let task;try{task=findRivalMatch(race,race.challenge||race.daily?{courses:[race.course]}:undefined);}catch{task=null;}
     Promise.resolve(task).catch(()=>null).then(match=>{
       // A cancelled or superseded search never lands.
       if(race.matchSearch!==search)return;
@@ -659,6 +691,7 @@ export default class RivalsRace {
       opponentKind:this.race.opponentKind,recordingID:this.race.opponent?.recordingID ?? null
     },record,own.ok ? own.record : null);
     this.reportChallenge();
+    this.recordDailyRace();
     this.showResult();
   }
   // --- Challenges -----------------------------------------------------------
@@ -672,7 +705,7 @@ export default class RivalsRace {
   challengeSpec(){
     const r=this.race;
     return {slot:r.course.slot,stashSeed:r.stashSeed,recordingID:r.opponent.recordingID,pool:r.pool||'ordinary',
-      ms:Math.round(r.finishedMs),courseName:r.course.name||'',rivalName:this.rivalLabel()};
+      ms:Math.round(r.finishedMs),courseName:r.course.name||'',rivalName:this.rivalLabel(),...(Number.isInteger(r.daily)?{daily:r.daily}:{})};
   }
   /** The CHALLENGE A FRIEND button: create the challenge, then open the share dialog. */
   sendChallenge(label){
@@ -689,6 +722,27 @@ export default class RivalsRace {
       })
       .catch(()=>say('TRY AGAIN'))
       .finally(()=>{this.challengeBusy=false;});
+  }
+  /** Today's Daily Race: the first finish of the day is official; it keeps the streak and gets a rank. */
+  recordDailyRace(){
+    const n=this.race.daily;
+    if(!Number.isInteger(n)||this.race.dailyRecorded)return;
+    this.race.dailyRecorded=true;
+    const houses=this.race.clearTimes.length,ms=Math.round(this.race.finishedMs);
+    const {state,official}=saveDailyResult(n,{ms,houses,retries:this.race.retries,result:this.race.result});
+    this.race.dailyOfficial=official;
+    this.race.dailyStreak=liveStreak(state,n);
+    trackScene(this.scene,'daily_completed',{course_slot:this.race.course.slot,result:houses===RIVAL_HOUSES?'finished':'short',success:official});
+    if(!official)return;
+    Promise.resolve().then(()=>submitDaily({userId:getUserID(),day:n,ms,houses,retries:this.race.retries}))
+      .then(res=>{if(Number.isInteger(res?.rank))saveDailyRank(n,res.rank,res.total);}).catch(()=>{});
+  }
+  dailyLine(){
+    const n=this.race.daily;
+    if(!Number.isInteger(n))return null;
+    if(!this.race.dailyOfficial)return 'DAILY #'+n+' · PRACTICE RUN';
+    const streak=this.race.dailyStreak>0?' · 🔥 '+this.race.dailyStreak+' DAY'+(this.race.dailyStreak===1?'':'S'):'';
+    return 'DAILY #'+n+' · OFFICIAL'+streak;
   }
   /** A challenge race reports how it went; the result line reads the creator's time either way. */
   reportChallenge(){
@@ -758,6 +812,8 @@ export default class RivalsRace {
     // A challenge race says how it went against the friend who sent it.
     const vsFriend=this.challengeLine();
     if(vsFriend&&!this.race.rivalCityIndex)config.lines.unshift(vsFriend);
+    const daily=this.dailyLine();
+    if(daily&&!this.race.rivalCityIndex)config.lines.unshift(daily);
     // Challenge a friend: first, so it is the obvious next move after a finish.
     if(this.canChallenge()){
       let label=null;
@@ -814,6 +870,11 @@ export default class RivalsRace {
       const label=margin>0?'YOU BY '+margin.toFixed(1)+'s':margin<0?sides[1].label+' BY '+(-margin).toFixed(1)+'s':'DEAD HEAT';
       text(area.x+area.width/2,y,label,{size:13,color:margin>0?'#9bcae5':margin<0?'#dec386':'#eee3c7'});
       y+=22;
+    }
+    const daily=this.dailyLine();
+    if(daily){
+      text(area.x+area.width/2,y,daily,{size:12,color:'#9bcae5'});
+      y+=20;
     }
     const vsFriend=this.challengeLine();
     if(vsFriend){

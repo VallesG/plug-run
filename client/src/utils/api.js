@@ -138,6 +138,13 @@ export async function reportChallengeResult({ id, userId, ms, houses }) {
     body: JSON.stringify({ id, userId, token: getToken(), ms, houses })
   }, 6000);
 }
+/** Submit today's official Daily Race. Resolves { rank, total } (rank null if not seven houses). */
+export async function submitDaily({ userId, day, ms, houses, retries }) {
+  return await tryFetch(TG + '?action=daily-submit', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, token: getToken(), day, ms, houses, retries })
+  }, 6000);
+}
 /**
  * Share a finished Block Rivals race (the player opted in for this race).
  * Sends the race's own record and replay with this device's identity; the

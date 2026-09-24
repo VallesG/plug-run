@@ -14,6 +14,7 @@
 //                       Telegram first name. userId/token are this device's existing
 //                       identity, adopted only when the token matches.
 import { createHmac, timingSafeEqual, randomUUID, randomBytes } from 'node:crypto';
+import { dailyNumber } from '../../src/logic/dailyRace.js';
 
 const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
@@ -74,7 +75,8 @@ export function challengeSpec(c) {
   const pool = typeof c.pool === 'string' && /^[a-z-]{1,24}$/.test(c.pool) ? c.pool : 'ordinary';
   const courseName = typeof c.courseName === 'string' ? c.courseName.replace(/[\p{Cc}\p{Cf}]/gu, '').slice(0, 40) : '';
   const rivalName = typeof c.rivalName === 'string' ? c.rivalName.replace(/[\p{Cc}\p{Cf}]/gu, '').slice(0, 24) : '';
-  return { slot, stashSeed, recordingID: c.recordingID, pool, ms: Math.round(ms), courseName, rivalName };
+  const daily = Number.isInteger(c.daily) && c.daily > 0 && c.daily < 100000 ? c.daily : null;
+  return { slot, stashSeed, recordingID: c.recordingID, pool, ms: Math.round(ms), courseName, rivalName, ...(daily ? { daily } : {}) };
 }
 
 export function raceTime(ms) {
@@ -86,7 +88,8 @@ export function raceTime(ms) {
 export function challengeText(rec) {
   const where = rec.courseName ? ' on ' + rec.courseName : '';
   const vs = rec.rivalName ? ' against ' + rec.rivalName : '';
-  return rec.name + ' ran seven houses' + where + vs + ' in ' + raceTime(rec.ms) + '. Think you can beat it?';
+  const lead = rec.daily ? 'Plug Run Daily #' + rec.daily + ': ' : '';
+  return lead + rec.name + ' ran seven houses' + where + vs + ' in ' + raceTime(rec.ms) + '. Think you can beat it?';
 }
 
 function challengeId() {
@@ -298,6 +301,33 @@ export function createTelegramHandler({
     return json(200, { ok: true });
   }
 
+  // --- Daily Race ---------------------------------------------------------------
+  // Everyone races the same course and rival each UTC day (src/logic/dailyRace.js
+  // picks them). The first seven-house finish a player submits for a day is
+  // their official time; the day's board ranks those times.
+  async function dailySubmit(req) {
+    let body = null;
+    try { body = JSON.parse(await req.text()); } catch {}
+    const meta = await signedIn(body);
+    if (!meta) return json(403, { ok: false, error: 'no identity' });
+    const today = dailyNumber(nowSec() * 1000);
+    const day = Number(body.day), ms = Number(body.ms), houses = Number(body.houses);
+    // A race started just before midnight may finish just after it.
+    if (!Number.isInteger(day) || day < today - 1 || day > today) return json(400, { ok: false, error: 'not a current daily' });
+    if (!Number.isFinite(ms) || ms < 10_000 || ms > 3_600_000 || !Number.isInteger(houses) || houses < 0 || houses > 7) return json(400, { ok: false, error: 'bad result' });
+    const board = 'daily:' + day;
+    if (houses === 7) {
+      await redis(['ZADD', board, 'NX', String(Math.round(ms)), body.userId]); // first official finish only
+      await redis(['HSET', board + ':names', body.userId, meta.username]);
+      await redis(['EXPIRE', board, String(8 * 86400)]);
+      await redis(['EXPIRE', board + ':names', String(8 * 86400)]);
+    }
+    await redis(['INCR', board + ':plays']);
+    const rank = houses === 7 ? await redis(['ZRANK', board, body.userId]) : null;
+    const total = Number(await redis(['ZCARD', board])) || 0;
+    return json(200, { ok: true, day, rank: rank === null || rank === undefined ? null : Number(rank) + 1, total });
+  }
+
   return async (req) => {
     let action = null, url = null;
     try { url = new URL(req.url); action = url.searchParams.get('action'); } catch {}
@@ -308,6 +338,7 @@ export function createTelegramHandler({
       if (req.method === 'GET' && action === 'challenge') return await getChallenge(url);
       if (req.method === 'POST' && action === 'challenge-result') return await challengeResult(req);
       if (req.method === 'POST' && action === 'webhook') return await webhook(req);
+      if (req.method === 'POST' && action === 'daily-submit') return await dailySubmit(req);
       if (req.method === 'GET' && action === 'setup-webhook') return await setupWebhook();
     } catch (e) {
       console.error('[telegram]', action, e?.message ? String(e.message).slice(0, 120) : 'error');

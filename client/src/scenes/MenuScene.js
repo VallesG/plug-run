@@ -22,6 +22,10 @@ import { getCurrentRouteID } from '../utils/seededRandom.js';
 import { trackNavigation, trackEvent } from '../utils/analytics.js';
 import { takeLaunchChallenge } from '../platform/index.js';
 import { getChallenge } from '../utils/api.js';
+import { dailyNumber, dailySlot, dailyRival, dailyNote } from '../logic/dailyRace.js';
+import { getDailyState } from '../utils/dailyProgress.js';
+import { enabledRivalCourses, rivalPoolCourse } from '../logic/rivals.js';
+import { loadRivalOpponents, isJevRecord } from '../utils/rivalSession.js';
 import { createPortraitOverlay } from '../utils/portraitMode.js';
 import { isDesktop, areSidebarsActive, createSidebarContainer, createSocialFeed, createPersonalStats, cleanupSidebars, updateStats, updateLeaderboard, updateSocialFeed, setGlobalTimers, setCurrentMode, getCurrentMode, getExistingSidebars } from '../utils/desktopSidebars.js';
 import { fetchRecentActivity } from '../utils/activityFeed.js';
@@ -144,7 +148,9 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Tutorial shares the quiet title-menu treatment
-    this.tutorialBtn = this.makeTutorialButton();
+    // Past the tutorial, its row becomes the Daily Race (the tutorial stays
+    // one tap away in the ? screen). New players keep the tutorial row.
+    this.tutorialBtn = (hasCompletedTutorial() || campaignStashes() >= 1) ? this.makeDailyButton() : this.makeTutorialButton();
 
     // User profile chip (clickable to show user's leaderboard position)
     this.profileChip = this.makeUserProfileChip();
@@ -396,7 +402,7 @@ export class MenuScene extends Phaser.Scene {
 
   // MENU: UI helpers -------------------------------------------------
   // Simple card with background and text overlay
-  makeTitleOption(label, onClick, locked = null){
+  makeTitleOption(label, onClick, locked = null, note = null){
     const a = landingLayout(this.scale.width, this.scale.height);
     const c = this.add.container(0, 0).setSize(a.menuW, a.rowH).setDepth(6);
     const shadow = this.rexUI.add.roundRectangle(0, 3, a.menuW, a.rowH, 8, 0x000000, 0.32);
@@ -404,7 +410,7 @@ export class MenuScene extends Phaser.Scene {
       locked ? 0x101922 : 0x102133, locked ? 0.70 : 0.91)
       .setStrokeStyle(1.5, locked ? 0x536270 : 0x77b9ed, locked ? 0.42 : 0.75)
       .setInteractive({ cursor: locked ? 'default' : 'pointer' });
-    const tx = this.add.text(0, locked ? -7 : 0, label, {
+    const tx = this.add.text(0, locked || note ? -7 : 0, label, {
       fontFamily: 'Arial, sans-serif',
       fontSize: (a.rowH >= 56 ? 22 : 20) + 'px',
       fontStyle: 'bold',
@@ -419,6 +425,13 @@ export class MenuScene extends Phaser.Scene {
       c.add(note);
       c._note = note;
     } else {
+      if (note) {
+        const caption = this.add.text(0, a.rowH * 0.25, note, {
+          fontFamily: 'monospace', fontSize: '10px', color: '#f2c14e', letterSpacing: 1
+        }).setOrigin(0.5);
+        c.add(caption);
+        c._note = caption;
+      }
       const chevron = this.add.text(a.menuW / 2 - 20, 0, '›', {
         fontFamily: 'Arial, sans-serif', fontSize: '30px', color: '#a7d8ff'
       }).setOrigin(0.5);
@@ -1607,6 +1620,46 @@ export class MenuScene extends Phaser.Scene {
     return note;
   }
 
+  makeDailyButton(){
+    const n = dailyNumber(Date.now());
+    return this.makeTitleOption('Daily Race #' + n, () => this.launchDaily(n), null, dailyNote(getDailyState(), n));
+  }
+
+  /** Today's race: the same course and recorded rival for everyone (logic/dailyRace.js). */
+  launchDaily(n){
+    if (this._dailyLoading) return;
+    this._dailyLoading = true;
+    const slot = dailySlot(n, enabledRivalCourses().map(c => c.slot));
+    const course = rivalPoolCourse(slot);
+    if (!course) { this._dailyLoading = false; this.toast('Daily Race unavailable'); return; }
+    trackEvent('daily_started', { course_slot: slot });
+    loadRivalOpponents(course, 'ordinary').then(entries => {
+      const pick = dailyRival(n, entries, isJevRecord);
+      if (!this.sys.isActive()) return;
+      if (!pick) { this.toast('Daily Race unavailable'); return; }
+      this.launchCard({ modeKey: 'runner', runKind: 'rivals', data: {
+        rivalSlot: slot, rivalStashSeed: pick.record.stashSeed, rivalOpponentID: pick.record.recordingID,
+        rivalPool: 'ordinary', rivalDaily: n
+      } });
+    }).catch(() => { if (this.sys.isActive()) this.toast('Daily Race unavailable'); })
+      .finally(() => { this._dailyLoading = false; });
+  }
+
+  startTutorialFromMenu(){
+    this.fadeOutStreetSounds();
+    try {
+      const audio = AudioManager.get(this);
+      audio.ensureUnlocked(this);
+      audio.playGameplayMusic('tutorial', { volume: 0.3, loop: true, fade: 800 });
+      audio.setMusicFilterCutoff(600, 0);
+    } catch {}
+    const cam = this.cameras.main;
+    cam.fadeOut(250, 0, 0, 0);
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.transition({ target: 'TUTORIAL_MINI', duration: 250, moveBelow: true });
+    });
+  }
+
   makeTutorialButton(){
     const button = this.makeTitleOption('Tutorial', () => {
       // Fade out street sounds
@@ -2448,8 +2501,17 @@ export class MenuScene extends Phaser.Scene {
       fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:cream,letterSpacing:1
     }).setOrigin(0.5).setDepth(56);
     els.push(actionShadow,action,actionText);
+    const tutW=Math.min(150,panelW-2*pad-actionW-10);
+    const tutX=cx-panelW/2+pad+tutW/2;
+    const tut=this.add.rectangle(tutX,actionY,tutW,buttonH,0x0d1214,1)
+      .setStrokeStyle(1.5,teal).setDepth(55).setInteractive({cursor:'pointer'});
+    const tutText=this.add.text(tutX,actionY,'REPLAY TUTORIAL',{
+      fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',color:'#bfe3df',letterSpacing:1
+    }).setOrigin(0.5).setDepth(56);
+    els.push(tut,tutText);
 
     const close=()=>els.forEach(object=>object?.destroy());
+    tut.on('pointerup',(pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);close();this.startTutorialFromMenu();});
     action.on('pointerover',()=>action.setFillStyle(gold,0.24));
     action.on('pointerout',()=>action.setFillStyle(0x172126,1));
     action.on('pointerup',(pointer,x,y,event)=>{guardModalDismissal(this,pointer,event);close();});
