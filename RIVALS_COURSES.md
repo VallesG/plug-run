@@ -192,7 +192,7 @@ course is short, and `--json` gives machine-readable output.
 
 Current state:
 
-- `jev-v1` (Normal) holds 923 races from 117 sealed jobs of the fresh Normal
+- `jev-v1` (Normal) holds 1,178 races (39-72 per course; recording was stopped at this size on purpose, see JEV_PROFILES_HANDOFF.md) from the sealed jobs of the fresh Normal
   recording (`tools/plans/jev-v1.json`): 31-48 on every one of the 21
   courses, all with match stash rules and a distinct
   seven-house pattern per race on each course. It replaced the 7 historical races (no match rules), which

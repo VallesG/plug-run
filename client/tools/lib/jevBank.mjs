@@ -19,8 +19,10 @@
 // Every rejection is reported with its reason, never repaired.
 
 import {
-  validateRivalRunRecord, validateRivalReplayBundle, rivalRecordMatchesCourse, rivalAttemptErrors, rivalBytes
+  validateRivalRunRecord, validateRivalReplayBundle, rivalRecordMatchesCourse, rivalAttemptErrors, rivalBytes,
+  buildRivalRunRecord, buildRivalReplayBundle
 } from '../../src/logic/rivalRecords.js';
+import { playerRunErrors } from '../../src/logic/rivalPlayerRuns.js';
 import { validateReplaySegment } from '../../src/logic/rivalReplay.js';
 import { RIVAL_RULES_VERSION, RIVAL_HOUSES, rivalPoolCourse, rivalGenuinePocket, rivalSessionPocket } from '../../src/logic/rivals.js';
 import { rivalPreset, RIVAL_BOT_DRIVER_VERSION } from '../../src/logic/rivalPresets.js';
@@ -300,6 +302,23 @@ export function jevProvenance(payload, race, sourceFile = null, bankId = JEV_BAN
  * @param existing  [{ record, bundle, provenance }] already in the bank
  * @param captures  [{ file, payload }] raw recorder output
  */
+// A banked race is shown to players as a rival, so it has to pass the same
+// checks as a player's own shared run: no holes in the replay, no impossible
+// movement. Jev plays honestly, but a stalled capture can leave a gap that
+// would show as the ghost freezing and then jumping. Returns the first error.
+export function jevReplayError(entry) {
+  try {
+    const r = entry.record;
+    const record = buildRivalRunRecord({
+      rulesVersion: r.rulesVersion, course: rivalPoolCourse(r.courseSlot),
+      opponent: { id: 'local-player', displayName: 'You', kind: 'human' },
+      orderedPowers: r.orderedPowers, attempts: r.attempts, recordingID: 'local-check', stashSeed: r.stashSeed
+    });
+    const bundle = buildRivalReplayBundle(record, (entry.bundle?.segments || []).map((seg) => seg.replay));
+    return playerRunErrors(record, bundle)[0] || null;
+  } catch (e) { return e?.message || 'replay could not be checked'; }
+}
+
 export function selectJevBank(existing, captures, bankId = JEV_BANK_ID) {
   const accepted = [], rejected = [];
   const byId = new Map(), byHash = new Map();
@@ -312,6 +331,8 @@ export function selectJevBank(existing, captures, bankId = JEV_BANK_ID) {
       rejected.push({ tag, reason: 'duplicate recordingID with different payload' }); return;
     }
     if (byHash.has(hash)) { rejected.push({ tag, reason: 'duplicate race (same payload as ' + byHash.get(hash) + ')' }); return; }
+    const replayErr = jevReplayError(entry);
+    if (replayErr) { rejected.push({ tag, reason: 'replay fails the shared-run checks: ' + replayErr }); return; }
     byId.set(id, entry); byHash.set(hash, id);
     accepted.push(entry);
   };

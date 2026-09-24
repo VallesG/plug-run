@@ -40,7 +40,7 @@ This handoff preserves the current work so another LLM can record more opponents
 - The Normal recording plan uses the Balanced motor and never pairs phase with dash; it rotates single-mobility/decoy loadouts. No deaths or bad routes are scripted.
 - Purpose: the profile ordinary Block Rivals players meet.
 - Do not put Apex or Rival Hard captures into this bank.
-- Current bank: 923 races (31-48 on every one of the 21 courses), from 117 sealed jobs of the fresh Normal plan (`tools/plans/jev-v1.json`, recorded into `client/tools/recordings/jev/fresh-normal-v1/`, git-ignored). Every race has match stash rules. The 7 older historical races (no match rules) were retired by `--fresh`. The plan continues toward 128 per course; re-assemble with `--fresh` from the same folder.
+- Current bank: 1,178 races (39-72 on every one of the 21 courses). Recording was stopped on purpose at this size (2026-09-24): measure how often players meet a repeated race before recording more. The races come from the sealed jobs of the fresh Normal plan (`tools/plans/jev-v1.json`, recorded into `client/tools/recordings/jev/fresh-normal-v1/`, git-ignored). Every race has match stash rules. The 7 older historical races (no match rules) were retired by `--fresh`. The plan continues toward 128 per course; re-assemble with `--fresh` from the same folder.
 
 ## Courses
 
