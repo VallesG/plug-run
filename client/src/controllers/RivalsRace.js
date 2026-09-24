@@ -595,6 +595,8 @@ export default class RivalsRace {
     // retry is neither and is marked so the race cannot be exported as a record.
     const outcome = reason==='resize' ? 'abandoned' : ((this.scene.attacker?.hp ?? 1) <= 0 ? 'caught' : 'timeout');
     endAttemptCapture(this.scene,this.race,outcome,now);
+    // Remembered so a finished race that can't be shared says why.
+    if(reason==='resize')this.race.resizedMidRace=true;
     this.race.retries++;
     if(reason!=='resize') trackScene(this.scene,'house_failed',{course_slot:this.race.course.slot,reason:outcome});
     if(reason!=='resize') {
@@ -643,7 +645,9 @@ export default class RivalsRace {
     // Opted in for this race: send it. Only a complete seven-house race with
     // no abandoned attempt exports at all; anything else is simply not sent.
     if(this.race.shareRun&&!this.race.recording&&!this.race.shareStatus){
-      if(own.ok)this.shareOwnRun(own);else this.race.shareStatus='unfinished';
+      // All seven cleared but a resize reset one house: say so, not "unfinished".
+      if(own.ok)this.shareOwnRun(own);
+      else this.race.shareStatus=this.race.resizedMidRace&&this.race.clearTimes.length===RIVAL_HOUSES?'resized':'unfinished';
     }
     this.territory=completeRivalDistrict(this.race);
     this.race.territoryClaim=this.territory;
@@ -764,7 +768,8 @@ export default class RivalsRace {
   }
   shareLabel(){
     const why=this.race.shareWhy?' · '+this.race.shareWhy:'';
-    return ({sending:'SHARING YOUR RUN…',shared:'RUN SHARED',failed:'RUN NOT SHARED'+why,unfinished:'RUN NOT SHARED · UNFINISHED'})[this.race.shareStatus]||'';
+    return ({sending:'SHARING YOUR RUN…',shared:'RUN SHARED',failed:'RUN NOT SHARED'+why,unfinished:'RUN NOT SHARED · UNFINISHED',
+      resized:'RUN NOT SHARED · RESIZED MID-RACE'})[this.race.shareStatus]||'';
   }
   /** Send the finished race the player opted to share; the result shows how it went. */
   shareOwnRun(own){

@@ -729,13 +729,16 @@ console.log('rivals getaway animation: assertions passed');
   check('scoreboard: a played-out loss shows your time and the rival margin in its gold',!!playedOut.find('1:22.0')&&playedOut.find('JEV BY 12.0s')?.style.color==='#dec386');
 }
 console.log('rival result scoreboard: '+passed+' total assertions passed');
-
+
 // Sharing a finished race: only when opted in, only a complete race.
 {
-  const race7=(share)=>{
+  const race7=(share,{resizeAt=0}={})=>{
     now=1000;let st={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],shareRun:share,rivalCityIndex:1};
     let r=setup(st);
     for(let house=1;house<=7;house++){
+      if(house===resizeAt){
+        now=house*9000-4000;r.controller.resize();r.events[0].fn();const d=r.restarts[0];now+=700;r=setup(d.rivalRace,d.pveRound);
+      }
       now=house*9000;r.controller.clearHouse();st=r.scene.rivalRace;
       if(house<7){r.events[0].fn();const d=r.restarts[0];now+=180;r=setup(d.rivalRace,d.pveRound);}
     }
@@ -755,6 +758,12 @@ console.log('rival result scoreboard: '+passed+' total assertions passed');
   now=1000;const quit={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],shareRun:true,rivalCityIndex:1};
   const q=setup(quit);q.controller.finish('forfeit',5000);
   check('an unfinished race is not sent, and the result says so',sharedRuns.length===0&&quit.shareStatus==='unfinished');
+  check('an unfinished race reads UNFINISHED',q.controller.shareLabel()==='RUN NOT SHARED · UNFINISHED');
+  sharedRuns.length=0;
+  const resized=race7(true,{resizeAt:3});
+  check('a resize mid-house still lets the race finish all seven',resized.st.clearTimes.length===7&&resized.st.retries===1);
+  check('a finished race with a resize reset is not sent',sharedRuns.length===0&&resized.st.shareStatus==='resized');
+  check('and the result says it was the resize, not an unfinished race',resized.r.controller.shareLabel()==='RUN NOT SHARED · RESIZED MID-RACE');
   shareAnswer=()=>Promise.resolve({ok:false,error:'identity not recognised'});
   const refused=race7(true);
   await Promise.resolve();await Promise.resolve();await Promise.resolve();
