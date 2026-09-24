@@ -26,7 +26,7 @@ import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
 import { saveDailyResult, saveDailyRank } from '../utils/dailyProgress.js';
 import { liveStreak, dailyResult, dailyDateLabel } from '../logic/dailyRace.js';
 import { getDailyState } from '../utils/dailyProgress.js';
-import { drawDailyCard, DAILY_AMBER } from './DailyCard.js';
+const DAILY_AMBER = 0xf2a33a;
 
 /** A short reason a run was not shared, from the submission's answer. */
 function shareReason(error){
@@ -129,23 +129,23 @@ export default class RivalsRace {
     if (this.isDaily() && !this.race.dailyIntroShown) { this.showDailyIntro(() => this.openLoadout()); return; }
     this.openLoadout();
   }
-  /** Today's race, on its own ticket: not the Block Rivals district screen. */
+  /** Today's race: the Block Rivals block screen, in the daily's own amber. */
   showDailyIntro(done){
     this.race.dailyIntroShown = true;
     const n = this.race.daily, official = !dailyResult(getDailyState(), n);
+    const streak = liveStreak(getDailyState(), n);
+    const target = this.race.rivalTimes?.[RIVAL_HOUSES-1];
     const modal = this.scene.gameUI.showModal({
-      fullScreen:true, completion:true, accent:DAILY_AMBER,
-      title:"TODAY'S RACE", subtitle:'SEVEN HOUSES · SAME RACE FOR EVERYONE',
-      lines:[],
+      fullScreen:true, palette:'daily', title:(this.race.course.name||'Daily Race').toUpperCase(),
+      subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+' · '+(official?'OFFICIAL RUN':'PRACTICE RUN'),
+      lines:[(Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:'')].filter(Boolean),
       buttons:[
         {label:official?'START OFFICIAL RUN':'START PRACTICE RUN',variant:'primary',onClick:()=>{ if(!this.disposed) done(); }},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
     });
-    drawDailyCard(this.scene, modal, {
-      n, dateLabel:dailyDateLabel(n), courseName:this.race.course.name, rivalName:this.rivalLabel(),
-      targetMs:this.race.rivalTimes?.[RIVAL_HOUSES-1], streak:liveStreak(getDailyState(), n), official, mode:'intro'
-    });
+    this.entryModal = modal;
+    drawRivalDistrictMap(this.scene, modal, this.race);
   }
   openDistrict(){
     if(this.disposed||this.race.status!=='ready')return;
@@ -766,7 +766,7 @@ export default class RivalsRace {
     const n=this.race.daily;
     if(!Number.isInteger(n))return null;
     if(!this.race.dailyOfficial)return 'DAILY #'+n+' · PRACTICE RUN';
-    const streak=this.race.dailyStreak>0?' · 🔥 '+this.race.dailyStreak+' DAY'+(this.race.dailyStreak===1?'':'S'):'';
+    const streak=this.race.dailyStreak>0?' · STREAK '+this.race.dailyStreak:'';
     return 'DAILY #'+n+' · OFFICIAL'+streak;
   }
   /** A challenge race reports how it went; the result line reads the creator's time either way. */
@@ -857,11 +857,9 @@ export default class RivalsRace {
       this.drawResultTimes(modal);
       drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
     }else if(this.isDaily()){
+      // The same result as Block Rivals: the scoreboard over the course's block.
       this.drawResultTimes(modal);
-      const r=this.race;
-      drawDailyCard(this.scene,modal,{n:r.daily,dateLabel:dailyDateLabel(r.daily),courseName:r.course.name,rivalName:this.rivalLabel(),
-        targetMs:r.rivalTimes?.[RIVAL_HOUSES-1],streak:r.dailyStreak||0,official:!!r.dailyOfficial,mode:'result',
-        cleared:r.clearTimes.length,finishedMs:r.finishedMs});
+      drawRivalDistrictMap(this.scene,modal,this.race,{won:this.race.result==='win'});
     }
   }
   /**
@@ -906,6 +904,11 @@ export default class RivalsRace {
       const label=margin>0?'YOU BY '+margin.toFixed(1)+'s':margin<0?sides[1].label+' BY '+(-margin).toFixed(1)+'s':'DEAD HEAT';
       text(area.x+area.width/2,y,label,{size:13,color:margin>0?'#9bcae5':margin<0?'#dec386':'#eee3c7'});
       y+=22;
+    }
+    const daily=this.dailyLine();
+    if(daily){
+      text(area.x+area.width/2,y,daily,{size:12,color:'#f2b760'});
+      y+=20;
     }
     const vsFriend=this.challengeLine();
     if(vsFriend){

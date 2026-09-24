@@ -55,7 +55,7 @@ const bindings={
   saveDailyResult:(n,r)=>{dailies.push({n,...r});const official=dailies.filter(d=>d.n===n).length===1;return {official,state:{streak:official?3:3,last:n,days:{}}};},
   saveDailyRank:(n,rank)=>{dailies.rank=rank;}, liveStreak:(st)=>st.streak??0,
   dailyResult:(st,n)=>dailies.officialToday?{ms:1}:null, dailyDateLabel:(n)=>'THU · SEP 24', getDailyState:()=>({days:{},streak:2,last:0}),
-  drawDailyCard:(scene,modal,info)=>{dailies.cards.push(info);return {};}, DAILY_AMBER:0xf2a33a, submitDaily:(b)=>{dailies.submitted.push(b);return Promise.resolve({ok:true,rank:7,total:90});}
+ submitDaily:(b)=>{dailies.submitted.push(b);return Promise.resolve({ok:true,rank:7,total:90});}
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -854,20 +854,18 @@ console.log('rivals quick start: '+passed+' total assertions passed');
     return {st,modal:r.modals.at(-1)};
   };
   const first=run({});await flush();
-  const card=dailies.cards.at(-1);
-  check('the daily result is its own ticket, not the Rivals district map',card?.mode==='result'&&card.n===12&&card.official===true&&card.streak===3&&card.cleared===7);
-  check('in the daily amber, with the date',first.modal.completion===true&&first.modal.accent===0xf2a33a&&/DAILY RACE #12 · THU · SEP 24/.test(first.modal.subtitle));
+  check('the daily result is the Block Rivals result, in the daily amber, with the date',first.modal.completion===true&&first.modal.accent===0xf2a33a&&/DAILY RACE #12 · THU · SEP 24/.test(first.modal.subtitle)&&first.st.dailyOfficial===true&&first.st.dailyStreak===3);
   check('it is submitted once for a rank',dailies.submitted.length===1&&dailies.submitted[0].day===12&&dailies.submitted[0].houses===7&&dailies.rank===7);
   check('and can still be sent as a challenge, marked daily',first.modal.buttons[0].label==='CHALLENGE A FRIEND');
   const second=run({});await flush();
-  check('a second run the same day is a practice run and is not submitted',dailies.cards.at(-1).official===false&&dailies.submitted.length===1);
+  check('a second run the same day is a practice run and is not submitted',second.st.dailyOfficial===false&&dailies.submitted.length===1);
   const again=second.modal.buttons.find(b=>b.label==='PRACTICE AGAIN');
   check('the result offers the same race again as practice, not a random new race',!!again&&!second.modal.buttons.some(b=>b.label==='NEW RACE'));
   // Entry: the daily opens on its ticket, then the picker titled for it.
   const entry=setup({...rules.newRivalRace(course,splits),daily:12});
   const intro=entry.modals.at(-1);
-  check('the daily opens on its own ticket',intro?.title==="TODAY'S RACE"&&dailies.cards.at(-1).mode==='intro'&&dailies.cards.at(-1).official===true);
-  check('no Rivals city or district screen',entry.scene.cityOptions===undefined&&!entry.scene.districtDraws);
+  check('the daily opens on the block screen in amber',intro?.palette==='daily'&&intro.fullScreen===true&&intro.title===(course.name||'Daily Race').toUpperCase()&&/DAILY RACE #12 · THU · SEP 24 · OFFICIAL RUN/.test(intro.subtitle));
+  check('with the course block drawn, and no Rivals city intro',entry.scene.districtDraws===1&&entry.scene.cityOptions===undefined);
   const beforePick=loadouts;intro.buttons[0].onClick();
   check('START OFFICIAL RUN goes to the picker, titled for the daily',intro.buttons[0].label==='START OFFICIAL RUN'&&loadouts===beforePick+1&&lastPicker.options.title==='DAILY RACE #12');
   dailies.officialToday=true;

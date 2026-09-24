@@ -30,8 +30,21 @@ export default class GameUI {
   //   ghost     — near-invisible, for low-priority actions
   // Explicit b.bg / b.stroke / b.color still override for special cases.
   // ---------------------------------------------------------------------
-  theme() {
+  theme(palette = null) {
     const isPlug = this.scene.role === 'plug';
+    // The Daily Race wears amber: the same screens as Block Rivals, its own colour.
+    if (palette === 'daily') return {
+      isPlug: false,
+      accent: 0xe08a1e, accentHi: 0xffb54d, accentTxt: '#f2b760',
+      panelBg: 0x120d06, panelLine: 0x3a2a12, title: '#f6ead2', body: '#d8b98a',
+      variants: {
+        primary:   { bg: 0xc97b1c, stroke: 0xffb54d, color: '#ffffff' },
+        secondary: { bg: 0x1d1509, stroke: 0x8a5a1f, color: '#f5c98a' },
+        tertiary:  { bg: 0x17130c, stroke: 0x3a2e18, color: '#cdbb98' },
+        danger:    { bg: 0x3a1414, stroke: 0x8f2f2f, color: '#ff9c9c' },
+        ghost:     { bg: 0x0f0c07, stroke: 0x2a2012, color: '#9c8a6a' }
+      }
+    };
     return {
       isPlug,
       accent:     isPlug ? 0xe14b4b : 0x2f8fe0,
@@ -51,12 +64,12 @@ export default class GameUI {
     };
   }
 
-  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false, loadout = false, compactLoadout = false, completion = false, accent = null, training = false, panelHeight = null }) {
+  showModal({ title, subtitle = null, lines = [], buttons = [], inputDelay = 700, fullScreen = false, loadout = false, compactLoadout = false, completion = false, accent = null, training = false, panelHeight = null, palette = null }) {
     // block world input + hide touch controls
     this.scene.input.keyboard.enabled = false;
     this.scene.suspendTouchUI?.(true);
 
-    const baseTheme = this.theme();
+    const baseTheme = this.theme(palette);
     const victoryAccent = Number.isInteger(accent) && accent >= 0 && accent <= 0xffffff ? accent : baseTheme.accentHi;
     const T = completion ? { ...baseTheme, title: '#eee6d2',
       accent: victoryAccent, accentHi: victoryAccent,
