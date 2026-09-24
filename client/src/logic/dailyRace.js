@@ -82,12 +82,31 @@ export function liveStreak(state, n) {
 }
 
 /**
- * Record a finished Daily Race. Only the first result of a day is official;
- * a seven-house finish extends the streak. Returns { state, official }.
+ * The official run is claimed at its GO, before it is raced: the day's first
+ * race to start is the official one, finished or not (the server holds the
+ * same single start ticket). Returns { state, official }.
  */
-export function recordDaily(state, n, { ms, houses, retries = 0, result = null } = {}) {
+export function claimDaily(state, n) {
   const prev = state && typeof state === 'object' ? state : EMPTY_DAILY;
   if (prev.days?.[n]) return { state: prev, official: false };
+  return { state: { ...prev, days: { ...(prev.days || {}), [n]: { started: true } } }, official: true };
+}
+
+/** A day claimed by a run that never finished (quit, closed, crashed). */
+export function dailyUnfinished(day) {
+  return !!day && day.started === true && day.houses === undefined;
+}
+
+/**
+ * Record a finished Daily Race. Only the first result of a day is official:
+ * the run that claimed the day fills its claim in (claimed), and a day nobody
+ * claimed takes its first finish. A seven-house finish extends the streak.
+ * Returns { state, official }.
+ */
+export function recordDaily(state, n, { ms, houses, retries = 0, result = null, claimed = false } = {}) {
+  const prev = state && typeof state === 'object' ? state : EMPTY_DAILY;
+  const had = prev.days?.[n];
+  if (had && !(claimed && dailyUnfinished(had))) return { state: prev, official: false };
   const days = { ...(prev.days || {}), [n]: { ms: Math.round(ms), houses, retries, result } };
   // Keep a month of history; older days never matter to the streak.
   for (const k of Object.keys(days)) if (Number(k) < n - 31) delete days[k];
@@ -105,12 +124,31 @@ export function raceTimeLabel(ms) {
   return Math.floor(t / 600) + ':' + String(Math.floor((t % 600) / 10)).padStart(2, '0') + '.' + (t % 10);
 }
 
+export const DAILY_BOARD_SIZE = 10;
+
+/**
+ * The leaderboard's rows from the server's answer ({ top, you, total }):
+ * the top ten, then your own row under them when you are further down.
+ * Each row is { rank, name, time, you }.
+ */
+export function dailyBoardRows(board) {
+  const row = (e, you) => ({ rank: e.rank, name: String(e.name || 'Runner').toUpperCase().slice(0, 16), time: raceTimeLabel(e.ms), you });
+  const top = (Array.isArray(board?.top) ? board.top : [])
+    .filter((e) => Number.isInteger(e?.rank) && Number.isFinite(e?.ms)).slice(0, DAILY_BOARD_SIZE);
+  const rows = top.map((e) => row(e, e.you === true));
+  const you = board?.you;
+  if (you && Number.isInteger(you.rank) && Number.isFinite(you.ms) && !rows.some((r) => r.you))
+    rows.push({ ...row({ ...you, name: 'You' }, true), below: true });
+  return rows;
+}
+
 /** The menu row's small line: today's result or that it's waiting, plus the streak. */
 export function dailyNote(state, n) {
   const today = dailyResult(state, n);
   const streak = liveStreak(state, n);
   const fire = streak > 0 ? '  ·  🔥 ' + streak : '';
   if (!today) return 'NEW RACE TODAY' + fire;
+  if (dailyUnfinished(today)) return 'DID NOT FINISH' + fire;
   const rank = today.rank ? '  ·  #' + today.rank : today.unranked ? '  ·  NOT RANKED' : '';
   return (today.houses === 7 ? '✓ ' + raceTimeLabel(today.ms) : today.houses + '/7') + rank + fire;
 }

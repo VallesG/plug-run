@@ -8,12 +8,13 @@ import * as capture from '../src/controllers/RivalReplayCapture.js';
 import * as matchmaking from '../src/logic/rivalMatchmaking.js';
 import { playExtraction } from '../src/controllers/extractionAnimation.js';
 import { nextRivalAnnouncement } from '../src/logic/rivalAnnouncer.js';
+import { dailyUnfinished, dailyBoardRows, DAILY_BOARD_SIZE } from '../src/logic/dailyRace.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
 // The match screen is presentation only; the stub records what it was told
 // to show and hands back the callbacks a player's taps would call.
-const challenges={made:[],shared:[],reported:[]};let tutorialDone=true;const dailies=[];dailies.submitted=[];dailies.started=[];dailies.cards=[];let shareOutcome='sent';
+const challenges={made:[],shared:[],reported:[]};let tutorialDone=true;const dailies=[];dailies.submitted=[];dailies.started=[];dailies.cards=[];dailies.boards=[];dailies.claims=0;let shareOutcome='sent';
 let matchResolver=()=>Promise.resolve(null), searchPlanMs=3000, realApply=null;
 // Shared runs go here instead of the network.
 const sharedRuns=[];let shareAnswer=()=>Promise.resolve({ok:true});
@@ -55,7 +56,9 @@ const bindings={
   saveDailyResult:(n,r)=>{dailies.push({n,...r});const official=dailies.filter(d=>d.n===n).length===1;return {official,state:{streak:official?3:3,last:n,days:{}}};},
   saveDailyRank:(n,rank)=>{dailies.rank=rank;}, liveStreak:(st)=>st.streak??0,
   dailyResult:(st,n)=>dailies.officialToday?{ms:1}:null, dailyDateLabel:(n)=>'THU · SEP 24', getDailyState:()=>({days:{},streak:2,last:0}),
- submitDaily:(b)=>{dailies.submitted.push(b);return Promise.resolve({ok:true,rank:7,total:90});}, startDaily:(b)=>{dailies.started.push(b);return Promise.resolve({ok:true,first:true});}
+ submitDaily:(b)=>{dailies.submitted.push(b);return Promise.resolve({ok:true,rank:7,total:90});}, startDaily:(b)=>{dailies.started.push(b);return Promise.resolve({ok:true,first:true});},
+  claimDailyRun:(n)=>{dailies.claims++;return !dailies.officialToday;}, dailyUnfinished, dailyBoardRows, DAILY_BOARD_SIZE,
+  getDailyBoard:(q)=>{dailies.boards.push(q);return Promise.resolve({ok:true,day:q.day,total:31,top:[{rank:1,name:'Ana',ms:61000},{rank:2,name:'Ben',ms:62500}],you:{rank:14,ms:70100}});}
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
 function node(x=0,y=0,width=0,height=0){
@@ -851,13 +854,14 @@ console.log('rivals quick start: '+passed+' total assertions passed');
     let r=setup(st);
     for(let house=1;house<=7;house++){now=house*9000;r.controller.clearHouse();st=r.scene.rivalRace;
       if(house<7){r.events[0].fn();const d=r.restarts[0];now+=180;r=setup(d.rivalRace,d.pveRound);}}
-    return {st,modal:r.modals.at(-1)};
+    return {st,modal:r.modals.at(-1),controller:r.controller};
   };
   const first=run({});await flush();
   check('the daily result is the Block Rivals result, in the daily amber, with the date',first.modal.completion===true&&first.modal.accent===0xf2a33a&&/DAILY RACE #12 · THU · SEP 24/.test(first.modal.subtitle)&&first.st.dailyOfficial===true&&first.st.dailyStreak===3);
   check('it is submitted once for a rank',dailies.submitted.length===1&&dailies.submitted[0].day===12&&dailies.submitted[0].houses===7&&dailies.rank===7);
   check('with its full race recording, so the server can check it',!!dailies.submitted[0].record&&!!dailies.submitted[0].bundle&&dailies.submitted[0].record.clearTimes.length===7&&!('ms' in dailies.submitted[0]));
   check('and can still be sent as a challenge, marked daily',first.modal.buttons[0].label==='CHALLENGE A FRIEND');
+  check('the result line takes the rank as soon as the server answers',first.st.dailyRank?.rank===7&&first.controller.dailyLine()==='DAILY #12 · RANK 7 OF 90 · STREAK 3');
   const second=run({});await flush();
   check('a second run the same day is a practice run and is not submitted',second.st.dailyOfficial===false&&dailies.submitted.length===1);
   const again=second.modal.buttons.find(b=>b.label==='RACE AGAIN');
@@ -867,14 +871,30 @@ console.log('rivals quick start: '+passed+' total assertions passed');
   const intro=entry.modals.at(-1);
   check('the daily opens on the block screen in amber',intro?.palette==='daily'&&intro.fullScreen===true&&intro.title===(course.name||'Daily Race').toUpperCase()&&/DAILY RACE #12 · THU · SEP 24 · OFFICIAL RUN/.test(intro.subtitle));
   check('with the course block drawn, and no Rivals city intro',entry.scene.districtDraws===1&&entry.scene.cityOptions===undefined);
-  const beforePick=loadouts;intro.buttons[0].onClick();await flush();
-  check('START OFFICIAL RUN takes the day ticket',dailies.started.length===1&&dailies.started[0].day===12);
-  check('START OFFICIAL RUN goes to the picker, titled for the daily',intro.buttons[0].label==='START OFFICIAL RUN'&&loadouts===beforePick+1&&lastPicker.options.title==='DAILY RACE #12');
+  check('with the leaderboard one tap away',intro.buttons.map(b=>b.label).join()==='START OFFICIAL RUN,LEADERBOARD,MAIN MENU');
+  intro.buttons[1].onClick();await flush();
+  const board=entry.modals.at(-1);
+  check('LEADERBOARD opens today\'s top ten in amber',board.title==='LEADERBOARD'&&board.palette==='daily'&&/DAILY RACE #12 · THU · SEP 24 · TOP 10/.test(board.subtitle));
+  check('asking for this player\'s own standing',dailies.boards.length===1&&dailies.boards[0].day===12&&dailies.boards[0].userId==='user-1');
+  check('the top rows, then yours under them',entry.controller.boardRows.map(r=>r.rank).join()==='1,2,14'&&entry.controller.boardRows[2].you===true);
+  board.buttons[0].onClick();
+  const intro2=entry.modals.at(-1);
+  check('BACK returns to the race screen',intro2!==board&&intro2.palette==='daily'&&intro2.buttons[0].label==='START OFFICIAL RUN');
+  const beforePick=loadouts;intro2.buttons[0].onClick();await flush();
+  check('START OFFICIAL RUN goes to the picker, titled for the daily',loadouts===beforePick+1&&lastPicker.options.title==='DAILY RACE #12');
+  check('the picker takes no ticket: a slow pick costs nothing',dailies.started.length===0&&dailies.claims===0);
+  entry.scene.runnerPowersSelected=['dash','dash'];lastPicker.done();
+  now=entry.scene.rivalRace.countdownEndsAt;entry.controller.update();await flush();
+  check('GO claims the official run and takes the day ticket',entry.scene.rivalRace.status==='racing'&&dailies.claims===1&&entry.scene.rivalRace.dailyClaimed===true&&dailies.started.length===1&&dailies.started[0].day===12);
+  entry.controller.update();await flush();
+  check('once',dailies.claims===1&&dailies.started.length===1);
   dailies.officialToday=true;
   const later=setup({...rules.newRivalRace(course,splits),daily:12});
   check('once the official run is done, the button says RACE AGAIN',later.modals.at(-1).buttons[0].label==='RACE AGAIN');
   later.modals.at(-1).buttons[0].onClick();await flush();
-  check('RACE AGAIN takes no ticket',dailies.started.length===1);
+  later.scene.runnerPowersSelected=['dash','dash'];lastPicker.done();
+  now=later.scene.rivalRace.countdownEndsAt;later.controller.update();await flush();
+  check('RACE AGAIN takes no ticket',later.scene.rivalRace.status==='racing'&&later.scene.rivalRace.dailyClaimed===false&&dailies.started.length===1);
   dailies.officialToday=false;
 }
 console.log('rivals daily race: '+passed+' total assertions passed');

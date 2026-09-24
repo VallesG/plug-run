@@ -2,7 +2,8 @@
 // and the server's daily ranking.
 import assert from 'node:assert/strict';
 import {
-  DAILY_EPOCH_MS, dailyNumber, dailySlot, dailyRival, recordDaily, liveStreak, dailyNote, EMPTY_DAILY, raceTimeLabel, finishMs, dailyDateLabel
+  DAILY_EPOCH_MS, dailyNumber, dailySlot, dailyRival, recordDaily, liveStreak, dailyNote, EMPTY_DAILY, raceTimeLabel, finishMs, dailyDateLabel,
+  claimDaily, dailyUnfinished, dailyBoardRows
 } from '../src/logic/dailyRace.js';
 import { createTelegramHandler } from '../netlify/functions/telegram.mjs';
 import { enabledRivalCourses } from '../src/logic/rivals.js';
@@ -56,6 +57,35 @@ eq([s.streak, s.best], [1, 2], 'after a gap the streak restarts, best is kept');
 s = recordDaily(s, 60, { ms: 60000, houses: 7 }).state;
 ok(!s.days[10] && s.days[60], 'history keeps about a month');
 
+// The official run is claimed at GO: finished or not, it is the day's one.
+{
+  let st = { ...EMPTY_DAILY, days: {} };
+  const c = claimDaily(st, 20);
+  ok(c.official && dailyUnfinished(c.state.days[20]), 'GO on the first race claims the day');
+  ok(!claimDaily(c.state, 20).official, 'a later race cannot claim it again');
+  const unclaimed = recordDaily(c.state, 20, { ms: 61000, houses: 7 });
+  ok(!unclaimed.official, 'a race that did not claim the day cannot fill the claim in');
+  const done = recordDaily(c.state, 20, { ms: 61000, houses: 7, claimed: true });
+  ok(done.official && done.state.days[20].ms === 61000 && !dailyUnfinished(done.state.days[20]) && done.state.streak === 1, 'the claiming run finishes as the official one');
+  ok(!recordDaily(done.state, 20, { ms: 50000, houses: 7, claimed: true }).official, 'and nothing replaces it');
+  eq(dailyNote(c.state, 20), 'DID NOT FINISH', 'a claimed run that never finished says so on the menu');
+  ok(recordDaily(st, 21, { ms: 61000, houses: 7 }).official, 'a day nobody claimed still takes its first finish');
+}
+
+// The leaderboard's rows.
+{
+  const board = { total: 31, top: [{ rank: 1, name: 'Ana', ms: 61000 }, { rank: 2, name: 'a very long telegram name', ms: 62540 }], you: { rank: 14, ms: 70100 } };
+  const rows = dailyBoardRows(board);
+  eq(rows.map((r) => r.rank), [1, 2, 14], 'top rows, then yours under them');
+  eq(rows[0], { rank: 1, name: 'ANA', time: '1:01.0', you: false }, 'a row: rank, name, time');
+  eq(rows[1].name.length, 16, 'long names are cut to fit');
+  ok(rows[2].you && rows[2].below, 'your own row sits below the top ten');
+  const inTop = dailyBoardRows({ total: 2, top: [{ rank: 1, name: 'Ana', ms: 61000, you: true }], you: { rank: 1, ms: 61000 } });
+  ok(inTop.length === 1 && inTop[0].you, 'already in the top ten: no second row');
+  eq(dailyBoardRows(null), [], 'nothing to show without an answer');
+  eq(dailyBoardRows({ top: Array.from({ length: 14 }, (_, i) => ({ rank: i + 1, name: 'R' + i, ms: 60000 + i })) }).length, 10, 'ten at most');
+}
+
 // The menu row's line.
 eq(dailyNote({ ...EMPTY_DAILY, days: {} }, 3), 'NEW RACE TODAY', 'fresh player');
 eq(dailyNote({ days: {}, streak: 4, last: 2 }, 3), 'NEW RACE TODAY  ·  🔥 4', 'waiting today with a live streak');
@@ -100,7 +130,11 @@ eq(raceTimeLabel(64321), '1:04.3', 'time label');
     if (cmd === 'ZADD') { const nx = a[0] === 'NX'; const [score, member] = nx ? a.slice(1) : a; if (nx && z(key).has(member)) return 0; z(key).set(member, Number(score)); return 1; }
     if (cmd === 'ZSCORE') { const v = z(key).get(a[0]); return v === undefined ? null : String(v); }
     if (cmd === 'ZCARD') return z(key).size;
-    if (cmd === 'ZRANK') { const sorted = [...z(key).entries()].sort((x, y) => x[1] - y[1]).map(([m]) => m); const i = sorted.indexOf(a[0]); return i < 0 ? null : i; }
+    // Redis orders equal scores by member.
+    const sorted = () => [...z(key).entries()].sort((x, y) => x[1] - y[1] || (x[0] < y[0] ? -1 : 1));
+    if (cmd === 'ZRANK') { const i = sorted().map(([m]) => m).indexOf(a[0]); return i < 0 ? null : i; }
+    if (cmd === 'ZRANGE') return sorted().slice(Number(a[0]), Number(a[1]) + 1).flatMap(([m, sc]) => [m, String(sc)]);
+    if (cmd === 'HMGET') return a.map((f) => z(key).get(f) ?? null);
     throw new Error(cmd);
   };
   let fetches = 0;
@@ -116,7 +150,8 @@ eq(raceTimeLabel(64321), '1:04.3', 'time label');
     const res = await h({ url: 'https://plugrun.io/.netlify/functions/telegram?action=' + action, method: 'POST', text: async () => JSON.stringify(body) });
     return { status: res.status, json: JSON.parse(await res.text()) };
   };
-  const users = [['u_a', 'Ana', '111'], ['u_b', 'Ben', null], ['u_c', 'Cy', null], ['u_d', 'Dee', null], ['u_e', 'Eli', null], ['u_f', 'Fay', null]];
+  const users = [['u_a', 'Ana', '111'], ['u_b', 'Ben', null], ['u_c', 'Cy', null], ['u_d', 'Dee', null], ['u_e', 'Eli', null], ['u_f', 'Fay', null],
+    ['u_g', 'Gus', null], ['u_h', 'Hal', null], ['u_i', 'Ivy', null]];
   for (const [id, name, tg] of users) store.set('user:' + id, JSON.stringify({ username: name, token: 't_' + id, ...(tg ? { telegramId: tg } : {}) }));
   const auth = (id) => ({ userId: id, token: 't_' + id, day: n });
 
@@ -151,7 +186,33 @@ eq(raceTimeLabel(64321), '1:04.3', 'time label');
   eq((await post('daily-submit', { ...auth('u_f'), houses: 7, ...good })).json.reason, 'sent too long after the start', 'held back and sent later: refused');
   const short = await post('daily-submit', { ...auth('u_b'), houses: 4 });
   ok(short.json.rank === null && short.json.verified === false, 'an unfinished daily is counted as played, not ranked');
-  eq(z('daily:' + n).size, 1, 'only the checked run is on the board');
+  // The ticket is sent at GO: one that lands a few seconds late (slow network,
+  // cold function) must not refuse a fair run.
+  await post('daily-start', auth('u_g')); clock += raceS - 12;
+  ok((await post('daily-submit', { ...auth('u_g'), houses: 7, ...good })).json.verified === true, 'a ticket that landed late still ranks a fair run');
+  eq(z('daily:' + n).size, 2, 'only the checked runs are on the board');
+
+  // Midnight: a race that reaches GO just after it started from yesterday's screen.
+  const saved = clock, midnight = (DAILY_EPOCH_MS + n * DAY) / 1000;
+  clock = midnight + 120;
+  ok((await post('daily-start', auth('u_h'))).json.first === true, 'GO two minutes past midnight still takes yesterday\'s ticket');
+  clock = midnight + 900;
+  eq((await post('daily-start', auth('u_i'))).status, 400, 'fifteen minutes past, yesterday is closed');
+  clock = saved;
+
+  // The leaderboard: public, names and times only.
+  const get = async (q) => {
+    const res = await h({ url: 'https://plugrun.io/.netlify/functions/telegram?action=daily-board&' + q, method: 'GET' });
+    return { status: res.status, text: await res.text() };
+  };
+  const b1 = await get('day=' + n + '&userId=u_g');
+  const board = JSON.parse(b1.text);
+  eq(board.total, 2, 'the board counts the ranked runs');
+  eq(board.top.map((e) => [e.rank, e.name, e.ms]), [[1, 'Ana', Math.round(finishMs(pick.record))], [2, 'Gus', Math.round(finishMs(pick.record))]], 'top rows: rank, name, time (ties by account)');
+  ok(board.top[1].you === true && !board.top[0].you && board.you.rank === 2, 'the asking player is marked');
+  ok(!/u_[a-i]/.test(b1.text) && !/111/.test(b1.text), 'no account ids or Telegram ids leave the server');
+  eq(JSON.parse((await get('day=' + n + '&userId=u_b')).text).you, null, 'an unranked player has no row');
+  eq((await get('day=' + (n + 5))).status, 400, 'no board for a future day');
   ok(Number(store.get('daily:' + n + ':refused')) >= 5, 'refusals are counted');
 }
 

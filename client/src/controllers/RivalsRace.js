@@ -19,12 +19,12 @@ import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { nextRivalAnnouncement } from '../logic/rivalAnnouncer.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
-import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily, startDaily } from '../utils/api.js';
+import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily, startDaily, getDailyBoard } from '../utils/api.js';
 import { identityProof, shareChallenge } from '../platform/index.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
-import { saveDailyResult, saveDailyRank } from '../utils/dailyProgress.js';
-import { liveStreak, dailyResult, dailyDateLabel } from '../logic/dailyRace.js';
+import { saveDailyResult, saveDailyRank, claimDailyRun } from '../utils/dailyProgress.js';
+import { liveStreak, dailyResult, dailyDateLabel, dailyUnfinished, dailyBoardRows, DAILY_BOARD_SIZE } from '../logic/dailyRace.js';
 import { getDailyState } from '../utils/dailyProgress.js';
 const DAILY_AMBER = 0xf2a33a;
 
@@ -131,25 +131,64 @@ export default class RivalsRace {
   }
   /** Today's race: the Block Rivals block screen, in the daily's own amber. */
   showDailyIntro(done){
-    this.race.dailyIntroShown = true;
-    const n = this.race.daily, official = !dailyResult(getDailyState(), n);
+    const n = this.race.daily, today = dailyResult(getDailyState(), n), official = !today;
     const streak = liveStreak(getDailyState(), n);
     const target = this.race.rivalTimes?.[RIVAL_HOUSES-1];
     const modal = this.scene.gameUI.showModal({
       fullScreen:true, palette:'daily', title:(this.race.course.name||'Daily Race').toUpperCase(),
-      subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+(official?' · OFFICIAL RUN':' · OFFICIAL TIME SET'),
+      subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+(official?' · OFFICIAL RUN':dailyUnfinished(today)?' · OFFICIAL RUN USED':' · OFFICIAL TIME SET'),
       lines:[(Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:'')].filter(Boolean),
       buttons:[
+        // The official run is claimed at its GO (claimDaily), not here.
+        // Leaving marks the screen seen, so a resize restart shows it again.
         {label:official?'START OFFICIAL RUN':'RACE AGAIN',variant:'primary',onClick:()=>{
-          // The official run takes today's one start ticket (see the daily server).
-          if(official)Promise.resolve().then(()=>startDaily({userId:getUserID(),day:n})).catch(()=>{});
+          this.race.dailyIntroShown=true;
           if(!this.disposed) done();
         }},
+        {label:'LEADERBOARD',variant:'secondary',onClick:()=>{ if(!this.disposed) this.showDailyBoard(()=>this.showDailyIntro(done)); }},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
     });
     this.entryModal = modal;
     drawRivalDistrictMap(this.scene, modal, this.race);
+  }
+  /** Today's leaderboard, in the daily's amber: the top ten, then you. */
+  showDailyBoard(back){
+    const n=this.race.daily,s=this.scene,Z=20002;
+    const modal=s.gameUI.showModal({
+      fullScreen:true,palette:'daily',title:'LEADERBOARD',
+      subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+' · TOP '+DAILY_BOARD_SIZE,
+      lines:[],inputDelay:250,
+      buttons:[{label:'BACK',variant:'secondary',onClick:()=>{ if(!this.disposed) back(); }}]
+    });
+    this.entryModal=modal;
+    const area=modal?.contentBounds,keep=modal?.registerExtra;
+    const drawn=!!(area&&keep&&s.add?.text);
+    const text=(x,y,value,{size=14,color='#d8b98a',origin=0}={})=>{
+      const o=s.add.text(x,y,value,{fontFamily:'monospace',fontSize:size+'px',fontStyle:'bold',color})
+        .setOrigin(origin,0).setDepth(Z).setScrollFactor(0);
+      keep(o);return o;
+    };
+    const status=drawn?text(area.x+area.width/2,area.y+6,'LOADING',{size:12,color:'#9c8a6a',origin:.5}):null;
+    Promise.resolve().then(()=>getDailyBoard({day:n,userId:getUserID()})).then(board=>{
+      if(this.disposed||(status&&!status.active))return;
+      const rows=dailyBoardRows(board);
+      this.boardRows=rows;
+      if(!drawn)return;
+      status.setText(rows.length?(board.total||rows.length)+' RANKED TODAY':'NO OFFICIAL TIMES YET · SET THE FIRST');
+      const size=area.width<360?13:15;
+      const step=Math.max(20,Math.min(32,(area.height-40)/(DAILY_BOARD_SIZE+2)));
+      const inset=Math.max(8,(area.width-340)/2),left=area.x+inset,right=area.x+area.width-inset;
+      let y=area.y+34;
+      for(const row of rows){
+        if(row.below){text(area.x+area.width/2,y-4,'···',{size,color:'#9c8a6a',origin:.5});y+=step*.7;}
+        const color=row.you?'#ffb54d':row.rank<=3?'#f6ead2':'#d8b98a';
+        text(left+34,y,String(row.rank),{size,color,origin:1});
+        text(left+46,y,row.you?'YOU':row.name,{size,color});
+        text(right,y,row.time,{size,color,origin:1});
+        y+=step;
+      }
+    }).catch(()=>{ if(status?.active)status.setText('LEADERBOARD UNAVAILABLE'); });
   }
   openDistrict(){
     if(this.disposed||this.race.status!=='ready')return;
@@ -570,6 +609,7 @@ export default class RivalsRace {
         trackScene(this.scene,'rivals_match_started',{course_slot:this.race.course.slot,power_1:this.race.powers?.[0],power_2:this.race.powers?.[1]});
         this.notice?.setText('');
         beginRaceCapture(this.race);
+        this.claimDaily();
         this.resumeHouse();
       }
     }
@@ -753,13 +793,27 @@ export default class RivalsRace {
       .catch(()=>say('TRY AGAIN'))
       .finally(()=>{this.challengeBusy=false;});
   }
-  /** Today's Daily Race: the first finish of the day is official; it keeps the streak and gets a rank. */
+  /**
+   * GO on the day's first race claims the official run, here (claimDailyRun)
+   * and on the server, whose single start ticket bounds when its result may
+   * arrive. A failed ticket request is tried twice more.
+   */
+  claimDaily(){
+    const n=this.race.daily;
+    if(!Number.isInteger(n)||this.race.dailyClaimed!==undefined)return;
+    this.race.dailyClaimed=claimDailyRun(n);
+    if(!this.race.dailyClaimed)return;
+    const take=tries=>Promise.resolve().then(()=>startDaily({userId:getUserID(),day:n}))
+      .catch(()=>{if(tries>1)setTimeout(()=>take(tries-1),2500);});
+    take(3);
+  }
+  /** Today's Daily Race: the claimed run is official; it keeps the streak and gets a rank. */
   recordDailyRace(){
     const n=this.race.daily;
     if(!Number.isInteger(n)||this.race.dailyRecorded)return;
     this.race.dailyRecorded=true;
     const houses=this.race.clearTimes.length,ms=Math.round(this.race.finishedMs);
-    const {state,official}=saveDailyResult(n,{ms,houses,retries:this.race.retries,result:this.race.result});
+    const {state,official}=saveDailyResult(n,{ms,houses,retries:this.race.retries,result:this.race.result,claimed:!!this.race.dailyClaimed});
     this.race.dailyOfficial=official;
     this.race.dailyStreak=liveStreak(state,n);
     trackScene(this.scene,'daily_completed',{course_slot:this.race.course.slot,result:houses===RIVAL_HOUSES?'finished':'short',success:official});
@@ -767,14 +821,23 @@ export default class RivalsRace {
     // The recording goes with it: only a checked run is ranked.
     const own=this.ownExport?.ok?this.ownExport:null;
     Promise.resolve().then(()=>submitDaily({userId:getUserID(),day:n,houses,retries:this.race.retries,record:own?.record??null,bundle:own?.bundle??null}))
-      .then(res=>{if(res?.ok)saveDailyRank(n,res.rank,res.total,{verified:res.verified!==false,reason:res.reason||null});}).catch(()=>{});
+      .then(res=>{
+        if(!res?.ok)return;
+        const verified=res.verified!==false;
+        saveDailyRank(n,res.rank,res.total,{verified,reason:res.reason||null});
+        // The result line says where the run landed as soon as it is known.
+        this.race.dailyRank={rank:res.rank,total:res.total,verified};
+        if(this.dailyText?.active)this.dailyText.setText(this.dailyLine());
+      }).catch(()=>{});
   }
   dailyLine(){
     const n=this.race.daily;
     if(!Number.isInteger(n))return null;
-    if(!this.race.dailyOfficial)return 'DAILY #'+n+' · YOUR OFFICIAL TIME STANDS';
+    if(!this.race.dailyOfficial)return 'DAILY #'+n+' · '+(dailyUnfinished(dailyResult(getDailyState(),n))?'OFFICIAL RUN USED':'YOUR OFFICIAL TIME STANDS');
     const streak=this.race.dailyStreak>0?' · STREAK '+this.race.dailyStreak:'';
-    return 'DAILY #'+n+' · OFFICIAL'+streak;
+    const r=this.race.dailyRank;
+    const standing=!r?'OFFICIAL':r.verified&&Number.isInteger(r.rank)?'RANK '+r.rank+' OF '+r.total:'NOT RANKED';
+    return 'DAILY #'+n+' · '+standing+streak;
   }
   /** A challenge race reports how it went; the result line reads the creator's time either way. */
   reportChallenge(){
@@ -914,7 +977,7 @@ export default class RivalsRace {
     }
     const daily=this.dailyLine();
     if(daily){
-      text(area.x+area.width/2,y,daily,{size:12,color:'#f2b760'});
+      this.dailyText=text(area.x+area.width/2,y,daily,{size:12,color:'#f2b760'});
       y+=20;
     }
     const vsFriend=this.challengeLine();

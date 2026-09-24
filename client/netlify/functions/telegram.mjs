@@ -14,7 +14,7 @@
 //                       Telegram first name. userId/token are this device's existing
 //                       identity, adopted only when the token matches.
 import { createHmac, timingSafeEqual, randomUUID, randomBytes } from 'node:crypto';
-import { dailyNumber, dailySlot, dailyRival, finishMs } from '../../src/logic/dailyRace.js';
+import { dailyNumber, dailySlot, dailyRival, finishMs, DAILY_EPOCH_MS, DAILY_BOARD_SIZE } from '../../src/logic/dailyRace.js';
 import { enabledRivalCourses, rivalPoolCourse, RIVAL_RULES_VERSION } from '../../src/logic/rivals.js';
 import { validateRivalRunRecord, rivalRecordMatchesCourse } from '../../src/logic/rivalRecords.js';
 import { playerRunErrors, PLAYER_RUN_MAX_BYTES } from '../../src/logic/rivalPlayerRuns.js';
@@ -332,18 +332,23 @@ export function createTelegramHandler({
     return spec;
   }
 
-  // Tapping START OFFICIAL RUN takes today's one start ticket. A run is only
-  // ranked if it reaches the server within its own race time (plus menus and
-  // countdown) of that ticket, so a player can't play several races and send
-  // the best as their first.
+  // The official run's GO takes today's one start ticket. A run is only
+  // ranked if it reaches the server within its own race time (plus the
+  // result screen and upload) of that ticket, so a player can't play several
+  // races and send the best as their first.
   const DAILY_START_GRACE_S = 240;
+  // The ticket is sent at GO, so it lands a little after the race clock
+  // started (a slow phone network, a cold function): allow that much.
+  const DAILY_TICKET_LAG_S = 15;
   async function dailyStart(req) {
     let body = null;
     try { body = JSON.parse(await req.text()); } catch {}
     const meta = await signedIn(body);
     if (!meta) return json(403, { ok: false, error: 'no identity' });
     const today = dailyNumber(nowSec() * 1000), day = Number(body?.day);
-    if (day !== today) return json(400, { ok: false, error: "not today's daily" });
+    // A race that reaches GO just after midnight UTC started from yesterday's screen.
+    const sinceMidnightS = nowSec() - (DAILY_EPOCH_MS / 1000 + (today - 1) * 86400);
+    if (day !== today && !(day === today - 1 && sinceMidnightS < 600)) return json(400, { ok: false, error: "not today's daily" });
     const key = 'daily:' + day + ':start:' + body.userId;
     const set = await redis(['SET', key, String(nowSec()), 'NX', 'EX', String(2 * 86400)]);
     return json(200, { ok: true, day, first: set === 'OK' });
@@ -396,7 +401,7 @@ export function createTelegramHandler({
     const started = Number(await redis(['GET', board + ':start:' + body.userId]));
     if (!started) return refuse('no start ticket');
     const since = nowSec() - started;
-    if (since < ms / 1000 - 2) return refuse('finished faster than the clock allows');
+    if (since < ms / 1000 - DAILY_TICKET_LAG_S) return refuse('finished faster than the clock allows');
     if (since > ms / 1000 + DAILY_START_GRACE_S) return refuse('sent too long after the start');
 
     const added = await redis(['ZADD', board, 'NX', String(Math.round(ms)), body.userId]);
@@ -412,6 +417,28 @@ export function createTelegramHandler({
     return answer({ verified: true, ms: Math.round(ms) });
   }
 
+  // A day's leaderboard, public: the top ten names and times (never user
+  // ids), the number of ranked runs, and where the asking player stands.
+  async function dailyBoard(url) {
+    const today = dailyNumber(nowSec() * 1000);
+    const day = Number(url.searchParams.get('day') || today);
+    if (!Number.isInteger(day) || day < 1 || day > today) return json(400, { ok: false, error: 'bad day' });
+    const board = 'daily:' + day;
+    const flat = (await redis(['ZRANGE', board, '0', String(DAILY_BOARD_SIZE - 1), 'WITHSCORES'])) || [];
+    const ids = [], times = [];
+    for (let i = 0; i + 1 < flat.length; i += 2) { ids.push(String(flat[i])); times.push(Number(flat[i + 1])); }
+    const names = ids.length ? (await redis(['HMGET', board + ':names', ...ids])) || [] : [];
+    const userId = url.searchParams.get('userId');
+    const top = ids.map((id, i) => ({ rank: i + 1, name: names[i] || 'Runner', ms: times[i], ...(id === userId ? { you: true } : {}) }));
+    let you = null;
+    if (userId && userId.length <= USERID_MAX_LEN) {
+      const rank = await redis(['ZRANK', board, userId]);
+      if (rank !== null && rank !== undefined) you = { rank: Number(rank) + 1, ms: Number(await redis(['ZSCORE', board, userId])) };
+    }
+    const total = Number(await redis(['ZCARD', board])) || 0;
+    return json(200, { ok: true, day, total, top, you });
+  }
+
   return async (req) => {
     let action = null, url = null;
     try { url = new URL(req.url); action = url.searchParams.get('action'); } catch {}
@@ -424,6 +451,7 @@ export function createTelegramHandler({
       if (req.method === 'POST' && action === 'webhook') return await webhook(req);
       if (req.method === 'POST' && action === 'daily-submit') return await dailySubmit(req);
       if (req.method === 'POST' && action === 'daily-start') return await dailyStart(req);
+      if (req.method === 'GET' && action === 'daily-board') return await dailyBoard(url);
       if (req.method === 'GET' && action === 'setup-webhook') return await setupWebhook();
     } catch (e) {
       console.error('[telegram]', action, e?.message ? String(e.message).slice(0, 120) : 'error');

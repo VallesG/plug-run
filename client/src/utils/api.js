@@ -147,7 +147,13 @@ export async function submitDaily({ userId, day, houses, retries, record = null,
     body: JSON.stringify({ userId, token: getToken(), day, houses, retries, record, bundle })
   }, 25000);
 }
-/** Take today's start ticket when the official run starts (once per day, server-side). */
+/** Today's leaderboard: { total, top: [{ rank, name, ms, you? }], you: { rank, ms } | null }. */
+export async function getDailyBoard({ day, userId = null }) {
+  const qs = new URLSearchParams({ action: 'daily-board', day: String(day) });
+  if (userId) qs.set('userId', userId);
+  return await tryFetch(TG + '?' + qs.toString(), { method: 'GET' }, 6000);
+}
+/** Take today's start ticket at the official run's GO (once per day, server-side). */
 export async function startDaily({ userId, day }) {
   return await tryFetch(TG + '?action=daily-start', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
