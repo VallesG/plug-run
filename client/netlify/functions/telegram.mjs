@@ -275,7 +275,7 @@ export function createTelegramHandler({
       url: SITE + '/.netlify/functions/telegram?action=webhook',
       secret_token: webhookSecret(), allowed_updates: ['message'], drop_pending_updates: true
     });
-    await botApi('setMyCommands', { commands: [{ command: 'start', description: 'Play Plug Run' }] });
+    await botApi('setMyCommands', { commands: [{ command: 'start', description: 'Play Plug Run' }, { command: 'privacy', description: 'Privacy policy' }] });
     return json(hook?.ok ? 200 : 502, { ok: !!hook?.ok, webhook: hook?.ok ? 'set' : 'refused' });
   }
 
@@ -286,7 +286,9 @@ export function createTelegramHandler({
     const msg = update?.message;
     const chatId = msg?.chat?.id;
     if (!chatId || msg.chat.type !== 'private' || typeof msg.text !== 'string') return json(200, { ok: true });
-    {
+    if (/^\/privacy\b/.test(msg.text)) {
+      await botApi('sendMessage', { chat_id: chatId, text: 'Plug Run privacy policy: ' + SITE + '/privacy' });
+    } else {
       await botApi('sendPhoto', {
         chat_id: chatId, photo: SITE + '/share/challenge-card.jpg',
         caption: 'Plug Run: grab the stash, lose the Plug, make the getaway car.\n\nRun the campaign with your crew, or race Block Rivals head-to-head and challenge your friends to beat your time.',
