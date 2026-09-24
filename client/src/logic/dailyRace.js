@@ -111,6 +111,6 @@ export function dailyNote(state, n) {
   const streak = liveStreak(state, n);
   const fire = streak > 0 ? '  ·  🔥 ' + streak : '';
   if (!today) return 'NEW RACE TODAY' + fire;
-  const rank = today.rank ? '  ·  #' + today.rank : '';
+  const rank = today.rank ? '  ·  #' + today.rank : today.unranked ? '  ·  NOT RANKED' : '';
   return (today.houses === 7 ? '✓ ' + raceTimeLabel(today.ms) : today.houses + '/7') + rank + fire;
 }

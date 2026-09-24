@@ -19,7 +19,7 @@ import { drawPowerIcon } from './PowerIcons.js';
 import AudioManager from '../audio/AudioManager.js';
 import { nextRivalAnnouncement } from '../logic/rivalAnnouncer.js';
 import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCapture, exportRaceCapture } from './RivalReplayCapture.js';
-import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily } from '../utils/api.js';
+import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily, startDaily } from '../utils/api.js';
 import { identityProof, shareChallenge } from '../platform/index.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
@@ -140,7 +140,11 @@ export default class RivalsRace {
       subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+(official?' · OFFICIAL RUN':' · OFFICIAL TIME SET'),
       lines:[(Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:'')].filter(Boolean),
       buttons:[
-        {label:official?'START OFFICIAL RUN':'RACE AGAIN',variant:'primary',onClick:()=>{ if(!this.disposed) done(); }},
+        {label:official?'START OFFICIAL RUN':'RACE AGAIN',variant:'primary',onClick:()=>{
+          // The official run takes today's one start ticket (see the daily server).
+          if(official)Promise.resolve().then(()=>startDaily({userId:getUserID(),day:n})).catch(()=>{});
+          if(!this.disposed) done();
+        }},
         {label:'MAIN MENU',variant:'secondary',onClick:()=>this.scene.scene.start('MENU')}
       ]
     });
@@ -701,6 +705,7 @@ export default class RivalsRace {
       opponent:{ id:'local-player', displayName:'You', kind:'human' },
       recordingID:'local-'+this.race.course.id+'-'+Math.round(this.race.finishedMs)
     });
+    this.ownExport = own;
     // Opted in for this race: send it. Only a complete seven-house race with
     // no abandoned attempt exports at all; anything else is simply not sent.
     if(this.race.shareRun&&!this.race.recording&&!this.race.shareStatus){
@@ -759,8 +764,10 @@ export default class RivalsRace {
     this.race.dailyStreak=liveStreak(state,n);
     trackScene(this.scene,'daily_completed',{course_slot:this.race.course.slot,result:houses===RIVAL_HOUSES?'finished':'short',success:official});
     if(!official)return;
-    Promise.resolve().then(()=>submitDaily({userId:getUserID(),day:n,ms,houses,retries:this.race.retries}))
-      .then(res=>{if(Number.isInteger(res?.rank))saveDailyRank(n,res.rank,res.total);}).catch(()=>{});
+    // The recording goes with it: only a checked run is ranked.
+    const own=this.ownExport?.ok?this.ownExport:null;
+    Promise.resolve().then(()=>submitDaily({userId:getUserID(),day:n,houses,retries:this.race.retries,record:own?.record??null,bundle:own?.bundle??null}))
+      .then(res=>{if(res?.ok)saveDailyRank(n,res.rank,res.total,{verified:res.verified!==false,reason:res.reason||null});}).catch(()=>{});
   }
   dailyLine(){
     const n=this.race.daily;

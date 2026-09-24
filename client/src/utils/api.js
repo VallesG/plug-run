@@ -139,10 +139,19 @@ export async function reportChallengeResult({ id, userId, ms, houses }) {
   }, 6000);
 }
 /** Submit today's official Daily Race. Resolves { rank, total } (rank null if not seven houses). */
-export async function submitDaily({ userId, day, ms, houses, retries }) {
+export async function submitDaily({ userId, day, houses, retries, record = null, bundle = null }) {
+  // The whole race recording rides along: the server ranks only what it can
+  // check, and takes the time from the recording's own clock.
   return await tryFetch(TG + '?action=daily-submit', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, token: getToken(), day, ms, houses, retries })
+    body: JSON.stringify({ userId, token: getToken(), day, houses, retries, record, bundle })
+  }, 25000);
+}
+/** Take today's start ticket when the official run starts (once per day, server-side). */
+export async function startDaily({ userId, day }) {
+  return await tryFetch(TG + '?action=daily-start', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, token: getToken(), day })
   }, 6000);
 }
 /**

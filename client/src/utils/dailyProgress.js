@@ -23,10 +23,16 @@ export function saveDailyResult(n, result) {
   return out;
 }
 
-/** Remember today's rank once the server answers. */
-export function saveDailyRank(n, rank, total) {
+/**
+ * Remember what the server made of today's official run: its rank, or that it
+ * was not ranked (the server could not verify it) and why.
+ */
+export function saveDailyRank(n, rank, total, { verified = true, reason = null } = {}) {
   const state = getDailyState();
-  if (!state.days?.[n] || !Number.isInteger(rank)) return;
-  state.days[n] = { ...state.days[n], rank, total };
+  if (!state.days?.[n]) return;
+  const day = { ...state.days[n], total };
+  if (verified && Number.isInteger(rank)) { day.rank = rank; delete day.unranked; }
+  else if (!verified) { day.unranked = reason || 'not verified'; delete day.rank; }
+  state.days[n] = day;
   save(state);
 }

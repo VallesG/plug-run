@@ -14,7 +14,10 @@
 //                       Telegram first name. userId/token are this device's existing
 //                       identity, adopted only when the token matches.
 import { createHmac, timingSafeEqual, randomUUID, randomBytes } from 'node:crypto';
-import { dailyNumber } from '../../src/logic/dailyRace.js';
+import { dailyNumber, dailySlot, dailyRival, finishMs } from '../../src/logic/dailyRace.js';
+import { enabledRivalCourses, rivalPoolCourse, RIVAL_RULES_VERSION } from '../../src/logic/rivals.js';
+import { validateRivalRunRecord, rivalRecordMatchesCourse } from '../../src/logic/rivalRecords.js';
+import { playerRunErrors, PLAYER_RUN_MAX_BYTES } from '../../src/logic/rivalPlayerRuns.js';
 
 const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
@@ -106,7 +109,9 @@ export function createTelegramHandler({
   token = () => process.env.TELEGRAM_BOT_TOKEN,
   fetchImpl = (...args) => globalThis.fetch(...args),
   redis = upstash,
-  nowSec = () => Math.floor(Date.now() / 1000)
+  nowSec = () => Math.floor(Date.now() / 1000),
+  // Loaded when a run is stored, so this module imports without the Blobs SDK (tests).
+  dailyRuns = async () => (await import('@netlify/blobs')).getStore({ name: 'daily-runs', consistency: 'strong' })
 } = {}) {
   async function ping() {
     const botToken = token();
@@ -305,27 +310,106 @@ export function createTelegramHandler({
   // Everyone races the same course and rival each UTC day (src/logic/dailyRace.js
   // picks them). The first seven-house finish a player submits for a day is
   // their official time; the day's board ranks those times.
-  async function dailySubmit(req) {
+  // What today's race is, worked out the way the game does it: the day's
+  // course, then its Jev bank filtered exactly as the game filters it, then
+  // the day's pick. Cached per day and function instance.
+  const dailyCache = new Map();
+  const isJevRecord = (r) => r?.driverConfig?.driver === 'jev-strategist' && !!r.driverConfig.jev;
+  async function dailySpec(n) {
+    if (dailyCache.has(n)) return dailyCache.get(n);
+    const slot = dailySlot(n, enabledRivalCourses().map((c) => c.slot));
+    const course = rivalPoolCourse(slot);
+    if (!course) throw new Error('no daily course');
+    const res = await fetchImpl(SITE + '/rivals/jev-v1/courses/' + encodeURIComponent(course.id) + '/opponents.json');
+    const data = await res.json();
+    if (data?.schemaVersion !== 1 || data.rulesVersion !== RIVAL_RULES_VERSION || !Array.isArray(data.opponents)) throw new Error('daily bank unreadable');
+    const entries = data.opponents.filter((e) => e && validateRivalRunRecord(e.record).ok
+      && rivalRecordMatchesCourse(e.record, course, RIVAL_RULES_VERSION) && e.record.opponent?.kind === 'bot' && isJevRecord(e.record));
+    const pick = dailyRival(n, entries, isJevRecord);
+    if (!pick) throw new Error('no daily rival');
+    const spec = { slot, courseID: course.id, stashSeed: pick.record.stashSeed, rivalID: pick.record.recordingID };
+    dailyCache.set(n, spec);
+    return spec;
+  }
+
+  // Tapping START OFFICIAL RUN takes today's one start ticket. A run is only
+  // ranked if it reaches the server within its own race time (plus menus and
+  // countdown) of that ticket, so a player can't play several races and send
+  // the best as their first.
+  const DAILY_START_GRACE_S = 240;
+  async function dailyStart(req) {
     let body = null;
     try { body = JSON.parse(await req.text()); } catch {}
     const meta = await signedIn(body);
     if (!meta) return json(403, { ok: false, error: 'no identity' });
+    const today = dailyNumber(nowSec() * 1000), day = Number(body?.day);
+    if (day !== today) return json(400, { ok: false, error: "not today's daily" });
+    const key = 'daily:' + day + ':start:' + body.userId;
+    const set = await redis(['SET', key, String(nowSec()), 'NX', 'EX', String(2 * 86400)]);
+    return json(200, { ok: true, day, first: set === 'OK' });
+  }
+
+  // A daily result. The first seven-house run a player sends for a day is
+  // their official one, and it is only ranked if the server can check it:
+  // the full race recording passes the same checks as a shared run, it is
+  // today's course and stash layout, it arrived in time for its start ticket,
+  // and the ranked time is the recording's own clock, not a number the phone
+  // reports. The recording is kept for the prize review.
+  async function dailySubmit(req) {
+    let body = null;
+    const raw = await req.text();
+    if (typeof raw !== 'string' || raw.length > PLAYER_RUN_MAX_BYTES) return json(413, { ok: false, error: 'too large' });
+    try { body = JSON.parse(raw); } catch {}
+    const meta = await signedIn(body);
+    if (!meta) return json(403, { ok: false, error: 'no identity' });
     const today = dailyNumber(nowSec() * 1000);
-    const day = Number(body.day), ms = Number(body.ms), houses = Number(body.houses);
+    const day = Number(body.day), houses = Number(body.houses);
     // A race started just before midnight may finish just after it.
     if (!Number.isInteger(day) || day < today - 1 || day > today) return json(400, { ok: false, error: 'not a current daily' });
-    if (!Number.isFinite(ms) || ms < 10_000 || ms > 3_600_000 || !Number.isInteger(houses) || houses < 0 || houses > 7) return json(400, { ok: false, error: 'bad result' });
+    if (!Number.isInteger(houses) || houses < 0 || houses > 7) return json(400, { ok: false, error: 'bad result' });
     const board = 'daily:' + day;
-    if (houses === 7) {
-      await redis(['ZADD', board, 'NX', String(Math.round(ms)), body.userId]); // first official finish only
-      await redis(['HSET', board + ':names', body.userId, meta.username]);
-      await redis(['EXPIRE', board, String(8 * 86400)]);
-      await redis(['EXPIRE', board + ':names', String(8 * 86400)]);
-    }
+    const answer = async (extra) => {
+      const rank = await redis(['ZRANK', board, body.userId]);
+      const total = Number(await redis(['ZCARD', board])) || 0;
+      return json(200, { ok: true, day, rank: rank === null || rank === undefined ? null : Number(rank) + 1, total, ...extra });
+    };
     await redis(['INCR', board + ':plays']);
-    const rank = houses === 7 ? await redis(['ZRANK', board, body.userId]) : null;
-    const total = Number(await redis(['ZCARD', board])) || 0;
-    return json(200, { ok: true, day, rank: rank === null || rank === undefined ? null : Number(rank) + 1, total });
+    if (houses !== 7) return answer({ verified: false, reason: 'unfinished' });
+    // Already has an official time: nothing a later run sends replaces it.
+    if ((await redis(['ZSCORE', board, body.userId])) !== null) return answer({ verified: true, duplicate: true });
+
+    const { record, bundle } = body;
+    const refuse = async (reason) => {
+      await redis(['INCR', board + ':refused']);
+      console.warn('[daily] refused', day, reason);
+      return answer({ verified: false, reason });
+    };
+    if (!record || !bundle) return refuse('no recording');
+    const errors = playerRunErrors(record, bundle);
+    if (errors.length) return refuse(errors[0]);
+    let spec;
+    try { spec = await dailySpec(day); } catch { return json(503, { ok: false, error: 'daily check unavailable' }); }
+    if (record.courseSlot !== spec.slot) return refuse("not today's course");
+    if (record.stashSeed !== spec.stashSeed) return refuse("not today's stash layout");
+    const ms = finishMs(record);
+    if (ms === null) return refuse('not all seven houses cleared');
+    const started = Number(await redis(['GET', board + ':start:' + body.userId]));
+    if (!started) return refuse('no start ticket');
+    const since = nowSec() - started;
+    if (since < ms / 1000 - 2) return refuse('finished faster than the clock allows');
+    if (since > ms / 1000 + DAILY_START_GRACE_S) return refuse('sent too long after the start');
+
+    const added = await redis(['ZADD', board, 'NX', String(Math.round(ms)), body.userId]);
+    if (Number(added) !== 1) return answer({ verified: true, duplicate: true });
+    await redis(['HSET', board + ':names', body.userId, meta.username]);
+    // Prize races are Telegram-only: one entry per Telegram account.
+    if (meta.telegramId) await redis(['HSET', board + ':telegram', body.userId, meta.telegramId]);
+    for (const k of [board, board + ':names', board + ':telegram']) await redis(['EXPIRE', k, String(40 * 86400)]);
+    try {
+      await (await dailyRuns()).set(day + '/' + body.userId, JSON.stringify({ day, userId: body.userId, name: meta.username,
+        telegram: !!meta.telegramId, ms: Math.round(ms), submittedAt: nowSec(), startedAt: started, record, bundle }));
+    } catch (e) { console.warn('[daily] run not stored', e?.message || e); }
+    return answer({ verified: true, ms: Math.round(ms) });
   }
 
   return async (req) => {
@@ -339,6 +423,7 @@ export function createTelegramHandler({
       if (req.method === 'POST' && action === 'challenge-result') return await challengeResult(req);
       if (req.method === 'POST' && action === 'webhook') return await webhook(req);
       if (req.method === 'POST' && action === 'daily-submit') return await dailySubmit(req);
+      if (req.method === 'POST' && action === 'daily-start') return await dailyStart(req);
       if (req.method === 'GET' && action === 'setup-webhook') return await setupWebhook();
     } catch (e) {
       console.error('[telegram]', action, e?.message ? String(e.message).slice(0, 120) : 'error');

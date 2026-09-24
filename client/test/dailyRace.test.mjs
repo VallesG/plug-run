@@ -62,57 +62,97 @@ eq(dailyNote({ days: {}, streak: 4, last: 2 }, 3), 'NEW RACE TODAY  ·  🔥 4',
 eq(dailyNote({ days: { 3: { ms: 64321, houses: 7, rank: 14 } }, streak: 5, last: 3 }, 3), '✓ 1:04.3  ·  #14  ·  🔥 5', 'done today, ranked');
 eq(raceTimeLabel(64321), '1:04.3', 'time label');
 
-// Server: first seven-house finish of the day ranks; only current dailies.
+// Server: only a checked run ranks. A real race (the day's own Jev run, sent as
+// a player's) is accepted; every way of faking one is refused.
 {
-  const NOW = Math.floor((DAILY_EPOCH_MS + 9 * DAY + 3600000) / 1000); // during Daily #10
-  const store = new Map();
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { buildRivalRunRecord, buildRivalReplayBundle } = await import('../src/logic/rivalRecords.js');
+  const { rivalPoolCourse } = await import('../src/logic/rivals.js');
+  const bankRoot = new URL('../public/rivals/jev-v1/', import.meta.url);
+  const byCourse = new Map();
+  for (const c of readdirSync(new URL('courses/', bankRoot))) byCourse.set(c, JSON.parse(readFileSync(new URL('courses/' + c + '/opponents.json', bankRoot), 'utf8')));
+  const realJev = (r) => r?.driverConfig?.driver === 'jev-strategist' && !!r.driverConfig.jev;
+  const asPlayer = (e) => {
+    const b = JSON.parse(readFileSync(new URL(e.replay, bankRoot), 'utf8'));
+    const record = buildRivalRunRecord({ rulesVersion: e.record.rulesVersion, course: rivalPoolCourse(e.record.courseSlot),
+      opponent: { id: 'local-player', displayName: 'You', kind: 'human' }, orderedPowers: e.record.orderedPowers,
+      attempts: e.record.attempts, recordingID: 'local-x', stashSeed: e.record.stashSeed });
+    return { record, bundle: buildRivalReplayBundle(record, b.segments.map((x) => x.replay)) };
+  };
+  const n = 10;
+  const slot = dailySlot(n, enabledRivalCourses().map((c) => c.slot));
+  const course = rivalPoolCourse(slot);
+  const bank = byCourse.get(course.id);
+  const pick = dailyRival(n, bank.opponents, realJev);
+  const other = bank.opponents.find((e) => realJev(e.record) && e.record.stashSeed !== pick.record.stashSeed && e.record.retries <= 1);
+  const good = asPlayer(pick), wrongSeed = asPlayer(other);
+  const raceS = Math.ceil(finishMs(pick.record) / 1000);
+
+  let clock = Math.floor((DAILY_EPOCH_MS + (n - 1) * DAY) / 1000) + 3600;
+  const store = new Map(), blobs = new Map();
   const z = (k) => store.get(k) || (store.set(k, new Map()), store.get(k));
   const redis = async ([cmd, key, ...a]) => {
-    if (cmd === 'GET') return store.get(key) ?? null;
-    if (cmd === 'SET') { store.set(key, a[0]); return 'OK'; }
-    if (cmd === 'INCR') { const n = Number(store.get(key) || 0) + 1; store.set(key, String(n)); return n; }
+    if (cmd === 'GET') { const v = store.get(key); return v instanceof Map ? null : v ?? null; }
+    if (cmd === 'SET') { if (a.includes('NX') && store.has(key)) return null; store.set(key, a[0]); return 'OK'; }
+    if (cmd === 'INCR') { const v = Number(store.get(key) || 0) + 1; store.set(key, String(v)); return v; }
     if (cmd === 'EXPIRE') return 1;
     if (cmd === 'HSET') { z(key).set(a[0], a[1]); return 1; }
     if (cmd === 'ZADD') { const nx = a[0] === 'NX'; const [score, member] = nx ? a.slice(1) : a; if (nx && z(key).has(member)) return 0; z(key).set(member, Number(score)); return 1; }
+    if (cmd === 'ZSCORE') { const v = z(key).get(a[0]); return v === undefined ? null : String(v); }
     if (cmd === 'ZCARD') return z(key).size;
     if (cmd === 'ZRANK') { const sorted = [...z(key).entries()].sort((x, y) => x[1] - y[1]).map(([m]) => m); const i = sorted.indexOf(a[0]); return i < 0 ? null : i; }
     throw new Error(cmd);
   };
-  const h = createTelegramHandler({ token: () => 'x:y', redis, nowSec: () => NOW });
-  const submit = async (body) => {
-    const res = await h({ url: 'https://plugrun.io/.netlify/functions/telegram?action=daily-submit', method: 'POST', text: async () => JSON.stringify(body) });
+  let fetches = 0;
+  const fetchImpl = async (url) => {
+    fetches++;
+    const m = String(url).match(/\/rivals\/jev-v1\/courses\/([^/]+)\/opponents\.json$/);
+    if (!m) throw new Error('unexpected fetch ' + url);
+    return { json: async () => byCourse.get(decodeURIComponent(m[1])) };
+  };
+  const h = createTelegramHandler({ token: () => 'x:y', redis, fetchImpl, nowSec: () => clock,
+    dailyRuns: async () => ({ set: async (k, v) => { blobs.set(k, JSON.parse(v)); } }) });
+  const post = async (action, body) => {
+    const res = await h({ url: 'https://plugrun.io/.netlify/functions/telegram?action=' + action, method: 'POST', text: async () => JSON.stringify(body) });
     return { status: res.status, json: JSON.parse(await res.text()) };
   };
-  for (const [id, name] of [['u_a', 'Ana'], ['u_b', 'Ben'], ['u_c', 'Cy']]) store.set('user:' + id, JSON.stringify({ username: name, token: 't_' + id }));
-  eq((await submit({ userId: 'u_a', token: 'bad', day: 10, ms: 60000, houses: 7 })).status, 403, 'needs the player token');
-  eq((await submit({ userId: 'u_a', token: 't_u_a', day: 8, ms: 60000, houses: 7 })).status, 400, 'an old daily is refused');
-  eq((await submit({ userId: 'u_a', token: 't_u_a', day: 11, ms: 60000, houses: 7 })).status, 400, 'tomorrow is refused');
-  const a = await submit({ userId: 'u_a', token: 't_u_a', day: 10, ms: 60000, houses: 7 });
-  eq([a.json.rank, a.json.total], [1, 1], 'first finisher is #1 of 1');
-  const b = await submit({ userId: 'u_b', token: 't_u_b', day: 10, ms: 55000, houses: 7 });
-  eq([b.json.rank, b.json.total], [1, 2], 'a faster time ranks first');
-  const again = await submit({ userId: 'u_a', token: 't_u_a', day: 10, ms: 40000, houses: 7 });
-  eq(again.json.rank, 2, 'a second submission does not replace the official time');
-  const short = await submit({ userId: 'u_c', token: 't_u_c', day: 10, ms: 30000, houses: 5 });
-  eq([short.json.rank, short.json.total], [null, 2], 'an unfinished daily is counted as played, not ranked');
-  eq(store.get('daily:10:plays'), '4', 'plays are counted');
-  eq((await submit({ userId: 'u_c', token: 't_u_c', day: 9, ms: 65000, houses: 7 })).json.rank, 1, 'yesterday is still accepted (a race across midnight)');
-}
+  const users = [['u_a', 'Ana', '111'], ['u_b', 'Ben', null], ['u_c', 'Cy', null], ['u_d', 'Dee', null], ['u_e', 'Eli', null], ['u_f', 'Fay', null]];
+  for (const [id, name, tg] of users) store.set('user:' + id, JSON.stringify({ username: name, token: 't_' + id, ...(tg ? { telegramId: tg } : {}) }));
+  const auth = (id) => ({ userId: id, token: 't_' + id, day: n });
 
-// A good challenge: Jev's clean, fast runs only.
-{
-  const many = Array.from({ length: 40 }, (_, i) => ({ record: { recordingID: 'j' + String(i).padStart(2, '0'), stashSeed: i, clearTimes: T(60000 + i * 1000), retries: i % 5 === 0 ? 3 : 0, driverConfig: { driver: 'jev' } } }));
-  many.push({ record: { recordingID: 'stuck', stashSeed: 99, clearTimes: T(467000), retries: 29, driverConfig: { driver: 'jev' } } });
-  const chosen = new Set(Array.from({ length: 200 }, (_, i) => dailyRival(i + 1, many, isJev).record.recordingID));
-  ok(!chosen.has('stuck'), 'a stuck 467 s run is never the daily rival');
-  ok([...chosen].every((id) => many.find((e) => e.record.recordingID === id).record.retries <= 1), 'only runs with at most one retry');
-  ok([...chosen].every((id) => finishMs(many.find((e) => e.record.recordingID === id).record) <= 60000 + 12 * 1000), 'only the fastest quarter of clean runs');
-  ok(chosen.size >= 5, 'still varied day to day (' + chosen.size + ' different rivals)');
-  const messy = [{ record: { recordingID: 'x', stashSeed: 1, clearTimes: T(90000), retries: 4, driverConfig: { driver: 'jev' } } }];
-  eq(dailyRival(1, messy, isJev).record.recordingID, 'x', 'if every run is messy, still a race rather than none');
-  eq(finishMs({ clearTimes: [1, 2, 3] }), null, 'an unfinished race has no finish time');
-  eq(dailyDateLabel(1), 'THU · SEP 24', 'Daily #1 is Thursday, September 24');
-  eq(dailyDateLabel(9), 'FRI · OCT 2', 'dates roll over months');
+  eq((await post('daily-start', { ...auth('u_a'), day: n + 1 })).status, 400, 'no ticket for another day');
+  eq((await post('daily-start', { userId: 'u_a', token: 'bad', day: n })).status, 403, 'a ticket needs the player token');
+  eq((await post('daily-submit', { ...auth('u_b'), houses: 7, ...good })).json.reason, 'no start ticket', 'no start ticket: not ranked');
+
+  // A fair official run: ticket, race, send.
+  const t1 = await post('daily-start', auth('u_a'));
+  ok(t1.json.first === true, 'first start takes the ticket');
+  ok((await post('daily-start', auth('u_a'))).json.first === false, 'a second start does not reset it');
+  clock += raceS + 25;
+  const fair = await post('daily-submit', { ...auth('u_a'), houses: 7, ...good });
+  ok(fair.json.verified === true && fair.json.rank === 1 && fair.json.total === 1, 'a checked run ranks #1 of 1');
+  eq(fair.json.ms, Math.round(finishMs(pick.record)), 'the ranked time is the recording\'s own clock');
+  const kept = blobs.get(n + '/u_a');
+  ok(kept && kept.name === 'Ana' && kept.telegram === true && kept.record && kept.bundle, 'the run is kept for the prize review, marked Telegram');
+  eq(z('daily:' + n + ':telegram').get('u_a'), '111', 'prize eligibility follows the Telegram account');
+  ok((await post('daily-submit', { ...auth('u_a'), houses: 7, ...good })).json.duplicate === true, 'a second run never replaces the official one');
+  eq(fetches, 1, 'the day\'s race is worked out once and cached');
+
+  // Every way of faking one.
+  await post('daily-start', auth('u_c')); clock += raceS + 10;
+  eq((await post('daily-submit', { ...auth('u_c'), houses: 7, ...wrongSeed })).json.reason, 'not today\'s stash layout', 'another stash layout: refused');
+  await post('daily-start', auth('u_d')); clock += raceS + 10;
+  const edited = JSON.parse(JSON.stringify(good)); edited.record.clearTimes = edited.record.clearTimes.map((t) => t / 2);
+  ok((await post('daily-submit', { ...auth('u_d'), houses: 7, ...edited })).json.verified === false, 'an edited clock fails the record checks');
+  eq((await post('daily-submit', { ...auth('u_d'), houses: 7 })).json.reason, 'no recording', 'no recording: not ranked');
+  await post('daily-start', auth('u_e')); clock += 10;
+  eq((await post('daily-submit', { ...auth('u_e'), houses: 7, ...good })).json.reason, 'finished faster than the clock allows', 'faster than the time since its start: refused');
+  await post('daily-start', auth('u_f')); clock += raceS + 60 * 30;
+  eq((await post('daily-submit', { ...auth('u_f'), houses: 7, ...good })).json.reason, 'sent too long after the start', 'held back and sent later: refused');
+  const short = await post('daily-submit', { ...auth('u_b'), houses: 4 });
+  ok(short.json.rank === null && short.json.verified === false, 'an unfinished daily is counted as played, not ranked');
+  eq(z('daily:' + n).size, 1, 'only the checked run is on the board');
+  ok(Number(store.get('daily:' + n + ':refused')) >= 5, 'refusals are counted');
 }
 
 // Against the real bank: for two months of dailies, every pick is a strong, clean Jev run.
