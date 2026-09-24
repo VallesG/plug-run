@@ -1,7 +1,8 @@
 // Where the game is running: the plain web or Telegram (and later the iOS
 // app). The one module that decides; everything else asks it, and on the web
 // every answer is "nothing to do".
-import { isTelegramShell, WEB_CONTEXT, scrubbedUrl } from '../logic/telegramLaunch.js';
+import { isTelegramShell, WEB_CONTEXT, scrubbedUrl, versionAtLeast } from '../logic/telegramLaunch.js';
+import { createCloudBackup } from './cloudBackup.js';
 import { startTelegram, attachTelegramGame } from './telegram.js';
 import { setAnalyticsContext, trackPageView } from '../utils/analytics.js';
 import { signInWithTelegram } from '../utils/userManager.js';
@@ -19,6 +20,16 @@ export async function initPlatform(loc = globalThis.location) {
       // a slow or failed sign-in leaves the local identity and boots anyway.
       platform.signIn = await signInWithTelegram(tg.webApp.initData);
       if (platform.signIn) platform.context = { ...platform.context, player_status: platform.signIn.isNew ? 'new' : 'returning' };
+      // Progress backup: fill in what this device is missing, then keep the cloud copy current.
+      if (platform.signIn && tg.webApp.CloudStorage && versionAtLeast(tg.webApp.version, '6.9')) {
+        const backup = createCloudBackup(tg.webApp.CloudStorage);
+        platform.restored = await Promise.race([
+          backup.restore().catch(() => []),
+          new Promise((r) => setTimeout(() => r([]), 4000))
+        ]);
+        backup.start();
+        try { tg.webApp.onEvent('deactivated', () => backup.flush()); } catch {}
+      }
     }
     // Telegram's signed launch data (user id, name) rides in the #fragment.
     // Telegram's script has read it by now; drop it before analytics sees the address.
