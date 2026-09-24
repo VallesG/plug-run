@@ -38,20 +38,6 @@ export const CROSSLINE_CHAPTERS = Object.freeze([
           }
         ]
       },
-      "6": {
-        "label": "BLOCK RIVALS TEASE",
-        "pages": [
-          {
-            "speaker": "mags",
-            "text": "Once this entire block is ours, Block Rivals opens. Seven houses, you versus another runner, powers picked before the race."
-          },
-          {
-            "speaker": "switch",
-            "text": "Good. Something to do after you finish claiming this block."
-          }
-        ],
-        "rivalsTease": true
-      },
       "9": {
         "label": "THE JOB",
         "pages": [

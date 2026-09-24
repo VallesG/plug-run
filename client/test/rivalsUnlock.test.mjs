@@ -31,43 +31,14 @@ const full = blocks => {
   return skillCoverage(ev);
 };
 
-// A brand new account.
-check('a new player sees a locked row', mod.rivalsMenuState().unlocked === false);
-check('and is told how far along they are', mod.rivalsMenuState().progressText === '0 of 1 block run');
-check('the row copy is short and in-world',
-  mod.rivalsMenuState().progressText.length <= 20 && !/unlock|require|complete the/i.test(mod.rivalsMenuState().progressText));
-
-// Partway through.
+// Block Rivals is open from the start: every save, any progress, even lost evidence.
+check('a brand new player can race', mod.rivalsMenuState().unlocked === true);
 journey = { blockIndex: 1, pveRound: 5 };
 coverage = full(0);
-check('partial first block is still locked', mod.rivalsMenuState().unlocked === false);
-check('progress stays at zero until the claim', mod.rivalsMenuState().progressText === '0 of 1 block run');
-check('stashes are counted from the campaign', mod.campaignStashes() === 4);
-
-// Reaching the last house of block one is not finishing it.
-journey = { blockIndex: 1, pveRound: 15 };
-check('opening house fifteen does not unlock', mod.rivalsMenuState().unlocked === false);
-
-// First block claimed.
-journey = { blockIndex: 2, pveRound: 1 };
-coverage = full(1);
-check('one complete block unlocks it', mod.rivalsMenuState().unlocked === true);
-check('and fifteen stashes agree', mod.campaignStashes() === 15);
-
-// A legacy save: real completion, no timing evidence at all.
-coverage = skillCoverage(createSkillEvidence());
-journey = { blockIndex: 2, pveRound: 1 };
-check('a legacy save with proven completion qualifies', mod.rivalsMenuState().unlocked === true);
-check('its coverage is honestly empty', mod.rivalsMenuState().coverage.observations === 0);
-journey = { blockIndex: 1, pveRound: 15 };
-check('a legacy save one house short does not', mod.rivalsMenuState().unlocked === false && mod.campaignStashes() === 14);
-
-// Storage failure must not hand out or withhold the unlock wrongly.
+check('partway through block one: open', mod.rivalsMenuState().unlocked === true);
+check('stashes are still counted from the campaign', mod.campaignStashes() === 4);
 coverageThrows = true;
-journey = { blockIndex: 2, pveRound: 1 };
-check('lost evidence still honours a proven campaign', mod.rivalsMenuState().unlocked === true);
-journey = { blockIndex: 1, pveRound: 1 };
-check('lost evidence does not invent progress', mod.rivalsMenuState().unlocked === false);
+check('lost evidence: still open', mod.rivalsMenuState().unlocked === true);
 coverageThrows = false;
 
 // The menu wires the locked row without making it clickable.

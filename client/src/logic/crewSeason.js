@@ -23,7 +23,7 @@ const speakerTurn=(arc,number,speaker)=>arc.chapters.slice(0,number-1)
   .filter(c=>Object.values(c.beats).some(b=>b.reactive&&b.pages[0].speaker===speaker)).length;
 export function crewSeason(gangID){return Object.prototype.hasOwnProperty.call(arcs,gangID)?arcs[gangID]:null;}
 export function seasonChapter(gangID,chapter=0){return crewSeason(gangID)?.chapters[safeChapter(chapter)]||null;}
-/** Does this beat play in this block? The Block Rivals tease only before Rivals opens. */
+/** Does this beat play in this block? (Block Rivals is open from the start; no chapter teases it.) */
 const beatPlays=(beat,blockIndex)=>Boolean(beat)&&!(beat.rivalsTease&&safeBlock(blockIndex)!==1);
 /** The houses a chapter speaks before, in this block. */
 export function seasonHouses(gangID,{chapter=0,blockIndex=1}={}){

@@ -43,11 +43,9 @@ for(const gangID of ['iron-row','crossline','afterlight']){
   check('pickup preserves existing sound '+gangID+chapter,missionPickupSound(job.id)?.length>0);
   check('exactly one reactive slot '+gangID+chapter,Object.values(story.beats).filter(b=>b.reactive).length===1);
   check('house 9 is always the job '+gangID+chapter,!!story.beats[9]);
-  check('the Rivals tease is chapter one only, at door 6 '+gangID+chapter,
-   Object.entries(story.beats).filter(([,b])=>b.rivalsTease).map(([h])=>h).join()===(chapter===0?'6':''));
+  check('no chapter teases Block Rivals '+gangID+chapter,Object.values(story.beats).every(b=>!b.rivalsTease&&!b.pages.some(p=>/Rivals/.test(p.text))));
   for(const blockIndex of [1,71+chapter]){
    const houses=seasonHouses(gangID,{chapter,blockIndex});
-   if(story.beats[6]?.rivalsTease)check('tease only before Rivals opens '+gangID+chapter+'/'+blockIndex,houses.includes(6)===(blockIndex===1));
    const ids=new Set();
    for(let house=1;house<=15;house++){
     const cue=seasonCue(gangID,{chapter,house,blockIndex,cityName:'Railhaven'});

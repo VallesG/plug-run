@@ -57,12 +57,6 @@ A working scanner off the old harbor band. The channel was supposed to be dead. 
 
 **SWITCH** Do not feed them. They will expect it every block.
 
-#### DOOR 6 — BLOCK RIVALS TEASE
-
-**MAGS** Once this entire block is ours, Block Rivals opens. Seven houses, you versus another runner, powers picked before the race.
-
-**SWITCH** Good. Something to do after you finish claiming this block.
-
 #### DOOR 9 — THE JOB
 
 **MAGS** Violet case. Beat-up scanner, harbor band, already tuned. Bring the case and the stash.
@@ -668,12 +662,6 @@ A ledger lists jobs the previous garage crew never finished. It ends mid-entry.
 **BRICK** Three clear.
 
 **ROOK** Look at us. Functional workplace. HR would be shaking. We do not have HR.
-
-#### DOOR 6 — BLOCK RIVALS TEASE
-
-**ROOK** Once we own all fifteen, Block Rivals opens. Seven-house race, head-to-head, powers picked before the start.
-
-**BRICK** Earn the block first. Then race whoever wants it.
 
 #### DOOR 9 — THE JOB
 
@@ -1291,12 +1279,6 @@ A half-burned guestlist from a showcase that already happened somewhere else. So
 
 **SOL** Runner is... performing above thermal expectations.
 
-#### DOOR 6 — BLOCK RIVALS TEASE
-
-**SOL** When this whole block is ours, Block Rivals goes live: seven houses, another runner beside you, powers locked before the race.
-
-**VEE** Cute. Finish claiming the block, then you can make it personal.
-
 #### DOOR 9 — THE JOB
 
 **SOL** Violet case has a half-burned guestlist for a showcase I have never heard of.
@@ -1888,8 +1870,6 @@ _CONDITIONAL OPENING SLOTS - spoken lines intentionally blank_
 ## How to read the beats
 
 DOOR NUMBERS: Each block is still fifteen houses. Door 9 remains the fixed mission-item pickup. Other dialogue beats move around so the season does not feel mechanically identical.
-
-BLOCK RIVALS TEASE: Only Block 1 uses the Door 6 tease. The crew makes clear that Block Rivals opens after the entire first block is claimed: a seven-house head-to-head against another runner, with powers chosen before the race. Door 6 is only where the crew mentions it.
 
 REACTIVE LINES: Each performance-dependent debrief has blank conditional opening slots for: flawless, comeback, zero deaths, no powers used, phase used, dash used, decoy used, and a neutral fallback. One slot can later receive crew-specific spoken praise; the fixed dialogue that follows stays unchanged.
 

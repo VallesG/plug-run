@@ -195,14 +195,9 @@ export function adaptSkill(currentMs, { opponentMs, result, weight = 0.25 } = {}
   return currentMs;
 }
 
-/** Has the player finished their first complete campaign block? */
-export function rivalsUnlocked(coverage, { stashes = null } = {}) {
-  const blocks = Number.isSafeInteger(coverage?.blocksCompleted) ? coverage.blocksCompleted : 0;
-  if (blocks >= RIVAL_UNLOCK_BLOCKS) return true;
-  // A save from before this record existed can still prove completion through
-  // the count the campaign has always kept. Never the other way round: a big
-  // A partial first block cannot count as a completed one.
-  return Number.isSafeInteger(stashes) && stashes >= RIVAL_UNLOCK_STASHES;
+/** Block Rivals is open from the start (it used to wait for one complete campaign block). */
+export function rivalsUnlocked() {
+  return true;
 }
 
 /** One short line for the locked menu row. No explanation, no popup. */

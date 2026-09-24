@@ -125,13 +125,8 @@ check('an unknown estimate stays unknown', adaptSkill(null, { opponentMs: 1, res
 
 // --- the unlock ------------------------------------------------------------
 const cov = blocks => ({ blocksCompleted: blocks });
-check('one complete block unlocks it', rivalsUnlocked(cov(1)) && rivalsUnlocked(cov(9)));
-check('no complete block stays locked', !rivalsUnlocked(cov(0)));
-check('opening block one is not finishing it', !rivalsUnlocked(cov(0), { stashes: 14 }));
-check('a legacy save with 15 stashes qualifies', rivalsUnlocked(cov(0), { stashes: RIVAL_UNLOCK_STASHES }));
-check('a legacy save short of 15 does not', !rivalsUnlocked(cov(0), { stashes: 14 }));
+check('Block Rivals is open from the start', rivalsUnlocked() && rivalsUnlocked(cov(0)) && rivalsUnlocked(null));
 check('fifteen is one complete block', RIVAL_UNLOCK_STASHES === RIVAL_UNLOCK_BLOCKS * 15);
-check('garbage does not unlock it', !rivalsUnlocked(null) && !rivalsUnlocked({}, { stashes: 'lots' }));
 check('progress text is short and honest',
   rivalsUnlockProgress(cov(1)).text === '1 of 1 block run' && rivalsUnlockProgress(cov(0)).blocks === 0);
 check('progress never overstates', rivalsUnlockProgress(cov(9)).blocks === 1);

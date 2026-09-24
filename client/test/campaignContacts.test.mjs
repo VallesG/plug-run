@@ -21,11 +21,8 @@ for(const gangID of ['crossline','iron-row','afterlight']){
   const finish=campaignContactFinish(gangID,chapter,'Duskport'),baseFinish=seasonFinish(gangID,chapter,'Duskport');
   check('finish is the script\'s door 15',JSON.stringify(finish)===JSON.stringify(baseFinish));
  }
- // Block 1 of chapter 1 hears the Block Rivals tease at door 6, once.
- const tease=campaignContactCue(gangID,{chapter:0,house:6,blockIndex:1});
- check('first block teases Block Rivals '+gangID,tease.beat.kind==='tease'&&tease.pages.some(p=>/Block Rivals/.test(p.text)));
- const later=campaignContactCue(gangID,{chapter:0,house:6,blockIndex:4});
- check('after Rivals opens the tease is gone '+gangID,!later||later.beat.kind==='banter');
+ // Block Rivals is open from the start: no chapter teases it, not even door 6 of block 1.
+ check('no Block Rivals tease '+gangID,[1,4].every(b=>{const c=campaignContactCue(gangID,{chapter:0,house:6,blockIndex:b});return !c||!c.pages.some(p=>/Rivals/.test(p.text));}));
  check('postseason unchanged',campaignContactCue(gangID,{chapter:10,house:4})===null&&campaignContactFinish(gangID,10)===null);
 }
 check('unknown crew stays silent',campaignContactCue('unknown',{house:4})===null&&campaignContactFinish('unknown')===null);

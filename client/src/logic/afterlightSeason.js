@@ -54,20 +54,6 @@ export const AFTERLIGHT_CHAPTERS = Object.freeze([
           }
         ]
       },
-      "6": {
-        "label": "BLOCK RIVALS TEASE",
-        "pages": [
-          {
-            "speaker": "sol",
-            "text": "When this whole block is ours, Block Rivals goes live: seven houses, another runner beside you, powers locked before the race."
-          },
-          {
-            "speaker": "vee",
-            "text": "Cute. Finish claiming the block, then you can make it personal."
-          }
-        ],
-        "rivalsTease": true
-      },
       "9": {
         "label": "THE JOB",
         "pages": [

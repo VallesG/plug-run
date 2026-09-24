@@ -9,7 +9,7 @@ let passed=0;
 function check(name,ok){if(!ok)throw Error(name);passed++;}
 const ironRowChapter=c=>seasonChapter('iron-row',c),ironRowJob=c=>seasonJob('iron-row',c);
 const ironRowFinish=(c,city)=>seasonFinish('iron-row',c,city),ironRowCue=o=>seasonCue('iron-row',o);
-const fixedSchedules=[[1,4,6,9,10],[1,7,9,13],[3,9,11,13],[1,7,9,13],[1,4,9,10],
+const fixedSchedules=[[1,4,9,10],[1,7,9,13],[3,9,11,13],[1,7,9,13],[1,4,9,10],
   [4,7,9,13],[1,4,9,11],[6,9,10,13],[1,4,9,13],[1,4,9,13]];
 check('legacy claimed beat identity survives upgrade',ironRowCue({chapter:0,house:9,blockIndex:5}).eventID===contactCue({gangID:'iron-row',house:9,blockIndex:5}).eventID);
 check('ten authored chapters',IRON_ROW_CHAPTERS.length===10);

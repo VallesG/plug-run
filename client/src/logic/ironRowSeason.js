@@ -42,20 +42,6 @@ export const IRON_ROW_CHAPTERS = Object.freeze([
           }
         ]
       },
-      "6": {
-        "label": "BLOCK RIVALS TEASE",
-        "pages": [
-          {
-            "speaker": "rook",
-            "text": "Once we own all fifteen, Block Rivals opens. Seven-house race, head-to-head, powers picked before the start."
-          },
-          {
-            "speaker": "brick",
-            "text": "Earn the block first. Then race whoever wants it."
-          }
-        ],
-        "rivalsTease": true
-      },
       "9": {
         "label": "THE JOB",
         "pages": [
