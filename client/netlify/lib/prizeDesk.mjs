@@ -18,7 +18,7 @@ const KEEP_S = String(60 * 86400);
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 const parse = (v) => { if (!v) return null; try { return JSON.parse(v); } catch { return null; } };
 
-export function createPrizeDesk({ redis, botApi, nowSec, adminId, dailyRuns, botName, telegramUser }) {
+export function createPrizeDesk({ redis, botApi, nowSec, adminId, channelId = () => null, dailyRuns, botName, telegramUser }) {
   const today = () => dailyNumber(nowSec() * 1000);
   const getJson = async (key) => parse(await redis(['GET', key]));
   const setJson = (key, value, ...extra) => redis(['SET', key, JSON.stringify(value), ...extra]);
@@ -97,6 +97,11 @@ export function createPrizeDesk({ redis, botApi, nowSec, adminId, dailyRuns, bot
       '🏆 <b>You won Plug Run Daily #' + n + '!</b>\n\nYour official time ' + raceTimeLabel(win.ms) + ' was the fastest of the day. '
       + 'Your prize: <b>' + gramLabel(win.gram) + '</b>.\n\nTap below and connect a TON wallet to claim it within ' + PRIZE_CLAIM_DAYS + ' days.',
       [{ text: '🏆 CLAIM ' + gramLabel(win.gram), url: 'https://t.me/' + bot + '/play?startapp=prize_' + n }]);
+    // The public results channel: the winner, and today's race.
+    if (channelId()) {
+      await say(channelId(), '🏁 <b>Daily Race #' + n + ' winner: ' + esc(win.name) + '</b> · ' + raceTimeLabel(win.ms) + ' · wins ' + gramLabel(win.gram)
+        + '\n\nToday\'s race is live. Fastest run wins.', [{ text: '▶ RACE TODAY', url: 'https://t.me/' + bot + '/play' }]);
+    }
     await tellOwner('🏁 <b>Daily #' + n + ' winner: ' + esc(win.name) + '</b> · ' + raceTimeLabel(win.ms)
       + '\nRank ' + win.rank + ' of ' + win.ranked + ' ranked · ' + gramLabel(win.gram)
       + '\n' + (await runBrief(n, win.userId))
@@ -246,5 +251,11 @@ export function createPrizeDesk({ redis, botApi, nowSec, adminId, dailyRuns, bot
     return true;
   }
 
-  return { dayPrize, boardPrize, settleDay, settleClosed, playerStatus, claim, command };
+  /** The bot's welcome card adds the prize on prize days only. */
+  async function welcomeLine() {
+    try { const p = await dayPrize(today(), { create: true }); return p ? '\n\n🏆 Today\'s fastest Daily Race run wins ' + gramLabel(p.gram) + '.' : ''; }
+    catch { return ''; }
+  }
+
+  return { welcomeLine, dayPrize, boardPrize, settleDay, settleClosed, playerStatus, claim, command };
 }

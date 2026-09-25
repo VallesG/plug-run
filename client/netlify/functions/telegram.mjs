@@ -114,7 +114,9 @@ export function createTelegramHandler({
   // Loaded when a run is stored, so this module imports without the Blobs SDK (tests).
   dailyRuns = async () => (await import('@netlify/blobs')).getStore({ name: 'daily-runs', consistency: 'strong' }),
   // The owner's Telegram id (the bot's /whoami tells it): prize commands and payout messages.
-  adminId = () => process.env.ADMIN_TELEGRAM_ID
+  adminId = () => process.env.ADMIN_TELEGRAM_ID,
+  // A public channel (e.g. @PlugRunDaily, the bot an admin there) where each day's winner is posted.
+  channelId = () => process.env.DAILY_CHANNEL
 } = {}) {
   async function ping() {
     const botToken = token();
@@ -280,7 +282,7 @@ export function createTelegramHandler({
     return res.json();
   };
   // Daily Race prizes (netlify/lib/prizeDesk.mjs).
-  const prize = createPrizeDesk({ redis, botApi, nowSec, adminId, dailyRuns, botName,
+  const prize = createPrizeDesk({ redis, botApi, nowSec, adminId, channelId, dailyRuns, botName,
     telegramUser: (initData) => validateInitData(initData, token(), { nowSec: nowSec() })?.user || null });
 
   async function setupWebhook() {
@@ -306,7 +308,8 @@ export function createTelegramHandler({
     } else {
       await botApi('sendPhoto', {
         chat_id: chatId, photo: SITE + '/share/challenge-card.jpg',
-        caption: 'Plug Run: grab the stash, lose the Plug, make the getaway car.\n\nRun the campaign with your crew, or race Block Rivals head-to-head and challenge your friends to beat your time.',
+        caption: 'Plug Run: grab the stash, lose the Plug, make the getaway car.\n\nRun the campaign with your crew, or race Block Rivals head-to-head and challenge your friends to beat your time.'
+          + (await prize.welcomeLine()),
         reply_markup: { inline_keyboard: [[{ text: '▶ PLAY', web_app: { url: SITE + '/tg' } }]] }
       });
     }

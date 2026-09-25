@@ -132,7 +132,7 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
     sent.push({ method: m[1], ...body });
     return { json: async () => ({ ok: body.chat_id !== 333 && body.chat_id !== '333' }) };
   };
-  const h = createTelegramHandler({ token: () => BOT, redis, fetchImpl, nowSec: () => clock, adminId: () => ADMIN,
+  const h = createTelegramHandler({ token: () => BOT, redis, fetchImpl, nowSec: () => clock, adminId: () => ADMIN, channelId: () => '@PlugRunDaily',
     dailyRuns: async () => ({ set: async (k, v) => blobs.set(k, JSON.parse(v)), get: async (k) => blobs.get(k) ?? null }) });
   const call = async (method, action, body, q = '') => {
     const res = await h({ url: 'https://plugrun.io/.netlify/functions/telegram?action=' + action + q, method,
@@ -165,13 +165,16 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   await chat(555, '/whoami');
   ok(/Your Telegram ID: <code>555<\/code>/.test(said(to(555))?.text || ''), '/whoami answers anyone with their id');
   await chat(555, '/prize 1');
-  ok(!!said((m) => m.method === 'sendPhoto' && m.chat_id === 555) && store.get('prize:config') === undefined, 'a stranger sending /prize gets the welcome card, and nothing changes');
+  const card = said((m) => m.method === 'sendPhoto' && m.chat_id === 555);
+  ok(!!card && store.get('prize:config') === undefined && !/GRAM/.test(card.caption), 'a stranger sending /prize gets the welcome card (no prize on it), and nothing changes');
   eq((await board(n)).prize, undefined, 'no prize, nothing on the board');
 
   await chat(ADMIN, '/prize 1 6');
   ok(/1 GRAM a day<\/b>, from Daily #3 .* through #8/.test(said(to(ADMIN))?.text || ''), 'the owner turns it on for six days');
   eq(JSON.parse(store.get('prize:config')), { gram: 1, from: 3, until: 8 }, 'config stored');
   eq((await status('u_a')).today, { day: n, gram: 1 }, 'the game hears about today\'s prize');
+  await chat(555, '/start');
+  ok(/Today's fastest Daily Race run wins 1 GRAM\./.test(said((m) => m.method === 'sendPhoto')?.caption), 'the welcome card names the prize on a prize day');
 
   // Daily #3: the fastest run is from the web; the prize goes to the fastest Telegram run.
   rank(n, 'u_web', 60000.01); rank(n, 'u_b', 64000.05); rank(n, 'u_a', 62000.02);
@@ -185,6 +188,8 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   ok(win.status === 'won' && win.userId === 'u_a' && win.telegramId === '111' && win.ms === 62000 && win.rank === 2 && win.ranked === 3, 'settled: Ana wins Daily #3');
   const dm = said(to('111'));
   ok(/You won Plug Run Daily #3/.test(dm?.text) && dm.reply_markup.inline_keyboard[0][0].url === 'https://t.me/PlugRunBot/play?startapp=prize_3', 'the winner is told, with a claim link into the game');
+  const post = said(to('@PlugRunDaily'));
+  ok(/Daily Race #3 winner: Ana<\/b> · 1:02\.0 · wins 1 GRAM/.test(post?.text) && post.reply_markup.inline_keyboard[0][0].url === 'https://t.me/PlugRunBot/play', 'the results channel gets the winner and a link to today\'s race');
   const review = said(to(ADMIN))?.text || '';
   ok(/Daily #3 winner: Ana<\/b> · 1:02\.0/.test(review) && /Rank 2 of 3 ranked/.test(review) && /Houses \(s\): 11\.0 · 12\.0/.test(review) && /Told them in Telegram/.test(review) && /\/dq 3/.test(review), 'the owner gets the run to review');
   await h.settle();
