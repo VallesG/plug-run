@@ -4,10 +4,10 @@
 let today = null;
 
 export function setTodayPrize(p) {
-  today = p && Number.isInteger(p.day) && p.usd > 0 ? { day: p.day, usd: p.usd } : null;
+  today = p && Number.isInteger(p.day) && p.gram > 0 ? { day: p.day, gram: p.gram } : null;
 }
 
-/** { day, usd } when Daily #n has a prize, else null. */
+/** { day, gram } when Daily #n has a prize, else null. */
 export function todayPrize(n) {
   return today && today.day === n ? today : null;
 }

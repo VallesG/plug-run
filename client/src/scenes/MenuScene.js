@@ -24,6 +24,7 @@ import { takeLaunchChallenge, takeLaunchPrize, prizesHere, identityProof } from 
 import { getChallenge, getPrizeStatus, claimPrize } from '../utils/api.js';
 import { showPrizeClaim } from '../platform/prizeClaim.js';
 import { setTodayPrize } from '../utils/prizeState.js';
+import { gramLabel } from '../logic/dailyPrize.js';
 import { dailyNumber, dailySlot, dailyRival, dailyNote } from '../logic/dailyRace.js';
 import { getDailyState } from '../utils/dailyProgress.js';
 import { enabledRivalCourses, rivalPoolCourse } from '../logic/rivals.js';
@@ -2306,7 +2307,7 @@ export class MenuScene extends Phaser.Scene {
       if (!this.sys.isActive() || !st?.ok) return;
       setTodayPrize(st.today);
       const n = dailyNumber(Date.now());
-      if (st.today?.day === n) this.tutorialBtn?._note?.setText?.(dailyNote(getDailyState(), n, st.today.usd));
+      if (st.today?.day === n) this.tutorialBtn?._note?.setText?.(dailyNote(getDailyState(), n, gramLabel(st.today.gram)));
       const wins = st.wins || [];
       const open = wins.find(w => w.status === 'won' && (linkDay == null ? !prizeLater.has(w.day) : w.day === linkDay));
       if (open) { this.openPrizeClaim(open); return; }

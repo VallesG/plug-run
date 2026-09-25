@@ -9,6 +9,7 @@ import * as matchmaking from '../src/logic/rivalMatchmaking.js';
 import { playExtraction } from '../src/controllers/extractionAnimation.js';
 import { nextRivalAnnouncement } from '../src/logic/rivalAnnouncer.js';
 import { dailyUnfinished, dailyBoardRows, DAILY_BOARD_SIZE } from '../src/logic/dailyRace.js';
+import { gramLabel } from '../src/logic/dailyPrize.js';
 let passed=0;
 function check(name,value) { if(!value) throw new Error(name); passed++; }
 let now=1000, loadouts=0, saved=[], lastPicker, played=[], resolver=()=>null, replayLoader=async()=>null;
@@ -60,7 +61,7 @@ const bindings={
  submitDaily:(b)=>{dailies.submitted.push(b);return Promise.resolve({ok:true,rank:7,total:90});}, startDaily:(b)=>{dailies.started.push(b);return Promise.resolve({ok:true,first:true});},
   claimDailyRun:(n)=>{dailies.claims++;return !dailies.officialToday;}, dailyUnfinished, dailyBoardRows, DAILY_BOARD_SIZE,
   prizesHere:()=>prizeHere, askToMessage:()=>prizeAsks.push(1), openPage:(u)=>pagesOpened.push(u),
-  todayPrize:(n)=>prizeToday&&prizeToday.day===n?prizeToday:null,
+  todayPrize:(n)=>prizeToday&&prizeToday.day===n?prizeToday:null, gramLabel,
   getDailyBoard:(q)=>{dailies.boards.push(q);return Promise.resolve({ok:true,day:q.day,total:31,top:[{rank:1,name:'Ana',ms:61000},{rank:2,name:'Ben',ms:62500}],you:{rank:14,ms:70100}});}
 };
 const Race=new Function(...Object.keys(bindings),source+'\nreturn RivalsRace;')(...Object.values(bindings));
@@ -906,21 +907,21 @@ console.log('rivals daily race: '+passed+' total assertions passed');
 // prize-day official run asks whether the bot may message the player.
 {
   const flush=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
-  prizeToday={day:12,usd:5};
+  prizeToday={day:12,gram:1};
   const web=setup({...rules.newRivalRace(course,splits),daily:12});
-  check('on the web there is no prize line',!web.modals.at(-1).lines.some(l=>/IN TON/.test(l)));
+  check('on the web there is no prize line',!web.modals.at(-1).lines.some(l=>/GRAM/.test(l)));
   prizeHere=true;
   const tg=setup({...rules.newRivalRace(course,splits),daily:12});
   const intro=tg.modals.at(-1);
-  check('in Telegram on a prize day, the intro names the prize',intro.lines.includes('$5 IN TON FOR TODAY\'S FASTEST'));
+  check('in Telegram on a prize day, the intro names the prize',intro.lines.includes('1 GRAM FOR TODAY\'S FASTEST'));
   intro.buttons[1].onClick();await flush();
   const board=tg.modals.at(-1);
   check('the board offers the prize rules',board.title==='LEADERBOARD'&&board.buttons.map(b=>b.label).join()==='PRIZE RULES,BACK'&&board.buttons[0].keepOpen===true);
   board.buttons[0].onClick();
   check('which open the rules page',pagesOpened.at(-1)==='https://plugrun.io/rules');
   const noPrize=setup({...rules.newRivalRace(course,splits),daily:14});
-  check('a Telegram day without a prize shows none',!noPrize.modals.at(-1).lines.some(l=>/IN TON/.test(l)));
-  prizeToday={day:13,usd:5};
+  check('a Telegram day without a prize shows none',!noPrize.modals.at(-1).lines.some(l=>/GRAM/.test(l)));
+  prizeToday={day:13,gram:1};
   const asksBefore=prizeAsks.length;
   const {st}=(()=>{now=1000;let st={...rules.newRivalRace(course,splits),status:'racing',startedAt:0,powers:['dash','dash'],opponentKind:'recorded-bot',opponent:{displayName:'Jev',recordingID:'rec-d'},daily:13};
     let r=setup(st);

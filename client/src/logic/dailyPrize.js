@@ -1,8 +1,9 @@
 // The Daily Race prize, as data. Pure: no storage, network or clock.
 //
-// A prize day pays one prize, in TON, to the fastest verified official run
-// from a Telegram account. The owner turns prizes on and off from the bot
-// (/prize 5 6 = $5 a day for six days); each day's amount is fixed the first
+// A prize day pays one prize, in GRAM (the TON network's coin, formerly
+// Toncoin), to the fastest verified official run from a Telegram account. The
+// owner turns prizes on and off from the bot (/prize 1 6 = 1 GRAM a day for
+// six days); each day's amount is fixed the first
 // time that day is touched, so a change never alters a race in progress. The
 // day closes at midnight UTC, the winner is settled half an hour later (late
 // finishes land by then), and the winner has a week to connect a wallet.
@@ -12,7 +13,7 @@ import { DAILY_EPOCH_MS, raceTimeLabel } from './dailyRace.js';
 
 export const PRIZE_SETTLE_DELAY_S = 30 * 60;
 export const PRIZE_CLAIM_DAYS = 7;
-export const PRIZE_MAX_USD = 100;
+export const PRIZE_MAX_GRAM = 100;
 export const PRIZE_MAX_DAYS = 60;
 export const TON_MAINNET = '-239';
 
@@ -26,20 +27,27 @@ export function settleable(n, nowSec) {
   return Number.isInteger(n) && n >= 1 && nowSec >= dayEndSec(n) + PRIZE_SETTLE_DELAY_S;
 }
 
-/** The prize the standing config gives Daily #n: { usd } or null. */
+/** The prize the standing config gives Daily #n: { gram } or null. */
 export function prizeForDay(config, n) {
-  if (!config || !Number.isFinite(config.usd) || config.usd <= 0) return null;
+  if (!config || !Number.isFinite(config.gram) || config.gram <= 0) return null;
   if (!Number.isInteger(config.from) || n < config.from) return null;
   if (Number.isInteger(config.until) && n > config.until) return null;
-  return { usd: config.usd };
+  return { gram: config.gram };
 }
 
-export const usdLabel = (usd) => '$' + (Number.isInteger(usd) ? String(usd) : Number(usd).toFixed(2));
+/** "1 GRAM", "0.5 GRAM". */
+export const gramLabel = (gram) => String(Number(Number(gram).toFixed(2))) + ' GRAM';
+
+/** A GRAM amount in nano units (1 GRAM = 1e9), as wallets and transfer links take it. */
+export function gramNano(gram) {
+  if (!(gram > 0)) return null;
+  return String(BigInt(Math.round(gram * 100)) * 10_000_000n);
+}
 
 /**
  * The owner's bot commands. Returns null for anything else.
  *   /prize                 status
- *   /prize 5  | /prize 5 6 on: $5 a day (for 6 days)
+ *   /prize 1  | /prize 1 6 on: 1 GRAM a day (for 6 days)
  *   /prize off             off from tomorrow (today's prize stands)
  *   /paid 12 [tx]          Daily #12 was paid
  *   /dq 12 reason          pass Daily #12 to the next runner
@@ -49,10 +57,10 @@ export function parsePrizeCommand(text) {
   let m;
   if (/^\/prize$/i.test(t)) return { cmd: 'status' };
   if (/^\/prize\s+off$/i.test(t)) return { cmd: 'off' };
-  if ((m = /^\/prize\s+\$?(\d+(?:\.\d{1,2})?)(?:\s+(\d+))?$/i.exec(t))) {
-    const usd = Number(m[1]), days = m[2] ? Number(m[2]) : null;
-    if (!(usd > 0 && usd <= PRIZE_MAX_USD) || (days !== null && !(days >= 1 && days <= PRIZE_MAX_DAYS))) return { cmd: 'bad' };
-    return { cmd: 'on', usd, days };
+  if ((m = /^\/prize\s+(\d+(?:\.\d{1,2})?)(?:\s*gram)?(?:\s+(\d+))?$/i.exec(t))) {
+    const gram = Number(m[1]), days = m[2] ? Number(m[2]) : null;
+    if (!(gram > 0 && gram <= PRIZE_MAX_GRAM) || (days !== null && !(days >= 1 && days <= PRIZE_MAX_DAYS))) return { cmd: 'bad' };
+    return { cmd: 'on', gram, days };
   }
   if ((m = /^\/paid\s+#?(\d+)(?:\s+(\S{1,128}))?$/i.exec(t))) return { cmd: 'paid', day: Number(m[1]), tx: m[2] || null };
   if ((m = /^\/dq\s+#?(\d+)(?:\s+([\s\S]{1,200}))?$/i.exec(t))) return { cmd: 'dq', day: Number(m[1]), reason: (m[2] || 'disqualified').trim() };
@@ -72,15 +80,6 @@ export function pickWinner(board, telegramIds, disqualified = new Set()) {
   }
   return null;
 }
-
-/** Nanotons for a dollar amount at a TON price, rounded up to the next 0.01 TON. */
-export function tonNano(usd, priceUsd) {
-  if (!(usd > 0) || !(priceUsd > 0)) return null;
-  const cents = Math.ceil((usd / priceUsd) * 100 - 1e-9);
-  return String(BigInt(cents) * 10_000_000n);
-}
-
-export const tonLabel = (nano) => (Number(BigInt(nano) / 10_000_000n) / 100).toFixed(2) + ' TON';
 
 /** Tonkeeper's transfer link, with the amount and a comment filled in when known. */
 export function tonkeeperLink(address, nano = null, text = '') {
@@ -102,5 +101,5 @@ export function winLine(n, win, nowSec) {
   if (win.status === 'none') return '#' + n + ' no Telegram runs';
   const state = winState(win, nowSec);
   const what = state === 'won' ? 'waiting for a wallet' : state === 'claimed' ? 'claimed, not paid (/paid ' + n + ')' : state;
-  return '#' + n + ' ' + win.name + ' ' + raceTimeLabel(win.ms) + ' · ' + usdLabel(win.usd) + ' · ' + what;
+  return '#' + n + ' ' + win.name + ' ' + raceTimeLabel(win.ms) + ' · ' + gramLabel(win.gram) + ' · ' + what;
 }

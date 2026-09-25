@@ -3,13 +3,14 @@
 // wallet picker (which opens over it) is DOM too, and a claim must survive
 // the game resizing underneath.
 import { raceTimeLabel } from '../logic/dailyRace.js';
+import { gramLabel } from '../logic/dailyPrize.js';
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const dateLabel = (sec) => { const d = new Date(sec * 1000); return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate(); };
 
 /** What the claim screen shows in each state. Pure. */
 export function claimView(state, win, { wallet = null, error = null } = {}) {
-  const head = { title: 'DAILY RACE #' + win.day + ' · WINNER', big: '$' + win.usd + ' IN TON' };
+  const head = { title: 'DAILY RACE #' + win.day + ' · WINNER', big: gramLabel(win.gram) };
   if (state === 'claimed') return { ...head, line: 'ON ITS WAY TO ' + (wallet || 'YOUR WALLET'),
     note: 'Prizes are sent within 7 days of a claim.', buttons: [{ label: 'DONE', act: 'close', primary: true }] };
   const line = Number.isFinite(win.ms) ? 'FASTEST TIME ' + raceTimeLabel(win.ms) : '';
@@ -43,7 +44,7 @@ const STYLE = {
 };
 
 /**
- * Show the claim for a win ({ day, usd, ms, claimBy }). connect() resolves a
+ * Show the claim for a win ({ day, gram, ms, claimBy }). connect() resolves a
  * wallet ({ address, chain }) or null; claim(wallet) resolves the server's
  * answer ({ wallet }) or throws. onClose(state) runs when it is dismissed.
  */

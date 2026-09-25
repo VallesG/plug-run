@@ -1,16 +1,16 @@
 // The Daily Race prize desk (rules in src/logic/dailyPrize.js): which days
 // pay, who won, the wallet they claimed with, and the owner's bot commands.
 // Server-only; the telegram function wires it in. State in Redis:
-//   prize:config   { usd, from, until }   the standing setting (/prize)
-//   prize:day:{n}  { usd }                a day's prize, fixed the first time it is touched
-//   prize:win:{n}  { day, usd, userId, telegramId, name, ms, rank, ranked, status, claimBy, wallet, ... }
+//   prize:config   { gram, from, until }  the standing setting (/prize)
+//   prize:day:{n}  { gram }               a day's prize, fixed the first time it is touched
+//   prize:win:{n}  { day, gram, userId, telegramId, name, ms, rank, ranked, status, claimBy, wallet, ... }
 //                  status 'won' -> 'claimed' -> 'paid', or 'none' (no Telegram runs)
 //   prize:dq:{n}   hash userId -> reason
 // Payouts are sent by hand from the owner's wallet: the desk never holds a key.
 import { dailyNumber, dailyDateLabel, raceTimeLabel } from '../../src/logic/dailyRace.js';
 import {
-  PRIZE_CLAIM_DAYS, TON_MAINNET, settleable, prizeForDay, usdLabel, parsePrizeCommand, pickWinner,
-  tonNano, tonLabel, tonkeeperLink, winState, winLine
+  PRIZE_CLAIM_DAYS, TON_MAINNET, settleable, prizeForDay, gramLabel, gramNano, parsePrizeCommand, pickWinner,
+  tonkeeperLink, winState, winLine
 } from '../../src/logic/dailyPrize.js';
 import { parseRawAddress, parseFriendlyAddress, friendlyAddress, shortAddress } from '../../src/logic/tonAddress.js';
 
@@ -18,7 +18,7 @@ const KEEP_S = String(60 * 86400);
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 const parse = (v) => { if (!v) return null; try { return JSON.parse(v); } catch { return null; } };
 
-export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dailyRuns, botName, telegramUser }) {
+export function createPrizeDesk({ redis, botApi, nowSec, adminId, dailyRuns, botName, telegramUser }) {
   const today = () => dailyNumber(nowSec() * 1000);
   const getJson = async (key) => parse(await redis(['GET', key]));
   const setJson = (key, value, ...extra) => redis(['SET', key, JSON.stringify(value), ...extra]);
@@ -31,7 +31,7 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
   };
   const tellOwner = (text, buttons) => (adminId() ? say(adminId(), text, buttons) : Promise.resolve(false));
 
-  /** Daily #n's prize: { usd } or null. Today's is fixed from the config the first time it is asked for. */
+  /** Daily #n's prize: { gram } or null. Today's is fixed from the config the first time it is asked for. */
   async function dayPrize(n, { create = false } = {}) {
     const have = await getJson('prize:day:' + n);
     if (have || !create || n !== today()) return have;
@@ -65,12 +65,12 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
     return { lead: { ...lead, name }, board, telegram: tg.size };
   }
 
-  /** For the public board: { usd, leader: { rank, name, ms } | null }, or null on a day without a prize. */
+  /** For the public board: { gram, leader: { rank, name, ms } | null }, or null on a day without a prize. */
   async function boardPrize(n) {
     const prize = await dayPrize(n, { create: true });
     if (!prize) return null;
     const { lead } = await leaderOf(n);
-    return { usd: prize.usd, leader: lead ? { rank: lead.rank, name: lead.name, ms: lead.ms } : null };
+    return { gram: prize.gram, leader: lead ? { rank: lead.rank, name: lead.name, ms: lead.ms } : null };
   }
 
   // The winner's run, in brief, for the owner's review message.
@@ -95,10 +95,10 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
     const bot = await botName().catch(() => 'PlugRunBot');
     const told = await say(win.telegramId,
       '🏆 <b>You won Plug Run Daily #' + n + '!</b>\n\nYour official time ' + raceTimeLabel(win.ms) + ' was the fastest of the day. '
-      + 'Your prize: <b>' + usdLabel(win.usd) + ' in TON</b>.\n\nTap below and connect a TON wallet to claim it within ' + PRIZE_CLAIM_DAYS + ' days.',
-      [{ text: '🏆 CLAIM ' + usdLabel(win.usd) + ' IN TON', url: 'https://t.me/' + bot + '/play?startapp=prize_' + n }]);
+      + 'Your prize: <b>' + gramLabel(win.gram) + '</b>.\n\nTap below and connect a TON wallet to claim it within ' + PRIZE_CLAIM_DAYS + ' days.',
+      [{ text: '🏆 CLAIM ' + gramLabel(win.gram), url: 'https://t.me/' + bot + '/play?startapp=prize_' + n }]);
     await tellOwner('🏁 <b>Daily #' + n + ' winner: ' + esc(win.name) + '</b> · ' + raceTimeLabel(win.ms)
-      + '\nRank ' + win.rank + ' of ' + win.ranked + ' ranked · ' + usdLabel(win.usd) + ' in TON'
+      + '\nRank ' + win.rank + ' of ' + win.ranked + ' ranked · ' + gramLabel(win.gram)
       + '\n' + (await runBrief(n, win.userId))
       + '\n\n' + (told ? 'Told them in Telegram.' : 'Could not message them; they will see it when they open the game.')
       + ' Waiting for their wallet.\nNot a fair run? /dq ' + n + ' reason passes it to the next runner.');
@@ -115,9 +115,9 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
     const { lead, board } = await leaderOf(n);
     const now = nowSec();
     const win = lead
-      ? { day: n, usd: prize.usd, userId: lead.userId, telegramId: lead.telegramId, name: lead.name, ms: lead.ms,
+      ? { day: n, gram: prize.gram, userId: lead.userId, telegramId: lead.telegramId, name: lead.name, ms: lead.ms,
           rank: lead.rank, ranked: board.length, status: 'won', settledAt: now, claimBy: now + PRIZE_CLAIM_DAYS * 86400 }
-      : { day: n, usd: prize.usd, ranked: board.length, status: 'none', settledAt: now };
+      : { day: n, gram: prize.gram, ranked: board.length, status: 'none', settledAt: now };
     if ((await setJson('prize:win:' + n, win, 'NX', 'EX', KEEP_S)) !== 'OK') return getJson('prize:win:' + n);
     await announce(win);
     return win;
@@ -142,26 +142,16 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
     raw.forEach((v, i) => {
       const w = parse(v);
       if (!w || w.userId !== userId || w.status === 'none') return;
-      wins.push({ day: days[i], usd: w.usd, ms: w.ms, status: winState(w, now), claimBy: w.claimBy ?? null, wallet: w.wallet ? shortAddress(w.wallet) : null });
+      wins.push({ day: days[i], gram: w.gram, ms: w.ms, status: winState(w, now), claimBy: w.claimBy ?? null, wallet: w.wallet ? shortAddress(w.wallet) : null });
     });
-    return { today: p ? { day: t, usd: p.usd } : null, wins };
-  }
-
-  async function tonPrice() {
-    const get = async (url) => (await fetchImpl(url, { signal: AbortSignal.timeout?.(3000) })).json();
-    try { const p = Number((await get('https://tonapi.io/v2/rates?tokens=ton&currencies=usd'))?.rates?.TON?.prices?.USD); if (p > 0) return p; } catch {}
-    try { const p = Number((await get('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd'))?.['the-open-network']?.usd); if (p > 0) return p; } catch {}
-    return null;
+    return { today: p ? { day: t, gram: p.gram } : null, wins };
   }
 
   async function tellOwnerClaim(win) {
-    const n = win.day, price = await tonPrice();
-    const nano = price ? tonNano(win.usd, price) : null;
-    const comment = 'Plug Run Daily #' + n;
-    await tellOwner('💰 <b>' + esc(win.name) + ' claimed Daily #' + n + '</b> (' + usdLabel(win.usd) + ').\nWallet: <code>' + win.wallet + '</code>\n'
-      + (nano ? 'Send: <b>' + tonLabel(nano) + '</b> (TON at $' + price.toFixed(2) + ')' : 'Send ' + usdLabel(win.usd) + ' in TON (the TON price was unavailable).')
-      + '\nComment: ' + comment + '\n\nThen send /paid ' + n,
-    [{ text: nano ? 'Pay ' + tonLabel(nano) + ' in Tonkeeper' : 'Open in Tonkeeper', url: tonkeeperLink(win.wallet, nano, comment) }]);
+    const n = win.day, comment = 'Plug Run Daily #' + n;
+    await tellOwner('💰 <b>' + esc(win.name) + ' claimed Daily #' + n + '</b>.\nWallet: <code>' + win.wallet + '</code>\n'
+      + 'Send: <b>' + gramLabel(win.gram) + '</b>\nComment: ' + comment + '\n\nThen send /paid ' + n,
+    [{ text: 'Pay ' + gramLabel(win.gram) + ' in Tonkeeper', url: tonkeeperLink(win.wallet, gramNano(win.gram), comment) }]);
   }
 
   /** A winner connects their wallet. Returns [httpStatus, body]. */
@@ -199,28 +189,28 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
     const t = today(), now = nowSec();
     const reply = (text) => say(chatId, text);
     if (c.cmd === 'bad') {
-      await reply('Commands:\n/prize (status)\n/prize 5 (on: $5 a day) · /prize 5 6 (for six days)\n/prize off (off from tomorrow)\n/paid 12 [tx]\n/dq 12 reason');
+      await reply('Commands:\n/prize (status)\n/prize 1 (on: 1 GRAM a day) · /prize 1 6 (for six days)\n/prize off (off from tomorrow)\n/paid 12 [tx]\n/dq 12 reason');
     } else if (c.cmd === 'on') {
-      const config = { usd: c.usd, from: t, until: c.days ? t + c.days - 1 : null };
+      const config = { gram: c.gram, from: t, until: c.days ? t + c.days - 1 : null };
       await setJson('prize:config', config);
-      await setJson('prize:day:' + t, { usd: c.usd }, 'EX', KEEP_S);
-      await reply('Daily prize on: <b>' + usdLabel(c.usd) + ' in TON a day</b>, from Daily #' + t + ' (' + dailyDateLabel(t) + ')'
+      await setJson('prize:day:' + t, { gram: c.gram }, 'EX', KEEP_S);
+      await reply('Daily prize on: <b>' + gramLabel(c.gram) + ' a day</b>, from Daily #' + t + ' (' + dailyDateLabel(t) + ')'
         + (config.until ? ' through #' + config.until + ' (' + dailyDateLabel(config.until) + ')' : ' until /prize off')
         + '. Today\'s race shows it now.');
     } else if (c.cmd === 'off') {
       const config = await getJson('prize:config');
       if (config) await setJson('prize:config', { ...config, until: Math.min(config.until ?? t, t) });
       const p = await getJson('prize:day:' + t);
-      await reply('Daily prize off from tomorrow.' + (p ? ' Today\'s ' + usdLabel(p.usd) + ' (Daily #' + t + ') still stands.' : ''));
+      await reply('Daily prize off from tomorrow.' + (p ? ' Today\'s ' + gramLabel(p.gram) + ' (Daily #' + t + ') still stands.' : ''));
     } else if (c.cmd === 'status') {
       const config = await getJson('prize:config');
       const p = await dayPrize(t, { create: true });
       const lines = [];
       const on = config && prizeForDay(config, t);
-      lines.push(on ? 'Daily prize: ' + usdLabel(config.usd) + ' in TON a day' + (config.until ? ', through #' + config.until : ', until /prize off') + '.' : 'Daily prize: off.');
+      lines.push(on ? 'Daily prize: ' + gramLabel(config.gram) + ' a day' + (config.until ? ', through #' + config.until : ', until /prize off') + '.' : 'Daily prize: off.');
       if (p) {
         const { lead, board } = await leaderOf(t);
-        lines.push('Today #' + t + ': ' + usdLabel(p.usd) + ' · ' + board.length + ' ranked · leader ' + (lead ? esc(lead.name) + ' ' + raceTimeLabel(lead.ms) : 'none yet'));
+        lines.push('Today #' + t + ': ' + gramLabel(p.gram) + ' · ' + board.length + ' ranked · leader ' + (lead ? esc(lead.name) + ' ' + raceTimeLabel(lead.ms) : 'none yet'));
       }
       const recent = [];
       for (let d = t - 1; d >= Math.max(1, t - 7); d--) {
@@ -228,7 +218,7 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
         if (win || dp) recent.push(esc(winLine(d, win, now)));
       }
       if (recent.length) lines.push('\nRecent:\n' + recent.join('\n'));
-      lines.push('\n/prize 5 [days] · /prize off · /paid N [tx] · /dq N reason');
+      lines.push('\n/prize 1 [days] · /prize off · /paid N [tx] · /dq N reason');
       await reply(lines.join('\n'));
     } else if (c.cmd === 'paid') {
       const win = await getJson('prize:win:' + c.day);
@@ -237,7 +227,7 @@ export function createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dai
       else if (win.status !== 'claimed') await reply(esc(win.name) + ' has not connected a wallet for Daily #' + c.day + ' yet.');
       else {
         await setJson('prize:win:' + c.day, { ...win, status: 'paid', paidAt: now, tx: c.tx }, 'EX', KEEP_S);
-        await say(win.telegramId, '💸 Your ' + usdLabel(win.usd) + ' in TON for Plug Run Daily #' + c.day + ' has been sent to <code>' + shortAddress(win.wallet) + '</code>. Thanks for racing!');
+        await say(win.telegramId, '💸 Your ' + gramLabel(win.gram) + ' for Plug Run Daily #' + c.day + ' has been sent to <code>' + shortAddress(win.wallet) + '</code>. Thanks for racing!');
         await reply('Daily #' + c.day + ' marked paid.');
       }
     } else if (c.cmd === 'dq') {

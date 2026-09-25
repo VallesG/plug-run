@@ -22,6 +22,7 @@ import { beginRaceCapture, beginAttemptCapture, tickAttemptCapture, endAttemptCa
 import { submitRivalRun, createChallenge, reportChallengeResult, submitDaily, startDaily, getDailyBoard } from '../utils/api.js';
 import { identityProof, shareChallenge, prizesHere, askToMessage, openPage } from '../platform/index.js';
 import { todayPrize } from '../utils/prizeState.js';
+import { gramLabel } from '../logic/dailyPrize.js';
 import { getUserID, getCurrentUserSync } from '../utils/userManager.js';
 import { hasCompletedTutorial } from '../utils/tutorialProgress.js';
 import { saveDailyResult, saveDailyRank, claimDailyRun } from '../utils/dailyProgress.js';
@@ -141,7 +142,7 @@ export default class RivalsRace {
       subtitle:'DAILY RACE #'+n+' · '+dailyDateLabel(n)+(official?' · OFFICIAL RUN':dailyUnfinished(today)?' · OFFICIAL RUN USED':' · OFFICIAL TIME SET'),
       lines:[
         (Number.isFinite(target)?'TO BEAT: '+this.rivalLabel()+' '+rivalTimeLabel(target):'')+(streak>0?'   ·   STREAK '+streak:''),
-        prize?'$'+prize.usd+' IN TON FOR TODAY\'S FASTEST':''
+        prize?gramLabel(prize.gram)+' FOR TODAY\'S FASTEST':''
       ].filter(Boolean),
       buttons:[
         // The official run is claimed at its GO (claimDaily), not here.
@@ -190,18 +191,18 @@ export default class RivalsRace {
       if(!drawn)return;
       status.setText(rows.length?(board.total||rows.length)+' RANKED TODAY':'NO OFFICIAL TIMES YET · SET THE FIRST');
       // A prize day in Telegram: the prize, and a tag on the run in line for it.
-      const prize=prizesHere()&&board?.prize?.usd>0?board.prize:null;
+      const prize=prizesHere()&&board?.prize?.gram>0?board.prize:null;
       const size=area.width<360?13:15;
       const step=Math.max(20,Math.min(32,(area.height-(prize?60:40))/(DAILY_BOARD_SIZE+2)));
       const inset=Math.max(8,(area.width-340)/2),left=area.x+inset,right=area.x+area.width-inset;
       let y=area.y+34;
-      if(prize){text(area.x+area.width/2,y-8,'$'+prize.usd+' IN TON TO THE FASTEST TELEGRAM RUN',{size:12,color:'#ffb54d',origin:.5});y+=20;}
+      if(prize){text(area.x+area.width/2,y-8,gramLabel(prize.gram)+' TO THE FASTEST TELEGRAM RUN',{size:12,color:'#ffb54d',origin:.5});y+=20;}
       for(const row of rows){
         if(row.below){text(area.x+area.width/2,y-4,'···',{size,color:'#9c8a6a',origin:.5});y+=step*.7;}
         const color=row.you?'#ffb54d':row.rank<=3?'#f6ead2':'#d8b98a';
         text(left+34,y,String(row.rank),{size,color,origin:1});
         text(left+46,y,row.you?'YOU':row.name,{size,color});
-        if(prize&&prize.leader?.rank===row.rank)text(right-size*5,y,'$'+prize.usd,{size,color:'#ffb54d',origin:1});
+        if(prize&&prize.leader?.rank===row.rank)text(right-size*5,y,gramLabel(prize.gram),{size,color:'#ffb54d',origin:1});
         text(right,y,row.time,{size,color,origin:1});
         y+=step;
       }

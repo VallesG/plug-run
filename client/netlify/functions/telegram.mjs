@@ -280,7 +280,7 @@ export function createTelegramHandler({
     return res.json();
   };
   // Daily Race prizes (netlify/lib/prizeDesk.mjs).
-  const prize = createPrizeDesk({ redis, botApi, nowSec, fetchImpl, adminId, dailyRuns, botName,
+  const prize = createPrizeDesk({ redis, botApi, nowSec, adminId, dailyRuns, botName,
     telegramUser: (initData) => validateInitData(initData, token(), { nowSec: nowSec() })?.user || null });
 
   async function setupWebhook() {

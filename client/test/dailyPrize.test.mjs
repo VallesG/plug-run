@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { friendlyAddress, parseFriendlyAddress, parseRawAddress, shortAddress } from '../src/logic/tonAddress.js';
 import {
-  parsePrizeCommand, prizeForDay, settleable, dayEndSec, tonNano, tonLabel, tonkeeperLink, pickWinner, winState, PRIZE_SETTLE_DELAY_S
+  parsePrizeCommand, prizeForDay, settleable, dayEndSec, gramNano, gramLabel, tonkeeperLink, pickWinner, winState, PRIZE_SETTLE_DELAY_S
 } from '../src/logic/dailyPrize.js';
 import { DAILY_EPOCH_MS, dailyNote, EMPTY_DAILY } from '../src/logic/dailyRace.js';
 import { startParamKind } from '../src/logic/telegramLaunch.js';
@@ -30,34 +30,36 @@ eq(shortAddress('UQDKbjIcfM6ezt8KjKJJLshZJJSqX7XOA4ff-W72r5gqPuwA'), 'UQDKbj…g
 
 // --- Rules ---------------------------------------------------------------------
 eq(parsePrizeCommand('/prize'), { cmd: 'status' }, 'status');
-eq(parsePrizeCommand('/prize 5'), { cmd: 'on', usd: 5, days: null }, 'on');
-eq(parsePrizeCommand('/prize $5 6'), { cmd: 'on', usd: 5, days: 6 }, 'on for six days');
+eq(parsePrizeCommand('/prize 1'), { cmd: 'on', gram: 1, days: null }, 'on');
+eq(parsePrizeCommand('/prize 1 6'), { cmd: 'on', gram: 1, days: 6 }, 'on for six days');
+eq(parsePrizeCommand('/prize 0.5 gram 4'), { cmd: 'on', gram: 0.5, days: 4 }, 'half a GRAM, the word allowed');
 eq(parsePrizeCommand('/prize@PlugRunBot off'), { cmd: 'off' }, 'off, with the bot name');
 eq(parsePrizeCommand('/paid 12 abc123'), { cmd: 'paid', day: 12, tx: 'abc123' }, 'paid');
 eq(parsePrizeCommand('/dq #12 way too fast'), { cmd: 'dq', day: 12, reason: 'way too fast' }, 'dq');
 eq(parsePrizeCommand('/prize 5000').cmd, 'bad', 'no runaway amounts');
 eq(parsePrizeCommand('/prize lots').cmd, 'bad', 'nonsense is a help reply');
 eq(parsePrizeCommand('hello'), null, 'ordinary messages are not commands');
-eq(prizeForDay({ usd: 5, from: 3, until: 8 }, 8), { usd: 5 }, 'last day of a run pays');
-eq(prizeForDay({ usd: 5, from: 3, until: 8 }, 9), null, 'the day after does not');
-eq(prizeForDay({ usd: 5, from: 3, until: null }, 2), null, 'nor a day before it started');
+eq(prizeForDay({ gram: 1, from: 3, until: 8 }, 8), { gram: 1 }, 'last day of a run pays');
+eq(prizeForDay({ gram: 1, from: 3, until: 8 }, 9), null, 'the day after does not');
+eq(prizeForDay({ gram: 1, from: 3, until: null }, 2), null, 'nor a day before it started');
 ok(!settleable(4, dayEndSec(4) + PRIZE_SETTLE_DELAY_S - 1) && settleable(4, dayEndSec(4) + PRIZE_SETTLE_DELAY_S), 'settled half an hour after midnight');
-eq(tonNano(5, 3.2), '1570000000', '$5 at $3.20 is 1.57 TON (rounded up)');
-eq(tonLabel('1570000000'), '1.57 TON', 'label');
-eq(tonNano(5, 0), null, 'no price, no amount');
+eq(gramNano(1), '1000000000', '1 GRAM in nano units');
+eq(gramNano(0.5), '500000000', 'half');
+eq(gramNano(0), null, 'no amount, nothing to send');
+eq([gramLabel(1), gramLabel(0.5), gramLabel(2.25)], ['1 GRAM', '0.5 GRAM', '2.25 GRAM'], 'labels');
 eq(tonkeeperLink('UQabc', '1570000000', 'Plug Run Daily #3'), 'https://app.tonkeeper.com/transfer/UQabc?amount=1570000000&text=Plug%20Run%20Daily%20%233', 'Tonkeeper link, comment spaces kept');
 eq(pickWinner([{ userId: 'w' }, { userId: 'a' }, { userId: 'b' }], new Map([['a', '1'], ['b', '2']]), new Set(['a']))?.userId, 'b', 'fastest Telegram run that is not disqualified');
 eq(winState({ status: 'won', claimBy: 100 }, 101), 'expired', 'unclaimed after a week');
 
 // --- In the game ------------------------------------------------------------------
-eq(dailyNote({ ...EMPTY_DAILY, days: {} }, 3, 5), 'WIN $5 IN TON TODAY', 'a prize day\'s menu line names the prize');
-eq(dailyNote({ days: { 3: { ms: 64321, houses: 7, rank: 2 } }, streak: 1, last: 3 }, 3, 5), '✓ 1:04.3  ·  #2  ·  🔥 1', 'after the run it shows the result as always');
+eq(dailyNote({ ...EMPTY_DAILY, days: {} }, 3, '1 GRAM'), 'WIN 1 GRAM TODAY', 'a prize day\'s menu line names the prize');
+eq(dailyNote({ days: { 3: { ms: 64321, houses: 7, rank: 2 } }, streak: 1, last: 3 }, 3, '1 GRAM'), '✓ 1:04.3  ·  #2  ·  🔥 1', 'after the run it shows the result as always');
 eq(startParamKind('prize_12'), 'prize', 'the winner\'s link');
 eq(startParamKind('prize_x'), 'other', 'only a day number');
 {
-  const win = { day: 3, usd: 5, ms: 62000, claimBy: Date.UTC(2026, 8, 30, 0, 30) / 1000 };
+  const win = { day: 3, gram: 1, ms: 62000, claimBy: Date.UTC(2026, 8, 30, 0, 30) / 1000 };
   const v = claimView('won', win);
-  ok(v.title === 'DAILY RACE #3 · WINNER' && v.big === '$5 IN TON' && v.line === 'FASTEST TIME 1:02.0' && /Claim by SEP 30\./.test(v.note), 'the claim screen');
+  ok(v.title === 'DAILY RACE #3 · WINNER' && v.big === '1 GRAM' && v.line === 'FASTEST TIME 1:02.0' && /Claim by SEP 30\./.test(v.note), 'the claim screen');
   eq(v.buttons.map((b) => b.label), ['CONNECT WALLET', 'LATER'], 'its buttons');
   eq(claimView('claimed', win, { wallet: 'UQDKbj…gqPuwA' }).line, 'ON ITS WAY TO UQDKbj…gqPuwA', 'claimed');
   eq(claimError(new Error('HTTP 410 {"ok":false,"error":"the claim window has closed"}')), 'The claim window has closed.', 'the server\'s reason, as a sentence');
@@ -121,11 +123,8 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
     throw new Error('redis ' + cmd);
   };
   const sent = [];
-  let price = 3.2;
   const fetchImpl = async (url, opts) => {
     const u = String(url);
-    if (u.includes('tonapi.io')) { if (!price) throw new Error('down'); return { json: async () => ({ rates: { TON: { prices: { USD: price } } } }) }; }
-    if (u.includes('coingecko')) throw new Error('down');
     const m = u.match(/\/bot[^/]+\/(\w+)$/);
     if (!m) throw new Error('unexpected fetch ' + u);
     if (m[1] === 'getMe') return { json: async () => ({ ok: true, result: { username: 'PlugRunBot' } }) };
@@ -165,19 +164,19 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   // Anyone can ask for their id; only the owner runs prize commands.
   await chat(555, '/whoami');
   ok(/Your Telegram ID: <code>555<\/code>/.test(said(to(555))?.text || ''), '/whoami answers anyone with their id');
-  await chat(555, '/prize 5');
+  await chat(555, '/prize 1');
   ok(!!said((m) => m.method === 'sendPhoto' && m.chat_id === 555) && store.get('prize:config') === undefined, 'a stranger sending /prize gets the welcome card, and nothing changes');
   eq((await board(n)).prize, undefined, 'no prize, nothing on the board');
 
-  await chat(ADMIN, '/prize 5 6');
-  ok(/\$5 in TON a day<\/b>, from Daily #3 .* through #8/.test(said(to(ADMIN))?.text || ''), 'the owner turns it on for six days');
-  eq(JSON.parse(store.get('prize:config')), { usd: 5, from: 3, until: 8 }, 'config stored');
-  eq((await status('u_a')).today, { day: n, usd: 5 }, 'the game hears about today\'s prize');
+  await chat(ADMIN, '/prize 1 6');
+  ok(/1 GRAM a day<\/b>, from Daily #3 .* through #8/.test(said(to(ADMIN))?.text || ''), 'the owner turns it on for six days');
+  eq(JSON.parse(store.get('prize:config')), { gram: 1, from: 3, until: 8 }, 'config stored');
+  eq((await status('u_a')).today, { day: n, gram: 1 }, 'the game hears about today\'s prize');
 
   // Daily #3: the fastest run is from the web; the prize goes to the fastest Telegram run.
   rank(n, 'u_web', 60000.01); rank(n, 'u_b', 64000.05); rank(n, 'u_a', 62000.02);
   const b3 = await board(n);
-  eq(b3.prize, { usd: 5, leader: { rank: 2, name: 'Ana', ms: 62000 } }, 'the board shows the prize and who is in line for it');
+  eq(b3.prize, { gram: 1, leader: { rank: 2, name: 'Ana', ms: 62000 } }, 'the board shows the prize and who is in line for it');
   eq(b3.top.map((e) => e.ms), [60000, 62000, 64000], 'board times drop the tiebreak');
   eq(await h.settle(), [null, null], 'nothing settles while the day is open');
 
@@ -191,7 +190,7 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   await h.settle();
   eq(sent.filter((m) => m.method === 'sendMessage').length, 0, 'settling again sends nothing');
 
-  eq((await status('u_a')).wins, [{ day: 3, usd: 5, ms: 62000, status: 'won', claimBy: win.claimBy, wallet: null }], 'the winner\'s game sees the win');
+  eq((await status('u_a')).wins, [{ day: 3, gram: 1, ms: 62000, status: 'won', claimBy: win.claimBy, wallet: null }], 'the winner\'s game sees the win');
   eq((await status('u_b')).wins, [], 'nobody else\'s does');
 
   // Claiming.
@@ -205,8 +204,8 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   const good = await claim('u_a', { wallet: RAW, chain: '-239', initData: sign('111') });
   eq(good.json, { ok: true, day: 3, status: 'claimed', wallet: 'UQDKbj…gqPuwA' }, 'claimed with the connected wallet');
   const pay = said(to(ADMIN));
-  ok(/Ana claimed Daily #3/.test(pay?.text) && /<code>UQDKbjIcfM6ezt8KjKJJLshZJJSqX7XOA4ff-W72r5gqPuwA<\/code>/.test(pay.text) && /1\.57 TON<\/b> \(TON at \$3\.20\)/.test(pay.text), 'the owner gets the wallet and the TON amount');
-  eq(pay.reply_markup.inline_keyboard[0][0].url, 'https://app.tonkeeper.com/transfer/UQDKbjIcfM6ezt8KjKJJLshZJJSqX7XOA4ff-W72r5gqPuwA?amount=1570000000&text=Plug%20Run%20Daily%20%233', 'with a prefilled Tonkeeper payment');
+  ok(/Ana claimed Daily #3/.test(pay?.text) && /<code>UQDKbjIcfM6ezt8KjKJJLshZJJSqX7XOA4ff-W72r5gqPuwA<\/code>/.test(pay.text) && /Send: <b>1 GRAM<\/b>/.test(pay.text), 'the owner gets the wallet and the amount');
+  eq(pay.reply_markup.inline_keyboard[0][0], { text: 'Pay 1 GRAM in Tonkeeper', url: 'https://app.tonkeeper.com/transfer/UQDKbjIcfM6ezt8KjKJJLshZJJSqX7XOA4ff-W72r5gqPuwA?amount=1000000000&text=Plug%20Run%20Daily%20%233' }, 'with a prefilled Tonkeeper payment');
   await claim('u_a', { wallet: RAW, initData: sign('111') });
   eq(sent.length, 0, 'claiming again with the same wallet sends nothing new');
 
@@ -220,7 +219,6 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   // Daily #4: a disqualified winner passes the prize to the next Telegram runner.
   rank(4, 'u_b', 58000.03); rank(4, 'u_a', 59000.01); rank(4, 'u_c', 61000.02);
   clock = DAILY_EPOCH_MS / 1000 + 4 * DAY + PRIZE_SETTLE_DELAY_S;
-  price = null; // the price service is down tonight
   await h.settle();
   ok(/You won Plug Run Daily #4/.test(said(to('222'))?.text) && /winner: Ben/.test(said(to(ADMIN))?.text), 'Ben wins Daily #4');
   await chat(ADMIN, '/dq 4 impossible splits');
@@ -229,8 +227,7 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   ok(/You won Plug Run Daily #4/.test(said(to('111'))?.text) && /winner: Ana/.test(said(to(ADMIN))?.text), 'and Ana, next in line, wins it');
   eq(JSON.parse(store.get('prize:win:4')).userId, 'u_a', 'stored');
   await call('POST', 'prize-claim', { userId: 'u_a', token: 't_u_a', day: 4, wallet: RAW, initData: sign('111') });
-  const noPrice = said(to(ADMIN));
-  ok(/Send \$5 in TON \(the TON price was unavailable\)/.test(noPrice?.text) && !/amount=/.test(noPrice.reply_markup.inline_keyboard[0][0].url), 'without a price, the owner is asked to send $5 worth');
+  ok(/Ana claimed Daily #4/.test(said(to(ADMIN))?.text), 'the new winner can claim it');
 
   // Daily #5: a winner the bot cannot message, who then never claims.
   rank(5, 'u_web', 50000.01); rank(5, 'u_c', 70000.01);
@@ -243,10 +240,10 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   clock = DAILY_EPOCH_MS / 1000 + 6 * DAY + 3600; // Daily #7
   await chat(ADMIN, '/prize');
   const st = said(to(ADMIN))?.text || '';
-  ok(/Daily prize: \$5 in TON a day, through #8/.test(st) && /Today #7: \$5 · 0 ranked · leader none yet/.test(st) && /#3 Ana 1:02\.0 · \$5 · paid/.test(st) && /#4 Ana 0:59\.0 · \$5 · claimed, not paid/.test(st) && /#5 Cy 1:10\.0 · \$5 · waiting for a wallet/.test(st), 'the owner\'s status: setting, today, recent days');
+  ok(/Daily prize: 1 GRAM a day, through #8/.test(st) && /Today #7: 1 GRAM · 0 ranked · leader none yet/.test(st) && /#3 Ana 1:02\.0 · 1 GRAM · paid/.test(st) && /#4 Ana 0:59\.0 · 1 GRAM · claimed, not paid/.test(st) && /#5 Cy 1:10\.0 · 1 GRAM · waiting for a wallet/.test(st), 'the owner\'s status: setting, today, recent days');
   sent.length = 0;
   await chat(ADMIN, '/prize off');
-  ok(/off from tomorrow\. Today's \$5 \(Daily #7\) still stands/.test(said(to(ADMIN))?.text), 'off from tomorrow, today stands');
+  ok(/off from tomorrow\. Today's 1 GRAM \(Daily #7\) still stands/.test(said(to(ADMIN))?.text), 'off from tomorrow, today stands');
   clock += DAY;
   eq((await status('u_a')).today, null, 'no prize the next day');
   rank(8, 'u_a', 50000);
@@ -258,7 +255,7 @@ eq(startParamKind('prize_x'), 'other', 'only a day number');
   ok(/Commands:/.test(said(to(ADMIN))?.text), 'a mistyped command gets the help');
 
   // Daily #9 on again; nobody from Telegram raced.
-  await chat(ADMIN, '/prize 5');
+  await chat(ADMIN, '/prize 1');
   sent.length = 0;
   rank(9, 'u_web', 50000);
   clock += DAY;
